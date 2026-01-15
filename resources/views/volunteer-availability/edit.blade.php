@@ -124,11 +124,13 @@
                                 @endphp
                                 @foreach($events as $event)
                                     <option value="{{ $event->id }}" {{ in_array($event->id, $selectedEvents) ? 'selected' : '' }}>
-                                        {{ $event->title }} - {{ \Carbon\Carbon::parse($event->start_date)->format('d/m/Y H:i') }}
+                                        {{ $event->title }} - {{ \Carbon\Carbon::parse($event->start_date)->format('d/m/Y H:i') }}@if($event->category) ({{ strtoupper($event->category->name) }})@endif
                                     </option>
                                 @endforeach
                             </select>
-                            <small class="form-text text-muted">Segure Ctrl (ou Cmd no Mac) para selecionar múltiplos eventos</small>
+                            <small class="form-text text-muted">
+                                <i class="bx bx-info-circle me-1"></i>Exibindo apenas eventos do mês corrente ({{ \Carbon\Carbon::now()->locale('pt_BR')->translatedFormat('F/Y') }}). Segure Ctrl (ou Cmd no Mac) para selecionar múltiplos eventos.
+                            </small>
                             @error('events')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror

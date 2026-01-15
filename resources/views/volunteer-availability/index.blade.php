@@ -103,7 +103,7 @@
                                             @if($volunteer->availability)
                                                 <span class="badge badge-success">Cadastrada</span>
                                             @else
-                                                <span class="badge badge-secondary">Pendente</span>
+                                                <span class="badge badge-danger">Pendente</span>
                                             @endif
                                         </td>
                                         <td>

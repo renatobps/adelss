@@ -17,6 +17,7 @@ class Event extends Model
         'all_day',
         'recurrence',
         'visibility',
+        'status',
         'location',
         'category_id',
     ];

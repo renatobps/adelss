@@ -251,7 +251,7 @@
                                         </li>
                                     </ul>
                                 </li>
-                                <li class="nav-parent {{ request()->routeIs('servico.*') || request()->routeIs('departments.*') || request()->routeIs('voluntarios.*') || request()->routeIs('escalas.*') || request()->routeIs('disponibilidade.*') || request()->routeIs('voluntarios.cadastro.*') || request()->routeIs('voluntarios.areas.*') || request()->routeIs('voluntarios.disponibilidade.*') || request()->routeIs('voluntarios.escalas.*') || request()->routeIs('voluntarios.historico.*') || request()->routeIs('voluntarios.relatorios.*') ? 'nav-expanded nav-active' : '' }}">
+                                <li class="nav-parent {{ request()->routeIs('servico.*') || request()->routeIs('departments.*') || request()->routeIs('voluntarios.*') || request()->routeIs('voluntarios.cadastro.*') || request()->routeIs('voluntarios.areas.*') || request()->routeIs('voluntarios.disponibilidade.*') || request()->routeIs('voluntarios.escalas.*') || request()->routeIs('voluntarios.historico.*') || request()->routeIs('voluntarios.relatorios.*') ? 'nav-expanded nav-active' : '' }}">
                                     <a class="nav-link" href="#">
                                         <i class="bx bx-cog" aria-hidden="true"></i>
                                         <span>Serviço</span>
@@ -299,8 +299,8 @@
                                                 </li>
                                             </ul>
                                         </li>
-                                        <li class="{{ request()->routeIs('escalas.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="#">
+                                        <li class="{{ request()->routeIs('servico.escalas.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('servico.escalas.index') }}">
                                                 <i class="bx bx-calendar-check"></i>Escalas
                                             </a>
                                         </li>

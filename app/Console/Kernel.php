@@ -12,7 +12,8 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        // Verificar eventos passados a cada hora
+        $schedule->command('events:check-past')->hourly();
     }
 
     /**

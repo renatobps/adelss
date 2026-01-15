@@ -54,8 +54,14 @@ class VolunteerAvailabilityController extends Controller
                 ->with('info', 'Este voluntário já possui disponibilidade cadastrada. Redirecionando para edição.');
         }
 
-        $events = Event::where('start_date', '>=', now())
-                      ->orderBy('start_date')
+        // Filtrar apenas eventos do mês corrente
+        $startOfMonth = \Carbon\Carbon::now()->startOfMonth();
+        $endOfMonth = \Carbon\Carbon::now()->endOfMonth();
+        
+        $events = Event::with('category')
+                      ->whereBetween('start_date', [$startOfMonth, $endOfMonth])
+                      ->orderBy('start_date', 'asc')
+                      ->orderBy('title', 'asc')
                       ->get();
 
         return view('volunteer-availability.create', compact('volunteer', 'events'));
@@ -138,8 +144,14 @@ class VolunteerAvailabilityController extends Controller
     {
         $disponibilidade->load(['volunteer.member', 'volunteer.availabilityEvents']);
         
-        $events = Event::where('start_date', '>=', now()->subDays(30))
-                      ->orderBy('start_date')
+        // Filtrar apenas eventos do mês corrente
+        $startOfMonth = \Carbon\Carbon::now()->startOfMonth();
+        $endOfMonth = \Carbon\Carbon::now()->endOfMonth();
+        
+        $events = Event::with('category')
+                      ->whereBetween('start_date', [$startOfMonth, $endOfMonth])
+                      ->orderBy('start_date', 'asc')
+                      ->orderBy('title', 'asc')
                       ->get();
 
         return view('volunteer-availability.edit', compact('disponibilidade', 'events'));

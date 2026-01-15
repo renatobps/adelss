@@ -25,4 +25,27 @@ class EventCategoryController extends Controller
             'category' => $category,
         ]);
     }
+
+    /**
+     * Remove the specified category
+     */
+    public function destroy(EventCategory $category)
+    {
+        // Verificar se há eventos usando esta categoria
+        $eventsCount = \App\Models\Event::where('category_id', $category->id)->count();
+        
+        if ($eventsCount > 0) {
+            return response()->json([
+                'success' => false,
+                'message' => "Não é possível remover esta categoria. Ela está sendo usada por {$eventsCount} evento(s).",
+            ], 422);
+        }
+
+        $category->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Categoria removida com sucesso!',
+        ]);
+    }
 }

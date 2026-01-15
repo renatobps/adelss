@@ -7,6 +7,7 @@ use App\Http\Controllers\MemberRoleController;
 use App\Http\Controllers\VolunteerController;
 use App\Http\Controllers\ServiceAreaController;
 use App\Http\Controllers\VolunteerAvailabilityController;
+use App\Http\Controllers\ServiceScheduleController;
 use App\Http\Controllers\PgiController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\Financial\CategoryController;
@@ -39,7 +40,9 @@ Route::resource('member-roles', MemberRoleController::class);
 
 // Rotas do módulo de Voluntários
 Route::prefix('voluntarios')->name('voluntarios.')->group(function () {
-    Route::resource('cadastro', VolunteerController::class)->names([
+    Route::resource('cadastro', VolunteerController::class)->parameters([
+        'cadastro' => 'volunteer'
+    ])->names([
         'index' => 'cadastro.index',
         'create' => 'cadastro.create',
         'store' => 'cadastro.store',
@@ -70,6 +73,28 @@ Route::prefix('voluntarios')->name('voluntarios.')->group(function () {
         'update' => 'disponibilidade.update',
         'destroy' => 'disponibilidade.destroy',
     ]);
+});
+
+// Rotas do módulo de Serviço - Escalas
+Route::prefix('servico')->name('servico.')->group(function () {
+    Route::get('escalas', [ServiceScheduleController::class, 'index'])->name('escalas.index');
+    Route::get('escalas/create', [ServiceScheduleController::class, 'create'])->name('escalas.create');
+    Route::post('escalas/step1', [ServiceScheduleController::class, 'storeStep1'])->name('escalas.store.step1');
+    Route::post('escalas/step2', [ServiceScheduleController::class, 'storeStep2'])->name('escalas.store.step2');
+    Route::post('escalas/step3', [ServiceScheduleController::class, 'storeStep3'])->name('escalas.store.step3');
+    Route::post('escalas', [ServiceScheduleController::class, 'store'])->name('escalas.store');
+    Route::get('escalas/{escala}', [ServiceScheduleController::class, 'show'])->name('escalas.show');
+    Route::get('escalas/{escala}/edit', [ServiceScheduleController::class, 'edit'])->name('escalas.edit');
+    Route::put('escalas/{escala}', [ServiceScheduleController::class, 'update'])->name('escalas.update');
+    Route::delete('escalas/{escala}', [ServiceScheduleController::class, 'destroy'])->name('escalas.destroy');
+    Route::post('escalas/{escala}/duplicate', [ServiceScheduleController::class, 'duplicate'])->name('escalas.duplicate');
+    Route::put('escalas/{escala}/cancel', [ServiceScheduleController::class, 'cancel'])->name('escalas.cancel');
+    Route::put('escalas/{escala}/publish', [ServiceScheduleController::class, 'publish'])->name('escalas.publish');
+    Route::put('escalas/{escala}/status', [ServiceScheduleController::class, 'updateStatus'])->name('escalas.update-status');
+    Route::get('escalas/api/suggested-volunteers', [ServiceScheduleController::class, 'getSuggestedVolunteers'])->name('escalas.api.suggested-volunteers');
+    Route::put('escalas/volunteers/{volunteer}/confirm', [ServiceScheduleController::class, 'confirmVolunteer'])->name('escalas.volunteers.confirm');
+    Route::delete('escalas/volunteers/{volunteer}', [ServiceScheduleController::class, 'removeVolunteer'])->name('escalas.volunteers.remove');
+    Route::get('escalas/{escala}/pdf', [ServiceScheduleController::class, 'generatePdf'])->name('escalas.pdf');
 });
 
 // Rotas de importação de membros
@@ -252,6 +277,7 @@ Route::prefix('agenda')->name('agenda.')->group(function () {
     
     // Categorias
     Route::post('categories', [EventCategoryController::class, 'store'])->name('categories.store');
+    Route::delete('categories/{category}', [EventCategoryController::class, 'destroy'])->name('categories.destroy');
     
     // Eventos (página de listagem)
     Route::get('eventos', [EventosController::class, 'index'])->name('eventos.index');
