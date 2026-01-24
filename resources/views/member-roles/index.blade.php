@@ -10,6 +10,27 @@
 @endsection
 
 @section('content')
+@php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $canViewMembers = $isAdmin || 
+                      ($user && ($user->hasPermission('members.index.view') || 
+                                 $user->hasPermission('members.view') ||
+                                 $user->hasPermission('members.index.manage')));
+    $canViewRoles = $isAdmin || 
+                    ($user && ($user->hasPermission('members.roles.view') || 
+                               $user->hasPermission('members.roles.manage')));
+    $canCreateRoles = $isAdmin || 
+                      ($user && ($user->hasPermission('members.roles.create') || 
+                                 $user->hasPermission('members.roles.manage')));
+    $canEditRoles = $isAdmin || 
+                    ($user && ($user->hasPermission('members.roles.edit') || 
+                               $user->hasPermission('members.roles.manage')));
+    $canDeleteRoles = $isAdmin || 
+                      ($user && ($user->hasPermission('members.roles.delete') || 
+                                 $user->hasPermission('members.roles.manage')));
+@endphp
+
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bx bx-check-circle me-2"></i>{{ session('success') }}
@@ -26,7 +47,7 @@
 
 <div class="row">
     <!-- Coluna Esquerda - Lista de Cargos -->
-    <div class="col-lg-8">
+    <div class="{{ $canCreateRoles ? 'col-lg-8' : 'col-lg-12' }}">
         <section class="card">
             <div class="card-body">
                 <h4 class="mb-3">Resultados: {{ $roles->count() }}</h4>
@@ -49,18 +70,25 @@
                                         <td><strong>{{ $role->name }}</strong></td>
                                         <td>{{ $role->description ?? '-' }}</td>
                                         <td>
+                                            @if($canViewMembers)
                                             <a href="{{ route('members.index', ['role_id' => $role->id]) }}" 
                                                class="btn btn-sm btn-info">
                                                 Ver Membros
                                             </a>
+                                            @else
+                                            <span class="text-muted">-</span>
+                                            @endif
                                         </td>
                                         <td>
                                             <div class="btn-group btn-group-sm" role="group">
+                                                @if($canEditRoles)
                                                 <a href="{{ route('member-roles.edit', $role) }}" 
                                                    class="btn btn-primary" 
                                                    title="Editar">
-                                                    Editar
+                                                    <i class="bx bx-edit"></i>
                                                 </a>
+                                                @endif
+                                                @if($canDeleteRoles)
                                                 <form action="{{ route('member-roles.destroy', $role) }}" 
                                                       method="POST" 
                                                       class="d-inline"
@@ -70,9 +98,13 @@
                                                     <button type="submit" 
                                                             class="btn btn-outline-danger" 
                                                             title="Remover">
-                                                        Remover
+                                                        <i class="bx bx-trash"></i>
                                                     </button>
                                                 </form>
+                                                @endif
+                                                @if(!$canEditRoles && !$canDeleteRoles)
+                                                <span class="text-muted">-</span>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -91,6 +123,7 @@
     </div>
 
     <!-- Coluna Direita - Formulário de Criação -->
+    @if($canCreateRoles)
     <div class="col-lg-4">
         <section class="card">
             <header class="card-header" style="background-color: #20c997; color: white;">
@@ -132,6 +165,7 @@
             </div>
         </section>
     </div>
+    @endif
 </div>
 
 @push('scripts')

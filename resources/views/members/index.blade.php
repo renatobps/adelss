@@ -23,7 +23,25 @@
                 <p class="card-subtitle">Gerencie os membros da organização</p>
             </header>
             <div class="card-body">
+                @php
+                    $user = Auth::user();
+                    $isAdmin = $user?->is_admin ?? false;
+                    $canCreateMembers = $isAdmin || 
+                                       ($user && ($user->hasPermission('members.index.create') || 
+                                                  $user->hasPermission('members.create') ||
+                                                  $user->hasPermission('members.index.manage')));
+                    $canEditMembers = $isAdmin || 
+                                     ($user && ($user->hasPermission('members.index.edit') || 
+                                                $user->hasPermission('members.edit') ||
+                                                $user->hasPermission('members.index.manage')));
+                    $canDeleteMembers = $isAdmin || 
+                                       ($user && ($user->hasPermission('members.index.delete') || 
+                                                  $user->hasPermission('members.delete') ||
+                                                  $user->hasPermission('members.index.manage')));
+                @endphp
+                
                 <!-- Card Tutorial de Importação -->
+                @if($canCreateMembers)
                 <div class="card mb-4 border-success">
                     <div class="card-header bg-success text-white">
                         <h5 class="mb-0">
@@ -199,7 +217,9 @@
                         </div>
                     </div>
                 </div>
+                @endif
 
+                @if($canCreateMembers)
                 <div class="d-flex justify-content-end align-items-center mb-4">
                     <button type="button" class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#importModal">
                         <i class="bx bx-upload me-2"></i>Importar CSV
@@ -208,6 +228,7 @@
                         <i class="bx bx-plus me-2"></i>Novo Membro
                     </a>
                 </div>
+                @endif
 
                 @if(session('success'))
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -259,6 +280,14 @@
                                     <option value="name" {{ request('sort_by') == 'name' ? 'selected' : '' }}>Nome</option>
                                     <option value="created_at" {{ request('sort_by') == 'created_at' ? 'selected' : '' }}>Data de Cadastro</option>
                                     <option value="status" {{ request('sort_by') == 'status' ? 'selected' : '' }}>Status</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label for="per_page" class="form-label">Itens por página</label>
+                                <select class="form-select" id="per_page" name="per_page" onchange="this.form.submit()">
+                                    <option value="10" {{ (request('per_page', 10)) == '10' ? 'selected' : '' }}>10</option>
+                                    <option value="50" {{ request('per_page') == '50' ? 'selected' : '' }}>50</option>
+                                    <option value="100" {{ request('per_page') == '100' ? 'selected' : '' }}>100</option>
                                 </select>
                             </div>
                             <div class="col-md-2 d-flex align-items-end">
@@ -358,11 +387,14 @@
                                                    title="Visualizar">
                                                     <i class="bx bx-show"></i>
                                                 </a>
+                                                @if($canEditMembers)
                                                 <a href="{{ route('members.edit', $member) }}" 
                                                    class="btn btn-default" 
                                                    title="Editar">
                                                     <i class="bx bx-edit"></i>
                                                 </a>
+                                                @endif
+                                                @if($canDeleteMembers)
                                                 <form action="{{ route('members.destroy', $member) }}" 
                                                       method="POST" 
                                                       class="d-inline"
@@ -375,6 +407,7 @@
                                                         <i class="bx bx-trash"></i>
                                                     </button>
                                                 </form>
+                                                @endif
                                             </div>
                                         </td>
                                     </tr>
@@ -399,6 +432,7 @@
 </div>
 
 <!-- Modal: Importar Membros -->
+@if($canCreateMembers ?? false)
 <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -451,4 +485,62 @@
         </div>
     </div>
 </div>
+@endif
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form[action="{{ route('members.index') }}"]');
+    const searchInput = document.getElementById('search');
+    const statusSelect = document.getElementById('status');
+    const genderSelect = document.getElementById('gender');
+    const sortSelect = document.getElementById('sort_by');
+    
+    let searchTimeout;
+    
+    // Função para submeter o formulário com debounce
+    function submitForm() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            form.submit();
+        }, 500); // Aguarda 500ms após parar de digitar
+    }
+    
+    // Busca em tempo real no campo de busca
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            submitForm();
+        });
+        
+        // Permite Enter para buscar imediatamente
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                clearTimeout(searchTimeout);
+                e.preventDefault();
+                form.submit();
+            }
+        });
+    }
+    
+    // Filtros de select também atualizam automaticamente
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            form.submit();
+        });
+    }
+    
+    if (genderSelect) {
+        genderSelect.addEventListener('change', function() {
+            form.submit();
+        });
+    }
+    
+    if (sortSelect) {
+        sortSelect.addEventListener('change', function() {
+            form.submit();
+        });
+    }
+});
+</script>
+@endpush
 @endsection

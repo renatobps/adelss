@@ -67,6 +67,11 @@ class EstudosController extends Controller
             ->with('success', 'Estudo criado com sucesso!');
     }
 
+    public function show(Study $estudo)
+    {
+        return view('ensino.estudos.show', compact('estudo'));
+    }
+
     public function edit(Study $estudo)
     {
         return view('ensino.estudos.edit', compact('estudo'));

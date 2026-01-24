@@ -10,6 +10,20 @@
 @endsection
 
 @section('content')
+@php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $canCreateEscolas = $isAdmin || 
+                       ($user && ($user->hasPermission('ensino.escolas.create') || 
+                                  $user->hasPermission('ensino.escolas.manage')));
+    $canEditEscolas = $isAdmin || 
+                     ($user && ($user->hasPermission('ensino.escolas.edit') || 
+                                $user->hasPermission('ensino.escolas.manage')));
+    $canDeleteEscolas = $isAdmin || 
+                       ($user && ($user->hasPermission('ensino.escolas.delete') || 
+                                  $user->hasPermission('ensino.escolas.manage')));
+@endphp
+
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -53,19 +67,30 @@
                         <tbody>
                             @forelse($schools as $school)
                                 <tr>
-                                    <td><strong>{{ $school->name }}</strong></td>
+                                    <td>
+                                        <a href="{{ route('ensino.escolas.show', $school) }}" class="text-decoration-none fw-bold" style="color: #2c3e50;">
+                                            {{ $school->name }}
+                                        </a>
+                                    </td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <button type="button" class="btn btn-primary btn-sm" onclick="editSchool({{ $school->id }}, {!! json_encode($school->name) !!}, {{ $school->manager_id ? $school->manager_id : 'null' }}, {!! json_encode($school->description ?? '') !!})">
-                                                <i class="bx bx-edit"></i> Editar
+                                            <a href="{{ route('ensino.escolas.show', $school) }}" class="btn btn-info btn-sm" title="Visualizar">
+                                                <i class="bx bx-show"></i>
+                                            </a>
+                                            @if($canEditEscolas)
+                                            <button type="button" class="btn btn-primary btn-sm" onclick="editSchool({{ $school->id }}, {!! json_encode($school->name) !!}, {{ $school->manager_id ? $school->manager_id : 'null' }}, {!! json_encode($school->description ?? '') !!})" title="Editar">
+                                                <i class="bx bx-edit"></i>
                                             </button>
+                                            @endif
+                                            @if($canDeleteEscolas)
                                             <form action="{{ route('ensino.escolas.destroy', $school) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta escola?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-danger btn-sm">
-                                                    <i class="bx bx-trash"></i> Remover
+                                                <button type="submit" class="btn btn-danger btn-sm" title="Remover">
+                                                    <i class="bx bx-trash"></i>
                                                 </button>
                                             </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -91,6 +116,7 @@
     </div>
 
     <!-- Formulário de Criação/Edição (Lado Direito) -->
+    @if($canCreateEscolas)
     <div class="col-lg-5">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-header bg-success text-white">
@@ -153,6 +179,7 @@
             </div>
         </div>
     </div>
+    @endif
 </div>
 
 @push('scripts')

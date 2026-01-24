@@ -71,14 +71,36 @@
 
                 <span class="separator"></span>
 
+                @php
+                    $loggedUser = Auth::user();
+                    $loggedMember = $loggedUser?->member;
+                    $profilePhoto = ($loggedMember && $loggedMember->photo_url)
+                        ? $loggedMember->photo_url
+                        : asset('img/img/!logged-user.jpg');
+                    
+                    // Determinar o cargo/role a ser exibido
+                    $displayRole = 'Usuário';
+                    if ($loggedUser && $loggedUser->is_admin) {
+                        $displayRole = 'Administrador';
+                    } elseif ($loggedMember) {
+                        // Carregar o relacionamento role se ainda não estiver carregado
+                        if (!$loggedMember->relationLoaded('role')) {
+                            $loggedMember->load('role');
+                        }
+                        if ($loggedMember->role) {
+                            $displayRole = $loggedMember->role->name;
+                        }
+                    }
+                @endphp
+
                 <div id="userbox" class="userbox">
                     <a href="#" data-bs-toggle="dropdown">
                         <figure class="profile-picture">
-                            <img src="{{ asset('img/img/!logged-user.jpg') }}" alt="Usuário" class="rounded-circle" data-lock-picture="{{ asset('img/img/!logged-user.jpg') }}" />
+                            <img src="{{ $profilePhoto }}" alt="{{ $loggedUser->name ?? 'Usuário' }}" class="rounded-circle" data-lock-picture="{{ $profilePhoto }}" />
                         </figure>
-                        <div class="profile-info" data-lock-name="Usuário" data-lock-email="usuario@adelss.com">
-                            <span class="name">Usuário</span>
-                            <span class="role">Administrador</span>
+                        <div class="profile-info" data-lock-name="{{ $loggedUser->name ?? 'Usuário' }}" data-lock-email="{{ $loggedUser->email ?? 'usuario@adelss.com' }}">
+                            <span class="name">{{ $loggedUser->name ?? 'Usuário' }}</span>
+                            <span class="role">{{ $displayRole }}</span>
                         </div>
 
                         <i class="fa custom-caret"></i>
@@ -88,13 +110,20 @@
                         <ul class="list-unstyled mb-2">
                             <li class="divider"></li>
                             <li>
-                                <a role="menuitem" tabindex="-1" href="#"><i class="bx bx-user-circle"></i> Meu Perfil</a>
+                                <a role="menuitem" tabindex="-1" href="{{ $loggedMember ? route('members.show', $loggedMember) : '#' }}">
+                                    <i class="bx bx-user-circle"></i> Meu Perfil
+                                </a>
                             </li>
                             <li>
                                 <a role="menuitem" tabindex="-1" href="#"><i class="bx bx-lock"></i> Bloquear Tela</a>
                             </li>
                             <li>
-                                <a role="menuitem" tabindex="-1" href="#"><i class="bx bx-power-off"></i> Sair</a>
+                                <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item text-danger" style="border: none; background: none; width: 100%; text-align: left; padding: 0.5rem 1rem; color: inherit;">
+                                        <i class="bx bx-power-off"></i> Sair
+                                    </button>
+                                </form>
                             </li>
                         </ul>
                     </div>
@@ -126,113 +155,325 @@
                                         <span>Visão Geral</span>
                                     </a>
                                 </li>
+                                
+                                @php
+                                    $user = Auth::user();
+                                    $isAdmin = $user?->is_admin ?? false;
+                                    $member = $user?->member;
+                                    $hasPgi = $member && $member->pgi_id;
+                                    
+                                    // Verificar se é líder ou líder em treinamento de algum PGI
+                                    $isLeaderOfPgi = false;
+                                    if ($member) {
+                                        $isLeaderOfPgi = \App\Models\Pgi::where(function($q) use ($member) {
+                                            $q->where('leader_1_id', $member->id)
+                                              ->orWhere('leader_2_id', $member->id)
+                                              ->orWhere('leader_training_1_id', $member->id)
+                                              ->orWhere('leader_training_2_id', $member->id);
+                                        })->exists();
+                                    }
+                                    
+                                    // Verificar permissões específicas
+                                    $canViewMembers = false;
+                                    $canCreateMembers = false;
+                                    $canManageRoles = false;
+                                    $canViewPgis = false;
+                                    $canManagePermissions = $isAdmin; // Apenas admin pode gerenciar permissões
+                                    
+                                    // Permissões do módulo Ensino
+                                    $canViewEstudos = false;
+                                    $canViewEscolas = false;
+                                    $canViewTurmas = false;
+                                    $isStudentOfAnyClass = false; // Verificar se é aluno de alguma turma
+                                    $isTeacherOfAnyClass = false; // Verificar se é professor de alguma turma
+                                    
+                                    // Permissões do módulo Financeiro
+                                    $canViewReceitas = false;
+                                    $canViewDespesas = false;
+                                    $canViewCategories = false;
+                                    $canViewAccounts = false;
+                                    $canViewContacts = false;
+                                    $canViewCostCenters = false;
+                                    $canViewReports = false;
+                                    
+                                    // Permissões do módulo Agenda
+                                    $canViewEvents = false;
+                                    $canViewEventCategories = false;
+                                    
+                                    // Permissões do módulo Serviço
+                                    $canViewDepartments = false;
+                                    $canViewVoluntariosCadastro = false;
+                                    $canViewVoluntariosAreas = false;
+                                    $canViewVoluntariosDisponibilidade = false;
+                                    $canViewVoluntariosEscalas = false;
+                                    $canViewVoluntariosHistorico = false;
+                                    $canViewVoluntariosRelatorios = false;
+                                    
+                                    if ($user) {
+                                        if ($isAdmin) {
+                                            $canViewMembers = true;
+                                            $canCreateMembers = true;
+                                            $canManageRoles = true;
+                                            $canViewPgis = true;
+                                            $canViewEstudos = true;
+                                            $canViewEscolas = true;
+                                            $canViewTurmas = true;
+                                            $canViewReceitas = true;
+                                            $canViewDespesas = true;
+                                            $canViewCategories = true;
+                                            $canViewAccounts = true;
+                                            $canViewContacts = true;
+                                            $canViewCostCenters = true;
+                                            $canViewReports = true;
+                                            $canViewEvents = true;
+                                            $canViewEventCategories = true;
+                                            $canViewDepartments = true;
+                                            $canViewVoluntariosCadastro = true;
+                                            $canViewVoluntariosAreas = true;
+                                            $canViewVoluntariosDisponibilidade = true;
+                                            $canViewVoluntariosEscalas = true;
+                                            $canViewVoluntariosHistorico = true;
+                                            $canViewVoluntariosRelatorios = true;
+                                        } else {
+                                            try {
+                                                // Verificar permissões específicas do menu
+                                                $canViewMembers = $user->hasPermission('members.index.view') || 
+                                                                  $user->hasPermission('members.view') ||
+                                                                  $user->hasPermission('members.index.manage');
+                                                $canCreateMembers = $user->hasPermission('members.index.create') || 
+                                                                    $user->hasPermission('members.create') ||
+                                                                    $user->hasPermission('members.index.manage');
+                                                $canManageRoles = $user->hasPermission('members.roles.view') || 
+                                                                  $user->hasPermission('members.roles.create') ||
+                                                                  $user->hasPermission('members.roles.edit') ||
+                                                                  $user->hasPermission('members.roles.delete') ||
+                                                                  $user->hasPermission('members.roles.manage');
+                                                $canViewPgis = $user->hasPermission('pgis.index.view') || 
+                                                               $user->hasPermission('pgis.index.manage');
+                                                
+                                                // Verificar permissões do módulo Ensino
+                                                $canViewEstudos = $user->hasPermission('ensino.estudos.view') || 
+                                                                  $user->hasPermission('ensino.estudos.manage');
+                                                $canViewEscolas = $user->hasPermission('ensino.escolas.view') || 
+                                                                  $user->hasPermission('ensino.escolas.manage');
+                                                $canViewTurmas = $user->hasPermission('ensino.turmas.view') || 
+                                                                  $user->hasPermission('ensino.turmas.manage');
+                                                
+                                                // Verificar se é aluno ou professor de alguma turma
+                                                if ($member) {
+                                                    $isStudentOfAnyClass = $member->turmas()->exists();
+                                                    $isTeacherOfAnyClass = $member->isTeacherOfAnyClass();
+                                                }
+                                                
+                                                // Verificar permissões do módulo Financeiro
+                                                $canViewReceitas = $user->hasPermission('financial.receitas.view') || 
+                                                                   $user->hasPermission('financial.receitas.manage');
+                                                $canViewDespesas = $user->hasPermission('financial.despesas.view') || 
+                                                                   $user->hasPermission('financial.despesas.manage');
+                                                $canViewCategories = $user->hasPermission('financial.categories.view') || 
+                                                                     $user->hasPermission('financial.categories.manage');
+                                                $canViewAccounts = $user->hasPermission('financial.accounts.view') || 
+                                                                    $user->hasPermission('financial.accounts.manage');
+                                                $canViewContacts = $user->hasPermission('financial.contacts.view') || 
+                                                                    $user->hasPermission('financial.contacts.manage');
+                                                $canViewCostCenters = $user->hasPermission('financial.cost-centers.view') || 
+                                                                      $user->hasPermission('financial.cost-centers.manage');
+                                                $canViewReports = $user->hasPermission('financial.reports.view') || 
+                                                                  $user->hasPermission('financial.reports.manage');
+                                                
+                                                // Verificar permissões do módulo Agenda
+                                                $canViewEvents = $user->hasPermission('agenda.events.view') || 
+                                                                 $user->hasPermission('agenda.events.manage');
+                                                $canViewEventCategories = $user->hasPermission('agenda.categories.view') || 
+                                                                           $user->hasPermission('agenda.categories.manage');
+                                                
+                                                // Verificar permissões do módulo Serviço
+                                                $canViewDepartments = $user->hasPermission('servico.departments.view') || 
+                                                                       $user->hasPermission('servico.departments.manage');
+                                                $canViewVoluntariosCadastro = $user->hasPermission('servico.voluntarios.cadastro.view') || 
+                                                                              $user->hasPermission('servico.voluntarios.cadastro.manage');
+                                                $canViewVoluntariosAreas = $user->hasPermission('servico.voluntarios.areas.view') || 
+                                                                            $user->hasPermission('servico.voluntarios.areas.manage');
+                                                $canViewVoluntariosDisponibilidade = $user->hasPermission('servico.voluntarios.disponibilidade.view') || 
+                                                                                      $user->hasPermission('servico.voluntarios.disponibilidade.manage');
+                                                $canViewVoluntariosEscalas = $user->hasPermission('servico.voluntarios.escalas.view') || 
+                                                                              $user->hasPermission('servico.voluntarios.escalas.manage');
+                                                $canViewVoluntariosHistorico = $user->hasPermission('servico.voluntarios.historico.view') || 
+                                                                               $user->hasPermission('servico.voluntarios.historico.manage');
+                                                $canViewVoluntariosRelatorios = $user->hasPermission('servico.voluntarios.relatorios.view') || 
+                                                                                $user->hasPermission('servico.voluntarios.relatorios.manage');
+                                            } catch (\Exception $e) {
+                                                // Em caso de erro, não exibir menu
+                                                $canViewMembers = false;
+                                                $canCreateMembers = false;
+                                                $canManageRoles = false;
+                                                $canViewPgis = false;
+                                                $canViewEstudos = false;
+                                                $canViewEscolas = false;
+                                                $canViewTurmas = false;
+                                                $canViewReceitas = false;
+                                                $canViewDespesas = false;
+                                                $canViewCategories = false;
+                                                $canViewAccounts = false;
+                                                $canViewContacts = false;
+                                                $canViewCostCenters = false;
+                                                $canViewReports = false;
+                                                $canViewEvents = false;
+                                                $canViewEventCategories = false;
+                                                $canViewDepartments = false;
+                                                $canViewVoluntariosCadastro = false;
+                                                $canViewVoluntariosAreas = false;
+                                                $canViewVoluntariosDisponibilidade = false;
+                                                $canViewVoluntariosEscalas = false;
+                                                $canViewVoluntariosHistorico = false;
+                                                $canViewVoluntariosRelatorios = false;
+                                            }
+                                        }
+                                    }
+                                @endphp
+
+                                {{-- MENU MEMBROS - Verificar permissão de visualização ou cargos --}}
+                                @if($canViewMembers || $canManageRoles)
                                 <li class="nav-parent {{ request()->routeIs('members.*') || request()->routeIs('member-roles.*') ? 'nav-expanded nav-active' : '' }}">
                                     <a class="nav-link" href="#">
                                         <i class="bx bx-user" aria-hidden="true"></i>
                                         <span>Membros</span>
                                     </a>
                                     <ul class="nav nav-children">
+                                        @if($canViewMembers)
                                         <li class="{{ request()->routeIs('members.index') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('members.index') }}">
                                                 Ver Todos
                                             </a>
                                         </li>
-                                        <li class="{{ request()->routeIs('members.create') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('members.create') }}">
-                                                Novo Membro
-                                            </a>
-                                        </li>
+                                        @endif
+                                        @if($canManageRoles)
                                         <li class="{{ request()->routeIs('member-roles.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('member-roles.index') }}">
                                                 Cargos
                                             </a>
                                         </li>
+                                        @endif
+                                        @if($canManagePermissions)
+                                        <li class="{{ request()->routeIs('permissions.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('permissions.index') }}">
+                                                Permissões
+                                            </a>
+                                        </li>
+                                        @endif
                                     </ul>
                                 </li>
-                                <li class="nav-parent">
+                                @endif
+
+                                {{-- MENU PGIs - Verificar permissão de visualização, se faz parte de PGI ou se é líder --}}
+                                @if($canViewPgis || $hasPgi || $isLeaderOfPgi)
+                                <li class="nav-parent {{ request()->routeIs('pgis.*') ? 'nav-expanded nav-active' : '' }}">
                                     <a class="nav-link" href="#">
                                         <i class="bx bx-group" aria-hidden="true"></i>
                                         <span>PGIs</span>
                                     </a>
                                     <ul class="nav nav-children">
-                                        <li>
+                                        <li class="{{ request()->routeIs('pgis.index') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('pgis.index') }}">
                                                 Listar PGIs
                                             </a>
                                         </li>
-                                        <li>
-                                            <a class="nav-link" href="{{ route('pgis.create') }}">
-                                                Novo PGI
-                                            </a>
-                                        </li>
                                     </ul>
                                 </li>
+                                @endif
+
+                                {{-- MENU ENSINO - Estudos disponível para todos, outros verificam permissão --}}
                                 <li class="nav-parent {{ request()->routeIs('ensino.*') ? 'nav-expanded nav-active' : '' }}">
                                     <a class="nav-link" href="#">
                                         <i class="bx bx-book-reader" aria-hidden="true"></i>
                                         <span>Ensino</span>
                                     </a>
                                     <ul class="nav nav-children">
+                                        {{-- Estudos: disponível para todos --}}
                                         <li class="{{ request()->routeIs('ensino.estudos.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('ensino.estudos.index') }}">
                                                 <i class="bx bx-file"></i>Estudos
                                             </a>
                                         </li>
+                                        @if($isAdmin || $canViewEscolas)
                                         <li class="{{ request()->routeIs('ensino.escolas.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('ensino.escolas.index') }}">
                                                 <i class="bx bx-list-ul"></i>Escolas
                                             </a>
                                         </li>
+                                        @endif
+                                        @if($isAdmin || $canViewTurmas || $isStudentOfAnyClass || $isTeacherOfAnyClass)
                                         <li class="{{ request()->routeIs('ensino.turmas.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('ensino.turmas.index') }}">
                                                 <i class="fa-solid fa-graduation-cap"></i>Turmas
                                             </a>
                                         </li>
+                                        @endif
                                     </ul>
                                 </li>
+
+                                {{-- MENU FINANCEIRO - Verificar permissões --}}
+                                @if($isAdmin || $canViewReceitas || $canViewDespesas || $canViewCategories || $canViewAccounts || $canViewContacts || $canViewCostCenters || $canViewReports)
                                 <li class="nav-parent {{ request()->routeIs('financial.*') ? 'nav-expanded nav-active' : '' }}">
                                     <a class="nav-link" href="#">
                                         <i class="bx bx-dollar" aria-hidden="true"></i>
                                         <span>Financeiro</span>
                                     </a>
                                     <ul class="nav nav-children">
+                                        @if($isAdmin || $canViewReceitas || $canViewDespesas)
                                         <li class="{{ request()->routeIs('financial.summary') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('financial.summary') }}">
                                                 <i class="bx bx-right-arrow-alt"></i>Resumo
                                             </a>
                                         </li>
+                                        @endif
+                                        @if($isAdmin || $canViewReceitas || $canViewDespesas)
                                         <li class="{{ request()->routeIs('financial.transactions.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('financial.transactions.index') }}">
                                                 <i class="bx bx-refresh"></i>Transações
                                             </a>
                                         </li>
+                                        @endif
+                                        @if($isAdmin || $canViewReports)
                                         <li class="{{ request()->routeIs('financial.reports.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('financial.reports.index') }}">
                                                 <i class="bx bx-line-chart"></i>Relatórios
                                             </a>
                                         </li>
+                                        @endif
+                                        @if($isAdmin || $canViewCategories)
                                         <li class="{{ request()->routeIs('financial.categories.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('financial.categories.index') }}">
                                                 <i class="bx bx-purchase-tag"></i>Categorias
                                             </a>
                                         </li>
+                                        @endif
+                                        @if($isAdmin || $canViewAccounts)
                                         <li class="{{ request()->routeIs('financial.accounts.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('financial.accounts.index') }}">
                                                 <i class="bx bx-file"></i>Contas
                                             </a>
                                         </li>
+                                        @endif
+                                        @if($isAdmin || $canViewContacts)
                                         <li class="{{ request()->routeIs('financial.contacts.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('financial.contacts.index') }}">
                                                 <i class="bx bx-user"></i>Contatos
                                             </a>
                                         </li>
+                                        @endif
+                                        @if($isAdmin || $canViewCostCenters)
                                         <li class="{{ request()->routeIs('financial.cost-centers.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('financial.cost-centers.index') }}">
                                                 <i class="bx bx-folder"></i>Centros de custos
                                             </a>
                                         </li>
+                                        @endif
                                     </ul>
                                 </li>
+                                @endif
+
+                                {{-- MENU AGENDA - Disponível para todos --}}
                                 <li class="nav-parent {{ request()->routeIs('agenda.*') ? 'nav-expanded nav-active' : '' }}">
                                     <a class="nav-link" href="#">
                                         <i class="bx bx-calendar" aria-hidden="true"></i>
@@ -251,66 +492,76 @@
                                         </li>
                                     </ul>
                                 </li>
+
+                                {{-- MENU SERVIÇO - Verificar permissões --}}
+                                @if($isAdmin || $canViewDepartments || $canViewVoluntariosCadastro || $canViewVoluntariosAreas || $canViewVoluntariosDisponibilidade || $canViewVoluntariosEscalas || $canViewVoluntariosHistorico || $canViewVoluntariosRelatorios)
                                 <li class="nav-parent {{ request()->routeIs('servico.*') || request()->routeIs('departments.*') || request()->routeIs('voluntarios.*') || request()->routeIs('voluntarios.cadastro.*') || request()->routeIs('voluntarios.areas.*') || request()->routeIs('voluntarios.disponibilidade.*') || request()->routeIs('voluntarios.escalas.*') || request()->routeIs('voluntarios.historico.*') || request()->routeIs('voluntarios.relatorios.*') ? 'nav-expanded nav-active' : '' }}">
                                     <a class="nav-link" href="#">
                                         <i class="bx bx-cog" aria-hidden="true"></i>
                                         <span>Serviço</span>
                                     </a>
                                     <ul class="nav nav-children">
+                                        @if($isAdmin || $canViewDepartments)
                                         <li class="{{ request()->routeIs('departments.*') ? 'nav-active' : '' }}">
                                             <a class="nav-link" href="{{ route('departments.index') }}">
                                                 <i class="bx bx-building"></i>Departamentos
                                             </a>
                                         </li>
+                                        @endif
+                                        @if($isAdmin || $canViewVoluntariosCadastro || $canViewVoluntariosAreas || $canViewVoluntariosDisponibilidade || $canViewVoluntariosEscalas || $canViewVoluntariosHistorico || $canViewVoluntariosRelatorios)
                                         <li class="nav-parent {{ request()->routeIs('voluntarios.*') ? 'nav-expanded nav-active' : '' }}">
                                             <a class="nav-link" href="#">
                                                 <i class="bx bx-user"></i>Voluntários
                                             </a>
                                             <ul class="nav nav-children">
+                                                @if($isAdmin || $canViewVoluntariosCadastro)
                                                 <li class="{{ request()->routeIs('voluntarios.cadastro.*') ? 'nav-active' : '' }}">
                                                     <a class="nav-link" href="{{ route('voluntarios.cadastro.index') }}">
                                                         <i class="bx bx-user-plus"></i>Cadastro de Voluntários
                                                     </a>
                                                 </li>
+                                                @endif
+                                                @if($isAdmin || $canViewVoluntariosAreas)
                                                 <li class="{{ request()->routeIs('voluntarios.areas.*') ? 'nav-active' : '' }}">
                                                     <a class="nav-link" href="{{ route('voluntarios.areas.index') }}">
                                                         <i class="bx bx-category"></i>Áreas de Serviço
                                                     </a>
                                                 </li>
+                                                @endif
+                                                @if($isAdmin || $canViewVoluntariosDisponibilidade)
                                                 <li class="{{ request()->routeIs('voluntarios.disponibilidade.*') ? 'nav-active' : '' }}">
                                                     <a class="nav-link" href="{{ route('voluntarios.disponibilidade.index') }}">
                                                         <i class="bx bx-time"></i>Disponibilidade
                                                     </a>
                                                 </li>
+                                                @endif
+                                                @if($isAdmin || $canViewVoluntariosEscalas)
                                                 <li class="{{ request()->routeIs('voluntarios.escalas.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="#">
+                                                    <a class="nav-link" href="{{ route('voluntarios.escalas.index') }}">
                                                         <i class="bx bx-calendar-check"></i>Escalas
                                                     </a>
                                                 </li>
+                                                @endif
+                                                @if($isAdmin || $canViewVoluntariosHistorico)
                                                 <li class="{{ request()->routeIs('voluntarios.historico.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="#">
+                                                    <a class="nav-link" href="{{ route('voluntarios.historico.index') }}">
                                                         <i class="bx bx-history"></i>Histórico de Serviço
                                                     </a>
                                                 </li>
+                                                @endif
+                                                @if($isAdmin || $canViewVoluntariosRelatorios)
                                                 <li class="{{ request()->routeIs('voluntarios.relatorios.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="#">
+                                                    <a class="nav-link" href="{{ route('voluntarios.relatorios.dashboard') }}">
                                                         <i class="bx bx-bar-chart-alt-2"></i>Relatórios
                                                     </a>
                                                 </li>
+                                                @endif
                                             </ul>
                                         </li>
-                                        <li class="{{ request()->routeIs('servico.escalas.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('servico.escalas.index') }}">
-                                                <i class="bx bx-calendar-check"></i>Escalas
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('disponibilidade.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="#">
-                                                <i class="bx bx-time"></i>Disponibilidade
-                                            </a>
-                                        </li>
+                                        @endif
                                     </ul>
                                 </li>
+                                @endif
                             </ul>
                         </nav>
 
@@ -376,6 +627,44 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         <strong>Erro!</strong> {{ session('error') }}
                     </div>
+                @endif
+
+                @if(session('access_denied'))
+                    <!-- Modal de Acesso Negado -->
+                    <div class="modal fade" id="accessDeniedModal" tabindex="-1" aria-labelledby="accessDeniedModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title" id="accessDeniedModalLabel">
+                                        <i class="bx bx-error-circle me-2"></i>Acesso Negado
+                                    </h5>
+                                </div>
+                                <div class="modal-body">
+                                    <p class="mb-0">{{ session('access_denied') }}</p>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="window.history.back()">
+                                        <i class="bx bx-check me-1"></i>OK
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            var modal = new bootstrap.Modal(document.getElementById('accessDeniedModal'));
+                            modal.show();
+                            
+                            // Quando o modal for fechado, voltar para a página anterior
+                            document.getElementById('accessDeniedModal').addEventListener('hidden.bs.modal', function () {
+                                if (window.history.length > 1) {
+                                    window.history.back();
+                                } else {
+                                    window.location.href = '{{ route("dashboard") }}';
+                                }
+                            });
+                        });
+                    </script>
                 @endif
 
                 @if($errors->any())

@@ -13,6 +13,7 @@ use App\Models\ClassFile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
 
 class TurmasController extends Controller
 {
@@ -21,7 +22,36 @@ class TurmasController extends Controller
      */
     public function index(Request $request)
     {
+        $user = Auth::user();
+        $isAdmin = $user?->is_admin ?? false;
+        $member = $user?->member;
+
         $query = Turma::with('school');
+
+        // Se não for admin, filtrar apenas turmas onde o membro é aluno ou professor
+        if (!$isAdmin && $member) {
+            // IDs das turmas onde o membro é aluno
+            $studentTurmaIds = DB::table('class_students')
+                ->where('member_id', $member->id)
+                ->pluck('class_id');
+            
+            // IDs das turmas onde o membro é professor (através de disciplinas)
+            $teacherTurmaIds = DB::table('discipline_teachers')
+                ->join('disciplines', 'discipline_teachers.discipline_id', '=', 'disciplines.id')
+                ->where('discipline_teachers.member_id', $member->id)
+                ->pluck('disciplines.class_id')
+                ->unique();
+            
+            // Combinar os IDs e filtrar
+            $turmaIds = $studentTurmaIds->merge($teacherTurmaIds)->unique()->toArray();
+            
+            if (count($turmaIds) > 0) {
+                $query->whereIn('id', $turmaIds);
+            } else {
+                // Se não for aluno nem professor de nenhuma turma, retornar vazio
+                $query->whereRaw('1 = 0');
+            }
+        }
 
         // Busca
         if ($request->filled('search')) {
@@ -106,6 +136,16 @@ class TurmasController extends Controller
             // Lista de escolas para o formulário
             $schools = School::orderBy('name')->get();
 
+            // Verificar se o usuário logado é aluno ou professor desta turma
+            $user = Auth::user();
+            $isStudent = false;
+            $isTeacher = false;
+            
+            if ($user && $user->member) {
+                $isStudent = $turma->isStudent($user->member);
+                $isTeacher = $turma->isTeacher($user->member);
+            }
+
             return view('ensino.turmas.show', compact(
                 'turma',
                 'studentsCount',
@@ -113,7 +153,9 @@ class TurmasController extends Controller
                 'lessonsCount',
                 'filesCount',
                 'members',
-                'schools'
+                'schools',
+                'isStudent',
+                'isTeacher'
             ));
         } catch (\Exception $e) {
             return redirect()->route('ensino.turmas.index')

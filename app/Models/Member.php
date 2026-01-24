@@ -82,11 +82,36 @@ class Member extends Model
     }
 
     /**
+     * Relacionamento com Disciplinas (como professor)
+     */
+    public function disciplines()
+    {
+        return $this->belongsToMany(\App\Models\Discipline::class, 'discipline_teachers', 'member_id', 'discipline_id')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Verifica se o membro é professor de alguma turma
+     */
+    public function isTeacherOfAnyClass(): bool
+    {
+        return $this->disciplines()->exists();
+    }
+
+    /**
      * Relacionamento com Transações Financeiras
      */
     public function financialTransactions()
     {
         return $this->hasMany(\App\Models\FinancialTransaction::class);
+    }
+
+    /**
+     * Relacionamento com o usuário do sistema (login)
+     */
+    public function user()
+    {
+        return $this->hasOne(User::class);
     }
 
 

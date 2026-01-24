@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\MemberRoleController;
@@ -8,6 +10,8 @@ use App\Http\Controllers\VolunteerController;
 use App\Http\Controllers\ServiceAreaController;
 use App\Http\Controllers\VolunteerAvailabilityController;
 use App\Http\Controllers\ServiceScheduleController;
+use App\Http\Controllers\ServiceHistoryController;
+use App\Http\Controllers\VolunteerReportController;
 use App\Http\Controllers\PgiController;
 use App\Http\Controllers\MeetingController;
 use App\Http\Controllers\Financial\CategoryController;
@@ -25,21 +29,28 @@ use App\Http\Controllers\Agenda\CalendarioController;
 use App\Http\Controllers\Agenda\EventController;
 use App\Http\Controllers\Agenda\EventCategoryController;
 
+// Rotas de autenticação
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::middleware('auth')->group(function () {
+
 Route::get('/', function () {
     return view('dashboard');
 })->name('dashboard');
 
-// Rotas do módulo de Membros
-Route::resource('members', MemberController::class);
+// Rotas do módulo de Membros (somente admin)
+Route::resource('members', MemberController::class)->middleware('module.access:members');
 
-// Rotas do módulo de Departamentos
-Route::resource('departments', DepartmentController::class);
+// Rotas do módulo de Departamentos (somente admin)
+Route::resource('departments', DepartmentController::class)->middleware('module.access:servico');
 
-// Rotas do módulo de Cargos de Membros
-Route::resource('member-roles', MemberRoleController::class);
+// Rotas do módulo de Cargos de Membros (somente admin)
+Route::resource('member-roles', MemberRoleController::class)->middleware('module.access:members');
 
-// Rotas do módulo de Voluntários
-Route::prefix('voluntarios')->name('voluntarios.')->group(function () {
+// Rotas do módulo de Serviço - Voluntários (somente admin)
+Route::prefix('servico/voluntarios')->name('voluntarios.')->middleware('module.access:servico')->group(function () {
     Route::resource('cadastro', VolunteerController::class)->parameters([
         'cadastro' => 'volunteer'
     ])->names([
@@ -73,10 +84,13 @@ Route::prefix('voluntarios')->name('voluntarios.')->group(function () {
         'update' => 'disponibilidade.update',
         'destroy' => 'disponibilidade.destroy',
     ]);
-});
-
-// Rotas do módulo de Serviço - Escalas
-Route::prefix('servico')->name('servico.')->group(function () {
+    
+    // Histórico de Serviço
+    Route::get('historico', [ServiceHistoryController::class, 'index'])->name('historico.index');
+    Route::get('historico/{history}', [ServiceHistoryController::class, 'show'])->name('historico.show');
+    Route::get('historico/voluntario/{volunteer}', [ServiceHistoryController::class, 'showByVolunteer'])->name('historico.volunteer');
+    
+    // Escalas
     Route::get('escalas', [ServiceScheduleController::class, 'index'])->name('escalas.index');
     Route::get('escalas/create', [ServiceScheduleController::class, 'create'])->name('escalas.create');
     Route::post('escalas/step1', [ServiceScheduleController::class, 'storeStep1'])->name('escalas.store.step1');
@@ -93,22 +107,40 @@ Route::prefix('servico')->name('servico.')->group(function () {
     Route::put('escalas/{escala}/status', [ServiceScheduleController::class, 'updateStatus'])->name('escalas.update-status');
     Route::get('escalas/api/suggested-volunteers', [ServiceScheduleController::class, 'getSuggestedVolunteers'])->name('escalas.api.suggested-volunteers');
     Route::put('escalas/volunteers/{volunteer}/confirm', [ServiceScheduleController::class, 'confirmVolunteer'])->name('escalas.volunteers.confirm');
+    Route::put('escalas/volunteers/{volunteer}/substitute', [ServiceScheduleController::class, 'substituteVolunteer'])->name('escalas.volunteers.substitute');
     Route::delete('escalas/volunteers/{volunteer}', [ServiceScheduleController::class, 'removeVolunteer'])->name('escalas.volunteers.remove');
     Route::get('escalas/{escala}/pdf', [ServiceScheduleController::class, 'generatePdf'])->name('escalas.pdf');
+    
+    // Relatórios
+    Route::prefix('relatorios')->name('relatorios.')->group(function () {
+        Route::get('/', [VolunteerReportController::class, 'dashboard'])->name('dashboard');
+        Route::get('ativos-por-area', [VolunteerReportController::class, 'activeByArea'])->name('active-by-area');
+        Route::get('mais-servem', [VolunteerReportController::class, 'topVolunteers'])->name('top-volunteers');
+        Route::get('inativos', [VolunteerReportController::class, 'inactiveVolunteers'])->name('inactive');
+        Route::get('deficit', [VolunteerReportController::class, 'deficitByArea'])->name('deficit');
+        Route::get('por-escala', [VolunteerReportController::class, 'bySchedule'])->name('by-schedule');
+    });
 });
 
-// Rotas de importação de membros
-Route::prefix('members')->name('members.')->group(function () {
+// Gestão de permissões (apenas para administradores - checado na view/controller)
+Route::get('/permissoes', [PermissionController::class, 'index'])->name('permissions.index');
+Route::put('/permissoes/{member}', [PermissionController::class, 'update'])->name('permissions.update');
+Route::put('/permissoes/funcoes/{role}', [PermissionController::class, 'updateRole'])->name('permissions.update-role');
+
+}); // fim do grupo auth
+
+        // Rotas de importação de membros (somente admin)
+        Route::prefix('members')->name('members.')->middleware('module.access:members')->group(function () {
     Route::get('import/tutorial', [MemberController::class, 'importTutorial'])->name('import.tutorial');
     Route::get('import/template', [MemberController::class, 'downloadTemplate'])->name('import.template');
     Route::post('import', [MemberController::class, 'import'])->name('import');
 });
 
-// Rotas do módulo de PGIs
-Route::resource('pgis', PgiController::class);
+// Rotas do módulo de PGIs (admin total, outros só ver se fizer parte de PGI)
+Route::resource('pgis', PgiController::class)->middleware('module.access:pgis');
 
-// Rotas do módulo de Reuniões (dentro de um PGI)
-Route::prefix('pgis/{pgi}')->name('pgis.')->group(function () {
+        // Rotas do módulo de Reuniões (dentro de um PGI) - admin total, outros só ver se fizer parte
+        Route::prefix('pgis/{pgi}')->name('pgis.')->middleware('module.access:pgis')->group(function () {
     Route::get('meetings/create', [MeetingController::class, 'create'])->name('meetings.create');
     Route::post('meetings', [MeetingController::class, 'store'])->name('meetings.store');
     Route::get('meetings/{meeting}/edit', [MeetingController::class, 'edit'])->name('meetings.edit');
@@ -124,8 +156,8 @@ Route::prefix('pgis/{pgi}')->name('pgis.')->group(function () {
     Route::post('banner', [PgiController::class, 'updateBanner'])->name('banner.update');
 });
 
-// Rotas do módulo Financeiro
-Route::prefix('financial')->name('financial.')->group(function () {
+        // Rotas do módulo Financeiro (somente admin)
+        Route::prefix('financial')->name('financial.')->middleware('module.access:financial')->group(function () {
     // Resumo/Dashboard
     Route::get('summary', [SummaryController::class, 'index'])->name('summary');
     
@@ -202,13 +234,14 @@ Route::prefix('financial')->name('financial.')->group(function () {
     ]);
 });
 
-// Rotas do módulo de Ensino
-Route::prefix('ensino')->name('ensino.')->group(function () {
+        // Rotas do módulo de Ensino (admin total, outros só ver estudos)
+        Route::prefix('ensino')->name('ensino.')->middleware('module.access:ensino')->group(function () {
     // Estudos
     Route::resource('estudos', EstudosController::class)->names([
         'index' => 'estudos.index',
         'create' => 'estudos.create',
         'store' => 'estudos.store',
+        'show' => 'estudos.show',
         'edit' => 'estudos.edit',
         'update' => 'estudos.update',
         'destroy' => 'estudos.destroy',
@@ -263,8 +296,8 @@ Route::prefix('ensino')->name('ensino.')->group(function () {
     
 });
 
-// Rotas do módulo de Agenda
-Route::prefix('agenda')->name('agenda.')->group(function () {
+        // Rotas do módulo de Agenda (admin total, outros só ver)
+        Route::prefix('agenda')->name('agenda.')->middleware('module.access:agenda')->group(function () {
     // Calendário
     Route::get('calendario', [CalendarioController::class, 'index'])->name('calendario.index');
     

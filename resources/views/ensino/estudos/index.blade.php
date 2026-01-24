@@ -10,14 +10,30 @@
 @endsection
 
 @section('content')
+@php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $canCreateEstudos = $isAdmin || 
+                       ($user && ($user->hasPermission('ensino.estudos.create') || 
+                                  $user->hasPermission('ensino.estudos.manage')));
+    $canEditEstudos = $isAdmin || 
+                     ($user && ($user->hasPermission('ensino.estudos.edit') || 
+                                $user->hasPermission('ensino.estudos.manage')));
+    $canDeleteEstudos = $isAdmin || 
+                       ($user && ($user->hasPermission('ensino.estudos.delete') || 
+                                  $user->hasPermission('ensino.estudos.manage')));
+@endphp
+
 <div class="row">
     <div class="col-12">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0" style="color: #2c3e50; font-weight: 600;">Estudos</h5>
+                @if($canCreateEstudos)
                 <a href="{{ route('ensino.estudos.create') }}" class="btn btn-success btn-sm">
                     <i class="bx bx-plus me-1"></i>Adicionar estudo
                 </a>
+                @endif
             </div>
             <div class="card-body">
                 <!-- Controles superiores -->
@@ -95,20 +111,31 @@
                         <tbody>
                             @forelse($studies as $study)
                                 <tr>
-                                    <td><strong>{{ $study->name }}</strong></td>
+                                    <td>
+                                        <a href="{{ route('ensino.estudos.show', $study) }}" class="text-decoration-none fw-bold" style="color: #2c3e50;">
+                                            {{ $study->name }}
+                                        </a>
+                                    </td>
                                     <td>{{ $study->created_at->format('d/m/Y') }}</td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <a href="{{ route('ensino.estudos.edit', $study) }}" class="btn btn-primary btn-sm">
-                                                <i class="bx bx-edit"></i> Editar
+                                            <a href="{{ route('ensino.estudos.show', $study) }}" class="btn btn-info btn-sm" title="Visualizar">
+                                                <i class="bx bx-show"></i>
                                             </a>
+                                            @if($canEditEstudos)
+                                            <a href="{{ route('ensino.estudos.edit', $study) }}" class="btn btn-primary btn-sm" title="Editar">
+                                                <i class="bx bx-edit"></i>
+                                            </a>
+                                            @endif
+                                            @if($canDeleteEstudos)
                                             <form action="{{ route('ensino.estudos.destroy', $study) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir este estudo?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-danger btn-sm">
-                                                    <i class="bx bx-trash"></i> Excluir
+                                                <button type="submit" class="btn btn-danger btn-sm" title="Excluir">
+                                                    <i class="bx bx-trash"></i>
                                                 </button>
                                             </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

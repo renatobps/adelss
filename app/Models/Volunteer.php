@@ -74,4 +74,12 @@ class Volunteer extends Model
     {
         return $query->where('member_id', $memberId);
     }
+
+    /**
+     * Relacionamento com Histórico de Serviço
+     */
+    public function serviceHistories()
+    {
+        return $this->hasMany(ServiceHistory::class, 'volunteer_id');
+    }
 }

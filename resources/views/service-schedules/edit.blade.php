@@ -5,7 +5,7 @@
 @section('page-title', 'Editar Escala')
 
 @section('breadcrumbs')
-    <li><a href="{{ route('servico.escalas.index') }}">Escalas</a></li>
+    <li><a href="{{ route('voluntarios.escalas.index') }}">Escalas</a></li>
     <li><span>Editar</span></li>
 @endsection
 
@@ -30,7 +30,7 @@
                 </h2>
             </header>
             <div class="card-body">
-                <form action="{{ route('servico.escalas.update', $escala) }}" method="POST">
+                <form action="{{ route('voluntarios.escalas.update', $escala) }}" method="POST">
                     @csrf
                     @method('PUT')
                     
@@ -209,7 +209,7 @@
 
                     <div class="mt-4">
                         <div class="d-flex justify-content-end gap-2">
-                            <a href="{{ route('servico.escalas.show', $escala) }}" class="btn btn-default">Cancelar</a>
+                            <a href="{{ route('voluntarios.escalas.show', $escala) }}" class="btn btn-default">Cancelar</a>
                             <button type="submit" class="btn btn-primary">
                                 <i class="bx bx-check me-2"></i>Salvar Alterações
                             </button>
@@ -330,7 +330,7 @@
                 
                 if (serviceAreaId) {
                     // Fazer requisição AJAX para carregar voluntários
-                    fetch(`/servico/escalas/api/suggested-volunteers?service_area_id=${serviceAreaId}&date={{ $escala->date->format('Y-m-d') }}&start_time={{ \Carbon\Carbon::parse($escala->start_time)->format('H:i') }}`)
+                    fetch(`/voluntarios/escalas/api/suggested-volunteers?service_area_id=${serviceAreaId}&date={{ $escala->date->format('Y-m-d') }}&start_time={{ \Carbon\Carbon::parse($escala->start_time)->format('H:i') }}`)
                         .then(response => response.json())
                         .then(data => {
                             const selectedValues = Array.from(volunteerSelect.selectedOptions).map(opt => opt.value);

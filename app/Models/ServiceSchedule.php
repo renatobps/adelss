@@ -57,4 +57,20 @@ class ServiceSchedule extends Model
     {
         return $query->where('status', 'rascunho');
     }
+
+    /**
+     * Relacionamento com Histórico de Serviço
+     */
+    public function serviceHistories()
+    {
+        return $this->hasMany(ServiceHistory::class, 'schedule_id');
+    }
+
+    /**
+     * Scope para escalas concluídas
+     */
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', 'concluido');
+    }
 }

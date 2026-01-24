@@ -10,6 +10,17 @@
 @endsection
 
 @section('content')
+@php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $canCreateReceitas = $isAdmin || $user->hasPermission('financial.receitas.create') || $user->hasPermission('financial.receitas.manage');
+    $canCreateDespesas = $isAdmin || $user->hasPermission('financial.despesas.create') || $user->hasPermission('financial.despesas.manage');
+    $canEditReceitas = $isAdmin || $user->hasPermission('financial.receitas.edit') || $user->hasPermission('financial.receitas.manage');
+    $canEditDespesas = $isAdmin || $user->hasPermission('financial.despesas.edit') || $user->hasPermission('financial.despesas.manage');
+    $canDeleteReceitas = $isAdmin || $user->hasPermission('financial.receitas.delete') || $user->hasPermission('financial.receitas.manage');
+    $canDeleteDespesas = $isAdmin || $user->hasPermission('financial.despesas.delete') || $user->hasPermission('financial.despesas.manage');
+@endphp
+
 <!-- Header -->
 <div class="alert alert-info mb-4" style="background-color: #e3f2fd; color: #1976d2; border: none;">
     <i class="bx bx-info-circle me-2"></i>
@@ -166,12 +177,16 @@
                 <button type="button" class="btn btn-primary btn-sm me-1" data-bs-toggle="modal" data-bs-target="#importModal">
                     <i class="bx bx-upload me-1"></i>Importar
                 </button>
+                @if($canCreateReceitas)
                 <button type="button" class="btn btn-success btn-sm me-1" data-bs-toggle="modal" data-bs-target="#createReceitaModal">
                     <i class="bx bx-plus me-1"></i>+ Adicionar receita
                 </button>
+                @endif
+                @if($canCreateDespesas)
                 <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#createDespesaModal">
                     <i class="bx bx-plus me-1"></i>+ Adicionar despesa
                 </button>
+                @endif
             </div>
         </div>
     </div>
@@ -265,21 +280,30 @@
                                 <td>{{ $transaction->account ? $transaction->account->name : '-' }}</td>
                                 <td class="text-end">
                                     <div class="btn-group btn-group-sm" role="group">
+                                        @php
+                                            $canEdit = ($transaction->type === 'receita' && $canEditReceitas) || ($transaction->type === 'despesa' && $canEditDespesas);
+                                            $canDelete = ($transaction->type === 'receita' && $canDeleteReceitas) || ($transaction->type === 'despesa' && $canDeleteDespesas);
+                                        @endphp
+                                        @if($canEdit)
                                         <button type="button" class="btn btn-sm btn-outline-primary edit-transaction" 
                                                 data-transaction-id="{{ $transaction->id }}" 
                                                 title="Editar">
                                             <i class="bx bx-edit"></i>
                                         </button>
+                                        @endif
                                         <button type="button" class="btn btn-sm btn-outline-info print-receipt" 
                                                 data-transaction-id="{{ $transaction->id }}" 
                                                 title="Imprimir">
                                             <i class="bx bx-printer"></i>
                                         </button>
+                                        @if($canCreateReceitas || $canCreateDespesas)
                                         <button type="button" class="btn btn-sm btn-outline-secondary duplicate-transaction" 
                                                 data-transaction-id="{{ $transaction->id }}" 
                                                 title="Duplicar">
                                             <i class="bx bx-copy"></i>
                                         </button>
+                                        @endif
+                                        @if($canDelete)
                                         <form action="{{ route('financial.transactions.destroy', $transaction) }}" 
                                               method="POST" 
                                               class="d-inline" 
@@ -290,6 +314,7 @@
                                                 <i class="bx bx-trash"></i>
                                             </button>
                                         </form>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -362,6 +387,7 @@
 </div>
 
 <!-- Modal: Criar Receita -->
+@if($canCreateReceitas)
 <div class="modal fade" id="createReceitaModal" tabindex="-1" aria-labelledby="createReceitaModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -523,6 +549,7 @@
         </div>
     </div>
 </div>
+@endif
 
 <!-- Modal: Editar Transação -->
 <div class="modal fade" id="editTransactionModal" tabindex="-1" aria-labelledby="editTransactionModalLabel" aria-hidden="true">
@@ -688,6 +715,7 @@
 </div>
 
 <!-- Modal: Criar Despesa -->
+@if($canCreateDespesas)
 <div class="modal fade" id="createDespesaModal" tabindex="-1" aria-labelledby="createDespesaModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -837,6 +865,7 @@
         </div>
     </div>
 </div>
+@endif
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

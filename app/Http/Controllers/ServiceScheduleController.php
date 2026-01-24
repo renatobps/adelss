@@ -102,7 +102,7 @@ class ServiceScheduleController extends Controller
         $wizardData['step1'] = $validated;
         session(['schedule_wizard' => $wizardData]);
 
-        return redirect()->route('servico.escalas.create', ['step' => 2]);
+        return redirect()->route('voluntarios.escalas.create', ['step' => 2]);
     }
 
     /**
@@ -127,7 +127,7 @@ class ServiceScheduleController extends Controller
         $wizardData['step2'] = $validated;
         session(['schedule_wizard' => $wizardData]);
 
-        return redirect()->route('servico.escalas.create', ['step' => 3]);
+        return redirect()->route('voluntarios.escalas.create', ['step' => 3]);
     }
 
     /**
@@ -138,7 +138,7 @@ class ServiceScheduleController extends Controller
         $wizardData = session('schedule_wizard', []);
         
         if (!isset($wizardData['step2'])) {
-            return redirect()->route('servico.escalas.create', ['step' => 2])
+            return redirect()->route('voluntarios.escalas.create', ['step' => 2])
                 ->with('error', 'Complete as etapas anteriores primeiro.');
         }
 
@@ -157,7 +157,7 @@ class ServiceScheduleController extends Controller
         $wizardData['step3'] = $validated;
         session(['schedule_wizard' => $wizardData]);
 
-        return redirect()->route('servico.escalas.create', ['step' => 4]);
+        return redirect()->route('voluntarios.escalas.create', ['step' => 4]);
     }
 
     /**
@@ -168,7 +168,7 @@ class ServiceScheduleController extends Controller
         $wizardData = session('schedule_wizard', []);
         
         if (!isset($wizardData['step1']) || !isset($wizardData['step2']) || !isset($wizardData['step3'])) {
-            return redirect()->route('servico.escalas.create')
+            return redirect()->route('voluntarios.escalas.create')
                 ->with('error', 'Complete todas as etapas primeiro.');
         }
 
@@ -219,7 +219,7 @@ class ServiceScheduleController extends Controller
             // Limpar sessão
             session()->forget('schedule_wizard');
 
-            return redirect()->route('servico.escalas.show', $schedule)
+            return redirect()->route('voluntarios.escalas.show', $schedule)
                 ->with('success', 'Escala criada com sucesso!');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -249,7 +249,7 @@ class ServiceScheduleController extends Controller
     public function edit(ServiceSchedule $escala)
     {
         if ($escala->status === 'publicada') {
-            return redirect()->route('servico.escalas.show', $escala)
+            return redirect()->route('voluntarios.escalas.show', $escala)
                 ->with('error', 'Não é possível editar uma escala publicada.');
         }
 
@@ -282,7 +282,7 @@ class ServiceScheduleController extends Controller
     public function update(Request $request, ServiceSchedule $escala)
     {
         if ($escala->status === 'publicada') {
-            return redirect()->route('servico.escalas.show', $escala)
+            return redirect()->route('voluntarios.escalas.show', $escala)
                 ->with('error', 'Não é possível editar uma escala publicada.');
         }
 
@@ -381,7 +381,7 @@ class ServiceScheduleController extends Controller
 
             DB::commit();
 
-            return redirect()->route('servico.escalas.show', $escala)
+            return redirect()->route('voluntarios.escalas.show', $escala)
                 ->with('success', 'Escala atualizada com sucesso!');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -397,13 +397,13 @@ class ServiceScheduleController extends Controller
     public function destroy(ServiceSchedule $escala)
     {
         if ($escala->status === 'publicada') {
-            return redirect()->route('servico.escalas.index')
+            return redirect()->route('voluntarios.escalas.index')
                 ->with('error', 'Não é possível excluir uma escala publicada. Cancele-a primeiro.');
         }
 
         $escala->delete();
 
-        return redirect()->route('servico.escalas.index')
+        return redirect()->route('voluntarios.escalas.index')
             ->with('success', 'Escala excluída com sucesso!');
     }
 
@@ -434,7 +434,7 @@ class ServiceScheduleController extends Controller
 
             DB::commit();
 
-            return redirect()->route('servico.escalas.edit', $newSchedule)
+            return redirect()->route('voluntarios.escalas.edit', $newSchedule)
                 ->with('success', 'Escala duplicada com sucesso!');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -450,7 +450,7 @@ class ServiceScheduleController extends Controller
     {
         $escala->update(['status' => 'cancelada']);
 
-        return redirect()->route('servico.escalas.show', $escala)
+        return redirect()->route('voluntarios.escalas.show', $escala)
             ->with('success', 'Escala cancelada com sucesso!');
     }
 
@@ -466,7 +466,7 @@ class ServiceScheduleController extends Controller
             ? 'Escala republicada com sucesso!' 
             : 'Escala publicada com sucesso!';
 
-        return redirect()->route('servico.escalas.show', $escala)
+        return redirect()->route('voluntarios.escalas.show', $escala)
             ->with('success', $message);
     }
 
@@ -479,7 +479,13 @@ class ServiceScheduleController extends Controller
             'status' => 'required|in:rascunho,publicada,cancelada,concluido',
         ]);
 
+        $oldStatus = $escala->status;
         $escala->update(['status' => $validated['status']]);
+
+        // Se mudou para "concluido", gerar histórico
+        if ($validated['status'] === 'concluido' && $oldStatus !== 'concluido') {
+            $this->generateServiceHistory($escala);
+        }
 
         $statusLabels = [
             'rascunho' => 'Rascunho',
@@ -494,6 +500,29 @@ class ServiceScheduleController extends Controller
             'status' => $validated['status'],
             'status_label' => $statusLabels[$validated['status']],
         ]);
+    }
+
+    /**
+     * Gerar histórico de serviço quando escala é finalizada
+     */
+    private function generateServiceHistory(ServiceSchedule $escala)
+    {
+        $escala->load(['areas.volunteers.volunteer.member', 'areas.serviceArea']);
+
+        foreach ($escala->areas as $scheduleArea) {
+            foreach ($scheduleArea->volunteers as $scheduleVolunteer) {
+                \App\Models\ServiceHistory::create([
+                    'member_id' => $scheduleVolunteer->volunteer->member_id,
+                    'volunteer_id' => $scheduleVolunteer->volunteer_id,
+                    'service_area_id' => $scheduleArea->service_area_id,
+                    'schedule_id' => $escala->id,
+                    'date' => $escala->date,
+                    'service_type' => $escala->type,
+                    'status' => $scheduleVolunteer->status === 'confirmado' ? 'serviu' : 'confirmado_nao_compareceu',
+                    'notes' => null,
+                ]);
+            }
+        }
     }
 
     /**
@@ -556,14 +585,22 @@ class ServiceScheduleController extends Controller
     /**
      * Confirmar voluntário na escala
      */
-    public function confirmVolunteer(ServiceScheduleVolunteer $volunteer)
+    public function confirmVolunteer(Request $request, ServiceScheduleVolunteer $volunteer)
     {
         $volunteer->update(['status' => 'confirmado']);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Voluntário confirmado com sucesso!'
-        ]);
+        // Se for requisição AJAX, retorna JSON
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Voluntário confirmado com sucesso!'
+            ]);
+        }
+
+        // Caso contrário, redireciona de volta com mensagem de sucesso
+        $member = $volunteer->volunteer->member;
+        return redirect()->route('members.show', ['member' => $member->id])
+            ->with('success', 'Presença confirmada com sucesso!');
     }
 
     /**
@@ -580,13 +617,53 @@ class ServiceScheduleController extends Controller
     }
 
     /**
+     * Substituir voluntário na escala
+     */
+    public function substituteVolunteer(Request $request, ServiceScheduleVolunteer $volunteer)
+    {
+        $validated = $request->validate([
+            'new_volunteer_id' => 'required|exists:volunteers,id',
+        ]);
+
+        // Buscar a área da escala e a escala
+        $scheduleArea = $volunteer->scheduleArea;
+        $schedule = $scheduleArea->schedule;
+
+        // Verificar se o novo voluntário já está na mesma área
+        $existingVolunteer = ServiceScheduleVolunteer::where('schedule_area_id', $scheduleArea->id)
+            ->where('volunteer_id', $validated['new_volunteer_id'])
+            ->first();
+
+        if ($existingVolunteer) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Este voluntário já está na escala!'
+            ], 400);
+        }
+
+        // Substituir o voluntário
+        $oldVolunteerId = $volunteer->volunteer_id;
+        $oldStatus = $volunteer->status;
+        
+        $volunteer->update([
+            'volunteer_id' => $validated['new_volunteer_id'],
+            'status' => 'pendente', // Reset status para pendente na substituição
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Voluntário substituído com sucesso!'
+        ]);
+    }
+
+    /**
      * Gerar PDF da escala
      */
     public function generatePdf(ServiceSchedule $escala)
     {
         // Verificar se a escala está publicada
         if ($escala->status !== 'publicada') {
-            return redirect()->route('servico.escalas.show', $escala)
+            return redirect()->route('voluntarios.escalas.show', $escala)
                 ->with('error', 'Apenas escalas publicadas podem ser exportadas em PDF.');
         }
 

@@ -14,7 +14,31 @@ class PgiController extends Controller
      */
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $isAdmin = $user?->is_admin ?? false;
+        $member = $user?->member;
+        
+        // Verificar se tem permissão para ver todos os PGIs
+        $hasViewPermission = $isAdmin || 
+                            $user->hasPermission('pgis.index.view') || 
+                            $user->hasPermission('pgis.index.manage');
+        
         $query = Pgi::with(['leader1', 'leader2', 'leaderTraining1', 'leaderTraining2', 'members']);
+
+        // Se não for admin e não tiver permissão para ver todos, mostrar apenas PGIs relacionados ao membro
+        if (!$hasViewPermission && $member) {
+            $query->where(function($q) use ($member) {
+                // PGI do qual faz parte como membro
+                if ($member->pgi_id) {
+                    $q->where('id', $member->pgi_id);
+                }
+                // OU PGI do qual é líder ou líder em treinamento
+                $q->orWhere('leader_1_id', $member->id)
+                  ->orWhere('leader_2_id', $member->id)
+                  ->orWhere('leader_training_1_id', $member->id)
+                  ->orWhere('leader_training_2_id', $member->id);
+            });
+        }
 
         // Busca
         if ($request->has('search') && $request->search) {
@@ -123,6 +147,23 @@ class PgiController extends Controller
      */
     public function show(Pgi $pgi)
     {
+        $user = auth()->user();
+        $isAdmin = $user?->is_admin ?? false;
+        $member = $user?->member;
+        
+        // Se não for admin, verificar se faz parte deste PGI ou se é líder
+        if (!$isAdmin && $member) {
+            // Verificar se tem permissão, se faz parte do PGI ou se é líder/líder em treinamento
+            $hasPermission = $user->hasPermission('pgis.index.view') || 
+                            $user->hasPermission('pgis.index.manage');
+            $isMemberOfPgi = $member->pgi_id == $pgi->id;
+            $isLeader = $pgi->isLeader($member);
+            
+            if (!$hasPermission && !$isMemberOfPgi && !$isLeader) {
+                abort(403, 'Acesso negado. Você não tem permissão para visualizar este PGI.');
+            }
+        }
+        
         $pgi->load(['leader1', 'leader2', 'leaderTraining1', 'leaderTraining2', 'members']);
         
         // Carregar reuniões para o dashboard

@@ -5,7 +5,7 @@
 @section('page-title', 'Nova Escala')
 
 @section('breadcrumbs')
-    <li><a href="{{ route('servico.escalas.index') }}">Escalas</a></li>
+    <li><a href="{{ route('voluntarios.escalas.index') }}">Escalas</a></li>
     <li><span>Nova</span></li>
 @endsection
 
@@ -53,7 +53,7 @@
 
                 <!-- ETAPA 1: Dados Gerais -->
                 @if($step == 1)
-                    <form action="{{ route('servico.escalas.store.step1') }}" method="POST">
+                    <form action="{{ route('voluntarios.escalas.store.step1') }}" method="POST">
                         @csrf
                         <div class="row">
                             <div class="col-md-12 mb-3">
@@ -142,7 +142,7 @@
 
                         <div class="mt-4">
                             <div class="d-flex justify-content-end gap-2">
-                                <a href="{{ route('servico.escalas.index') }}" class="btn btn-default">Cancelar</a>
+                                <a href="{{ route('voluntarios.escalas.index') }}" class="btn btn-default">Cancelar</a>
                                 <button type="submit" class="btn btn-primary">Próximo <i class="bx bx-arrow-right ms-2"></i></button>
                             </div>
                         </div>
@@ -151,7 +151,7 @@
 
                 <!-- ETAPA 2: Áreas de Serviço -->
                 @if($step == 2)
-                    <form action="{{ route('servico.escalas.store.step2') }}" method="POST" id="areasForm">
+                    <form action="{{ route('voluntarios.escalas.store.step2') }}" method="POST" id="areasForm">
                         @csrf
                         <div class="row">
                             <div class="col-md-12 mb-3">
@@ -250,7 +250,7 @@
 
                         <div class="mt-4">
                             <div class="d-flex justify-content-between gap-2">
-                                <a href="{{ route('servico.escalas.create', ['step' => 1]) }}" class="btn btn-default">
+                                <a href="{{ route('voluntarios.escalas.create', ['step' => 1]) }}" class="btn btn-default">
                                     <i class="bx bx-arrow-back me-2"></i>Voltar
                                 </a>
                                 <button type="submit" class="btn btn-primary">Próximo <i class="bx bx-arrow-right ms-2"></i></button>
@@ -265,7 +265,7 @@
                         $areasData = $wizardData['step2']['areas'] ?? [];
                         $volunteersData = $wizardData['step3']['volunteers'] ?? [];
                     @endphp
-                    <form action="{{ route('servico.escalas.store.step3') }}" method="POST">
+                    <form action="{{ route('voluntarios.escalas.store.step3') }}" method="POST">
                         @csrf
                         <div class="row">
                             <div class="col-md-12 mb-3">
@@ -321,7 +321,7 @@
 
                         <div class="mt-4">
                             <div class="d-flex justify-content-between gap-2">
-                                <a href="{{ route('servico.escalas.create', ['step' => 2]) }}" class="btn btn-default">
+                                <a href="{{ route('voluntarios.escalas.create', ['step' => 2]) }}" class="btn btn-default">
                                     <i class="bx bx-arrow-back me-2"></i>Voltar
                                 </a>
                                 <button type="submit" class="btn btn-primary">Próximo <i class="bx bx-arrow-right ms-2"></i></button>
@@ -424,10 +424,10 @@
 
                         <div class="mt-4">
                             <div class="d-flex justify-content-between gap-2">
-                                <a href="{{ route('servico.escalas.create', ['step' => 3]) }}" class="btn btn-default">
+                                <a href="{{ route('voluntarios.escalas.create', ['step' => 3]) }}" class="btn btn-default">
                                     <i class="bx bx-arrow-back me-2"></i>Voltar
                                 </a>
-                                <a href="{{ route('servico.escalas.create', ['step' => 5]) }}" class="btn btn-primary">
+                                <a href="{{ route('voluntarios.escalas.create', ['step' => 5]) }}" class="btn btn-primary">
                                     Próximo <i class="bx bx-arrow-right ms-2"></i>
                                 </a>
                             </div>
@@ -437,7 +437,7 @@
 
                 <!-- ETAPA 5: Publicação -->
                 @if($step == 5)
-                    <form action="{{ route('servico.escalas.store') }}" method="POST">
+                    <form action="{{ route('voluntarios.escalas.store') }}" method="POST">
                         @csrf
                         <div class="row">
                             <div class="col-md-12 mb-3">
@@ -468,7 +468,7 @@
 
                         <div class="mt-4">
                             <div class="d-flex justify-content-between gap-2">
-                                <a href="{{ route('servico.escalas.create', ['step' => 4]) }}" class="btn btn-default">
+                                <a href="{{ route('voluntarios.escalas.create', ['step' => 4]) }}" class="btn btn-default">
                                     <i class="bx bx-arrow-back me-2"></i>Voltar
                                 </a>
                                 <button type="submit" class="btn btn-success">

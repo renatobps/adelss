@@ -98,4 +98,24 @@ class Turma extends Model
     {
         return $this->hasMany(ClassFile::class, 'class_id');
     }
+
+    /**
+     * Verifica se um membro é aluno desta turma
+     */
+    public function isStudent(Member $member): bool
+    {
+        return $this->students()->where('member_id', $member->id)->exists();
+    }
+
+    /**
+     * Verifica se um membro é professor desta turma (em qualquer disciplina)
+     */
+    public function isTeacher(Member $member): bool
+    {
+        return $this->disciplines()
+            ->whereHas('teachers', function($query) use ($member) {
+                $query->where('member_id', $member->id);
+            })
+            ->exists();
+    }
 }

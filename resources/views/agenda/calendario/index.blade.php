@@ -11,6 +11,17 @@
 @endsection
 
 @section('content')
+@php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    // Visualização disponível para todos, apenas criar/editar/excluir precisa de permissão
+    $canCreateEvents = $isAdmin || $user->hasPermission('agenda.events.create') || $user->hasPermission('agenda.events.manage');
+    $canEditEvents = $isAdmin || $user->hasPermission('agenda.events.edit') || $user->hasPermission('agenda.events.manage');
+    $canDeleteEvents = $isAdmin || $user->hasPermission('agenda.events.delete') || $user->hasPermission('agenda.events.manage');
+    $canCreateCategories = $isAdmin || $user->hasPermission('agenda.categories.create') || $user->hasPermission('agenda.categories.manage');
+    $canDeleteCategories = $isAdmin || $user->hasPermission('agenda.categories.delete') || $user->hasPermission('agenda.categories.manage');
+@endphp
+
 <div class="row">
     <div class="col-lg-9">
         <section class="card">
@@ -35,6 +46,7 @@
                 <h2 class="card-title">Categorias</h2>
             </header>
             <div class="card-body">
+                @if($canCreateCategories)
                 <form id="categoryForm">
                     @csrf
                     <div class="mb-3">
@@ -48,6 +60,7 @@
                     </button>
                 </form>
                 <hr>
+                @endif
                 <div id="categoriesList">
                     @foreach($categories as $category)
                         <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded category-item" data-category-id="{{ $category->id }}">
@@ -55,9 +68,11 @@
                                 <span class="badge me-2" style="background-color: {{ $category->color }}; width: 20px; height: 20px; display: inline-block; border-radius: 4px;"></span>
                                 <span>{{ $category->name }}</span>
                             </div>
+                            @if($canDeleteCategories)
                             <button type="button" class="btn btn-sm btn-danger btn-delete-category" data-category-id="{{ $category->id }}" title="Remover categoria">
                                 <i class="bx bx-trash"></i>
                             </button>
+                            @endif
                         </div>
                     @endforeach
                 </div>
@@ -67,6 +82,7 @@
 </div>
 
 <!-- Modal Adicionar/Editar Evento -->
+@if($canCreateEvents || $canEditEvents)
 <div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -168,22 +184,28 @@
                     </div>
                 </div>
                 <div class="modal-footer">
+                    @if($canDeleteEvents)
                     <button type="button" class="btn btn-danger" id="btnDeleteEvent" style="display: none;">
                         <i class="bx bx-trash me-1"></i>Remover
                     </button>
+                    @endif
                     <div class="ms-auto">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        @if($canCreateEvents || $canEditEvents)
                         <button type="submit" class="btn btn-success">
                             <i class="bx bx-check me-1"></i>Salvar
                         </button>
+                        @endif
                     </div>
                 </div>
             </form>
         </div>
     </div>
 </div>
+@endif
 
 <!-- Modal de Confirmação de Remoção -->
+@if($canDeleteEvents)
 <div class="modal fade" id="deleteEventModal" tabindex="-1" aria-labelledby="deleteEventModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -208,8 +230,10 @@
         </div>
     </div>
 </div>
+@endif
 
 <!-- Modal de Confirmação de Edição -->
+@if($canEditEvents)
 <div class="modal fade" id="updateEventModal" tabindex="-1" aria-labelledby="updateEventModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -234,6 +258,7 @@
         </div>
     </div>
 </div>
+@endif
 @endsection
 
 @push('styles')
@@ -276,8 +301,8 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         events: '{{ route("agenda.events.index") }}',
         editable: false,
-        selectable: true,
-        selectMirror: true,
+        selectable: {{ ($canCreateEvents) ? 'true' : 'false' }},
+        selectMirror: {{ ($canCreateEvents) ? 'true' : 'false' }},
         dayMaxEvents: true,
         eventInteractive: true,
         eventDisplay: 'block',
@@ -287,6 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
             arg.el.style.fontWeight = '500';
         },
         select: function(arg) {
+            @if($canCreateEvents)
             selectedDate = arg.startStr;
             resetEventForm();
             const startDate = new Date(arg.start);
@@ -297,6 +323,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const modal = new bootstrap.Modal(document.getElementById('addEventModal'));
             modal.show();
             calendar.unselect();
+            @else
+            calendar.unselect();
+            @endif
         },
         eventClick: function(arg) {
             // Prevenir comportamento padrão
@@ -332,11 +361,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(data => {
                     console.log('Dados recebidos:', data);
                     if (data.success && data.event) {
+                        @if($canEditEvents)
                         loadEventToForm(data.event);
                         document.getElementById('addEventModalLabel').textContent = 'Editar - ID ' + data.event.id;
                         document.getElementById('btnDeleteEvent').style.display = 'block';
                         const modal = new bootstrap.Modal(document.getElementById('addEventModal'));
                         modal.show();
+                        @else
+                        // Para usuários comuns, apenas mostrar informações do evento
+                        const event = data.event;
+                        let info = 'Evento: ' + event.title + '\n';
+                        if (event.description) info += 'Descrição: ' + event.description + '\n';
+                        if (event.location) info += 'Local: ' + event.location + '\n';
+                        if (event.start_date) info += 'Data: ' + event.start_date + '\n';
+                        if (event.start_time) info += 'Hora: ' + event.start_time;
+                        alert(info);
+                        @endif
                     } else {
                         console.error('Resposta sem sucesso:', data);
                         alert('Erro ao carregar evento: ' + (data.message || 'Dados inválidos'));
@@ -390,56 +430,63 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Formulário de categoria
-    document.getElementById('categoryForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const name = document.getElementById('categoryName').value;
-        const color = document.getElementById('categoryColor').value;
-        
-        fetch('{{ route("agenda.categories.store") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
-            },
-            body: JSON.stringify({ name, color })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Adicionar categoria à lista
-                const categoriesList = document.getElementById('categoriesList');
-                const categoryDiv = document.createElement('div');
-                categoryDiv.className = 'd-flex align-items-center justify-content-between mb-2 p-2 border rounded category-item';
-                categoryDiv.setAttribute('data-category-id', data.category.id);
-                categoryDiv.innerHTML = `
-                    <div class="d-flex align-items-center">
-                        <span class="badge me-2" style="background-color: ${data.category.color}; width: 20px; height: 20px; display: inline-block; border-radius: 4px;"></span>
-                        <span>${data.category.name}</span>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-danger btn-delete-category" data-category-id="${data.category.id}" title="Remover categoria">
-                        <i class="bx bx-trash"></i>
-                    </button>
-                `;
-                categoriesList.appendChild(categoryDiv);
-                
-                // Adicionar ao select de categorias
-                const categorySelect = document.getElementById('eventCategory');
-                const option = document.createElement('option');
-                option.value = data.category.id;
-                option.textContent = data.category.name;
-                categorySelect.appendChild(option);
-                
-                // Limpar formulário
-                document.getElementById('categoryName').value = '';
-                document.getElementById('categoryColor').value = '#0088cc';
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Erro ao adicionar categoria');
+    // Formulário de categoria (somente admin)
+    @if($canCreateCategories)
+    const categoryForm = document.getElementById('categoryForm');
+    if (categoryForm) {
+        categoryForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('categoryName').value;
+            const color = document.getElementById('categoryColor').value;
+            
+            fetch('{{ route("agenda.categories.store") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ name, color })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Adicionar categoria à lista
+                    const categoriesList = document.getElementById('categoriesList');
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'd-flex align-items-center justify-content-between mb-2 p-2 border rounded category-item';
+                    categoryDiv.setAttribute('data-category-id', data.category.id);
+                    categoryDiv.innerHTML = `
+                        <div class="d-flex align-items-center">
+                            <span class="badge me-2" style="background-color: ${data.category.color}; width: 20px; height: 20px; display: inline-block; border-radius: 4px;"></span>
+                            <span>${data.category.name}</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-danger btn-delete-category" data-category-id="${data.category.id}" title="Remover categoria">
+                            <i class="bx bx-trash"></i>
+                        </button>
+                    `;
+                    categoriesList.appendChild(categoryDiv);
+                    
+                    // Adicionar ao select de categorias
+                    const categorySelect = document.getElementById('eventCategory');
+                    if (categorySelect) {
+                        const option = document.createElement('option');
+                        option.value = data.category.id;
+                        option.textContent = data.category.name;
+                        categorySelect.appendChild(option);
+                    }
+                    
+                    // Limpar formulário
+                    document.getElementById('categoryName').value = '';
+                    document.getElementById('categoryColor').value = '#0088cc';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Erro ao adicionar categoria');
+            });
         });
-    });
+    }
+    @endif
     
     // Função para carregar evento no formulário
     function loadEventToForm(event) {
@@ -537,32 +584,109 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Formulário de evento
-    document.getElementById('eventForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const eventId = document.getElementById('eventId').value;
-        const recurrenceValue = document.getElementById('eventRecurrence').value;
-        const formData = {
-            title: document.getElementById('eventTitle').value,
-            description: document.getElementById('eventDescription').value,
-            start_date: document.getElementById('eventStartDate').value,
-            start_time: document.getElementById('eventStartTimeHour').value.padStart(2, '0') + ':' + 
-                       document.getElementById('eventStartTimeMinute').value.padStart(2, '0'),
-            end_date: document.getElementById('eventEndDate').value,
-            end_time: document.getElementById('eventEndTimeHour').value.padStart(2, '0') + ':' + 
-                     document.getElementById('eventEndTimeMinute').value.padStart(2, '0'),
-            all_day: document.getElementById('eventAllDay').checked,
-            recurrence: recurrenceValue === 'null' ? null : recurrenceValue,
-            visibility: document.getElementById('eventVisibility').value,
-            location: document.getElementById('eventLocation').value,
-            category_id: document.getElementById('eventCategory').value || null
-        };
-        
-        // Se for edição de evento, verificar se é recorrente
-        if (eventId) {
-            // Buscar dados do evento para verificar se é recorrente
-            const showUrl = '{{ route("agenda.events.show", ":id") }}'.replace(':id', eventId);
+    // Formulário de evento (somente admin)
+    @if($canCreateEvents || $canEditEvents)
+    const eventForm = document.getElementById('eventForm');
+    if (eventForm) {
+        eventForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const eventId = document.getElementById('eventId').value;
+            const recurrenceValue = document.getElementById('eventRecurrence').value;
+            const formData = {
+                title: document.getElementById('eventTitle').value,
+                description: document.getElementById('eventDescription').value,
+                start_date: document.getElementById('eventStartDate').value,
+                start_time: document.getElementById('eventStartTimeHour').value.padStart(2, '0') + ':' + 
+                           document.getElementById('eventStartTimeMinute').value.padStart(2, '0'),
+                end_date: document.getElementById('eventEndDate').value,
+                end_time: document.getElementById('eventEndTimeHour').value.padStart(2, '0') + ':' + 
+                         document.getElementById('eventEndTimeMinute').value.padStart(2, '0'),
+                all_day: document.getElementById('eventAllDay').checked,
+                recurrence: recurrenceValue === 'null' ? null : recurrenceValue,
+                visibility: document.getElementById('eventVisibility').value,
+                location: document.getElementById('eventLocation').value,
+                category_id: document.getElementById('eventCategory').value || null
+            };
+            
+            // Se for edição de evento, verificar se é recorrente
+            if (eventId) {
+                // Buscar dados do evento para verificar se é recorrente
+                const showUrl = '{{ route("agenda.events.show", ":id") }}'.replace(':id', eventId);
+                fetch(showUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && (data.event.recurrence === 'weekly' || data.event.recurrence === 'biweekly')) {
+                        // Se for evento recorrente, mostrar modal de escolha
+                        pendingFormData = formData;
+                        const updateModal = new bootstrap.Modal(document.getElementById('updateEventModal'));
+                        updateModal.show();
+                    } else {
+                        // Se não for recorrente, salvar diretamente
+                        saveEvent(formData, false);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    // Em caso de erro, salvar diretamente
+                    saveEvent(formData, false);
+                });
+            } else {
+                // Se for novo evento, salvar diretamente
+                saveEvent(formData, false);
+            }
+        });
+    }
+    @endif
+    
+    // Botões do modal de edição (somente admin)
+    @if($canEditEvents)
+    const btnUpdateOne = document.getElementById('btnUpdateOne');
+    if (btnUpdateOne) {
+        btnUpdateOne.addEventListener('click', function() {
+            if (pendingFormData) {
+                saveEvent(pendingFormData, false);
+                const updateModal = bootstrap.Modal.getInstance(document.getElementById('updateEventModal'));
+                if (updateModal) updateModal.hide();
+                pendingFormData = null;
+            }
+        });
+    }
+    
+    const btnUpdateAll = document.getElementById('btnUpdateAll');
+    if (btnUpdateAll) {
+        btnUpdateAll.addEventListener('click', function() {
+            if (pendingFormData) {
+                if (confirm('Tem certeza que deseja atualizar TODAS as ocorrências deste evento?')) {
+                    saveEvent(pendingFormData, true);
+                    const updateModal = bootstrap.Modal.getInstance(document.getElementById('updateEventModal'));
+                    if (updateModal) updateModal.hide();
+                    pendingFormData = null;
+                }
+            }
+        });
+    }
+    @endif
+    
+    // Variável para armazenar o ID do evento a ser removido
+    let eventToDeleteId = null;
+    
+    // Botão remover evento (somente admin)
+    @if($canDeleteEvents)
+    const btnDeleteEvent = document.getElementById('btnDeleteEvent');
+    if (btnDeleteEvent) {
+        btnDeleteEvent.addEventListener('click', function() {
+            eventToDeleteId = document.getElementById('eventId').value;
+            if (!eventToDeleteId) return;
+            
+            // Verificar se o evento é recorrente (buscar dados do evento)
+            const showUrl = '{{ route("agenda.events.show", ":id") }}'.replace(':id', eventToDeleteId);
             fetch(showUrl, {
                 method: 'GET',
                 headers: {
@@ -574,84 +698,25 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(data => {
                 if (data.success && (data.event.recurrence === 'weekly' || data.event.recurrence === 'biweekly')) {
                     // Se for evento recorrente, mostrar modal de escolha
-                    pendingFormData = formData;
-                    const updateModal = new bootstrap.Modal(document.getElementById('updateEventModal'));
-                    updateModal.show();
+                    const deleteModal = new bootstrap.Modal(document.getElementById('deleteEventModal'));
+                    deleteModal.show();
                 } else {
-                    // Se não for recorrente, salvar diretamente
-                    saveEvent(formData, false);
+                    // Se não for recorrente, remover diretamente
+                    if (confirm('Tem certeza que deseja remover este evento?')) {
+                        deleteEvent(eventToDeleteId, false);
+                    }
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                // Em caso de erro, salvar diretamente
-                saveEvent(formData, false);
-            });
-        } else {
-            // Se for novo evento, salvar diretamente
-            saveEvent(formData, false);
-        }
-    });
-    
-    // Botões do modal de edição
-    document.getElementById('btnUpdateOne').addEventListener('click', function() {
-        if (pendingFormData) {
-            saveEvent(pendingFormData, false);
-            const updateModal = bootstrap.Modal.getInstance(document.getElementById('updateEventModal'));
-            if (updateModal) updateModal.hide();
-            pendingFormData = null;
-        }
-    });
-    
-    document.getElementById('btnUpdateAll').addEventListener('click', function() {
-        if (pendingFormData) {
-            if (confirm('Tem certeza que deseja atualizar TODAS as ocorrências deste evento?')) {
-                saveEvent(pendingFormData, true);
-                const updateModal = bootstrap.Modal.getInstance(document.getElementById('updateEventModal'));
-                if (updateModal) updateModal.hide();
-                pendingFormData = null;
-            }
-        }
-    });
-    
-    // Variável para armazenar o ID do evento a ser removido
-    let eventToDeleteId = null;
-    
-    // Botão remover evento
-    document.getElementById('btnDeleteEvent').addEventListener('click', function() {
-        eventToDeleteId = document.getElementById('eventId').value;
-        if (!eventToDeleteId) return;
-        
-        // Verificar se o evento é recorrente (buscar dados do evento)
-        const showUrl = '{{ route("agenda.events.show", ":id") }}'.replace(':id', eventToDeleteId);
-        fetch(showUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success && (data.event.recurrence === 'weekly' || data.event.recurrence === 'biweekly')) {
-                // Se for evento recorrente, mostrar modal de escolha
-                const deleteModal = new bootstrap.Modal(document.getElementById('deleteEventModal'));
-                deleteModal.show();
-            } else {
-                // Se não for recorrente, remover diretamente
+                // Em caso de erro, remover diretamente
                 if (confirm('Tem certeza que deseja remover este evento?')) {
                     deleteEvent(eventToDeleteId, false);
                 }
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            // Em caso de erro, remover diretamente
-            if (confirm('Tem certeza que deseja remover este evento?')) {
-                deleteEvent(eventToDeleteId, false);
-            }
+            });
         });
-    });
+    }
+    @endif
     
     // Função para remover evento
     function deleteEvent(eventId, deleteAll) {
@@ -686,35 +751,52 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Botões do modal de confirmação
-    document.getElementById('btnDeleteOne').addEventListener('click', function() {
-        if (eventToDeleteId) {
-            deleteEvent(eventToDeleteId, false);
-        }
-    });
-    
-    document.getElementById('btnDeleteAll').addEventListener('click', function() {
-        if (eventToDeleteId) {
-            if (confirm('Tem certeza que deseja remover TODAS as ocorrências deste evento?')) {
-                deleteEvent(eventToDeleteId, true);
+    // Botões do modal de confirmação (somente admin)
+    @if($canDeleteEvents)
+    const btnDeleteOne = document.getElementById('btnDeleteOne');
+    if (btnDeleteOne) {
+        btnDeleteOne.addEventListener('click', function() {
+            if (eventToDeleteId) {
+                deleteEvent(eventToDeleteId, false);
             }
-        }
-    });
+        });
+    }
     
-    // Resetar formulário ao fechar modal
-    document.getElementById('addEventModal').addEventListener('hidden.bs.modal', function() {
-        resetEventForm();
-    });
+    const btnDeleteAll = document.getElementById('btnDeleteAll');
+    if (btnDeleteAll) {
+        btnDeleteAll.addEventListener('click', function() {
+            if (eventToDeleteId) {
+                if (confirm('Tem certeza que deseja remover TODAS as ocorrências deste evento?')) {
+                    deleteEvent(eventToDeleteId, true);
+                }
+            }
+        });
+    }
+    @endif
+    
+    // Resetar formulário ao fechar modal (somente admin)
+    @if($canCreateEvents || $canEditEvents)
+    const addEventModal = document.getElementById('addEventModal');
+    if (addEventModal) {
+        addEventModal.addEventListener('hidden.bs.modal', function() {
+            resetEventForm();
+        });
+    }
     
     // Toggle dia inteiro
-    document.getElementById('eventAllDay').addEventListener('change', function() {
-        const timeInputs = document.querySelectorAll('#eventStartTimeHour, #eventStartTimeMinute, #eventEndTimeHour, #eventEndTimeMinute');
-        timeInputs.forEach(input => {
-            input.disabled = this.checked;
+    const eventAllDay = document.getElementById('eventAllDay');
+    if (eventAllDay) {
+        eventAllDay.addEventListener('change', function() {
+            const timeInputs = document.querySelectorAll('#eventStartTimeHour, #eventStartTimeMinute, #eventEndTimeHour, #eventEndTimeMinute');
+            timeInputs.forEach(input => {
+                input.disabled = this.checked;
+            });
         });
-    });
+    }
+    @endif
     
-    // Remover categoria
+    // Remover categoria (somente admin)
+    @if($canDeleteCategories)
     document.addEventListener('click', function(e) {
         if (e.target.closest('.btn-delete-category')) {
             const btn = e.target.closest('.btn-delete-category');
@@ -750,6 +832,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+    @endif
 });
 </script>
 @endpush

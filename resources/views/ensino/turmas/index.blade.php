@@ -10,6 +10,20 @@
 @endsection
 
 @section('content')
+@php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $canCreateTurmas = $isAdmin || 
+                       ($user && ($user->hasPermission('ensino.turmas.create') || 
+                                  $user->hasPermission('ensino.turmas.manage')));
+    $canEditTurmas = $isAdmin || 
+                     ($user && ($user->hasPermission('ensino.turmas.edit') || 
+                                $user->hasPermission('ensino.turmas.manage')));
+    $canDeleteTurmas = $isAdmin || 
+                       ($user && ($user->hasPermission('ensino.turmas.delete') || 
+                                  $user->hasPermission('ensino.turmas.manage')));
+@endphp
+
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -85,16 +99,20 @@
                                     </td>
                                     <td>
                                         <div class="btn-group btn-group-sm" role="group">
-                                            <button type="button" class="btn btn-primary btn-sm" onclick="editTurma({{ $turma->id }}, {!! json_encode($turma->name) !!}, {{ $turma->school_id }}, {!! json_encode($turma->schedule) !!}, {!! json_encode($turma->status) !!}, {!! json_encode($turma->description ?? '') !!})">
-                                                <i class="bx bx-edit"></i> Editar
-                                            </button>
+                                            @if($canEditTurmas)
+                                            <a href="{{ route('ensino.turmas.edit', $turma) }}" class="btn btn-primary btn-sm" title="Editar">
+                                                <i class="bx bx-edit"></i>
+                                            </a>
+                                            @endif
+                                            @if($canDeleteTurmas)
                                             <form action="{{ route('ensino.turmas.destroy', $turma) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta turma?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-danger btn-sm">
-                                                    <i class="bx bx-trash"></i> Remover
+                                                <button type="submit" class="btn btn-danger btn-sm" title="Remover">
+                                                    <i class="bx bx-trash"></i>
                                                 </button>
                                             </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -120,6 +138,7 @@
     </div>
 
     <!-- Formulário de Criação/Edição (Lado Direito -->
+    @if($canCreateTurmas)
     <div class="col-lg-5">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-header bg-success text-white">
@@ -212,6 +231,7 @@
             </div>
         </div>
     </div>
+    @endif
 </div>
 
 @push('scripts')

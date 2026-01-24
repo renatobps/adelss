@@ -35,6 +35,14 @@ class MemberRole extends Model
     {
         return $query->where('is_active', true);
     }
+
+    /**
+     * Permissões associadas a este cargo/função.
+     */
+    public function permissions()
+    {
+        return $this->belongsToMany(Permission::class, 'permission_role', 'role_id', 'permission_id');
+    }
 }
 
 

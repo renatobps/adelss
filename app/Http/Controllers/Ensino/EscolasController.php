@@ -65,7 +65,7 @@ class EscolasController extends Controller
      */
     public function show(School $escola)
     {
-        $escola->load('manager');
+        $escola->load(['manager', 'turmas']);
         return view('ensino.escolas.show', compact('escola'));
     }
 

@@ -5,7 +5,7 @@
 @section('page-title', 'Visualizar Escala')
 
 @section('breadcrumbs')
-    <li><a href="{{ route('servico.escalas.index') }}">Escalas</a></li>
+    <li><a href="{{ route('voluntarios.escalas.index') }}">Escalas</a></li>
     <li><span>Visualizar</span></li>
 @endsection
 
@@ -61,15 +61,15 @@
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
                         @if($escala->status == 'publicada')
-                            <a href="{{ route('servico.escalas.pdf', $escala) }}" class="btn btn-info" target="_blank" title="Salvar escala em PDF">
+                            <a href="{{ route('voluntarios.escalas.pdf', $escala) }}" class="btn btn-info" target="_blank" title="Salvar escala em PDF">
                                 <i class="bx bx-download me-2"></i>Exportar PDF
                             </a>
                         @endif
                         @if($escala->status == 'rascunho')
-                            <a href="{{ route('servico.escalas.edit', $escala) }}" class="btn btn-primary">
+                            <a href="{{ route('voluntarios.escalas.edit', $escala) }}" class="btn btn-primary">
                                 <i class="bx bx-edit me-2"></i>Editar
                             </a>
-                            <form action="{{ route('servico.escalas.publish', $escala) }}" method="POST" class="d-inline">
+                            <form action="{{ route('voluntarios.escalas.publish', $escala) }}" method="POST" class="d-inline">
                                 @csrf
                                 @method('PUT')
                                 <button type="submit" class="btn btn-success" onclick="return confirm('Deseja publicar esta escala?')">
@@ -78,7 +78,7 @@
                             </form>
                         @endif
                         @if($escala->status == 'cancelada')
-                            <form action="{{ route('servico.escalas.publish', $escala) }}" method="POST" class="d-inline">
+                            <form action="{{ route('voluntarios.escalas.publish', $escala) }}" method="POST" class="d-inline">
                                 @csrf
                                 @method('PUT')
                                 <button type="submit" class="btn btn-success" onclick="return confirm('Deseja republicar esta escala?')">
@@ -87,7 +87,7 @@
                             </form>
                         @endif
                         @if($escala->status != 'cancelada' && $escala->status != 'publicada')
-                            <form action="{{ route('servico.escalas.cancel', $escala) }}" method="POST" class="d-inline">
+                            <form action="{{ route('voluntarios.escalas.cancel', $escala) }}" method="POST" class="d-inline">
                                 @csrf
                                 @method('PUT')
                                 <button type="submit" class="btn btn-danger" onclick="return confirm('Deseja cancelar esta escala?')">
@@ -95,7 +95,7 @@
                                 </button>
                             </form>
                         @endif
-                        <a href="{{ route('servico.escalas.index') }}" class="btn btn-default">
+                        <a href="{{ route('voluntarios.escalas.index') }}" class="btn btn-default">
                             <i class="bx bx-arrow-back me-2"></i>Voltar
                         </a>
                     </div>
@@ -176,7 +176,9 @@
                         <div class="volunteers-list">
                             @foreach($area->volunteers as $volunteerSchedule)
                                 <div class="volunteer-item mb-3 pb-3 border-bottom volunteer-row" 
-                                     data-volunteer-id="{{ $volunteerSchedule->id }}">
+                                     data-volunteer-id="{{ $volunteerSchedule->id }}"
+                                     data-schedule-area-id="{{ $area->id }}"
+                                     data-service-area-id="{{ $area->service_area_id }}">
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-center mb-1">
@@ -255,6 +257,41 @@
         </div>
     </div>
 @endif
+
+<!-- Modal: Substituir Voluntário -->
+<div class="modal fade" id="substituteVolunteerModal" tabindex="-1" aria-labelledby="substituteVolunteerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="substituteVolunteerModalLabel">
+                    <i class="bx bx-refresh me-2"></i>Substituir Voluntário
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="substituteVolunteerForm">
+                @csrf
+                <div class="modal-body">
+                    <input type="hidden" id="substitute_volunteer_schedule_id" name="volunteer_schedule_id">
+                    <input type="hidden" id="substitute_schedule_area_id" name="schedule_area_id">
+                    
+                    <div class="mb-3">
+                        <label for="new_volunteer_id" class="form-label">Selecione o novo voluntário <span class="text-danger">*</span></label>
+                        <select class="form-select" id="new_volunteer_id" name="new_volunteer_id" required>
+                            <option value="">Carregando voluntários...</option>
+                        </select>
+                        <small class="form-text text-muted">Os voluntários são filtrados pela área de serviço</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bx bx-check me-1"></i>Substituir
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <style>
     .volunteer-row {
@@ -343,7 +380,7 @@
             const volunteerId = btn.getAttribute('data-volunteer-id');
             
             if (confirm('Deseja confirmar este voluntário?')) {
-                fetch(`/servico/escalas/volunteers/${volunteerId}/confirm`, {
+                fetch(`{{ url('/servico/voluntarios/escalas/volunteers') }}/${volunteerId}/confirm`, {
                     method: 'PUT',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -369,8 +406,44 @@
         // Substituir voluntário
         if (e.target.closest('.substitute-volunteer')) {
             const btn = e.target.closest('.substitute-volunteer');
-            const volunteerId = btn.getAttribute('data-volunteer-id');
-            alert('Funcionalidade de substituição em desenvolvimento');
+            const volunteerScheduleId = btn.getAttribute('data-volunteer-id');
+            const volunteerRow = btn.closest('.volunteer-row');
+            
+            // Pegar os dados da linha do voluntário
+            const scheduleAreaId = volunteerRow.getAttribute('data-schedule-area-id');
+            const serviceAreaId = volunteerRow.getAttribute('data-service-area-id');
+            
+            // Preencher modal
+            document.getElementById('substitute_volunteer_schedule_id').value = volunteerScheduleId;
+            document.getElementById('substitute_schedule_area_id').value = scheduleAreaId;
+            
+            // Carregar voluntários disponíveis
+            const newVolunteerSelect = document.getElementById('new_volunteer_id');
+            newVolunteerSelect.innerHTML = '<option value="">Carregando...</option>';
+            
+            // Buscar voluntários disponíveis para a área
+            fetch(`{{ route('voluntarios.escalas.api.suggested-volunteers') }}?service_area_id=${serviceAreaId}&date={{ $escala->date->format('Y-m-d') }}&start_time={{ \Carbon\Carbon::parse($escala->start_time)->format('H:i') }}`)
+                .then(response => response.json())
+                .then(data => {
+                    newVolunteerSelect.innerHTML = '<option value="">Selecione um voluntário...</option>';
+                    data.forEach(volunteer => {
+                        const option = document.createElement('option');
+                        option.value = volunteer.id;
+                        option.textContent = volunteer.name + (volunteer.available ? '' : ' - ' + volunteer.reason);
+                        if (!volunteer.available) {
+                            option.style.color = 'red';
+                        }
+                        newVolunteerSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar voluntários:', error);
+                    newVolunteerSelect.innerHTML = '<option value="">Erro ao carregar voluntários</option>';
+                });
+            
+            // Abrir modal
+            const modal = new bootstrap.Modal(document.getElementById('substituteVolunteerModal'));
+            modal.show();
         }
         
         // Remover voluntário
@@ -379,7 +452,7 @@
             const volunteerId = btn.getAttribute('data-volunteer-id');
             
             if (confirm('Deseja remover este voluntário da escala?')) {
-                fetch(`/servico/escalas/volunteers/${volunteerId}`, {
+                fetch(`{{ url('/servico/voluntarios/escalas/volunteers') }}/${volunteerId}`, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}',
@@ -408,6 +481,55 @@
             const areaId = btn.getAttribute('data-area-id');
             alert('Funcionalidade de adicionar voluntário em desenvolvimento');
         }
+    });
+    
+    // Submit do formulário de substituição
+    document.getElementById('substituteVolunteerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const form = this;
+        const volunteerScheduleId = document.getElementById('substitute_volunteer_schedule_id').value;
+        const newVolunteerId = document.getElementById('new_volunteer_id').value;
+        const submitButton = form.querySelector('button[type="submit"]');
+        const originalButtonText = submitButton.innerHTML;
+        
+        // Desabilitar botão
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Substituindo...';
+        
+        // Fazer requisição
+        fetch(`{{ url('/servico/voluntarios/escalas/volunteers') }}/${volunteerScheduleId}/substitute`, {
+            method: 'PUT',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                new_volunteer_id: newVolunteerId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Fechar modal
+                const modal = bootstrap.Modal.getInstance(document.getElementById('substituteVolunteerModal'));
+                modal.hide();
+                
+                // Recarregar página
+                location.reload();
+            } else {
+                alert(data.message || 'Erro ao substituir voluntário');
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao substituir voluntário');
+            submitButton.disabled = false;
+            submitButton.innerHTML = originalButtonText;
+        });
     });
 </script>
 @endsection

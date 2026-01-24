@@ -5,7 +5,7 @@
 @section('page-title', 'Escalas de Serviço')
 
 @section('breadcrumbs')
-    <li><a href="{{ route('servico.escalas.index') }}">Escalas</a></li>
+    <li><a href="{{ route('voluntarios.escalas.index') }}">Escalas</a></li>
 @endsection
 
 @section('content')
@@ -38,14 +38,14 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-12">
-                        <a href="{{ route('servico.escalas.create') }}" class="btn btn-primary">
+                        <a href="{{ route('voluntarios.escalas.create') }}" class="btn btn-primary">
                             <i class="bx bx-plus me-2"></i>Nova Escala
                         </a>
                     </div>
                 </div>
 
                 <!-- Filtros -->
-                <form method="GET" action="{{ route('servico.escalas.index') }}" class="mb-4">
+                <form method="GET" action="{{ route('voluntarios.escalas.index') }}" class="mb-4">
                     <div class="row">
                         <div class="col-md-3">
                             <label for="area" class="form-label">Área</label>
@@ -176,23 +176,26 @@
                                         </td>
                                         <td>
                                             <div class="btn-group" role="group">
-                                                <a href="{{ route('servico.escalas.show', $schedule) }}" class="btn btn-sm btn-default" title="Ver">
+                                                <a href="{{ route('voluntarios.escalas.show', $schedule) }}" class="btn btn-sm btn-default" title="Ver">
                                                     <i class="bx bx-show"></i>
                                                 </a>
                                                 @if($schedule->status != 'publicada')
-                                                    <a href="{{ route('servico.escalas.edit', $schedule) }}" class="btn btn-sm btn-primary" title="Editar">
+                                                    <a href="{{ route('voluntarios.escalas.edit', $schedule) }}" class="btn btn-sm btn-primary" title="Editar">
                                                         <i class="bx bx-edit"></i>
                                                     </a>
                                                 @endif
                                                 @if($schedule->status != 'publicada')
-                                                    <form action="{{ route('servico.escalas.duplicate', $schedule) }}" method="POST" class="d-inline">
+                                                    <form action="{{ route('voluntarios.escalas.duplicate', $schedule) }}" method="POST" class="d-inline">
                                                         @csrf
                                                         <button type="submit" class="btn btn-sm btn-info" title="Duplicar" onclick="return confirm('Deseja duplicar esta escala?')">
                                                             <i class="bx bx-copy"></i>
                                                         </button>
                                                     </form>
                                                 @endif
-                                                <form action="{{ route('servico.escalas.destroy', $schedule) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta escala? Esta ação não pode ser desfeita.');">
+                                                <a href="{{ route('voluntarios.escalas.pdf', $schedule) }}" class="btn btn-sm btn-warning" target="_blank" title="Imprimir/Salvar PDF">
+                                                    <i class="bx bx-printer"></i>
+                                                </a>
+                                                <form action="{{ route('voluntarios.escalas.destroy', $schedule) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta escala? Esta ação não pode ser desfeita.');">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="btn btn-sm btn-danger" title="Excluir">
@@ -240,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Fazer requisição AJAX
-            fetch(`{{ url('servico/escalas') }}/${scheduleId}/status`, {
+            fetch(`{{ url('servico/voluntarios/escalas') }}/${scheduleId}/status`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

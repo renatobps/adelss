@@ -295,6 +295,51 @@
                                 @enderror
                             </div>
                         </div>
+
+                        <div class="col-md-12 mb-3 mt-3">
+                            <h5 class="border-bottom pb-2">Acesso ao Sistema</h5>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">E-mail de acesso</label>
+                                <input type="email"
+                                       class="form-control"
+                                       value="{{ $member->email ?? '-' }}"
+                                       disabled>
+                                <small class="form-text text-muted">
+                                    O e-mail do membro é usado como login. Para alterar, atualize o campo de e-mail acima.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="new_password" class="form-label">Nova senha</label>
+                                <input type="password"
+                                       id="new_password"
+                                       name="new_password"
+                                       class="form-control @error('new_password') is-invalid @enderror"
+                                       placeholder="Deixe em branco para manter a senha atual">
+                                @error('new_password')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted">
+                                    Mínimo de 6 caracteres.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="new_password_confirmation" class="form-label">Confirmar nova senha</label>
+                                <input type="password"
+                                       id="new_password_confirmation"
+                                       name="new_password_confirmation"
+                                       class="form-control"
+                                       placeholder="Repita a nova senha">
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mt-4">

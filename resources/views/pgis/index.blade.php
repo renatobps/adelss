@@ -9,6 +9,23 @@
 @endsection
 
 @section('content')
+@php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $canViewPgis = $isAdmin || 
+                   ($user && ($user->hasPermission('pgis.index.view') || 
+                              $user->hasPermission('pgis.index.manage')));
+    $canCreatePgis = $isAdmin || 
+                     ($user && ($user->hasPermission('pgis.index.create') || 
+                                $user->hasPermission('pgis.index.manage')));
+    $canEditPgis = $isAdmin || 
+                   ($user && ($user->hasPermission('pgis.index.edit') || 
+                              $user->hasPermission('pgis.index.manage')));
+    $canDeletePgis = $isAdmin || 
+                     ($user && ($user->hasPermission('pgis.index.delete') || 
+                                $user->hasPermission('pgis.index.manage')));
+@endphp
+
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bx bx-check-circle me-2"></i>{{ session('success') }}
@@ -259,10 +276,12 @@
             <div class="alert alert-info text-center">
                 <i class="bx bx-info-circle me-2"></i>
                 Nenhum PGI encontrado.
+                @if($canCreatePgis)
                 <br>
                 <a href="{{ route('pgis.create') }}" class="mt-2 d-inline-block">
                     Cadastrar primeiro PGI
                 </a>
+                @endif
             </div>
         @endif
     </div>
@@ -270,6 +289,7 @@
     <!-- Sidebar Direita -->
     <div class="col-lg-3">
         <!-- Botão Adicionar -->
+        @if($canCreatePgis)
         <div class="card mb-4" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-body text-center">
                 <a href="{{ route('pgis.create') }}" class="btn btn-success w-100" style="font-size: 1.1rem; padding: 12px;">
@@ -277,6 +297,7 @@
                 </a>
             </div>
         </div>
+        @endif
 
         <!-- Filtros -->
         <div class="card mb-4" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">

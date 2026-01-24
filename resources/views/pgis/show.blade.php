@@ -10,6 +10,31 @@
 @endsection
 
 @section('content')
+@php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $member = $user?->member;
+    $isLeader = $member && $pgi->isLeader($member);
+    
+    $canViewPgis = $isAdmin || 
+                   ($user && ($user->hasPermission('pgis.index.view') || 
+                              $user->hasPermission('pgis.index.manage')));
+    $canCreatePgis = $isAdmin || 
+                     ($user && ($user->hasPermission('pgis.index.create') || 
+                                $user->hasPermission('pgis.index.manage')));
+    $canEditPgis = $isAdmin || 
+                   ($user && ($user->hasPermission('pgis.index.edit') || 
+                              $user->hasPermission('pgis.index.manage')));
+    $canDeletePgis = $isAdmin || 
+                     ($user && ($user->hasPermission('pgis.index.delete') || 
+                                $user->hasPermission('pgis.index.manage')));
+    
+    // Líderes e líderes em treinamento podem criar reuniões
+    $canCreateMeetings = $isAdmin || $isLeader;
+    $canEditMeetings = $isAdmin || $isLeader;
+    $canDeleteMeetings = $isAdmin || $isLeader;
+@endphp
+
 <div class="row">
     <!-- Painel Esquerdo: Header do PGI e Liderança -->
     <div class="col-lg-4 mb-4">
@@ -37,6 +62,7 @@
                     <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3);"></div>
                 @endif
                 <!-- Botão para trocar banner -->
+                @if($canEditPgis)
                 <button type="button" 
                         class="btn btn-sm btn-light position-absolute" 
                         style="top: 10px; right: 10px; z-index: 2; padding: 4px 8px; border-radius: 4px; opacity: 0.9;"
@@ -45,6 +71,7 @@
                         title="Trocar banner">
                     <i class="bx bx-image" style="font-size: 1.2rem;"></i>
                 </button>
+                @endif
                 <div class="position-absolute top-0 start-0 p-4 w-100 h-100 d-flex align-items-center justify-content-center" style="z-index: 1;">
                     <div class="text-center text-white">
                         <h2 class="mb-0 fw-bold" style="font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">{{ $pgi->name }}</h2>
@@ -136,9 +163,11 @@
                 <h5 class="card-title mb-0">
                     <i class="bx bx-group me-2"></i>Membros ({{ $pgi->members->count() }})
                 </h5>
+                @if($canEditPgis)
                 <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
                     <i class="bx bx-plus me-1"></i>Adicionar
                 </button>
+                @endif
             </header>
             <div class="card-body" style="max-height: 600px; overflow-y: auto;">
                 <!-- Campo de pesquisa -->
@@ -167,6 +196,7 @@
                                     @endif
                                     <span>{{ $member->name }}</span>
                                 </div>
+                                @if($canEditPgis)
                                 <form action="{{ route('pgis.members.detach', [$pgi, $member]) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja remover este membro do PGI?');">
                                     @csrf
                                     @method('DELETE')
@@ -174,6 +204,7 @@
                                         <i class="bx bx-trash"></i>
                                     </button>
                                 </form>
+                                @endif
                             </li>
                         @endforeach
                     </ul>
@@ -191,10 +222,14 @@
                 <h5 class="card-title mb-0">
                     <i class="bx bx-info-circle me-2"></i>Informações
                 </h5>
+                @if($canEditPgis || $canDeletePgis)
                 <div>
+                    @if($canEditPgis)
                     <a href="{{ route('pgis.edit', $pgi) }}" class="btn btn-primary btn-sm">
                         <i class="bx bx-edit me-1"></i>Editar
                     </a>
+                    @endif
+                    @if($canDeletePgis)
                     <form action="{{ route('pgis.destroy', $pgi) }}" method="POST" class="d-inline" 
                           onsubmit="return confirm('Tem certeza que deseja remover este PGI?');">
                         @csrf
@@ -203,7 +238,9 @@
                             <i class="bx bx-trash me-1"></i>Remover
                         </button>
                     </form>
+                    @endif
                 </div>
+                @endif
             </header>
             <div class="card-body">
                 @if($pgi->opening_date)
@@ -262,9 +299,11 @@
                 <h5 class="card-title mb-0">
                     <i class="bx bx-calendar me-2"></i>Reuniões
                 </h5>
+                @if($canCreateMeetings)
                 <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#newMeetingModal">
                     <i class="bx bx-plus me-1"></i>Nova reunião
                 </button>
+                @endif
             </header>
             <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                 @if($meetings->count() > 0)
@@ -368,6 +407,7 @@
 </div>
 
 <!-- Modal: Adicionar Membro -->
+@if($canEditPgis)
 <div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -433,8 +473,10 @@
         </div>
     </div>
 </div>
+@endif
 
 <!-- Modal: Nova Reunião -->
+@if($canCreateMeetings)
 <div class="modal fade" id="newMeetingModal" tabindex="-1" aria-labelledby="newMeetingModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -502,9 +544,11 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-bold">Visitantes (<span id="visitorCount">0</span>)</label>
+                        @if($canEditPgis)
                         <button type="button" class="btn btn-primary btn-sm mb-2" id="addVisitorBtn">
                             <i class="bx bx-plus me-1"></i>Adicionar visitante
                         </button>
+                        @endif
                         <div id="visitorsContainer" style="max-height: 200px; overflow-y: auto;">
                             <!-- Visitantes serão adicionados aqui via JavaScript -->
                         </div>
@@ -530,8 +574,10 @@
         </div>
     </div>
 </div>
+@endif
 
 <!-- Modal: Trocar Logo -->
+@if($canEditPgis)
 <div class="modal fade" id="updateLogoModal" tabindex="-1" aria-labelledby="updateLogoModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -570,8 +616,10 @@
         </div>
     </div>
 </div>
+@endif
 
 <!-- Modal: Trocar Banner -->
+@if($canEditPgis)
 <div class="modal fade" id="updateBannerModal" tabindex="-1" aria-labelledby="updateBannerModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -610,6 +658,7 @@
         </div>
     </div>
 </div>
+@endif
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

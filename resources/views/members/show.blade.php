@@ -10,14 +10,35 @@
 @endsection
 
 @section('content')
+
 @php
     $activeTab = request()->get('tab', 'informacoes');
     $nameParts = explode(' ', $member->name);
     $firstName = $nameParts[0] ?? '';
     $lastName = implode(' ', array_slice($nameParts, 1)) ?? '';
     
-    // Buscar turmas do membro
-    $memberTurmas = $member->turmas()->with('school')->get();
+    // Verificar permissões
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $isOwnProfile = $user && $user->member && $user->member->id === $member->id;
+    
+    // Verificar permissões específicas
+    $canEdit = $isAdmin || $isOwnProfile || 
+              ($user && ($user->hasPermission('members.index.edit') || 
+                        $user->hasPermission('members.edit') ||
+                        $user->hasPermission('members.index.manage')));
+    
+    // O membro NÃO pode excluir o próprio perfil
+    $canDelete = ($isAdmin || 
+                 ($user && ($user->hasPermission('members.index.delete') || 
+                           $user->hasPermission('members.delete') ||
+                           $user->hasPermission('members.index.manage')))) 
+                 && !$isOwnProfile;
+    
+    $canViewFinancial = $isAdmin || $isOwnProfile;
+    $canManagePermissions = $isAdmin; // Apenas admin pode gerenciar permissões
+    
+    // Turmas já vêm do controller: $allTurmas, $memberTurmas, $teacherTurmas
     
     // Calcular percentual de completude do perfil
     $completionFields = [
@@ -115,9 +136,25 @@
             <header class="card-header">
                 <h2 class="card-title">PGIs</h2>
             </header>
-            <div class="card-body text-center">
-                <i class="bx bx-data fs-1 text-muted"></i>
-                <p class="text-muted mb-0">Não há dados disponíveis</p>
+            <div class="card-body">
+                @if($member->pgi)
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <i class="bx bx-group me-2 text-primary"></i>
+                            <a href="{{ route('pgis.show', $member->pgi) }}" class="text-decoration-none fw-bold" style="color: #2c3e50;">
+                                {{ $member->pgi->name }}
+                            </a>
+                        </div>
+                        <a href="{{ route('pgis.show', $member->pgi) }}" class="btn btn-sm btn-outline-primary" title="Ver PGI">
+                            <i class="bx bx-show"></i>
+                        </a>
+                    </div>
+                @else
+                    <div class="text-center">
+                        <i class="bx bx-data fs-1 text-muted"></i>
+                        <p class="text-muted mb-0">Não há dados disponíveis</p>
+                    </div>
+                @endif
             </div>
         </section>
 
@@ -127,11 +164,40 @@
                 <h2 class="card-title">Ensino</h2>
             </header>
             <div class="card-body">
-                @if($memberTurmas->count() > 0)
-                    @foreach($memberTurmas as $turma)
-                        <div class="mb-2">
-                            <strong>{{ $turma->school->name ?? 'Escola' }}</strong>
-                            <span class="badge badge-primary">Aluno(a)</span>
+                @if(isset($allTurmas) && $allTurmas->count() > 0)
+                    @foreach($allTurmas as $turma)
+                        <div class="mb-3 pb-2 border-bottom">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div>
+                                    <h6 class="mb-1 font-weight-semibold">
+                                        <a href="{{ route('ensino.turmas.show', $turma) }}" class="text-decoration-none fw-bold" style="color: #007bff;">
+                                            <i class="bx bx-link-external me-1"></i>{{ $turma->name }}
+                                        </a>
+                                    </h6>
+                                    @if($turma->school)
+                                        <p class="text-muted small mb-1">
+                                            <i class="bx bx-building me-1"></i>{{ $turma->school->name }}
+                                        </p>
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1">
+                                @if(isset($memberTurmas) && $memberTurmas->contains('id', $turma->id))
+                                    <span class="badge badge-primary">
+                                        <i class="bx bx-user me-1"></i>Aluno(a)
+                                    </span>
+                                @endif
+                                @if(isset($teacherTurmas) && $teacherTurmas->contains('id', $turma->id))
+                                    <span class="badge badge-info">
+                                        <i class="bx bx-chalkboard me-1"></i>Professor(a)
+                                    </span>
+                                @endif
+                                @if($turma->schedule)
+                                    <span class="badge badge-secondary">
+                                        <i class="bx bx-time me-1"></i>{{ ucfirst($turma->schedule) }}
+                                    </span>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
                 @else
@@ -165,30 +231,38 @@
                         Informações
                     </a>
                 </li>
+                @if($canViewFinancial)
                 <li class="nav-item">
                     <a class="nav-link {{ $activeTab === 'financeiro' ? 'active' : '' }}" 
                        href="{{ route('members.show', ['member' => $member->id, 'tab' => 'financeiro']) }}">
                         Financeiro
                     </a>
                 </li>
+                @endif
+                @if($canEdit)
                 <li class="nav-item">
                     <a class="nav-link {{ $activeTab === 'editar' ? 'active' : '' }}" 
                        href="{{ route('members.show', ['member' => $member->id, 'tab' => 'editar']) }}">
                         Editar
                     </a>
                 </li>
+                @endif
+                @if($canManagePermissions)
                 <li class="nav-item">
                     <a class="nav-link {{ $activeTab === 'permissoes' ? 'active' : '' }}" 
                        href="{{ route('members.show', ['member' => $member->id, 'tab' => 'permissoes']) }}">
                         Permissões
                     </a>
                 </li>
+                @endif
+                @if($canDelete)
                 <li class="nav-item">
                     <a class="nav-link text-danger {{ $activeTab === 'remover' ? 'active' : '' }}" 
                        href="{{ route('members.show', ['member' => $member->id, 'tab' => 'remover']) }}">
                         <i class="bx bx-trash"></i> Remover
                     </a>
                 </li>
+                @endif
             </ul>
             <div class="tab-content">
                 <!-- Aba Informações -->
@@ -265,7 +339,7 @@
                 @endif
 
                 <!-- Aba Financeiro -->
-                @if($activeTab === 'financeiro')
+                @if($activeTab === 'financeiro' && $canViewFinancial)
                 <div class="tab-pane active">
                     <div class="p-3">
                         <div class="d-flex justify-content-between align-items-center mb-4">
@@ -347,7 +421,7 @@
                 @endif
 
                 <!-- Aba Editar -->
-                @if($activeTab === 'editar')
+                @if($activeTab === 'editar' && $canEdit)
                 <div class="tab-pane active">
                     <form class="p-3" action="{{ route('members.update', $member) }}" method="POST" enctype="multipart/form-data">
                         @csrf
@@ -540,6 +614,56 @@
                             </div>
                         </div>
 
+                        @php
+                            $user = $member->user;
+                        @endphp
+                        @if($user)
+                        <h4 class="mb-3 mt-4 font-weight-semibold text-dark">Acesso ao Sistema</h4>
+                        <div class="row mb-4">
+                            <div class="mb-3 col-md-6">
+                                <label for="login_email" class="form-label">E-mail de Acesso</label>
+                                <input type="email" class="form-control" 
+                                       id="login_email" 
+                                       value="{{ $user->email }}" 
+                                       readonly 
+                                       style="background-color: #f8f9fa;">
+                                <small class="form-text text-muted">
+                                    <i class="bx bx-info-circle me-1"></i>O e-mail de acesso é o mesmo do membro. Para alterar, edite o campo "E-mail" acima.
+                                </small>
+                            </div>
+                            <div class="mb-3 col-md-6">
+                                <label for="new_password" class="form-label">Nova Senha</label>
+                                <input type="password" class="form-control @error('new_password') is-invalid @enderror" 
+                                       id="new_password" 
+                                       name="new_password" 
+                                       placeholder="Deixe em branco para manter a senha atual">
+                                @error('new_password')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                                <small class="form-text text-muted">
+                                    <i class="bx bx-info-circle me-1"></i>Mínimo de 6 caracteres. Deixe em branco para manter a senha atual.
+                                </small>
+                            </div>
+                        </div>
+                        <div class="row mb-4">
+                            <div class="mb-3 col-md-6">
+                                <label for="new_password_confirmation" class="form-label">Confirmar Nova Senha</label>
+                                <input type="password" class="form-control @error('new_password_confirmation') is-invalid @enderror" 
+                                       id="new_password_confirmation" 
+                                       name="new_password_confirmation" 
+                                       placeholder="Confirme a nova senha">
+                                @error('new_password_confirmation')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+                        @elseif($member->email)
+                        <div class="alert alert-info mt-4">
+                            <i class="bx bx-info-circle me-2"></i>
+                            <strong>Usuário de acesso será criado automaticamente</strong> ao salvar este formulário com o e-mail informado.
+                        </div>
+                        @endif
+
                         <div class="row">
                             <div class="col-md-12 text-end mt-3">
                                 <button type="submit" class="btn btn-primary">Salvar</button>
@@ -551,16 +675,124 @@
                 @endif
 
                 <!-- Aba Permissões -->
-                @if($activeTab === 'permissoes')
+                @if($activeTab === 'permissoes' && $canManagePermissions)
                 <div class="tab-pane active">
                     <div class="p-3">
-                        <p class="text-muted">A página de permissões será implementada posteriormente.</p>
+                        @if(!$member->user)
+                            <div class="alert alert-warning">
+                                <i class="bx bx-info-circle me-2"></i>
+                                <strong>Este membro ainda não possui usuário de acesso.</strong><br>
+                                Para configurar permissões, é necessário que o membro tenha um e-mail cadastrado. 
+                                Vá para a aba <strong>Editar</strong> e defina um e-mail para o membro, depois salve.
+                            </div>
+                        @else
+                            @if(session('success'))
+                                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                                    <i class="bx bx-check-circle me-2"></i>{{ session('success') }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            @endif
+
+                            <form method="POST" action="{{ route('permissions.update', $member) }}">
+                                @csrf
+                                @method('PUT')
+
+                                {{-- Checkbox Super Administrador --}}
+                                <div class="card mb-4 border-warning">
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   name="is_admin" 
+                                                   id="is_admin" 
+                                                   value="1"
+                                                   {{ $user->is_admin ? 'checked' : '' }}
+                                                   onchange="toggleAdminPermissions(this)">
+                                            <label class="form-check-label fw-bold text-warning" for="is_admin">
+                                                SUPER ADMINISTRADOR
+                                            </label>
+                                            <small class="d-block text-muted mt-1">
+                                                Usuário com acesso total ao sistema. Todas as permissões serão ignoradas.
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="permissions-section" style="{{ $user->is_admin ? 'display:none;' : '' }}">
+                                @foreach($modules as $module)
+                                    <div class="card mb-4 border-primary">
+                                        <div class="card-header bg-primary text-white">
+                                            <div class="form-check form-check-inline mb-0">
+                                                <input class="form-check-input module-checkbox" 
+                                                       type="checkbox" 
+                                                       id="module_{{ $module->id }}"
+                                                       data-module-id="{{ $module->id }}">
+                                                <label class="form-check-label text-white fw-bold" for="module_{{ $module->id }}">
+                                                    {{ strtoupper($module->name) }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="card-body">
+                                            @php
+                                                $moduleChildren = $module->children;
+                                            @endphp
+                                            
+                                            @foreach($moduleChildren as $group)
+                                                <div class="mb-3 ps-3 border-start border-2 border-primary">
+                                                    <div class="form-check mb-2">
+                                                        <input class="form-check-input group-checkbox" 
+                                                               type="checkbox" 
+                                                               id="group_{{ $group->id }}"
+                                                               data-group-id="{{ $group->id }}"
+                                                               data-module-id="{{ $module->id }}">
+                                                        <label class="form-check-label fw-bold" for="group_{{ $group->id }}">
+                                                            {{ $group->name }}
+                                                        </label>
+                                                    </div>
+                                                    
+                                                    @php
+                                                        $groupActions = $group->children ?? collect();
+                                                    @endphp
+                                                    
+                                                    @if($groupActions->count() > 0)
+                                                        <div class="ms-4 mt-2">
+                                                            @foreach($groupActions as $action)
+                                                                <div class="form-check mb-2">
+                                                                    <input class="form-check-input action-checkbox" 
+                                                                           type="checkbox" 
+                                                                           name="permissions[]"
+                                                                           id="perm_{{ $action->id }}"
+                                                                           value="{{ $action->id }}"
+                                                                           data-group-id="{{ $group->id }}"
+                                                                           data-module-id="{{ $module->id }}"
+                                                                           {{ in_array($action->id, $assignedPermissions) ? 'checked' : '' }}>
+                                                                    <label class="form-check-label" for="perm_{{ $action->id }}">
+                                                                        {{ $action->name }}
+                                                                    </label>
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endforeach
+                                </div>
+
+                                <div class="text-end mt-3">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bx bx-save me-1"></i>Salvar Permissões
+                                    </button>
+                                </div>
+                            </form>
+                        @endif
                     </div>
                 </div>
                 @endif
 
                 <!-- Aba Remover -->
-                @if($activeTab === 'remover')
+                @if($activeTab === 'remover' && $canDelete)
                 <div class="tab-pane active">
                     <div class="p-3">
                         <div class="alert alert-danger">
@@ -599,6 +831,70 @@
             </li>
         </ul>
 
+        <!-- Card de Escalas do Voluntário -->
+        @if($volunteer && $upcomingSchedules->count() > 0)
+        <section class="card mb-3" id="escalas-card">
+            <header class="card-header">
+                <h2 class="card-title">
+                    <i class="bx bx-calendar-check me-2"></i>Minhas Escalas
+                </h2>
+            </header>
+            <div class="card-body">
+                @foreach($upcomingSchedules as $item)
+                    @php
+                        $schedule = $item['schedule'];
+                        $serviceArea = $item['serviceArea'];
+                        $scheduleVolunteer = $item['scheduleVolunteer'];
+                    @endphp
+                    <div class="border rounded p-3 mb-3 {{ $scheduleVolunteer->status === 'confirmado' ? 'border-success' : '' }}">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6 class="mb-1 font-weight-semibold">{{ $schedule->title }}</h6>
+                                <p class="text-muted mb-1 small">
+                                    <i class="bx bx-calendar me-1"></i>{{ $schedule->date->format('d/m/Y') }}
+                                    @if($schedule->start_time)
+                                        <i class="bx bx-time me-1 ms-2"></i>{{ is_object($schedule->start_time) ? $schedule->start_time->format('H:i') : \Carbon\Carbon::parse($schedule->start_time)->format('H:i') }}
+                                    @endif
+                                </p>
+                                <p class="mb-0">
+                                    <span class="badge badge-info">{{ $serviceArea->name ?? 'Área não definida' }}</span>
+                                    @if($scheduleVolunteer->status === 'confirmado')
+                                        <span class="badge badge-success ms-2">
+                                            <i class="bx bx-check-circle me-1"></i>Confirmado
+                                        </span>
+                                    @else
+                                        <span class="badge badge-warning ms-2">Pendente</span>
+                                    @endif
+                                </p>
+                            </div>
+                        </div>
+                        @if($scheduleVolunteer->status !== 'confirmado')
+                            <form action="{{ route('voluntarios.escalas.volunteers.confirm', $scheduleVolunteer) }}" method="POST" class="mt-2 confirm-presence-form">
+                                @csrf
+                                @method('PUT')
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="bx bx-check me-1"></i>Confirmar Presença
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </section>
+        @elseif($volunteer)
+        <section class="card mb-3">
+            <header class="card-header">
+                <h2 class="card-title">
+                    <i class="bx bx-calendar-check me-2"></i>Minhas Escalas
+                </h2>
+            </header>
+            <div class="card-body text-center">
+                <i class="bx bx-calendar-x fs-1 text-muted d-block mb-2"></i>
+                <p class="text-muted mb-0">Nenhuma escala agendada</p>
+            </div>
+        </section>
+        @endif
+
         <h4 class="mb-3 mt-4 pt-2 font-weight-semibold text-dark">Informações</h4>
         <ul class="simple-bullet-list mb-3">
             <li class="blue">
@@ -626,4 +922,237 @@
         </ul>
     </div>
 </div>
+
+@if(isset($pendingSchedulesCount) && $pendingSchedulesCount > 0)
+<!-- Modal: Notificação de Escalas Pendentes -->
+<div class="modal fade" id="pendingSchedulesModal" tabindex="-1" aria-labelledby="pendingSchedulesModalLabel" aria-hidden="false" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-warning" style="border-width: 3px;">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="pendingSchedulesModalLabel">
+                    <i class="bx bx-calendar-exclamation me-2"></i>Atenção: Escalas Pendentes!
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="bx bx-calendar-x fs-1 text-warning mb-3"></i>
+                    <h4 class="mb-2">Você tem {{ $pendingSchedulesCount }} {{ $pendingSchedulesCount == 1 ? 'escala pendente' : 'escalas pendentes' }} de confirmação!</h4>
+                    <p class="text-muted mb-3">Por favor, confirme sua presença nas escalas abaixo para que possamos organizar melhor o serviço.</p>
+                </div>
+                
+                @if($upcomingSchedules->count() > 0)
+                <div class="list-group">
+                    @foreach($upcomingSchedules->filter(function($item) { return $item['scheduleVolunteer']->status !== 'confirmado'; }) as $item)
+                        @php
+                            $schedule = $item['schedule'];
+                            $serviceArea = $item['serviceArea'];
+                        @endphp
+                        <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ $schedule->title }}</h6>
+                                    <p class="mb-1 small text-muted">
+                                        <i class="bx bx-calendar me-1"></i>{{ $schedule->date->format('d/m/Y') }}
+                                        @if($schedule->start_time)
+                                            <i class="bx bx-time me-1 ms-2"></i>{{ is_object($schedule->start_time) ? $schedule->start_time->format('H:i') : \Carbon\Carbon::parse($schedule->start_time)->format('H:i') }}
+                                        @endif
+                                    </p>
+                                    <span class="badge badge-info">{{ $serviceArea->name ?? 'Área não definida' }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                @endif
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bx bx-x me-1"></i>Fechar
+                </button>
+                <a href="#escalas-card" class="btn btn-primary" data-bs-dismiss="modal" onclick="document.getElementById('escalas-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return false;">
+                    <i class="bx bx-calendar-check me-1"></i>Ver Minhas Escalas
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Abrir modal de escalas pendentes automaticamente
+    @if(isset($pendingSchedulesCount) && $pendingSchedulesCount > 0)
+    const pendingModal = new bootstrap.Modal(document.getElementById('pendingSchedulesModal'), {
+        backdrop: 'static',
+        keyboard: false
+    });
+    pendingModal.show();
+    @endif
+    
+    // Interceptar envio do formulário de confirmação de presença
+    const confirmForms = document.querySelectorAll('.confirm-presence-form');
+    
+    confirmForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formElement = this;
+            const submitButton = formElement.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            
+            // Desabilitar botão e mostrar loading
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Confirmando...';
+            
+            // Criar FormData
+            const formData = new FormData(formElement);
+            
+            // Fazer requisição AJAX
+            fetch(formElement.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || formElement.querySelector('input[name="_token"]').value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Atualizar visual do card
+                    const card = formElement.closest('.border');
+                    if (card) {
+                        card.classList.add('border-success');
+                        card.classList.remove('border');
+                    }
+                    
+                    // Atualizar badge de status
+                    const statusBadge = card?.querySelector('.badge-warning');
+                    if (statusBadge) {
+                        statusBadge.outerHTML = '<span class="badge badge-success ms-2"><i class="bx bx-check-circle me-1"></i>Confirmado</span>';
+                    }
+                    
+                    // Remover formulário
+                    formElement.remove();
+                    
+                    // Mostrar mensagem de sucesso
+                    if (typeof showNotification === 'function') {
+                        showNotification('success', data.message || 'Presença confirmada com sucesso!');
+                    } else {
+                        alert(data.message || 'Presença confirmada com sucesso!');
+                    }
+                    
+                    // Recarregar após 1 segundo para atualizar dados
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    throw new Error(data.message || 'Erro ao confirmar presença');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+                alert('Erro ao confirmar presença. Por favor, tente novamente.');
+            });
+        });
+    });
+});
+
+// JavaScript para checkboxes em cascata de permissões
+@if($activeTab === 'permissoes' && $canManagePermissions)
+// Função para mostrar/ocultar permissões quando Super Admin é marcado (global)
+window.toggleAdminPermissions = function(checkbox) {
+    const permissionsSection = document.getElementById('permissions-section');
+    if (checkbox && checkbox.checked) {
+        permissionsSection.style.display = 'none';
+        document.querySelectorAll('.action-checkbox').forEach(cb => cb.checked = false);
+    } else {
+        permissionsSection.style.display = 'block';
+    }
+};
+
+(function() {
+
+    // Função para atualizar estado dos checkboxes do módulo
+    function updateModuleCheckbox(moduleId) {
+        const moduleCheckbox = document.getElementById('module_' + moduleId);
+        const groupCheckboxes = document.querySelectorAll(`input[data-module-id="${moduleId}"].group-checkbox`);
+        const actionCheckboxes = document.querySelectorAll(`input[data-module-id="${moduleId}"].action-checkbox`);
+        
+        let allChecked = true;
+        let someChecked = false;
+        
+        actionCheckboxes.forEach(cb => {
+            if (cb.checked) someChecked = true;
+            else allChecked = false;
+        });
+        
+        if (moduleCheckbox) {
+            moduleCheckbox.checked = allChecked;
+            moduleCheckbox.indeterminate = someChecked && !allChecked;
+        }
+    }
+
+    // Função para atualizar estado dos checkboxes do grupo
+    function updateGroupCheckbox(groupId, moduleId) {
+        const groupCheckbox = document.getElementById('group_' + groupId);
+        const actionCheckboxes = document.querySelectorAll(`input[data-group-id="${groupId}"].action-checkbox`);
+        
+        let allChecked = true;
+        
+        actionCheckboxes.forEach(cb => {
+            if (!cb.checked) allChecked = false;
+        });
+        
+        if (groupCheckbox) {
+            groupCheckbox.checked = allChecked;
+        }
+        
+        updateModuleCheckbox(moduleId);
+    }
+
+    // Event listeners
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('module-checkbox')) {
+            const moduleId = e.target.dataset.moduleId;
+            const groupCheckboxes = document.querySelectorAll(`input[data-module-id="${moduleId}"].group-checkbox`);
+            const actionCheckboxes = document.querySelectorAll(`input[data-module-id="${moduleId}"].action-checkbox`);
+            
+            groupCheckboxes.forEach(cb => cb.checked = e.target.checked);
+            actionCheckboxes.forEach(cb => cb.checked = e.target.checked);
+        }
+        
+        if (e.target.classList.contains('group-checkbox')) {
+            const groupId = e.target.dataset.groupId;
+            const moduleId = e.target.dataset.moduleId;
+            const actionCheckboxes = document.querySelectorAll(`input[data-group-id="${groupId}"].action-checkbox`);
+            
+            actionCheckboxes.forEach(cb => cb.checked = e.target.checked);
+            updateModuleCheckbox(moduleId);
+        }
+        
+        if (e.target.classList.contains('action-checkbox')) {
+            const groupId = e.target.dataset.groupId;
+            const moduleId = e.target.dataset.moduleId;
+            updateGroupCheckbox(groupId, moduleId);
+        }
+    });
+
+    // Inicializar estados dos checkboxes ao carregar
+    document.addEventListener('DOMContentLoaded', function() {
+        const memberModules = document.querySelectorAll('.module-checkbox');
+        memberModules.forEach(cb => {
+            const moduleId = cb.dataset.moduleId;
+            updateModuleCheckbox(moduleId);
+        });
+    });
+})();
+@endif
+</script>
+@endpush
 @endsection

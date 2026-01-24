@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Member;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
 
 class MemberController extends Controller
@@ -46,7 +48,12 @@ class MemberController extends Controller
         $sortOrder = $request->get('sort_order', 'asc');
         $query->orderBy($sortBy, $sortOrder);
 
-        $members = $query->paginate(15);
+        // Itens por página (padrão: 10, opções: 10, 50, 100)
+        $perPage = $request->get('per_page', 10);
+        $perPage = in_array($perPage, [10, 50, 100]) ? $perPage : 10;
+
+        $members = $query->paginate($perPage);
+        $members->appends($request->except('page')); // Preservar filtros na paginação
 
         return view('members.index', compact('members'));
     }
@@ -68,7 +75,7 @@ class MemberController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:members,email',
+            'email' => 'nullable|email|unique:members,email|unique:users,email',
             'phone' => 'nullable|string|max:20',
             'gender' => 'nullable|in:M,F',
             'marital_status' => 'nullable|in:solteiro,casado,divorciado,viuvo,uniao_estavel',
@@ -102,6 +109,20 @@ class MemberController extends Controller
         // Criar membro
         $member = Member::create($validated);
 
+        // Criar usuário de acesso se houver e-mail
+        if (!empty($member->email)) {
+            User::updateOrCreate(
+                ['member_id' => $member->id],
+                [
+                    'name' => $member->name,
+                    'email' => $member->email,
+                    // Senha padrão inicial para novos membros
+                    'password' => Hash::make('123456'),
+                    'is_admin' => false,
+                ]
+            );
+        }
+
         // Sincronizar departamentos
         if (!empty($departments)) {
             $member->departments()->sync($departments);
@@ -116,7 +137,20 @@ class MemberController extends Controller
      */
     public function show(Member $member, Request $request)
     {
-        $member->load(['department', 'departments', 'pgi', 'role']);
+        $member->load(['department', 'departments', 'pgi', 'role', 'turmas.school']);
+        
+        // Carregar turmas onde o membro é aluno
+        $memberTurmas = $member->turmas()->with('school')->get();
+        
+        // Carregar turmas onde o membro é professor (através de disciplinas)
+        $teacherTurmas = \App\Models\Turma::whereHas('disciplines', function($disciplineQuery) use ($member) {
+            $disciplineQuery->whereHas('teachers', function($teacherQuery) use ($member) {
+                $teacherQuery->where('discipline_teachers.member_id', $member->id);
+            });
+        })->with('school')->get();
+        
+        // Combinar e remover duplicatas
+        $allTurmas = $memberTurmas->merge($teacherTurmas)->unique('id');
         
         // Carregar departamentos para o formulário de edição
         $departments = \App\Models\Department::active()->orderBy('name')->get();
@@ -141,9 +175,71 @@ class MemberController extends Controller
             })
             ->sum('amount');
         
+        // Buscar voluntário do membro e suas escalas futuras
+        $volunteer = \App\Models\Volunteer::where('member_id', $member->id)->where('status', 'ativo')->first();
+        $upcomingSchedules = collect();
+        
+        if ($volunteer) {
+            // Buscar escalas futuras onde o voluntário está escalado
+            $scheduleVolunteers = \App\Models\ServiceScheduleVolunteer::where('volunteer_id', $volunteer->id)
+                ->with([
+                    'scheduleArea.schedule',
+                    'scheduleArea.serviceArea'
+                ])
+                ->get();
+            
+            foreach ($scheduleVolunteers as $scheduleVolunteer) {
+                $scheduleArea = $scheduleVolunteer->scheduleArea;
+                if (!$scheduleArea) continue;
+                
+                $schedule = $scheduleArea->schedule;
+                if (!$schedule) continue;
+                
+                // Filtrar apenas escalas futuras e publicadas/rascunho
+                if ($schedule->date && $schedule->date >= now()->toDateString() && in_array($schedule->status, ['publicada', 'rascunho'])) {
+                    $upcomingSchedules->push([
+                        'schedule' => $schedule,
+                        'scheduleArea' => $scheduleArea,
+                        'serviceArea' => $scheduleArea->serviceArea,
+                        'scheduleVolunteer' => $scheduleVolunteer,
+                    ]);
+                }
+            }
+            
+            // Ordenar por data
+            $upcomingSchedules = $upcomingSchedules->sortBy(function($item) {
+                $date = $item['schedule']->date->format('Y-m-d');
+                $time = $item['schedule']->start_time ? (is_object($item['schedule']->start_time) ? $item['schedule']->start_time->format('H:i') : \Carbon\Carbon::parse($item['schedule']->start_time)->format('H:i')) : '00:00';
+                return $date . ' ' . $time;
+            })->values();
+            
+            // Contar escalas pendentes de confirmação
+            $pendingSchedulesCount = $upcomingSchedules->filter(function($item) {
+                return $item['scheduleVolunteer']->status !== 'confirmado';
+            })->count();
+        } else {
+            $pendingSchedulesCount = 0;
+        }
+        
         $tab = $request->get('tab', 'informacoes');
         
-        return view('members.show', compact('member', 'departments', 'transactions', 'totalDizimo', 'totalOferta', 'tab'));
+        // Carregar dados de permissões se estiver na aba de permissões
+        $user = $member->user;
+        $modules = null;
+        $assignedPermissions = [];
+        
+        if ($tab === 'permissoes') {
+            $modules = \App\Models\Permission::whereNull('parent_id')
+                ->with(['children' => function($query) {
+                    $query->with('children');
+                }])
+                ->orderBy('module')
+                ->get();
+            
+            $assignedPermissions = $user ? $user->permissions->pluck('id')->toArray() : [];
+        }
+        
+        return view('members.show', compact('member', 'departments', 'transactions', 'totalDizimo', 'totalOferta', 'volunteer', 'upcomingSchedules', 'pendingSchedulesCount', 'tab', 'user', 'modules', 'assignedPermissions', 'allTurmas', 'memberTurmas', 'teacherTurmas'));
     }
 
     /**
@@ -161,9 +257,23 @@ class MemberController extends Controller
      */
     public function update(Request $request, Member $member)
     {
+        $user = auth()->user();
+        $isAdmin = $user?->is_admin ?? false;
+        $loggedMember = $user?->member;
+        
+        // Se não for admin, verificar se está editando o próprio perfil
+        if (!$isAdmin && $loggedMember && $loggedMember->id !== $member->id) {
+            // Verificar se tem permissão para editar outros membros
+            if (!$user->hasPermission('members.index.edit') && 
+                !$user->hasPermission('members.edit') &&
+                !$user->hasPermission('members.index.manage')) {
+                abort(403, 'Acesso negado. Você só pode editar o seu próprio perfil.');
+            }
+        }
+        
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'nullable|email|unique:members,email,' . $member->id,
+            'email' => 'nullable|email|unique:members,email,' . $member->id . '|unique:users,email,' . optional($member->user)->id,
             'phone' => 'nullable|string|max:20',
             'gender' => 'nullable|in:M,F',
             'marital_status' => 'nullable|in:solteiro,casado,divorciado,viuvo,uniao_estavel',
@@ -182,6 +292,7 @@ class MemberController extends Controller
             'departments.*' => 'exists:departments,id',
             'pgi_id' => 'nullable|exists:pgis,id',
             'role_id' => 'nullable|exists:member_roles,id',
+            'new_password' => 'nullable|string|min:6|confirmed',
         ]);
 
         // Upload da foto
@@ -211,6 +322,27 @@ class MemberController extends Controller
         // Sincronizar departamentos
         $member->departments()->sync($departments ?? []);
 
+        // Garantir que o membro tenha usuário de acesso
+        if (!empty($member->email)) {
+            $user = $member->user ?: new User();
+            $user->member_id = $member->id;
+            $user->name = $member->name;
+            $user->email = $member->email;
+
+            if ($request->filled('new_password')) {
+                $user->password = Hash::make($request->input('new_password'));
+            } elseif (!$user->exists) {
+                // Se ainda não existir usuário, define senha padrão
+                $user->password = Hash::make('123456');
+            }
+
+            if ($user->is_admin === null) {
+                $user->is_admin = false;
+            }
+
+            $user->save();
+        }
+
         $tab = $request->get('tab', 'informacoes');
         return redirect()->route('members.show', ['member' => $member->id, 'tab' => $tab])
             ->with('success', 'Membro atualizado com sucesso!');
@@ -221,6 +353,14 @@ class MemberController extends Controller
      */
     public function destroy(Member $member)
     {
+        $user = auth()->user();
+        $loggedMember = $user?->member;
+        
+        // Impedir que o membro exclua o próprio perfil
+        if ($loggedMember && $loggedMember->id === $member->id) {
+            abort(403, 'Você não pode excluir o seu próprio perfil.');
+        }
+        
         // Remove foto se existir
         if ($member->photo_url) {
             Storage::disk('public')->delete($member->photo_url);

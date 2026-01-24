@@ -88,6 +88,17 @@ class Pgi extends Model
     }
 
     /**
+     * Verifica se um membro é líder ou líder em treinamento deste PGI
+     */
+    public function isLeader(Member $member): bool
+    {
+        return $this->leader_1_id == $member->id ||
+               $this->leader_2_id == $member->id ||
+               $this->leader_training_1_id == $member->id ||
+               $this->leader_training_2_id == $member->id;
+    }
+
+    /**
      * Relacionamento com Reuniões
      */
     public function meetings()

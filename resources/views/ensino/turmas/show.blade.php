@@ -11,6 +11,33 @@
 @endsection
 
 @section('content')
+@php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $canEditTurmas = $isAdmin || 
+                     ($user && ($user->hasPermission('ensino.turmas.edit') || 
+                                $user->hasPermission('ensino.turmas.manage')));
+    $canDeleteTurmas = $isAdmin || 
+                       ($user && ($user->hasPermission('ensino.turmas.delete') || 
+                                  $user->hasPermission('ensino.turmas.manage')));
+    
+    // Verificar se é aluno ou professor (já vem do controller)
+    // $isStudent e $isTeacher já estão disponíveis
+    
+    // Regras de acesso:
+    // - Aluno: pode ver turma, disciplinas, arquivos. NÃO pode ver relatórios
+    // - Professor: pode ver turma, registrar aula, adicionar arquivos, ver relatórios. NÃO pode editar/excluir turma
+    $canViewReports = $isAdmin || $isTeacher || ($user && ($user->hasPermission('ensino.turmas.view') || $user->hasPermission('ensino.turmas.manage')));
+    $canAddLesson = $isAdmin || $isTeacher || ($user && ($user->hasPermission('ensino.turmas.edit') || $user->hasPermission('ensino.turmas.manage')));
+    $canAddFile = $isAdmin || $isTeacher || ($user && ($user->hasPermission('ensino.turmas.edit') || $user->hasPermission('ensino.turmas.manage')));
+    
+    // Professores não podem editar/excluir turma
+    if ($isTeacher && !$isAdmin) {
+        $canEditTurmas = false;
+        $canDeleteTurmas = false;
+    }
+@endphp
+
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -35,6 +62,7 @@
                 </h5>
             </div>
             <div class="card-body">
+                @if($canEditTurmas)
                 <form action="{{ route('ensino.turmas.update', $turma) }}" method="POST" id="turmaInfoForm">
                     @csrf
                     @method('PUT')
@@ -111,17 +139,51 @@
                         <button type="submit" class="btn btn-success flex-fill">
                             <i class="bx bx-save me-1"></i>Salvar
                         </button>
+                        @if($canDeleteTurmas)
                         <button type="button" class="btn btn-danger" onclick="deleteTurma()">
                             <i class="bx bx-trash me-1"></i>Excluir turma
                         </button>
+                        @endif
                     </div>
                 </form>
 
                 <!-- Formulário oculto para deletar -->
+                @if($canDeleteTurmas)
                 <form action="{{ route('ensino.turmas.destroy', $turma) }}" method="POST" id="deleteForm" style="display: none;">
                     @csrf
                     @method('DELETE')
                 </form>
+                @endif
+                @else
+                <!-- Modo somente leitura -->
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nome da turma</label>
+                    <p class="form-control-plaintext">{{ $turma->name }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Escola</label>
+                    <p class="form-control-plaintext">{{ $turma->school->name ?? '-' }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Horário</label>
+                    <p class="form-control-plaintext">{{ $turma->schedule ? ucfirst($turma->schedule) : '-' }}</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Status</label>
+                    <p class="form-control-plaintext">{{ ucfirst($turma->status) }}</p>
+                </div>
+                @if($turma->description)
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Descrição</label>
+                    <p class="form-control-plaintext">{{ $turma->description }}</p>
+                </div>
+                @endif
+                <div class="d-flex gap-2">
+                    <a href="{{ route('ensino.turmas.index') }}" class="btn btn-secondary">
+                        <i class="bx bx-arrow-back me-1"></i>Voltar
+                    </a>
+                </div>
+                @endif
             </div>
         </div>
     </div>
@@ -160,11 +222,13 @@
                         Arquivos
                     </a>
                 </li>
+                @if($canViewReports)
                 <li class="nav-item" role="presentation">
                     <a class="nav-link" id="relatorios-tab" data-bs-toggle="tab" href="#relatorios" role="tab" aria-controls="relatorios" aria-selected="false">
                         Relatórios
                     </a>
                 </li>
+                @endif
             </ul>
 
             <!-- Tab Content -->
@@ -174,9 +238,11 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="mb-0">Alunos da Turma</h5>
+                            @if($canEditTurmas)
                             <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addStudentModal">
                                 <i class="bx bx-plus me-1"></i>Adicionar aluno
                             </button>
+                            @endif
                         </div>
 
                         <div class="table-responsive">
@@ -204,9 +270,11 @@
                                             </td>
                                             <td><strong>{{ $student->name }}</strong></td>
                                             <td class="text-center">
+                                                @if($canEditTurmas)
                                                 <button type="button" class="btn btn-danger btn-sm" onclick="removeStudent({{ $student->id }})">
                                                     <i class="bx bx-trash"></i>
                                                 </button>
+                                                @endif
                                             </td>
                                         </tr>
                                     @empty
@@ -227,9 +295,11 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="mb-0">Disciplinas da Turma</h5>
+                            @if($canEditTurmas)
                             <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addDisciplineModal">
                                 <i class="bx bx-plus me-1"></i>Adicionar disciplina
                             </button>
+                            @endif
                         </div>
 
                         <div class="row">
@@ -255,15 +325,19 @@
                                                 @endforelse
                                             </p>
                                             <div class="d-flex justify-content-end gap-2">
+                                                @if($canEditTurmas)
                                                 <button type="button" class="btn btn-primary btn-sm edit-discipline-btn" 
                                                         data-discipline-id="{{ $discipline->id }}"
                                                         data-discipline-name="{{ $discipline->name }}"
                                                         data-teacher-ids="{{ $discipline->teachers->pluck('id')->implode(',') }}">
                                                     <i class="bx bx-check"></i> Editar
                                                 </button>
+                                                @endif
+                                                @if($canEditTurmas)
                                                 <button type="button" class="btn btn-danger btn-sm" onclick="deleteDiscipline({{ $discipline->id }})">
                                                     <i class="bx bx-trash"></i> Remover
                                                 </button>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
@@ -285,9 +359,11 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="mb-0">Aulas Registradas</h5>
+                            @if($canAddLesson)
                             <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addLessonModal">
                                 <i class="bx bx-plus me-1"></i>Registrar aula
                             </button>
+                            @endif
                         </div>
 
                         <div class="table-responsive">
@@ -309,12 +385,18 @@
                                             <td>{{ $lesson->subject ?? '-' }}</td>
                                             <td>{{ $lesson->attendances->where('present', true)->count() }}</td>
                                             <td class="text-center">
+                                                @if($canEditTurmas)
                                                 <button type="button" class="btn btn-primary btn-sm" onclick="viewLesson({{ $lesson->id }})">
                                                     Visualizar / Editar
                                                 </button>
                                                 <button type="button" class="btn btn-danger btn-sm" onclick="deleteLesson({{ $lesson->id }})">
                                                     <i class="bx bx-trash"></i>
                                                 </button>
+                                                @elseif($isStudent || $isTeacher)
+                                                <button type="button" class="btn btn-info btn-sm" onclick="viewLesson({{ $lesson->id }})">
+                                                    Visualizar
+                                                </button>
+                                                @endif
                                             </td>
                                         </tr>
                                     @empty
@@ -335,9 +417,11 @@
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h5 class="mb-0">Arquivos da Turma</h5>
+                            @if($canAddFile)
                             <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addFileModal">
                                 <i class="bx bx-plus me-1"></i>Adicionar
                             </button>
+                            @endif
                         </div>
 
                         <div class="list-group">
@@ -362,9 +446,11 @@
                                                 <i class="bx bx-link-external"></i> Abrir Link
                                             </a>
                                         @endif
+                                        @if($canEditTurmas)
                                         <button type="button" class="btn btn-danger btn-sm" onclick="deleteFile({{ $file->id }})">
                                             <i class="bx bx-trash"></i>
                                         </button>
+                                        @endif
                                     </div>
                                 </div>
                             @empty
@@ -378,6 +464,7 @@
                 </div>
 
                 <!-- Tab Relatórios -->
+                @if($canViewReports)
                 <div class="tab-pane fade" id="relatorios" role="tabpanel" aria-labelledby="relatorios-tab">
                     <div class="card-body">
                         <h5 class="mb-3">Disciplinas</h5>
@@ -397,6 +484,7 @@
                         </div>
                     </div>
                 </div>
+                @endif
             </div>
         </div>
     </div>
@@ -404,6 +492,7 @@
 
 @include('ensino.turmas.modals.add-student')
 @include('ensino.turmas.modals.add-discipline')
+@include('ensino.turmas.modals.edit-discipline')
 @include('ensino.turmas.modals.add-lesson')
 @include('ensino.turmas.modals.add-file')
 @include('ensino.turmas.modals.frequency-monthly')
@@ -448,12 +537,37 @@
                 const id = this.getAttribute('data-discipline-id');
                 const name = this.getAttribute('data-discipline-name');
                 const teacherIdsStr = this.getAttribute('data-teacher-ids');
-                const teacherIds = teacherIdsStr ? teacherIdsStr.split(',').map(id => parseInt(id)) : [];
+                const teacherIds = teacherIdsStr ? teacherIdsStr.split(',').map(id => parseInt(id)).filter(id => !isNaN(id)) : [];
                 
-                // Por enquanto, apenas exibir um alert. Implementar modal de edição depois
-                console.log('Editar disciplina:', { id: id, name: name, teacherIds: teacherIds });
-                alert('Função de editar disciplina será implementada em breve. ID: ' + id + ', Nome: ' + name);
-                // TODO: Criar modal de edição de disciplina similar ao modal de adicionar
+                // Preencher o formulário do modal de edição
+                const editForm = document.getElementById('editDisciplineForm');
+                const editNameInput = document.getElementById('edit_discipline_name');
+                const editTeachersSelect = document.getElementById('edit_teachers');
+                
+                if (editForm && editNameInput && editTeachersSelect) {
+                    // Definir a ação do formulário
+                    editForm.action = '{{ url("ensino/turmas/{$turma->id}/disciplines") }}/' + id;
+                    
+                    // Preencher o nome
+                    editNameInput.value = name;
+                    
+                    // Limpar seleções anteriores
+                    Array.from(editTeachersSelect.options).forEach(option => {
+                        option.selected = false;
+                    });
+                    
+                    // Selecionar os professores
+                    teacherIds.forEach(teacherId => {
+                        const option = editTeachersSelect.querySelector(`option[value="${teacherId}"]`);
+                        if (option) {
+                            option.selected = true;
+                        }
+                    });
+                    
+                    // Abrir o modal
+                    const modal = new bootstrap.Modal(document.getElementById('editDisciplineModal'));
+                    modal.show();
+                }
             });
         });
     });

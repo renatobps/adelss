@@ -10,6 +10,15 @@
 @endsection
 
 @section('content')
+@php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $canViewCategories = $isAdmin || $user->hasPermission('financial.categories.view') || $user->hasPermission('financial.categories.manage');
+    $canCreateCategories = $isAdmin || $user->hasPermission('financial.categories.create') || $user->hasPermission('financial.categories.manage');
+    $canEditCategories = $isAdmin || $user->hasPermission('financial.categories.edit') || $user->hasPermission('financial.categories.manage');
+    $canDeleteCategories = $isAdmin || $user->hasPermission('financial.categories.delete') || $user->hasPermission('financial.categories.manage');
+@endphp
+
 <!-- Header -->
 <div class="alert alert-primary mb-4" style="background-color: #007bff; color: white; border: none;">
     <i class="bx bx-info-circle me-2"></i>
@@ -66,9 +75,12 @@
                                             </div>
                                         </td>
                                         <td class="text-end">
+                                            @if($canEditCategories)
                                             <button type="button" class="btn btn-sm btn-primary me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ $receita->id }}" title="Editar">
                                                 <i class="bx bx-edit"></i>
                                             </button>
+                                            @endif
+                                            @if($canDeleteCategories)
                                             <form action="{{ route('financial.categories.destroy', $receita) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja remover esta categoria?');">
                                                 @csrf
                                                 @method('DELETE')
@@ -76,10 +88,12 @@
                                                     <i class="bx bx-trash"></i>
                                                 </button>
                                             </form>
+                                            @endif
                                         </td>
                                     </tr>
 
                                     <!-- Modal de Edição -->
+                                    @if($canEditCategories)
                                     <div class="modal fade" id="editModal{{ $receita->id }}" tabindex="-1" aria-labelledby="editModalLabel{{ $receita->id }}" aria-hidden="true">
                                         <div class="modal-dialog">
                                             <div class="modal-content">
@@ -135,6 +149,7 @@
                                             </div>
                                         </div>
                                     </div>
+                                    @endif
                                 @endforeach
                             </tbody>
                         </table>
@@ -179,9 +194,12 @@
                                             </div>
                                         </td>
                                         <td class="text-end">
+                                            @if($canEditCategories)
                                             <button type="button" class="btn btn-sm btn-primary me-1" data-bs-toggle="modal" data-bs-target="#editModal{{ $despesa->id }}" title="Editar">
                                                 <i class="bx bx-edit"></i>
                                             </button>
+                                            @endif
+                                            @if($canDeleteCategories)
                                             <form action="{{ route('financial.categories.destroy', $despesa) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja remover esta categoria?');">
                                                 @csrf
                                                 @method('DELETE')
@@ -189,10 +207,12 @@
                                                     <i class="bx bx-trash"></i>
                                                 </button>
                                             </form>
+                                            @endif
                                         </td>
                                     </tr>
 
                                     <!-- Modal de Edição -->
+                                    @if($canEditCategories)
                                     <div class="modal fade" id="editModal{{ $despesa->id }}" tabindex="-1" aria-labelledby="editModalLabel{{ $despesa->id }}" aria-hidden="true">
                                         <div class="modal-dialog">
                                             <div class="modal-content">
@@ -248,6 +268,7 @@
                                             </div>
                                         </div>
                                     </div>
+                                    @endif
                                 @endforeach
                             </tbody>
                         </table>
@@ -263,6 +284,7 @@
     </div>
 
     <!-- Painel: Criar Categoria -->
+    @if($canCreateCategories)
     <div class="col-lg-3 mb-4">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <header class="card-header bg-light">
@@ -321,5 +343,6 @@
             </div>
         </div>
     </div>
+    @endif
 </div>
 @endsection
