@@ -562,6 +562,46 @@
                                     </ul>
                                 </li>
                                 @endif
+
+                                {{-- MENU MORIAH --}}
+                                <li class="nav-parent {{ request()->routeIs('moriah.*') ? 'nav-expanded nav-active' : '' }}">
+                                    <a class="nav-link" href="#">
+                                        <i class="fa-solid fa-music" aria-hidden="true"></i>
+                                        <span>Moriah</span>
+                                    </a>
+                                    <ul class="nav nav-children">
+                                        <li class="{{ request()->routeIs('moriah.inicio.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="#">
+                                                <i class="bx bx-home"></i>Início
+                                            </a>
+                                        </li>
+                                        <li class="{{ request()->routeIs('moriah.escalas.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="#">
+                                                <i class="bx bx-calendar-check"></i>Escalas
+                                            </a>
+                                        </li>
+                                        <li class="{{ request()->routeIs('moriah.repertorio.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('moriah.repertorio.index') }}">
+                                                <i class="bx bx-music"></i>Repertório
+                                            </a>
+                                        </li>
+                                        <li class="{{ request()->routeIs('moriah.notificacoes.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="#">
+                                                <i class="bx bx-bell"></i>Notificação
+                                            </a>
+                                        </li>
+                                        <li class="{{ request()->routeIs('moriah.ministerio.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('moriah.ministerio') }}">
+                                                <i class="bx bx-church"></i>Ministério
+                                            </a>
+                                        </li>
+                                        <li class="{{ request()->routeIs('moriah.indisponibilidades.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="#">
+                                                <i class="bx bx-x-circle"></i>Indisponibilidades
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
                             </ul>
                         </nav>
 

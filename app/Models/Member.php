@@ -99,6 +99,16 @@ class Member extends Model
     }
 
     /**
+     * Relacionamento com Funções do Moriah (muitos para muitos)
+     */
+    public function moriahFunctions()
+    {
+        return $this->belongsToMany(MoriahFunction::class, 'member_moriah_functions', 'member_id', 'moriah_function_id')
+                    ->withTimestamps();
+    }
+
+
+    /**
      * Relacionamento com Transações Financeiras
      */
     public function financialTransactions()

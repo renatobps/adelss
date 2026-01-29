@@ -11,6 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('meetings')) {
+            return; // Pular se a tabela já existir
+        }
+        
         Schema::create('meetings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('pgi_id')->constrained('pgis')->onDelete('cascade');

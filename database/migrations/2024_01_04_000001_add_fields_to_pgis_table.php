@@ -11,12 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (!Schema::hasTable('pgis')) {
+            return; // Pular se a tabela não existir
+        }
+        
         Schema::table('pgis', function (Blueprint $table) {
             // Remove foreign key antiga se existir
-            try {
-                $table->dropForeign(['leader_id']);
-            } catch (\Exception $e) {
-                // Ignora se não existir
+            $foreignKeys = \DB::select("SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'pgis' AND CONSTRAINT_NAME LIKE '%foreign%'");
+            $existingKeys = array_column($foreignKeys, 'CONSTRAINT_NAME');
+            
+            if (in_array('pgis_leader_id_foreign', $existingKeys)) {
+                try {
+                    $table->dropForeign(['leader_id']);
+                } catch (\Exception $e) {
+                    // Ignora se não existir
+                }
             }
             
             // Remove campos antigos se existirem

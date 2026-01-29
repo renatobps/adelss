@@ -23,6 +23,34 @@
                 <p class="card-subtitle">Gerencie os membros da organização</p>
             </header>
             <div class="card-body">
+                @if(session('success'))
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bx bx-check-circle me-2"></i>{{ session('success') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+                @if(session('error'))
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bx bx-error-circle me-2"></i>{{ session('error') }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
+                @if(session('import_errors') && count(session('import_errors')) > 0)
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <h5 class="alert-heading">
+                            <i class="bx bx-error-circle me-2"></i>Erros de Importação Detalhados
+                        </h5>
+                        <p class="mb-2">Foram encontrados <strong>{{ count(session('import_errors')) }} erro(s)</strong> durante a importação:</p>
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            <ul class="mb-0">
+                                @foreach(session('import_errors') as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                @endif
                 @php
                     $user = Auth::user();
                     $isAdmin = $user?->is_admin ?? false;

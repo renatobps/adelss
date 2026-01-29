@@ -165,27 +165,67 @@
     </div>
 </div>
 
-<!-- Modal para adicionar participante -->
+<!-- Modal para adicionar participantes -->
 <div class="modal fade" id="participantModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Adicionar Participante</h5>
+                <h5 class="modal-title">
+                    <i class="bx bx-user-plus me-2"></i>Adicionar Participantes
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <select class="form-select" id="participantSelect">
-                    <option value="">Selecione um membro...</option>
-                    @foreach($members as $member)
-                        <option value="{{ $member->id }}" data-name="{{ $member->name }}">
-                            {{ $member->name }}
-                        </option>
-                    @endforeach
-                </select>
+                <div class="alert alert-info mb-3">
+                    <i class="bx bx-info-circle me-2"></i>
+                    <strong>Selecione um ou mais membros</strong> para adicionar ao departamento. Você pode selecionar múltiplos membros de uma vez.
+                </div>
+                <div class="mb-3">
+                    <label for="searchParticipantInput" class="form-label">Buscar membro</label>
+                    <input type="text" class="form-control" id="searchParticipantInput" placeholder="Digite o nome do membro..." oninput="filterParticipants()">
+                    <small class="text-muted">A busca é automática conforme você digita</small>
+                </div>
+                <div class="mb-3 d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                    <span id="selectedParticipantsCount" class="fw-bold text-primary">0 membro(s) selecionado(s)</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllParticipants()">
+                        <i class="bx bx-check-square me-1"></i>Selecionar todos
+                    </button>
+                </div>
+                <div style="max-height: 400px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px; padding: 8px;">
+                    <div id="participantsListModal">
+                        @foreach($members as $member)
+                            <div class="participant-item d-flex align-items-center justify-content-between p-3 border-bottom" 
+                                 data-name="{{ strtolower($member->name) }}" 
+                                 data-member-id="{{ $member->id }}"
+                                 style="cursor: pointer; transition: background-color 0.2s; border-radius: 4px; margin-bottom: 4px;">
+                                <div class="d-flex align-items-center flex-grow-1">
+                                    <div class="form-check me-3">
+                                        <input class="form-check-input participant-checkbox" 
+                                               type="checkbox" 
+                                               value="{{ $member->id }}" 
+                                               id="participant_check_{{ $member->id }}"
+                                               onchange="updateParticipantsCount()"
+                                               style="width: 18px; height: 18px; cursor: pointer;">
+                                    </div>
+                                    @if($member->photo_url)
+                                        <img src="{{ $member->photo_url }}" alt="{{ $member->name }}" class="rounded-circle me-3" style="width: 50px; height: 50px; object-fit: cover; border: 2px solid #dee2e6;">
+                                    @else
+                                        <div class="rounded-circle me-3 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px; background-color: #e9ecef; color: #6c757d; border: 2px solid #dee2e6;">
+                                            <i class="bx bx-user" style="font-size: 1.5rem;"></i>
+                                        </div>
+                                    @endif
+                                    <span style="font-size: 1rem; font-weight: 500; color: #333;">{{ $member->name }}</span>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-primary" id="confirmParticipantBtn">Adicionar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="confirmParticipantBtn">
+                    <i class="bx bx-plus me-1"></i>Adicionar Selecionados (<span id="selectedCountBtn">0</span>)
+                </button>
             </div>
         </div>
     </div>
@@ -200,22 +240,155 @@
     document.getElementById('addParticipantBtn').addEventListener('click', function() {
         const modal = new bootstrap.Modal(document.getElementById('participantModal'));
         modal.show();
+        // Limpar busca e seleções ao abrir
+        const searchInput = document.getElementById('searchParticipantInput');
+        if (searchInput) {
+            searchInput.value = '';
+            filterParticipants();
+        }
+        document.querySelectorAll('.participant-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+        updateParticipantsCount();
+    });
+    
+    // Permitir clicar na linha inteira para selecionar
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.participant-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                if (e.target.type !== 'checkbox' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'LABEL') {
+                    const checkbox = this.querySelector('.participant-checkbox');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        updateParticipantsCount();
+                    }
+                }
+            });
+            
+            item.addEventListener('mouseenter', function() {
+                if (!this.querySelector('.participant-checkbox').checked) {
+                    this.style.backgroundColor = '#f8f9fa';
+                }
+            });
+            
+            item.addEventListener('mouseleave', function() {
+                if (!this.querySelector('.participant-checkbox').checked) {
+                    this.style.backgroundColor = 'transparent';
+                }
+            });
+        });
     });
 
-    document.getElementById('confirmParticipantBtn').addEventListener('click', function() {
-        const select = document.getElementById('participantSelect');
-        const memberId = select.value;
-        const memberName = select.options[select.selectedIndex].dataset.name;
+    // Filtrar participantes na busca
+    function filterParticipants() {
+        const input = document.getElementById('searchParticipantInput');
+        if (!input) return;
+        
+        const filter = input.value.toLowerCase().trim();
+        const items = document.querySelectorAll('.participant-item');
+        
+        items.forEach(item => {
+            const name = item.getAttribute('data-name');
+            if (filter === '' || name.includes(filter)) {
+                item.style.display = '';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
 
-        const id = parseInt(memberId);
-        if (memberId && id && !selectedMembers.includes(id)) {
-            selectedMembers.push(id);
-            updateParticipantsList();
-            
-            const modal = bootstrap.Modal.getInstance(document.getElementById('participantModal'));
-            modal.hide();
-            select.value = '';
+    // Selecionar todos os participantes
+    function selectAllParticipants() {
+        const checkboxes = document.querySelectorAll('.participant-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        checkboxes.forEach(checkbox => {
+            if (checkbox.offsetParent !== null) { // Só seleciona os visíveis
+                checkbox.checked = !allChecked;
+                const item = checkbox.closest('.participant-item');
+                if (item) {
+                    if (checkbox.checked) {
+                        item.style.backgroundColor = '#e7f3ff';
+                    } else {
+                        item.style.backgroundColor = 'transparent';
+                    }
+                }
+            }
+        });
+        
+        updateParticipantsCount();
+    }
+
+    // Atualizar contador de selecionados
+    function updateParticipantsCount() {
+        const selected = document.querySelectorAll('.participant-checkbox:checked').length;
+        const countElement = document.getElementById('selectedParticipantsCount');
+        const countBtnElement = document.getElementById('selectedCountBtn');
+        
+        if (countElement) {
+            countElement.textContent = `${selected} membro(s) selecionado(s)`;
         }
+        
+        if (countBtnElement) {
+            countBtnElement.textContent = selected;
+        }
+        
+        // Habilitar/desabilitar botão
+        const addBtn = document.getElementById('confirmParticipantBtn');
+        if (addBtn) {
+            if (selected > 0) {
+                addBtn.disabled = false;
+                addBtn.classList.remove('disabled');
+            } else {
+                addBtn.disabled = true;
+                addBtn.classList.add('disabled');
+            }
+        }
+        
+        // Atualizar cor de fundo dos itens
+        document.querySelectorAll('.participant-checkbox').forEach(checkbox => {
+            const item = checkbox.closest('.participant-item');
+            if (item) {
+                if (checkbox.checked) {
+                    item.style.backgroundColor = '#e7f3ff';
+                } else {
+                    item.style.backgroundColor = 'transparent';
+                }
+            }
+        });
+    }
+
+    document.getElementById('confirmParticipantBtn').addEventListener('click', function() {
+        const selectedCheckboxes = document.querySelectorAll('.participant-checkbox:checked');
+        const newMemberIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+        
+        if (newMemberIds.length === 0) {
+            alert('Selecione pelo menos um membro para adicionar.');
+            return;
+        }
+
+        // Adicionar apenas os que ainda não estão na lista
+        newMemberIds.forEach(memberId => {
+            if (!selectedMembers.includes(memberId)) {
+                selectedMembers.push(memberId);
+            }
+        });
+        
+        updateParticipantsList();
+        
+        const modal = bootstrap.Modal.getInstance(document.getElementById('participantModal'));
+        modal.hide();
+        
+        // Limpar seleções
+        document.querySelectorAll('.participant-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+        const searchInput = document.getElementById('searchParticipantInput');
+        if (searchInput) {
+            searchInput.value = '';
+            filterParticipants();
+        }
+        updateParticipantsCount();
     });
 
     function updateParticipantsList() {
@@ -230,10 +403,11 @@
         }
 
         noParticipants.style.display = 'none';
-        container.innerHTML = selectedMembers.map((memberId, index) => {
-            const select = document.getElementById('participantSelect');
-            const option = select.querySelector(`option[value="${memberId}"]`);
-            const name = option ? option.dataset.name : 'Membro ' + (index + 1);
+        container.innerHTML = selectedMembers.map((memberId) => {
+            const checkbox = document.querySelector(`#participant_check_${memberId}`);
+            const item = checkbox ? checkbox.closest('.participant-item') : null;
+            const nameSpan = item ? item.querySelector('span[style*="font-weight"]') : null;
+            const name = nameSpan ? nameSpan.textContent.trim() : 'Membro ' + memberId;
             
             return `
                 <div class="alert alert-light mb-2 d-flex justify-content-between align-items-center" id="participant-${memberId}">

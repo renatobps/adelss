@@ -18,6 +18,8 @@ class Department extends Model
         'status',
         'description',
         'leader_id',
+        'banner_url',
+        'logo_url',
     ];
 
     protected $casts = [

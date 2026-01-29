@@ -45,13 +45,50 @@
     </div>
 @endif
 
+@if(session('import_errors') && count(session('import_errors')) > 0)
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <h5 class="alert-heading">
+            <i class="bx bx-error-circle me-2"></i>Erros de Importação Detalhados
+        </h5>
+        <p class="mb-2">Foram encontrados <strong>{{ count(session('import_errors')) }} erro(s)</strong> durante a importação:</p>
+        <div style="max-height: 400px; overflow-y: auto;">
+            <ul class="mb-0">
+                @foreach(session('import_errors') as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
 <div class="row">
     <!-- Coluna Esquerda - Lista de Cargos -->
     <div class="{{ $canCreateRoles ? 'col-lg-8' : 'col-lg-12' }}">
         <section class="card">
+            <header class="card-header">
+                <div class="card-actions">
+                    <a href="#" class="card-action card-action-toggle" data-card-toggle></a>
+                    <a href="#" class="card-action card-action-dismiss" data-card-dismiss></a>
+                </div>
+                <h2 class="card-title">
+                    <i class="bx bx-id-card me-2"></i>Cargos de Membros
+                </h2>
+            </header>
             <div class="card-body">
-                <h4 class="mb-3">Resultados: {{ $roles->count() }}</h4>
-                <p class="text-muted mb-4">Crie cargos para atribuir às pessoas cadastradas</p>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h4 class="mb-0">Resultados: {{ $roles->count() }}</h4>
+                        <p class="text-muted mb-0">Crie cargos para atribuir às pessoas cadastradas</p>
+                    </div>
+                    @if($canCreateRoles)
+                    <div>
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#importModal">
+                            <i class="bx bx-upload me-2"></i>Importar Cargos
+                        </button>
+                    </div>
+                    @endif
+                </div>
                 
                 @if($roles->count() > 0)
                     <div class="table-responsive">
@@ -167,6 +204,57 @@
     </div>
     @endif
 </div>
+
+<!-- Modal: Importar Cargos -->
+@if($canCreateRoles)
+<div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="importModalLabel">
+                    <i class="bx bx-upload me-2"></i>Importar Cargos
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form action="{{ route('member-roles.import') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="bx bx-info-circle me-2"></i>
+                        <strong>Formato do arquivo CSV:</strong><br>
+                        O arquivo deve conter as colunas: nome, descricao, ativo, separadas por vírgula (,).<br>
+                        <small>Baixe o template para ver o formato correto. Campos opcionais podem ficar vazios.</small>
+                    </div>
+                    <div class="mb-3">
+                        <label for="import_file" class="form-label">Selecionar arquivo CSV <span class="text-danger">*</span></label>
+                        <input type="file" class="form-control @error('import_file') is-invalid @enderror" 
+                               id="import_file" name="import_file" accept=".csv,.txt" required>
+                        @error('import_file')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <small class="form-text text-muted">Tamanho máximo: 10MB. Formato: CSV</small>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="bx bx-error me-2"></i>
+                        <strong>Atenção:</strong> Cargos com nomes duplicados serão ignorados. Verifique o template antes de importar.
+                    </div>
+                    <div class="mb-3">
+                        <a href="{{ route('member-roles.import.template') }}" class="btn btn-outline-primary btn-sm">
+                            <i class="bx bx-download me-2"></i>Baixar Template CSV
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bx bx-upload me-2"></i>Importar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
 
 @push('scripts')
 <script>

@@ -1,0 +1,27 @@
+﻿nome,descricao,ativo
+Pastor,Líder espiritual da igreja,sim
+Pastor Auxiliar,Auxilia o pastor titular nas funções pastorais,sim
+Evangelista,Responsável pela evangelização e missões,sim
+Presbítero,Auxilia o pastor na liderança espiritual e aconselhamento,sim
+Diácono,Auxilia nas atividades administrativas e de apoio,sim
+Diaconisa,Auxilia nas atividades de cuidado e apoio aos membros,sim
+Bispo,Supervisão espiritual de igrejas ou regiões,sim
+Apóstolo,Liderança espiritual com visão de expansão e envio,sim
+Secretário(a),Responsável pela documentação e organização administrativa,sim
+Tesoureiro(a),Responsável pela administração financeira da igreja,sim
+Administrador(a),Gerencia processos e recursos da igreja,sim
+Líder de PGI,Responsável por conduzir e acompanhar uma PGI,sim
+Coordenador de PGI,Acompanha e supervisiona líderes de PGI,sim
+Líder do Ministério de Louvor,Coordena músicos e cantores,sim
+Sonoplasta,Responsável pelo som e áudio,sim
+Técnico de Áudio,Auxilia na operação dos equipamentos de som,sim
+Técnico de Multimídia,Responsável por projeção, vídeos e transmissão,sim
+Operador de Transmissão,Responsável por lives e gravações,sim
+Líder de Intercessão,Coordena o ministério de oração,sim
+Intercessor(a),Atua em oração e cobertura espiritual,sim
+Líder de Jovens,Responsável pelo ministério de jovens,sim
+Líder de Crianças,Responsável pelo ministério infantil,sim
+Professor(a) da EBD,Ensina na Escola Bíblica Dominical,sim
+Recepcionista,Acolhe membros e visitantes,sim
+Equipe de Acolhimento,Auxilia na recepção e orientação,sim
+Zelador(a),Cuida da organização e manutenção do espaço,sim

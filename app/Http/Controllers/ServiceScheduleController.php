@@ -60,12 +60,12 @@ class ServiceScheduleController extends Controller
         
         $serviceAreas = ServiceArea::active()->with('leader')->get();
         
-        // Filtrar apenas eventos do mês corrente
-        $startOfMonth = \Carbon\Carbon::now()->startOfMonth();
-        $endOfMonth = \Carbon\Carbon::now()->endOfMonth();
+        // Filtrar eventos dos próximos 37 dias a partir da data atual
+        $startDate = \Carbon\Carbon::now()->startOfDay();
+        $endDate = \Carbon\Carbon::now()->addDays(37)->endOfDay();
         
         $events = Event::with('category')
-                      ->whereBetween('start_date', [$startOfMonth, $endOfMonth])
+                      ->whereBetween('start_date', [$startDate, $endDate])
                       ->orderBy('start_date', 'asc')
                       ->orderBy('title', 'asc')
                       ->get();
@@ -262,12 +262,12 @@ class ServiceScheduleController extends Controller
 
         $serviceAreas = ServiceArea::active()->with('leader')->get();
         
-        // Filtrar apenas eventos do mês corrente
-        $startOfMonth = \Carbon\Carbon::now()->startOfMonth();
-        $endOfMonth = \Carbon\Carbon::now()->endOfMonth();
+        // Filtrar eventos dos próximos 37 dias a partir da data atual
+        $startDate = \Carbon\Carbon::now()->startOfDay();
+        $endDate = \Carbon\Carbon::now()->addDays(37)->endOfDay();
         
         $events = Event::with('category')
-                      ->whereBetween('start_date', [$startOfMonth, $endOfMonth])
+                      ->whereBetween('start_date', [$startDate, $endDate])
                       ->orderBy('start_date', 'asc')
                       ->orderBy('title', 'asc')
                       ->get();

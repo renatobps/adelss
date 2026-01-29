@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\User;
-use App\Models\Member;
 use Illuminate\Support\Facades\Hash;
 
 class AdminUserSeeder extends Seeder
@@ -14,28 +13,25 @@ class AdminUserSeeder extends Seeder
      */
     public function run(): void
     {
-        // Dados do administrador inicial
-        $adminEmail = 'renato.bps@hotmail.com';
-
-        // Buscar membro correspondente
-        $member = Member::where('email', $adminEmail)->first();
-
-        if (!$member) {
-            $this->command?->warn("Membro com e-mail {$adminEmail} não encontrado. Crie o membro antes de rodar este seeder.");
-            return;
+        // Buscar ou criar o membro
+        $member = \App\Models\Member::firstOrNew(['email' => 'renato.bps@hotmail.com']);
+        if (!$member->exists) {
+            $member->name = 'Renato Bento Pereira de Souza';
+            $member->status = 'ativo';
+            $member->save();
         }
 
-        User::updateOrCreate(
-            ['email' => $adminEmail],
-            [
-                'name' => $member->name,
-                'password' => Hash::make('123456'), // Senha inicial (pode ser alterada depois)
-                'is_admin' => true,
-                'member_id' => $member->id,
-            ]
-        );
+        // Criar ou atualizar o usuário admin
+        $user = User::firstOrNew(['email' => 'renato.bps@hotmail.com']);
+        $user->name = 'Renato Bento';
+        $user->password = Hash::make('Altruismo1@');
+        $user->is_admin = true;
+        $user->member_id = $member->id;
+        $user->save();
 
-        $this->command?->info('Usuário administrador criado/atualizado com sucesso (email: ' . $adminEmail . ', senha: 123456).');
+        $this->command->info('Usuário admin criado/atualizado com sucesso!');
+        $this->command->info('Email: renato.bps@hotmail.com');
+        $this->command->info('Senha: Altruismo1@');
+        $this->command->info('Membro vinculado: ' . $member->name . ' (ID: ' . $member->id . ')');
     }
 }
-

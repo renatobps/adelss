@@ -30,9 +30,10 @@ class PermissionController extends Controller
         // Carregar permissões agrupadas por módulo e hierarquia
         $modules = Permission::whereNull('parent_id')
             ->with(['children' => function($query) {
-                $query->with('children');
+                $query->with('children')->orderBy('name');
             }])
             ->orderBy('module')
+            ->orderBy('name')
             ->get();
 
         $assignedPermissions = $user ? $user->permissions->pluck('id')->toArray() : [];

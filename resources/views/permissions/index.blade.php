@@ -103,35 +103,51 @@
                     </div>
                 </div>
 
-                {{-- Gestão por membro (usuário específico) --}}
-                @if($selectedMember && $user)
-                    <form method="POST" action="{{ route('permissions.update', $selectedMember) }}">
-                        @csrf
-                        @method('PUT')
+                {{-- Debug: Verificar se módulos estão sendo carregados --}}
+                @if($modules->isEmpty())
+                    <div class="alert alert-warning">
+                        <i class="bx bx-error-circle me-2"></i>
+                        <strong>Atenção:</strong> Nenhum módulo foi encontrado. Execute o seeder de permissões:
+                        <code>php artisan db:seed --class=PermissionSeeder</code>
+                    </div>
+                @endif
 
-                        {{-- Checkbox Super Administrador --}}
-                        <div class="card mb-4 border-warning">
-                            <div class="card-body">
-                                <div class="form-check">
-                                    <input class="form-check-input" 
-                                           type="checkbox" 
-                                           name="is_admin" 
-                                           id="is_admin" 
-                                           value="1"
-                                           {{ $user->is_admin ? 'checked' : '' }}
-                                           onchange="toggleAdminPermissions(this)">
-                                    <label class="form-check-label fw-bold text-warning" for="is_admin">
-                                        SUPER ADMINISTRADOR
-                                    </label>
-                                    <small class="d-block text-muted mt-1">
-                                        Usuário com acesso total ao sistema. Todas as permissões serão ignoradas.
-                                    </small>
+                {{-- Gestão por membro (usuário específico) --}}
+                @if($selectedMember)
+                    @if(!$user)
+                        <div class="alert alert-warning">
+                            <i class="bx bx-error-circle me-2"></i>
+                            <strong>Atenção:</strong> Este membro ainda não possui usuário de acesso ao sistema. 
+                            Para configurar permissões, é necessário que o membro tenha um e-mail cadastrado e um usuário criado.
+                        </div>
+                    @else
+                        <form method="POST" action="{{ route('permissions.update', $selectedMember) }}">
+                            @csrf
+                            @method('PUT')
+
+                            {{-- Checkbox Super Administrador --}}
+                            <div class="card mb-4 border-warning">
+                                <div class="card-body">
+                                    <div class="form-check">
+                                        <input class="form-check-input" 
+                                               type="checkbox" 
+                                               name="is_admin" 
+                                               id="is_admin" 
+                                               value="1"
+                                               {{ $user->is_admin ? 'checked' : '' }}
+                                               onchange="toggleAdminPermissions(this)">
+                                        <label class="form-check-label fw-bold text-warning" for="is_admin">
+                                            SUPER ADMINISTRADOR
+                                        </label>
+                                        <small class="d-block text-muted mt-1">
+                                            Usuário com acesso total ao sistema. Todas as permissões serão ignoradas.
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div id="permissions-section" style="{{ $user->is_admin ? 'display:none;' : '' }}">
-                        @foreach($modules as $module)
+                            <div id="permissions-section" style="{{ $user->is_admin ? 'display:none;' : '' }}">
+                                @foreach($modules as $module)
                             <div class="card mb-4 border-primary">
                                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                                     <div class="form-check form-check-inline mb-0">
@@ -198,16 +214,18 @@
                                     @endforeach
                                 </div>
                                 </div>
+                                </div>
                             </div>
-                        @endforeach
-                        </div>
+                                @endforeach
+                            </div>
 
-                        <div class="text-end mt-3">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bx bx-save me-1"></i>Salvar Permissões
-                            </button>
-                        </div>
-                    </form>
+                            <div class="text-end mt-3">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bx bx-save me-1"></i>Salvar Permissões
+                                </button>
+                            </div>
+                        </form>
+                    @endif
                 @endif
 
                 {{-- Gestão por função/cargo --}}
