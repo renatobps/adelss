@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class MemberController extends Controller
@@ -178,9 +179,37 @@ class MemberController extends Controller
         // Buscar voluntário do membro e suas escalas futuras
         $volunteer = \App\Models\Volunteer::where('member_id', $member->id)->where('status', 'ativo')->first();
         $upcomingSchedules = collect();
+        $upcomingMonthlySchedules = collect();
+        $moriahSchedules = collect();
+        
+        // Buscar escalas do Moriah onde o membro está escalado (independente de ser voluntário)
+        $moriahSchedulePivots = \DB::table('moriah_schedule_members')
+            ->where('member_id', $member->id)
+            ->get();
+        
+        foreach ($moriahSchedulePivots as $pivot) {
+            $moriahSchedule = \App\Models\MoriahSchedule::with(['event'])
+                ->where('id', $pivot->moriah_schedule_id)
+                ->first();
+            
+            if (!$moriahSchedule) continue;
+            
+            // Filtrar apenas escalas futuras e publicadas/rascunho
+            $scheduleDate = is_string($moriahSchedule->date) ? \Carbon\Carbon::parse($moriahSchedule->date) : $moriahSchedule->date;
+            if ($scheduleDate && 
+                $scheduleDate->format('Y-m-d') >= now()->toDateString() && 
+                in_array($moriahSchedule->status, ['publicada', 'rascunho'])) {
+                
+                $moriahSchedules->push([
+                    'schedule' => $moriahSchedule,
+                    'pivot' => $pivot,
+                    'type' => 'moriah',
+                ]);
+            }
+        }
         
         if ($volunteer) {
-            // Buscar escalas futuras onde o voluntário está escalado
+            // Buscar escalas futuras onde o voluntário está escalado (escalas normais)
             $scheduleVolunteers = \App\Models\ServiceScheduleVolunteer::where('volunteer_id', $volunteer->id)
                 ->with([
                     'scheduleArea.schedule',
@@ -202,23 +231,87 @@ class MemberController extends Controller
                         'scheduleArea' => $scheduleArea,
                         'serviceArea' => $scheduleArea->serviceArea,
                         'scheduleVolunteer' => $scheduleVolunteer,
+                        'type' => 'normal',
                     ]);
                 }
             }
             
-            // Ordenar por data
-            $upcomingSchedules = $upcomingSchedules->sortBy(function($item) {
-                $date = $item['schedule']->date->format('Y-m-d');
-                $time = $item['schedule']->start_time ? (is_object($item['schedule']->start_time) ? $item['schedule']->start_time->format('H:i') : \Carbon\Carbon::parse($item['schedule']->start_time)->format('H:i')) : '00:00';
-                return $date . ' ' . $time;
+            // Buscar escalas mensais onde o voluntário está escalado
+            $monthlySchedulePivots = \DB::table('monthly_culto_service_areas')
+                ->where('volunteer_id', $volunteer->id)
+                ->get();
+            
+            foreach ($monthlySchedulePivots as $pivot) {
+                $monthlySchedule = \App\Models\MonthlyCultoSchedule::with(['event'])
+                    ->where('id', $pivot->monthly_culto_schedule_id)
+                    ->first();
+                
+                if (!$monthlySchedule) continue;
+                
+                // Filtrar apenas escalas futuras e publicadas/rascunho
+                if ($monthlySchedule->event && 
+                    $monthlySchedule->event->start_date && 
+                    $monthlySchedule->event->start_date >= now()->startOfDay() && 
+                    in_array($monthlySchedule->status, ['publicada', 'rascunho'])) {
+                    
+                    $serviceArea = \App\Models\ServiceArea::find($pivot->service_area_id);
+                    
+                    $upcomingMonthlySchedules->push([
+                        'schedule' => $monthlySchedule,
+                        'serviceArea' => $serviceArea,
+                        'pivot' => $pivot,
+                        'type' => 'monthly',
+                    ]);
+                }
+            }
+            
+            // Combinar e ordenar todas as escalas por data
+            $allSchedules = $upcomingSchedules->merge($upcomingMonthlySchedules)->merge($moriahSchedules);
+            $allSchedules = $allSchedules->sortBy(function($item) {
+                if ($item['type'] === 'normal') {
+                    $date = $item['schedule']->date->format('Y-m-d');
+                    $time = $item['schedule']->start_time ? (is_object($item['schedule']->start_time) ? $item['schedule']->start_time->format('H:i') : \Carbon\Carbon::parse($item['schedule']->start_time)->format('H:i')) : '00:00';
+                    return $date . ' ' . $time;
+                } elseif ($item['type'] === 'monthly') {
+                    $date = $item['schedule']->event->start_date->format('Y-m-d');
+                    $time = $item['schedule']->event->start_date->format('H:i');
+                    return $date . ' ' . $time;
+                } else { // moriah
+                    $date = $item['schedule']->date->format('Y-m-d');
+                    $time = $item['schedule']->time ? (is_object($item['schedule']->time) ? $item['schedule']->time->format('H:i') : \Carbon\Carbon::parse($item['schedule']->time)->format('H:i')) : '00:00';
+                    return $date . ' ' . $time;
+                }
             })->values();
             
             // Contar escalas pendentes de confirmação
-            $pendingSchedulesCount = $upcomingSchedules->filter(function($item) {
-                return $item['scheduleVolunteer']->status !== 'confirmado';
+            $pendingSchedulesCount = $allSchedules->filter(function($item) {
+                if ($item['type'] === 'normal') {
+                    return $item['scheduleVolunteer']->status !== 'confirmado';
+                } elseif ($item['type'] === 'monthly') {
+                    return ($item['pivot']->status ?? 'pendente') !== 'confirmado';
+                } else { // moriah
+                    return ($item['pivot']->status ?? 'pendente') !== 'confirmado';
+                }
             })->count();
+            
+            $upcomingSchedules = $allSchedules;
         } else {
-            $pendingSchedulesCount = 0;
+            // Mesmo sem ser voluntário, pode ter escalas do Moriah
+            if ($moriahSchedules->count() > 0) {
+                $upcomingSchedules = $moriahSchedules->sortBy(function($item) {
+                    $scheduleDate = is_string($item['schedule']->date) ? \Carbon\Carbon::parse($item['schedule']->date) : $item['schedule']->date;
+                    $date = $scheduleDate ? $scheduleDate->format('Y-m-d') : '9999-12-31';
+                    $time = $item['schedule']->time ? (is_object($item['schedule']->time) ? $item['schedule']->time->format('H:i') : \Carbon\Carbon::parse($item['schedule']->time)->format('H:i')) : '00:00';
+                    return $date . ' ' . $time;
+                })->values();
+                
+                $pendingSchedulesCount = $upcomingSchedules->filter(function($item) {
+                    return ($item['pivot']->status ?? 'pendente') !== 'confirmado';
+                })->count();
+            } else {
+                $upcomingSchedules = collect();
+                $pendingSchedulesCount = 0;
+            }
         }
         
         $tab = $request->get('tab', 'informacoes');

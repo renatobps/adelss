@@ -204,7 +204,6 @@
                                     $canViewDepartments = false;
                                     $canViewVoluntariosCadastro = false;
                                     $canViewVoluntariosAreas = false;
-                                    $canViewVoluntariosDisponibilidade = false;
                                     $canViewVoluntariosEscalas = false;
                                     $canViewVoluntariosHistorico = false;
                                     $canViewVoluntariosRelatorios = false;
@@ -230,7 +229,6 @@
                                             $canViewDepartments = true;
                                             $canViewVoluntariosCadastro = true;
                                             $canViewVoluntariosAreas = true;
-                                            $canViewVoluntariosDisponibilidade = true;
                                             $canViewVoluntariosEscalas = true;
                                             $canViewVoluntariosHistorico = true;
                                             $canViewVoluntariosRelatorios = true;
@@ -294,8 +292,6 @@
                                                                               $user->hasPermission('servico.voluntarios.cadastro.manage');
                                                 $canViewVoluntariosAreas = $user->hasPermission('servico.voluntarios.areas.view') || 
                                                                             $user->hasPermission('servico.voluntarios.areas.manage');
-                                                $canViewVoluntariosDisponibilidade = $user->hasPermission('servico.voluntarios.disponibilidade.view') || 
-                                                                                      $user->hasPermission('servico.voluntarios.disponibilidade.manage');
                                                 $canViewVoluntariosEscalas = $user->hasPermission('servico.voluntarios.escalas.view') || 
                                                                               $user->hasPermission('servico.voluntarios.escalas.manage');
                                                 $canViewVoluntariosHistorico = $user->hasPermission('servico.voluntarios.historico.view') || 
@@ -323,7 +319,6 @@
                                                 $canViewDepartments = false;
                                                 $canViewVoluntariosCadastro = false;
                                                 $canViewVoluntariosAreas = false;
-                                                $canViewVoluntariosDisponibilidade = false;
                                                 $canViewVoluntariosEscalas = false;
                                                 $canViewVoluntariosHistorico = false;
                                                 $canViewVoluntariosRelatorios = false;
@@ -494,8 +489,8 @@
                                 </li>
 
                                 {{-- MENU SERVIÇO - Verificar permissões --}}
-                                @if($isAdmin || $canViewDepartments || $canViewVoluntariosCadastro || $canViewVoluntariosAreas || $canViewVoluntariosDisponibilidade || $canViewVoluntariosEscalas || $canViewVoluntariosHistorico || $canViewVoluntariosRelatorios)
-                                <li class="nav-parent {{ request()->routeIs('servico.*') || request()->routeIs('departments.*') || request()->routeIs('voluntarios.*') || request()->routeIs('voluntarios.cadastro.*') || request()->routeIs('voluntarios.areas.*') || request()->routeIs('voluntarios.disponibilidade.*') || request()->routeIs('voluntarios.escalas.*') || request()->routeIs('voluntarios.historico.*') || request()->routeIs('voluntarios.relatorios.*') ? 'nav-expanded nav-active' : '' }}">
+                                @if($isAdmin || $canViewDepartments || $canViewVoluntariosCadastro || $canViewVoluntariosAreas || $canViewVoluntariosEscalas || $canViewVoluntariosHistorico || $canViewVoluntariosRelatorios)
+                                <li class="nav-parent {{ request()->routeIs('servico.*') || request()->routeIs('departments.*') || request()->routeIs('voluntarios.*') || request()->routeIs('voluntarios.cadastro.*') || request()->routeIs('voluntarios.areas.*') || request()->routeIs('voluntarios.escalas.*') || request()->routeIs('voluntarios.escalas-mensais.*') || request()->routeIs('voluntarios.historico.*') || request()->routeIs('voluntarios.relatorios.*') ? 'nav-expanded nav-active' : '' }}">
                                     <a class="nav-link" href="#">
                                         <i class="bx bx-cog" aria-hidden="true"></i>
                                         <span>Serviço</span>
@@ -508,7 +503,7 @@
                                             </a>
                                         </li>
                                         @endif
-                                        @if($isAdmin || $canViewVoluntariosCadastro || $canViewVoluntariosAreas || $canViewVoluntariosDisponibilidade || $canViewVoluntariosEscalas || $canViewVoluntariosHistorico || $canViewVoluntariosRelatorios)
+                                        @if($isAdmin || $canViewVoluntariosCadastro || $canViewVoluntariosAreas || $canViewVoluntariosEscalas || $canViewVoluntariosHistorico || $canViewVoluntariosRelatorios)
                                         <li class="nav-parent {{ request()->routeIs('voluntarios.*') ? 'nav-expanded nav-active' : '' }}">
                                             <a class="nav-link" href="#">
                                                 <i class="bx bx-user"></i>Voluntários
@@ -528,17 +523,17 @@
                                                     </a>
                                                 </li>
                                                 @endif
-                                                @if($isAdmin || $canViewVoluntariosDisponibilidade)
-                                                <li class="{{ request()->routeIs('voluntarios.disponibilidade.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="{{ route('voluntarios.disponibilidade.index') }}">
-                                                        <i class="bx bx-time"></i>Disponibilidade
+                                                @if($isAdmin || $canViewVoluntariosEscalas)
+                                                <li class="{{ request()->routeIs('voluntarios.escalas.*') && !request()->routeIs('voluntarios.escalas-mensais.*') ? 'nav-active' : '' }}">
+                                                    <a class="nav-link" href="{{ route('voluntarios.escalas.index') }}">
+                                                        <i class="bx bx-calendar-check"></i>Escalas
                                                     </a>
                                                 </li>
                                                 @endif
                                                 @if($isAdmin || $canViewVoluntariosEscalas)
-                                                <li class="{{ request()->routeIs('voluntarios.escalas.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="{{ route('voluntarios.escalas.index') }}">
-                                                        <i class="bx bx-calendar-check"></i>Escalas
+                                                <li class="{{ request()->routeIs('voluntarios.escalas-mensais.*') ? 'nav-active' : '' }}">
+                                                    <a class="nav-link" href="{{ route('voluntarios.escalas-mensais.index') }}">
+                                                        <i class="bx bx-calendar"></i>Escalas Mensais (Cultos)
                                                     </a>
                                                 </li>
                                                 @endif
@@ -575,8 +570,8 @@
                                                 <i class="bx bx-home"></i>Início
                                             </a>
                                         </li>
-                                        <li class="{{ request()->routeIs('moriah.escalas.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="#">
+                                        <li class="{{ request()->routeIs('moriah.schedules.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('moriah.schedules.index') }}">
                                                 <i class="bx bx-calendar-check"></i>Escalas
                                             </a>
                                         </li>
@@ -595,7 +590,11 @@
                                                 <i class="bx bx-church"></i>Ministério
                                             </a>
                                         </li>
-                                        <li class="{{ request()->routeIs('moriah.indisponibilidades.*') ? 'nav-active' : '' }}">
+                                        <li class="{{ request()->routeIs('moriah.unavailabilities.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('moriah.unavailabilities.index') }}">
+                                                <i class="bx bx-right-arrow-alt"></i>Indisponibilidades
+                                            </a>
+                                        </li>
                                             <a class="nav-link" href="#">
                                                 <i class="bx bx-x-circle"></i>Indisponibilidades
                                             </a>

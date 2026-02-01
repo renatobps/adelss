@@ -8,8 +8,8 @@ use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\MemberRoleController;
 use App\Http\Controllers\VolunteerController;
 use App\Http\Controllers\ServiceAreaController;
-use App\Http\Controllers\VolunteerAvailabilityController;
 use App\Http\Controllers\ServiceScheduleController;
+use App\Http\Controllers\MonthlyCultoScheduleController;
 use App\Http\Controllers\ServiceHistoryController;
 use App\Http\Controllers\VolunteerReportController;
 use App\Http\Controllers\PgiController;
@@ -31,6 +31,8 @@ use App\Http\Controllers\Agenda\EventCategoryController;
 use App\Http\Controllers\MoriahController;
 use App\Http\Controllers\MoriahFunctionController;
 use App\Http\Controllers\RepertorioController;
+use App\Http\Controllers\MoriahScheduleController;
+use App\Http\Controllers\MoriahUnavailabilityController;
 
 // Rotas de autenticação
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -78,17 +80,6 @@ Route::prefix('servico/voluntarios')->name('voluntarios.')->middleware('module.a
         'destroy' => 'areas.destroy',
     ]);
     
-    Route::resource('disponibilidade', VolunteerAvailabilityController::class)->parameters([
-        'disponibilidade' => 'disponibilidade'
-    ])->names([
-        'index' => 'disponibilidade.index',
-        'create' => 'disponibilidade.create',
-        'store' => 'disponibilidade.store',
-        'show' => 'disponibilidade.show',
-        'edit' => 'disponibilidade.edit',
-        'update' => 'disponibilidade.update',
-        'destroy' => 'disponibilidade.destroy',
-    ]);
     
     // Histórico de Serviço
     Route::get('historico', [ServiceHistoryController::class, 'index'])->name('historico.index');
@@ -116,6 +107,23 @@ Route::prefix('servico/voluntarios')->name('voluntarios.')->middleware('module.a
     Route::delete('escalas/volunteers/{volunteer}', [ServiceScheduleController::class, 'removeVolunteer'])->name('escalas.volunteers.remove');
     Route::get('escalas/{escala}/pdf', [ServiceScheduleController::class, 'generatePdf'])->name('escalas.pdf');
     
+    // Escalas Mensais de Cultos
+    Route::get('escalas-mensais', [MonthlyCultoScheduleController::class, 'index'])->name('escalas-mensais.index');
+    Route::get('escalas-mensais/create', [MonthlyCultoScheduleController::class, 'create'])->name('escalas-mensais.create');
+    Route::post('escalas-mensais', [MonthlyCultoScheduleController::class, 'store'])->name('escalas-mensais.store');
+    Route::get('escalas-mensais/{escala}', [MonthlyCultoScheduleController::class, 'show'])->name('escalas-mensais.show');
+    Route::get('escalas-mensais/{escala}/edit', [MonthlyCultoScheduleController::class, 'edit'])->name('escalas-mensais.edit');
+    Route::put('escalas-mensais/{escala}', [MonthlyCultoScheduleController::class, 'update'])->name('escalas-mensais.update');
+    Route::put('escalas-mensais/{escala}/status', [MonthlyCultoScheduleController::class, 'updateStatus'])->name('escalas-mensais.update-status');
+    Route::put('escalas-mensais/{escala}/publish', [MonthlyCultoScheduleController::class, 'publish'])->name('escalas-mensais.publish');
+    Route::put('escalas-mensais/{escala}/cancel', [MonthlyCultoScheduleController::class, 'cancel'])->name('escalas-mensais.cancel');
+    Route::get('escalas-mensais/{escala}/pdf', [MonthlyCultoScheduleController::class, 'generatePdf'])->name('escalas-mensais.pdf');
+    Route::get('escalas-mensais/volunteers/available', [MonthlyCultoScheduleController::class, 'getAvailableVolunteers'])->name('escalas-mensais.volunteers.available');
+    Route::put('escalas-mensais/volunteers/{pivot}/confirm', [MonthlyCultoScheduleController::class, 'confirmVolunteer'])->name('escalas-mensais.volunteers.confirm');
+    Route::put('escalas-mensais/volunteers/{pivot}/substitute', [MonthlyCultoScheduleController::class, 'substituteVolunteer'])->name('escalas-mensais.volunteers.substitute');
+    Route::delete('escalas-mensais/volunteers/{pivot}', [MonthlyCultoScheduleController::class, 'removeVolunteer'])->name('escalas-mensais.volunteers.remove');
+    Route::delete('escalas-mensais/{escala}', [MonthlyCultoScheduleController::class, 'destroy'])->name('escalas-mensais.destroy');
+    
     // Relatórios
     Route::prefix('relatorios')->name('relatorios.')->group(function () {
         Route::get('/', [VolunteerReportController::class, 'dashboard'])->name('dashboard');
@@ -131,6 +139,61 @@ Route::prefix('servico/voluntarios')->name('voluntarios.')->middleware('module.a
 Route::get('/permissoes', [PermissionController::class, 'index'])->name('permissions.index');
 Route::put('/permissoes/{member}', [PermissionController::class, 'update'])->name('permissions.update');
 Route::put('/permissoes/funcoes/{role}', [PermissionController::class, 'updateRole'])->name('permissions.update-role');
+
+    // Rotas do módulo Moriah
+    Route::prefix('moriah')->name('moriah.')->group(function () {
+        Route::get('ministerio', [MoriahController::class, 'ministerio'])->name('ministerio');
+        Route::get('members/{member}/functions', [MoriahController::class, 'getMemberFunctions'])->name('members.functions.get');
+        Route::post('members/{member}/functions', [MoriahController::class, 'updateMemberFunctions'])->name('members.functions.update');
+        Route::post('members/add', [MoriahController::class, 'addMemberToMinistry'])->name('members.add');
+        Route::delete('members/{member}/remove', [MoriahController::class, 'removeMemberFromMinistry'])->name('members.remove');
+        Route::post('banner/update', [MoriahController::class, 'updateBanner'])->name('banner.update');
+        Route::post('logo/update', [MoriahController::class, 'updateLogo'])->name('logo.update');
+        
+        // Rotas de Funções
+        Route::get('funcoes', [MoriahFunctionController::class, 'index'])->name('funcoes.index');
+        Route::post('funcoes', [MoriahFunctionController::class, 'store'])->name('funcoes.store');
+        Route::put('funcoes/{funcao}', [MoriahFunctionController::class, 'update'])->name('funcoes.update');
+        Route::delete('funcoes/{funcao}', [MoriahFunctionController::class, 'destroy'])->name('funcoes.destroy');
+        
+        // Rotas de Repertório
+        Route::get('repertorio', [RepertorioController::class, 'index'])->name('repertorio.index');
+        Route::get('repertorio/import', [RepertorioController::class, 'import'])->name('repertorio.import');
+        Route::get('repertorio/import/template', [RepertorioController::class, 'downloadTemplate'])->name('repertorio.import.template');
+        Route::post('repertorio/import', [RepertorioController::class, 'processImport'])->name('repertorio.import.process');
+        Route::get('repertorio/songs/{song}', [RepertorioController::class, 'showSong'])->name('repertorio.songs.show');
+        Route::post('repertorio/preencher-youtube', [RepertorioController::class, 'preencherYoutube'])->name('repertorio.preencher.youtube');
+        Route::post('repertorio/songs', [RepertorioController::class, 'storeSong'])->name('repertorio.songs.store');
+        Route::put('repertorio/songs/{song}', [RepertorioController::class, 'updateSong'])->name('repertorio.songs.update');
+        Route::delete('repertorio/songs/{song}', [RepertorioController::class, 'destroySong'])->name('repertorio.songs.destroy');
+        Route::post('repertorio/folders', [RepertorioController::class, 'storeFolder'])->name('repertorio.folders.store');
+        Route::put('repertorio/folders/{folder}', [RepertorioController::class, 'updateFolder'])->name('repertorio.folders.update');
+        Route::delete('repertorio/folders/{folder}', [RepertorioController::class, 'destroyFolder'])->name('repertorio.folders.destroy');
+        
+        // Rotas de Escalas do Moriah
+        Route::resource('schedules', MoriahScheduleController::class)->parameters([
+            'schedules' => 'schedule'
+        ])->names([
+            'index' => 'schedules.index',
+            'create' => 'schedules.create',
+            'store' => 'schedules.store',
+            'show' => 'schedules.show',
+            'edit' => 'schedules.edit',
+            'update' => 'schedules.update',
+            'destroy' => 'schedules.destroy',
+        ]);
+        
+        // Rotas para confirmação de membros nas escalas do Moriah
+        Route::put('schedules/members/{pivotId}/confirm', [MoriahScheduleController::class, 'confirmMember'])->name('schedules.members.confirm');
+        Route::put('schedules/members/{pivotId}/reject', [MoriahScheduleController::class, 'rejectMember'])->name('schedules.members.reject');
+        Route::put('schedules/members/{pivotId}/status', [MoriahScheduleController::class, 'updateMemberStatus'])->name('schedules.members.updateStatus');
+
+        // Rotas de Indisponibilidades
+        Route::get('unavailabilities', [MoriahUnavailabilityController::class, 'index'])->name('unavailabilities.index');
+        Route::post('unavailabilities', [MoriahUnavailabilityController::class, 'store'])->name('unavailabilities.store');
+        Route::delete('unavailabilities/{id}', [MoriahUnavailabilityController::class, 'destroy'])->name('unavailabilities.destroy');
+        Route::post('unavailabilities/check', [MoriahUnavailabilityController::class, 'checkUnavailabilities'])->name('unavailabilities.check');
+    });
 
 }); // fim do grupo auth
 
@@ -321,28 +384,33 @@ Route::resource('pgis', PgiController::class)->middleware('module.access:pgis');
     Route::get('eventos', [EventosController::class, 'index'])->name('eventos.index');
 });
 
-// Rotas do módulo Moriah
-Route::prefix('moriah')->name('moriah.')->group(function () {
-    Route::get('ministerio', [MoriahController::class, 'ministerio'])->name('ministerio');
-    Route::get('members/{member}/functions', [MoriahController::class, 'getMemberFunctions'])->name('members.functions.get');
-    Route::post('members/{member}/functions', [MoriahController::class, 'updateMemberFunctions'])->name('members.functions.update');
-    Route::post('members/add', [MoriahController::class, 'addMemberToMinistry'])->name('members.add');
-    Route::delete('members/{member}/remove', [MoriahController::class, 'removeMemberFromMinistry'])->name('members.remove');
-    Route::post('banner/update', [MoriahController::class, 'updateBanner'])->name('banner.update');
-    Route::post('logo/update', [MoriahController::class, 'updateLogo'])->name('logo.update');
-    
-    // Rotas de Funções
-    Route::get('funcoes', [MoriahFunctionController::class, 'index'])->name('funcoes.index');
-    Route::post('funcoes', [MoriahFunctionController::class, 'store'])->name('funcoes.store');
-    Route::put('funcoes/{funcao}', [MoriahFunctionController::class, 'update'])->name('funcoes.update');
-    Route::delete('funcoes/{funcao}', [MoriahFunctionController::class, 'destroy'])->name('funcoes.destroy');
-    
-    // Rotas de Repertório
-    Route::get('repertorio', [RepertorioController::class, 'index'])->name('repertorio.index');
-    Route::post('repertorio/songs', [RepertorioController::class, 'storeSong'])->name('repertorio.songs.store');
-    Route::put('repertorio/songs/{song}', [RepertorioController::class, 'updateSong'])->name('repertorio.songs.update');
-    Route::delete('repertorio/songs/{song}', [RepertorioController::class, 'destroySong'])->name('repertorio.songs.destroy');
-    Route::post('repertorio/folders', [RepertorioController::class, 'storeFolder'])->name('repertorio.folders.store');
-    Route::put('repertorio/folders/{folder}', [RepertorioController::class, 'updateFolder'])->name('repertorio.folders.update');
-    Route::delete('repertorio/folders/{folder}', [RepertorioController::class, 'destroyFolder'])->name('repertorio.folders.destroy');
-});
+    // Rotas do módulo Moriah
+    Route::prefix('moriah')->name('moriah.')->group(function () {
+        Route::get('ministerio', [MoriahController::class, 'ministerio'])->name('ministerio');
+        Route::get('members/{member}/functions', [MoriahController::class, 'getMemberFunctions'])->name('members.functions.get');
+        Route::post('members/{member}/functions', [MoriahController::class, 'updateMemberFunctions'])->name('members.functions.update');
+        Route::post('members/add', [MoriahController::class, 'addMemberToMinistry'])->name('members.add');
+        Route::delete('members/{member}/remove', [MoriahController::class, 'removeMemberFromMinistry'])->name('members.remove');
+        Route::post('banner/update', [MoriahController::class, 'updateBanner'])->name('banner.update');
+        Route::post('logo/update', [MoriahController::class, 'updateLogo'])->name('logo.update');
+        
+        // Rotas de Funções
+        Route::get('funcoes', [MoriahFunctionController::class, 'index'])->name('funcoes.index');
+        Route::post('funcoes', [MoriahFunctionController::class, 'store'])->name('funcoes.store');
+        Route::put('funcoes/{funcao}', [MoriahFunctionController::class, 'update'])->name('funcoes.update');
+        Route::delete('funcoes/{funcao}', [MoriahFunctionController::class, 'destroy'])->name('funcoes.destroy');
+        
+        // Rotas de Repertório
+        Route::get('repertorio', [RepertorioController::class, 'index'])->name('repertorio.index');
+        Route::get('repertorio/import', [RepertorioController::class, 'import'])->name('repertorio.import');
+        Route::get('repertorio/import/template', [RepertorioController::class, 'downloadTemplate'])->name('repertorio.import.template');
+        Route::post('repertorio/import', [RepertorioController::class, 'processImport'])->name('repertorio.import.process');
+        Route::get('repertorio/songs/{song}', [RepertorioController::class, 'showSong'])->name('repertorio.songs.show');
+        Route::post('repertorio/preencher-youtube', [RepertorioController::class, 'preencherYoutube'])->name('repertorio.preencher.youtube');
+        Route::post('repertorio/songs', [RepertorioController::class, 'storeSong'])->name('repertorio.songs.store');
+        Route::put('repertorio/songs/{song}', [RepertorioController::class, 'updateSong'])->name('repertorio.songs.update');
+        Route::delete('repertorio/songs/{song}', [RepertorioController::class, 'destroySong'])->name('repertorio.songs.destroy');
+        Route::post('repertorio/folders', [RepertorioController::class, 'storeFolder'])->name('repertorio.folders.store');
+        Route::put('repertorio/folders/{folder}', [RepertorioController::class, 'updateFolder'])->name('repertorio.folders.update');
+        Route::delete('repertorio/folders/{folder}', [RepertorioController::class, 'destroyFolder'])->name('repertorio.folders.destroy');
+    });

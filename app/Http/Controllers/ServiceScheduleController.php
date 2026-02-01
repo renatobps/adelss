@@ -542,40 +542,17 @@ class ServiceScheduleController extends Controller
         $volunteers = Volunteer::whereHas('serviceAreas', function($q) use ($serviceArea) {
             $q->where('service_areas.id', $serviceArea->id);
         })
-        ->with(['member', 'availability'])
+        ->with(['member'])
         ->where('status', 'ativo')
         ->get();
 
-        // Filtrar por disponibilidade
-        $suggested = $volunteers->map(function($volunteer) use ($validated) {
-            $available = true;
-            $reason = '';
-
-            // Verificar disponibilidade
-            if ($volunteer->availability) {
-                $dayOfWeek = strtolower(\Carbon\Carbon::parse($validated['date'])->format('l'));
-                $dayMap = [
-                    'monday' => 'segunda',
-                    'tuesday' => 'terça',
-                    'wednesday' => 'quarta',
-                    'thursday' => 'quinta',
-                    'friday' => 'sexta',
-                    'saturday' => 'sábado',
-                    'sunday' => 'domingo',
-                ];
-                $dayPt = $dayMap[$dayOfWeek] ?? '';
-
-                if ($volunteer->availability->days_of_week && !in_array($dayPt, $volunteer->availability->days_of_week)) {
-                    $available = false;
-                    $reason = 'Não disponível neste dia';
-                }
-            }
-
+        // Retornar todos os voluntários como disponíveis
+        $suggested = $volunteers->map(function($volunteer) {
             return [
                 'id' => $volunteer->id,
                 'name' => $volunteer->member->name,
-                'available' => $available,
-                'reason' => $reason,
+                'available' => true,
+                'reason' => '',
             ];
         })->values();
 

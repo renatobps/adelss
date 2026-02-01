@@ -832,7 +832,7 @@
         </ul>
 
         <!-- Card de Escalas do Voluntário -->
-        @if($volunteer && $upcomingSchedules->count() > 0)
+        @if(isset($upcomingSchedules) && $upcomingSchedules->count() > 0)
         <section class="card mb-3" id="escalas-card">
             <header class="card-header">
                 <h2 class="card-title">
@@ -841,47 +841,171 @@
             </header>
             <div class="card-body">
                 @foreach($upcomingSchedules as $item)
-                    @php
-                        $schedule = $item['schedule'];
-                        $serviceArea = $item['serviceArea'];
-                        $scheduleVolunteer = $item['scheduleVolunteer'];
-                    @endphp
-                    <div class="border rounded p-3 mb-3 {{ $scheduleVolunteer->status === 'confirmado' ? 'border-success' : '' }}">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <h6 class="mb-1 font-weight-semibold">{{ $schedule->title }}</h6>
-                                <p class="text-muted mb-1 small">
-                                    <i class="bx bx-calendar me-1"></i>{{ $schedule->date->format('d/m/Y') }}
-                                    @if($schedule->start_time)
-                                        <i class="bx bx-time me-1 ms-2"></i>{{ is_object($schedule->start_time) ? $schedule->start_time->format('H:i') : \Carbon\Carbon::parse($schedule->start_time)->format('H:i') }}
-                                    @endif
-                                </p>
-                                <p class="mb-0">
-                                    <span class="badge badge-info">{{ $serviceArea->name ?? 'Área não definida' }}</span>
-                                    @if($scheduleVolunteer->status === 'confirmado')
-                                        <span class="badge badge-success ms-2">
-                                            <i class="bx bx-check-circle me-1"></i>Confirmado
-                                        </span>
-                                    @else
-                                        <span class="badge badge-warning ms-2">Pendente</span>
-                                    @endif
-                                </p>
+                    @if($item['type'] === 'normal')
+                        @php
+                            $schedule = $item['schedule'];
+                            $serviceArea = $item['serviceArea'];
+                            $scheduleVolunteer = $item['scheduleVolunteer'];
+                        @endphp
+                        <div class="border rounded p-3 mb-3 {{ $scheduleVolunteer->status === 'confirmado' ? 'border-success' : '' }}">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1 font-weight-semibold">{{ $schedule->title }}</h6>
+                                    <p class="text-muted mb-1 small">
+                                        <i class="bx bx-calendar me-1"></i>{{ $schedule->date->format('d/m/Y') }}
+                                        @if($schedule->start_time)
+                                            <i class="bx bx-time me-1 ms-2"></i>{{ is_object($schedule->start_time) ? $schedule->start_time->format('H:i') : \Carbon\Carbon::parse($schedule->start_time)->format('H:i') }}
+                                        @endif
+                                    </p>
+                                    <p class="mb-0">
+                                        <span class="badge badge-info">{{ $serviceArea->name ?? 'Área não definida' }}</span>
+                                        @if($scheduleVolunteer->status === 'confirmado')
+                                            <span class="badge badge-success ms-2">
+                                                <i class="bx bx-check-circle me-1"></i>Confirmado
+                                            </span>
+                                        @else
+                                            <span class="badge badge-warning ms-2">Pendente</span>
+                                        @endif
+                                    </p>
+                                </div>
                             </div>
+                            @if($scheduleVolunteer->status !== 'confirmado')
+                                <form action="{{ route('voluntarios.escalas.volunteers.confirm', $scheduleVolunteer) }}" method="POST" class="mt-2 confirm-presence-form">
+                                    @csrf
+                                    @method('PUT')
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="bx bx-check me-1"></i>Confirmar Presença
+                                    </button>
+                                </form>
+                            @endif
                         </div>
-                        @if($scheduleVolunteer->status !== 'confirmado')
-                            <form action="{{ route('voluntarios.escalas.volunteers.confirm', $scheduleVolunteer) }}" method="POST" class="mt-2 confirm-presence-form">
-                                @csrf
-                                @method('PUT')
-                                <button type="submit" class="btn btn-success btn-sm">
-                                    <i class="bx bx-check me-1"></i>Confirmar Presença
-                                </button>
-                            </form>
-                        @endif
-                    </div>
+                    @elseif($item['type'] === 'monthly')
+                        @php
+                            $monthlySchedule = $item['schedule'];
+                            $serviceArea = $item['serviceArea'];
+                            $pivot = $item['pivot'];
+                            $pivotStatus = $pivot->status ?? 'pendente';
+                        @endphp
+                        <div class="border rounded p-3 mb-3 {{ $pivotStatus === 'confirmado' ? 'border-success' : '' }}">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1 font-weight-semibold">
+                                        {{ $monthlySchedule->event->title ?? 'Culto' }}
+                                        <span class="badge badge-primary ms-1">Mensal</span>
+                                    </h6>
+                                    <p class="text-muted mb-1 small">
+                                        <i class="bx bx-calendar me-1"></i>{{ $monthlySchedule->event->start_date->format('d/m/Y') ?? 'N/A' }}
+                                        @if($monthlySchedule->event->start_date)
+                                            <i class="bx bx-time me-1 ms-2"></i>{{ $monthlySchedule->event->start_date->format('H:i') }}
+                                        @endif
+                                    </p>
+                                    <p class="mb-0">
+                                        <span class="badge badge-info">{{ $serviceArea->name ?? 'Área não definida' }}</span>
+                                        @if($pivotStatus === 'confirmado')
+                                            <span class="badge badge-success ms-2">
+                                                <i class="bx bx-check-circle me-1"></i>Confirmado
+                                            </span>
+                                        @else
+                                            <span class="badge badge-warning ms-2">Pendente</span>
+                                        @endif
+                                    </p>
+                                </div>
+                            </div>
+                            @if($pivotStatus !== 'confirmado')
+                                <form action="{{ route('voluntarios.escalas-mensais.volunteers.confirm', $pivot->id) }}" method="POST" class="mt-2 confirm-monthly-presence-form">
+                                    @csrf
+                                    @method('PUT')
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="bx bx-check me-1"></i>Confirmar Presença
+                                    </button>
+                                </form>
+                            @endif
+                        </div>
+                    @elseif($item['type'] === 'moriah')
+                        @php
+                            $moriahSchedule = $item['schedule'];
+                            $pivot = $item['pivot'];
+                            $pivotStatus = $pivot->status ?? 'pendente';
+                            
+                            // Buscar funções selecionadas do membro nesta escala
+                            // Usar o pivot que já vem do controller ou buscar novamente
+                            $scheduleMember = $pivot ?? \DB::table('moriah_schedule_members')
+                                ->where('moriah_schedule_id', $moriahSchedule->id)
+                                ->where('member_id', $member->id)
+                                ->first();
+                            
+                            $selectedFunctions = [];
+                            if ($scheduleMember && isset($scheduleMember->id)) {
+                                $selectedFunctions = \DB::table('moriah_schedule_member_functions')
+                                    ->where('moriah_schedule_member_id', $scheduleMember->id)
+                                    ->join('moriah_functions', 'moriah_schedule_member_functions.moriah_function_id', '=', 'moriah_functions.id')
+                                    ->pluck('moriah_functions.name')
+                                    ->toArray();
+                            }
+                        @endphp
+                        <div class="border rounded p-3 mb-3 {{ $pivotStatus === 'confirmado' ? 'border-success' : '' }}">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h6 class="mb-1 font-weight-semibold">
+                                        {{ $moriahSchedule->title }}
+                                        <span class="badge badge-info ms-1">Moriah</span>
+                                    </h6>
+                                    <p class="text-muted mb-1 small">
+                                        <i class="bx bx-calendar me-1"></i>{{ $moriahSchedule->date->format('d/m/Y') }}
+                                        @if($moriahSchedule->time)
+                                            <i class="bx bx-time me-1 ms-2"></i>{{ is_object($moriahSchedule->time) ? $moriahSchedule->time->format('H:i') : \Carbon\Carbon::parse($moriahSchedule->time)->format('H:i') }}
+                                        @endif
+                                    </p>
+                                    @if(!empty($selectedFunctions))
+                                        <p class="mb-1 small">
+                                            <i class="bx bx-music me-1"></i>{{ implode(', ', $selectedFunctions) }}
+                                        </p>
+                                    @endif
+                                    <p class="mb-0">
+                                        @if($pivotStatus === 'confirmado')
+                                            <span class="badge badge-success">
+                                                <i class="bx bx-check-circle me-1"></i>Confirmado
+                                            </span>
+                                        @elseif($pivotStatus === 'recusado')
+                                            <span class="badge badge-danger">
+                                                <i class="bx bx-x-circle me-1"></i>Recusado
+                                            </span>
+                                        @else
+                                            <span class="badge badge-warning">Pendente</span>
+                                        @endif
+                                    </p>
+                                </div>
+                            </div>
+                            @if($moriahSchedule->request_confirmation && $pivotStatus === 'pendente' && $isOwnProfile)
+                                @php
+                                    // Garantir que temos o ID correto do pivot
+                                    $pivotId = isset($pivot->id) ? $pivot->id : (isset($scheduleMember->id) ? $scheduleMember->id : null);
+                                @endphp
+                                @if($pivotId)
+                                <div class="mt-2 d-flex gap-2">
+                                    <form action="{{ route('moriah.schedules.members.confirm', $pivotId) }}" method="POST" class="confirm-moriah-presence-form">
+                                        @csrf
+                                        @method('PUT')
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="bx bx-check me-1"></i>Confirmar
+                                        </button>
+                                    </form>
+                                    <form action="{{ route('moriah.schedules.members.reject', $pivotId) }}" method="POST" class="reject-moriah-presence-form">
+                                        @csrf
+                                        @method('PUT')
+                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Tem certeza que deseja recusar esta escala?');">
+                                            <i class="bx bx-x me-1"></i>Recusar
+                                        </button>
+                                    </form>
+                                </div>
+                                @endif
+                            @endif
+                        </div>
+                    @endif
                 @endforeach
             </div>
         </section>
-        @elseif($volunteer)
+        @elseif($volunteer || (isset($moriahSchedules) && $moriahSchedules->count() > 0))
         <section class="card mb-3">
             <header class="card-header">
                 <h2 class="card-title">
@@ -943,25 +1067,77 @@
                 
                 @if($upcomingSchedules->count() > 0)
                 <div class="list-group">
-                    @foreach($upcomingSchedules->filter(function($item) { return $item['scheduleVolunteer']->status !== 'confirmado'; }) as $item)
-                        @php
-                            $schedule = $item['schedule'];
-                            $serviceArea = $item['serviceArea'];
-                        @endphp
-                        <div class="list-group-item">
-                            <div class="d-flex w-100 justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-1">{{ $schedule->title }}</h6>
-                                    <p class="mb-1 small text-muted">
-                                        <i class="bx bx-calendar me-1"></i>{{ $schedule->date->format('d/m/Y') }}
-                                        @if($schedule->start_time)
-                                            <i class="bx bx-time me-1 ms-2"></i>{{ is_object($schedule->start_time) ? $schedule->start_time->format('H:i') : \Carbon\Carbon::parse($schedule->start_time)->format('H:i') }}
-                                        @endif
-                                    </p>
-                                    <span class="badge badge-info">{{ $serviceArea->name ?? 'Área não definida' }}</span>
+                    @foreach($upcomingSchedules->filter(function($item) { 
+                        if ($item['type'] === 'normal') {
+                            return $item['scheduleVolunteer']->status !== 'confirmado';
+                        } elseif ($item['type'] === 'monthly') {
+                            return ($item['pivot']->status ?? 'pendente') !== 'confirmado';
+                        } else { // moriah
+                            return ($item['pivot']->status ?? 'pendente') !== 'confirmado';
+                        }
+                    }) as $item)
+                        @if($item['type'] === 'normal')
+                            @php
+                                $schedule = $item['schedule'];
+                                $serviceArea = $item['serviceArea'];
+                            @endphp
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">{{ $schedule->title }}</h6>
+                                        <p class="mb-1 small text-muted">
+                                            <i class="bx bx-calendar me-1"></i>{{ $schedule->date->format('d/m/Y') }}
+                                            @if($schedule->start_time)
+                                                <i class="bx bx-time me-1 ms-2"></i>{{ is_object($schedule->start_time) ? $schedule->start_time->format('H:i') : \Carbon\Carbon::parse($schedule->start_time)->format('H:i') }}
+                                            @endif
+                                        </p>
+                                        <span class="badge badge-info">{{ $serviceArea->name ?? 'Área não definida' }}</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        @elseif($item['type'] === 'monthly')
+                            @php
+                                $monthlySchedule = $item['schedule'];
+                                $serviceArea = $item['serviceArea'];
+                            @endphp
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            {{ $monthlySchedule->event->title ?? 'Culto' }}
+                                            <span class="badge badge-primary ms-1">Mensal</span>
+                                        </h6>
+                                        <p class="mb-1 small text-muted">
+                                            <i class="bx bx-calendar me-1"></i>{{ $monthlySchedule->event->start_date->format('d/m/Y') ?? 'N/A' }}
+                                            @if($monthlySchedule->event->start_date)
+                                                <i class="bx bx-time me-1 ms-2"></i>{{ $monthlySchedule->event->start_date->format('H:i') }}
+                                            @endif
+                                        </p>
+                                        <span class="badge badge-info">{{ $serviceArea->name ?? 'Área não definida' }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        @elseif($item['type'] === 'moriah')
+                            @php
+                                $moriahSchedule = $item['schedule'];
+                            @endphp
+                            <div class="list-group-item">
+                                <div class="d-flex w-100 justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            {{ $moriahSchedule->title }}
+                                            <span class="badge badge-info ms-1">Moriah</span>
+                                        </h6>
+                                        <p class="mb-1 small text-muted">
+                                            <i class="bx bx-calendar me-1"></i>{{ $moriahSchedule->date->format('d/m/Y') }}
+                                            @if($moriahSchedule->time)
+                                                <i class="bx bx-time me-1 ms-2"></i>{{ is_object($moriahSchedule->time) ? $moriahSchedule->time->format('H:i') : \Carbon\Carbon::parse($moriahSchedule->time)->format('H:i') }}
+                                            @endif
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                     @endforeach
                 </div>
                 @endif
@@ -970,9 +1146,9 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="bx bx-x me-1"></i>Fechar
                 </button>
-                <a href="#escalas-card" class="btn btn-primary" data-bs-dismiss="modal" onclick="document.getElementById('escalas-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return false;">
+                <button type="button" class="btn btn-primary" id="btn-ver-escalas">
                     <i class="bx bx-calendar-check me-1"></i>Ver Minhas Escalas
-                </a>
+                </button>
             </div>
         </div>
     </div>
@@ -984,14 +1160,48 @@
 document.addEventListener('DOMContentLoaded', function() {
     // Abrir modal de escalas pendentes automaticamente
     @if(isset($pendingSchedulesCount) && $pendingSchedulesCount > 0)
-    const pendingModal = new bootstrap.Modal(document.getElementById('pendingSchedulesModal'), {
+    const pendingModalElement = document.getElementById('pendingSchedulesModal');
+    const pendingModal = new bootstrap.Modal(pendingModalElement, {
         backdrop: 'static',
         keyboard: false
     });
     pendingModal.show();
+    
+    // Event listener para o botão "Ver Minhas Escalas"
+    const btnVerEscalas = document.getElementById('btn-ver-escalas');
+    if (btnVerEscalas) {
+        btnVerEscalas.addEventListener('click', function() {
+            // Fechar o modal primeiro
+            pendingModal.hide();
+            
+            // Aguardar o modal fechar completamente antes de fazer scroll
+            pendingModalElement.addEventListener('hidden.bs.modal', function scrollToEscalas() {
+                // Remover o listener após usar
+                pendingModalElement.removeEventListener('hidden.bs.modal', scrollToEscalas);
+                
+                // Fazer scroll para o card de escalas
+                const escalasCard = document.getElementById('escalas-card');
+                if (escalasCard) {
+                    setTimeout(function() {
+                        escalasCard.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                        
+                        // Adicionar um destaque visual temporário
+                        escalasCard.style.transition = 'box-shadow 0.3s ease';
+                        escalasCard.style.boxShadow = '0 0 20px rgba(0, 123, 255, 0.5)';
+                        setTimeout(function() {
+                            escalasCard.style.boxShadow = '';
+                        }, 2000);
+                    }, 100);
+                }
+            }, { once: true });
+        });
+    }
     @endif
     
-    // Interceptar envio do formulário de confirmação de presença
+    // Interceptar envio do formulário de confirmação de presença (escalas normais)
     const confirmForms = document.querySelectorAll('.confirm-presence-form');
     
     confirmForms.forEach(function(form) {
@@ -1058,6 +1268,189 @@ document.addEventListener('DOMContentLoaded', function() {
                 submitButton.disabled = false;
                 submitButton.innerHTML = originalButtonText;
                 alert('Erro ao confirmar presença. Por favor, tente novamente.');
+            });
+        });
+    });
+    
+    // Interceptar envio do formulário de confirmação de presença (escalas mensais)
+    const confirmMonthlyForms = document.querySelectorAll('.confirm-monthly-presence-form');
+    
+    confirmMonthlyForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formElement = this;
+            const submitButton = formElement.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            
+            // Desabilitar botão e mostrar loading
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Confirmando...';
+            
+            // Criar FormData
+            const formData = new FormData(formElement);
+            
+            // Fazer requisição AJAX
+            fetch(formElement.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || formElement.querySelector('input[name="_token"]').value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Atualizar visual do card
+                    const card = formElement.closest('.border');
+                    if (card) {
+                        card.classList.add('border-success');
+                        card.classList.remove('border');
+                    }
+                    
+                    // Atualizar badge de status
+                    const statusBadge = card?.querySelector('.badge-warning');
+                    if (statusBadge) {
+                        statusBadge.outerHTML = '<span class="badge badge-success ms-2"><i class="bx bx-check-circle me-1"></i>Confirmado</span>';
+                    }
+                    
+                    // Remover formulário
+                    formElement.remove();
+                    
+                    // Mostrar mensagem de sucesso
+                    if (typeof showNotification === 'function') {
+                        showNotification('success', data.message || 'Presença confirmada com sucesso!');
+                    } else {
+                        alert(data.message || 'Presença confirmada com sucesso!');
+                    }
+                    
+                    // Recarregar após 1 segundo para atualizar dados
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    throw new Error(data.message || 'Erro ao confirmar presença');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+                alert('Erro ao confirmar presença. Por favor, tente novamente.');
+            });
+        });
+    });
+    
+    // Interceptar envio do formulário de confirmação/recusa de presença (escalas do Moriah)
+    const confirmMoriahForms = document.querySelectorAll('.confirm-moriah-presence-form');
+    const rejectMoriahForms = document.querySelectorAll('.reject-moriah-presence-form');
+    
+    confirmMoriahForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formElement = this;
+            const submitButton = formElement.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            
+            // Desabilitar botão e mostrar loading
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Confirmando...';
+            
+            // Criar FormData
+            const formData = new FormData(formElement);
+            
+            // Adicionar _method PUT se não existir
+            if (!formData.has('_method')) {
+                formData.append('_method', 'PUT');
+            }
+            
+            // Fazer requisição AJAX
+            fetch(formElement.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || formElement.querySelector('input[name="_token"]').value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || `Erro ${response.status}: ${response.statusText}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    throw new Error(data.message || 'Erro ao confirmar presença');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+                alert('Erro ao confirmar presença: ' + error.message);
+            });
+        });
+    });
+    
+    rejectMoriahForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formElement = this;
+            const submitButton = formElement.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            
+            // Desabilitar botão e mostrar loading
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="bx bx-loader-alt bx-spin me-1"></i>Recusando...';
+            
+            // Criar FormData
+            const formData = new FormData(formElement);
+            
+            // Adicionar _method PUT se não existir
+            if (!formData.has('_method')) {
+                formData.append('_method', 'PUT');
+            }
+            
+            // Fazer requisição AJAX
+            fetch(formElement.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || formElement.querySelector('input[name="_token"]').value,
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || `Erro ${response.status}: ${response.statusText}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    throw new Error(data.message || 'Erro ao recusar escala');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonText;
+                alert('Erro ao recusar escala: ' + error.message);
             });
         });
     });
