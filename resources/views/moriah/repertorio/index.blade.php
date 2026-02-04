@@ -19,8 +19,8 @@ use Illuminate\Support\Facades\Storage;
     <div class="col-12">
         <!-- Header -->
         <div class="text-center mb-4">
-            <h2 class="mb-1" style="color: #333; font-weight: 600;">Repertório</h2>
-            <h3 class="mb-4" style="color: #666; font-size: 1.1rem; font-weight: 500;">MORIAH MUSIC</h3>
+            <h2 class="mb-1" style="color: #333; font-weight: 600; font-size: 2rem;">Repertório</h2>
+            <h3 class="mb-4" style="color: #666; font-size: 1.4rem; font-weight: 500;">MORIAH MUSIC</h3>
         </div>
 
         <!-- Tabs -->
@@ -47,10 +47,10 @@ use Illuminate\Support\Facades\Storage;
             <!-- Tab Músicas -->
             <div class="tab-pane fade show active" id="musicas" role="tabpanel" aria-labelledby="musicas-tab">
                 <div class="mb-3 d-flex gap-2">
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#songModal" onclick="resetSongForm()">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#songModal" onclick="resetSongForm()" style="font-size: 1.1rem;">
                         <i class="bx bx-plus me-1"></i>Adicionar Música
                     </button>
-                    <a href="{{ route('moriah.repertorio.import') }}" class="btn btn-success">
+                    <a href="{{ route('moriah.repertorio.import') }}" class="btn btn-success" style="font-size: 1.1rem;">
                         <i class="bx bx-import me-1"></i>Importar Músicas
                     </a>
                 </div>
@@ -71,9 +71,9 @@ use Illuminate\Support\Facades\Storage;
 
                             <!-- Informações da música -->
                             <div class="flex-grow-1">
-                                <h6 class="mb-1" style="color: #1e3a8a; font-weight: 600; font-size: 1rem;">{{ $song->version_name ?? $song->title }}</h6>
-                                <p class="mb-1" style="color: #333; font-size: 0.9rem; font-weight: 500;">{{ $song->artist ?? 'Artista não informado' }}</p>
-                                <p class="mb-0" style="color: #666; font-size: 0.85rem;">
+                                <h6 class="mb-1" style="color: #1e3a8a; font-weight: 600; font-size: 1.2rem;">{{ $song->version_name ?? $song->title }}</h6>
+                                <p class="mb-1" style="color: #333; font-size: 1.1rem; font-weight: 500;">{{ $song->artist ?? 'Artista não informado' }}</p>
+                                <p class="mb-0" style="color: #666; font-size: 1rem;">
                                     {{ $song->genre }}@if($song->key), Tom: {{ $song->key }}@endif
                                 </p>
                             </div>
@@ -95,13 +95,13 @@ use Illuminate\Support\Facades\Storage;
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end">
                                     <li>
-                                        <a class="dropdown-item" href="#" onclick="editSong({{ $song->id }}, '{{ addslashes($song->title) }}', '{{ addslashes($song->artist ?? '') }}', '{{ $song->genre }}', '{{ $song->key ?? '' }}', {{ $song->folder_id ?? 'null' }}, {{ $song->has_lyrics ? 'true' : 'false' }}, {{ $song->has_chords ? 'true' : 'false' }}, {{ $song->has_audio ? 'true' : 'false' }}, {{ $song->has_video ? 'true' : 'false' }}, '{{ addslashes($song->version_name ?? '') }}', '{{ addslashes($song->observations ?? '') }}', {{ $song->bpm ?? 'null' }}, {{ $song->duration_hours ?? 0 }}, {{ $song->duration_minutes ?? 0 }}, {{ $song->duration_seconds ?? 0 }}, '{{ addslashes($song->link_letra ?? '') }}', '{{ addslashes($song->link_cifra ?? '') }}', '{{ addslashes($song->link_audio ?? '') }}', '{{ addslashes($song->link_video ?? '') }}'); return false;">
+                                        <a class="dropdown-item" href="#" onclick="editSong({{ $song->id }}, '{{ addslashes($song->title) }}', '{{ addslashes($song->artist ?? '') }}', '{{ $song->genre }}', '{{ $song->key ?? '' }}', {{ $song->folder_id ?? 'null' }}, {{ $song->has_lyrics ? 'true' : 'false' }}, {{ $song->has_chords ? 'true' : 'false' }}, {{ $song->has_audio ? 'true' : 'false' }}, {{ $song->has_video ? 'true' : 'false' }}, '{{ addslashes($song->version_name ?? '') }}', '{{ addslashes($song->observations ?? '') }}', {{ $song->bpm ?? 'null' }}, {{ $song->duration_hours ?? 0 }}, {{ $song->duration_minutes ?? 0 }}, {{ $song->duration_seconds ?? 0 }}, '{{ addslashes($song->link_letra ?? '') }}', '{{ addslashes($song->link_cifra ?? '') }}', '{{ addslashes($song->link_audio ?? '') }}', '{{ addslashes($song->link_video ?? '') }}'); return false;" style="font-size: 1.1rem;">
                                             <i class="bx bx-edit me-2"></i>Editar
                                         </a>
                                     </li>
                                     <li><hr class="dropdown-divider"></li>
                                     <li>
-                                        <a class="dropdown-item text-danger" href="#" onclick="deleteSong({{ $song->id }}, '{{ addslashes($song->title) }}'); return false;">
+                                        <a class="dropdown-item text-danger" href="#" onclick="deleteSong({{ $song->id }}, '{{ addslashes($song->title) }}'); return false;" style="font-size: 1.1rem;">
                                             <i class="bx bx-trash me-2"></i>Excluir
                                         </a>
                                     </li>
@@ -114,7 +114,7 @@ use Illuminate\Support\Facades\Storage;
                 @if($songs->count() === 0)
                     <div class="text-center py-5">
                         <i class="bx bx-music" style="font-size: 4rem; color: #ccc; margin-bottom: 1rem;"></i>
-                        <p class="text-muted">Nenhuma música cadastrada.</p>
+                        <p class="text-muted" style="font-size: 1.1rem;">Nenhuma música cadastrada.</p>
                     </div>
                 @endif
             </div>
@@ -122,7 +122,7 @@ use Illuminate\Support\Facades\Storage;
             <!-- Tab Pastas -->
             <div class="tab-pane fade" id="pastas" role="tabpanel" aria-labelledby="pastas-tab">
                 <div class="mb-3">
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#folderModal" onclick="resetFolderForm()">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#folderModal" onclick="resetFolderForm()" style="font-size: 1.1rem;">
                         <i class="bx bx-plus me-1"></i>Adicionar Pasta
                     </button>
                 </div>
@@ -135,19 +135,19 @@ use Illuminate\Support\Facades\Storage;
                                     <div class="list-group-item d-flex justify-content-between align-items-center" style="border: none; border-bottom: 1px solid #eee; padding: 16px 20px;">
                                         <div>
                                             <i class="bx bx-folder me-2" style="font-size: 1.5rem; color: #666;"></i>
-                                            <span style="font-size: 1rem; font-weight: 500;">{{ $folder->name }}</span>
+                                            <span style="font-size: 1.2rem; font-weight: 500;">{{ $folder->name }}</span>
                                             @if($folder->description)
-                                                <p class="mb-0 mt-1" style="font-size: 0.85rem; color: #666;">{{ $folder->description }}</p>
+                                                <p class="mb-0 mt-1" style="font-size: 1rem; color: #666;">{{ $folder->description }}</p>
                                             @endif
                                         </div>
                                         <div class="d-flex gap-2">
-                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="editFolder({{ $folder->id }}, '{{ addslashes($folder->name) }}', '{{ addslashes($folder->description ?? '') }}');">
+                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="editFolder({{ $folder->id }}, '{{ addslashes($folder->name) }}', '{{ addslashes($folder->description ?? '') }}');" style="font-size: 1.1rem;">
                                                 <i class="bx bx-edit"></i>
                                             </button>
                                             <form action="{{ route('moriah.repertorio.folders.destroy', $folder) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja excluir esta pasta?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" style="font-size: 1.1rem;">
                                                     <i class="bx bx-trash"></i>
                                                 </button>
                                             </form>
@@ -158,7 +158,7 @@ use Illuminate\Support\Facades\Storage;
                         @else
                             <div class="text-center py-5">
                                 <i class="bx bx-folder" style="font-size: 4rem; color: #ccc; margin-bottom: 1rem;"></i>
-                                <p class="text-muted">Nenhuma pasta cadastrada.</p>
+                                <p class="text-muted" style="font-size: 1.1rem;">Nenhuma pasta cadastrada.</p>
                             </div>
                         @endif
                     </div>
@@ -175,7 +175,7 @@ use Illuminate\Support\Facades\Storage;
                                     <div class="col-md-4 col-lg-3 mb-3">
                                         <div class="card" style="border: 1px solid #eee; border-radius: 8px; padding: 16px; text-align: center;">
                                             <i class="bx bx-user" style="font-size: 2rem; color: #666; margin-bottom: 8px;"></i>
-                                            <p class="mb-0" style="font-weight: 500;">{{ $artist }}</p>
+                                            <p class="mb-0" style="font-weight: 500; font-size: 1.1rem;">{{ $artist }}</p>
                                         </div>
                                     </div>
                                 @endforeach
@@ -183,7 +183,7 @@ use Illuminate\Support\Facades\Storage;
                         @else
                             <div class="text-center py-5">
                                 <i class="bx bx-user" style="font-size: 4rem; color: #ccc; margin-bottom: 1rem;"></i>
-                                <p class="text-muted">Nenhum artista cadastrado.</p>
+                                <p class="text-muted" style="font-size: 1.1rem;">Nenhum artista cadastrado.</p>
                             </div>
                         @endif
                     </div>
@@ -198,7 +198,7 @@ use Illuminate\Support\Facades\Storage;
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="songModalLabel">Nova versão</h5>
+                <h5 class="modal-title" id="songModalLabel" style="font-size: 1.4rem;">Nova versão</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="songForm" enctype="multipart/form-data">
@@ -217,7 +217,7 @@ use Illuminate\Support\Facades\Storage;
                                     <i class="bx bx-text position-absolute" style="right: 15px; top: 50%; transform: translateY(-50%); color: #999;"></i>
                                 </div>
                                 <div class="text-end mt-1">
-                                    <small class="text-muted"><span id="version_name_count">0</span>/50</small>
+                                    <small class="text-muted" style="font-size: 1rem;"><span id="version_name_count">0</span>/50</small>
                                 </div>
                             </div>
 
@@ -247,7 +247,7 @@ use Illuminate\Support\Facades\Storage;
                                 <label for="observations" class="form-label">Observações</label>
                                 <textarea class="form-control rounded" id="observations" name="observations" rows="3" maxlength="150" placeholder="Digite observações sobre a versão"></textarea>
                                 <div class="text-end mt-1">
-                                    <small class="text-muted"><span id="observations_count">0</span>/150</small>
+                                    <small class="text-muted" style="font-size: 1rem;"><span id="observations_count">0</span>/150</small>
                                 </div>
                             </div>
                         </div>
@@ -327,7 +327,7 @@ use Illuminate\Support\Facades\Storage;
                         <label for="youtube_url" class="form-label">Link do YouTube</label>
                         <div class="input-group">
                             <input type="url" class="form-control rounded-pill" id="youtube_url" name="youtube_url" placeholder="https://www.youtube.com/watch?v=...">
-                            <button type="button" class="btn btn-outline-primary rounded-pill" id="btnPreencherYoutube">
+                            <button type="button" class="btn btn-outline-primary rounded-pill" id="btnPreencherYoutube" style="font-size: 1.1rem;">
                                 <i class="bx bx-bolt me-1"></i>Preencher automaticamente
                             </button>
                         </div>
@@ -339,7 +339,7 @@ use Illuminate\Support\Facades\Storage;
                             <label class="form-label mb-0">Referências</label>
                             <div class="d-flex align-items-center gap-2">
                                 <i class="bx bx-bolt text-warning"></i>
-                                <span class="small">Autopreenchimento</span>
+                                <span class="small" style="font-size: 1rem;">Autopreenchimento</span>
                                 <div class="form-check form-switch mb-0">
                                     <input class="form-check-input" type="checkbox" id="autofill_references" checked>
                                 </div>
@@ -350,7 +350,7 @@ use Illuminate\Support\Facades\Storage;
                             <label for="link_letra" class="form-label small">Link letra</label>
                             <div class="input-group">
                                 <input type="url" class="form-control rounded-pill" id="link_letra" name="link_letra" placeholder="https://...">
-                                <button type="button" class="btn btn-outline-secondary rounded-pill" onclick="window.open(document.getElementById('link_letra').value, '_blank')" title="Abrir link">
+                                <button type="button" class="btn btn-outline-secondary rounded-pill" onclick="window.open(document.getElementById('link_letra').value, '_blank')" title="Abrir link" style="font-size: 1.1rem;">
                                     <i class="bx bx-link-external"></i>
                                 </button>
                             </div>
@@ -369,7 +369,7 @@ use Illuminate\Support\Facades\Storage;
                         <div class="mb-2">
                             <label for="cifra_pdf" class="form-label small">PDF da cifra</label>
                             <input type="file" class="form-control rounded-pill" id="cifra_pdf" name="cifra_pdf" accept=".pdf">
-                            <small class="text-muted">Tamanho máximo: 10MB</small>
+                                <small class="text-muted" style="font-size: 1rem;">Tamanho máximo: 10MB</small>
                         </div>
 
                         <div class="mb-2">
@@ -392,7 +392,7 @@ use Illuminate\Support\Facades\Storage;
                             </div>
                         </div>
 
-                        <button type="button" class="btn btn-outline-primary rounded-pill w-100" id="addReferenceBtn">
+                        <button type="button" class="btn btn-outline-primary rounded-pill w-100" id="addReferenceBtn" style="font-size: 1.1rem;">
                             <i class="bx bx-plus me-1"></i>Adicionar referência
                         </button>
                     </div>
@@ -401,8 +401,8 @@ use Illuminate\Support\Facades\Storage;
                     <input type="hidden" id="title" name="title" value="">
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="font-size: 1.1rem;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="font-size: 1.1rem;">Salvar</button>
                 </div>
             </form>
         </div>
@@ -414,24 +414,24 @@ use Illuminate\Support\Facades\Storage;
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="folderModalLabel">Nova Pasta</h5>
+                <h5 class="modal-title" id="folderModalLabel" style="font-size: 1.4rem;">Nova Pasta</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="folderForm">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="folder_name" class="form-label">Nome <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="folder_name" name="name" required>
+                        <label for="folder_name" class="form-label" style="font-size: 1.1rem;">Nome <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="folder_name" name="name" required style="font-size: 1.1rem;">
                     </div>
                     <div class="mb-3">
-                        <label for="folder_description" class="form-label">Descrição</label>
-                        <textarea class="form-control" id="folder_description" name="description" rows="3"></textarea>
+                        <label for="folder_description" class="form-label" style="font-size: 1.1rem;">Descrição</label>
+                        <textarea class="form-control" id="folder_description" name="description" rows="3" style="font-size: 1.1rem;"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Salvar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="font-size: 1.1rem;">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="font-size: 1.1rem;">Salvar</button>
                 </div>
             </form>
         </div>
@@ -439,8 +439,29 @@ use Illuminate\Support\Facades\Storage;
 </div>
 
 <style>
+/* Aumentar fonte base */
+body {
+    font-size: 1.1rem;
+}
+
+/* Aumentar fonte de todos os elementos de texto */
+p, span, div, label, input, textarea, select, button, a, small {
+    font-size: inherit;
+}
+
 .nav-tabs .nav-link {
     transition: all 0.3s ease;
+    font-size: 1.1rem;
+}
+
+/* Aumentar fonte dos botões */
+.btn {
+    font-size: 1.1rem;
+}
+
+/* Aumentar fonte dos inputs e selects */
+.form-control, .form-select {
+    font-size: 1.1rem;
 }
 
 .nav-tabs .nav-link:hover {
@@ -458,10 +479,12 @@ use Illuminate\Support\Facades\Storage;
     border-radius: 50px !important;
     padding-left: 15px;
     padding-right: 40px;
+    font-size: 1.1rem;
 }
 
 #songModal .form-control.rounded {
     border-radius: 12px !important;
+    font-size: 1.1rem;
 }
 
 #songModal .input-group .btn {
@@ -477,10 +500,11 @@ use Illuminate\Support\Facades\Storage;
     font-weight: 500;
     margin-bottom: 0.5rem;
     color: #333;
+    font-size: 1.1rem;
 }
 
 #songModal .form-label.small {
-    font-size: 0.875rem;
+    font-size: 1rem;
     font-weight: 400;
 }
 
@@ -494,7 +518,7 @@ use Illuminate\Support\Facades\Storage;
     <div class="modal-dialog modal-lg">
         <div class="modal-content" style="border-radius: 16px;">
             <div class="modal-header" style="border-bottom: none; padding: 2rem 2rem 1rem;">
-                <h5 class="modal-title" id="songViewModalLabel" style="font-weight: 600; color: #333;">Música</h5>
+                <h5 class="modal-title" id="songViewModalLabel" style="font-weight: 600; color: #333; font-size: 1.5rem;">Música</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body" style="padding: 0 2rem 2rem;">
@@ -711,53 +735,53 @@ function viewSong(id) {
                         }
                     </div>
                     <div class="flex-grow-1">
-                        <h4 class="mb-2" style="color: #333; font-weight: 600;">${song.version_name || song.title}</h4>
-                        ${song.artist ? `<p class="mb-2" style="color: #666; font-size: 0.95rem;">
+                        <h4 class="mb-2" style="color: #333; font-weight: 600; font-size: 1.5rem;">${song.version_name || song.title}</h4>
+                        ${song.artist ? `<p class="mb-2" style="color: #666; font-size: 1.15rem;">
                             <i class="bx bx-user me-1"></i>${song.artist}
                         </p>` : ''}
-                        ${song.folder ? `<p class="mb-0" style="color: #999; font-size: 0.85rem;">
+                        ${song.folder ? `<p class="mb-0" style="color: #999; font-size: 1rem;">
                             <i class="bx bx-folder me-1"></i>${song.folder}
                         </p>` : ''}
                     </div>
                 </div>
                 
                 ${song.version_name ? `<div class="mb-3 p-2" style="background-color: #f5f5f5; border-radius: 8px;">
-                    <small style="color: #666;">Versão: ${song.version_name}</small>
+                    <small style="color: #666; font-size: 1rem;">Versão: ${song.version_name}</small>
                 </div>` : ''}
                 
                 <div class="row mb-3">
                     ${song.key ? `<div class="col-md-4 mb-2">
                         <div class="p-3" style="background-color: #f9f9f9; border-radius: 8px;">
-                            <div style="color: #666; font-size: 0.85rem; margin-bottom: 4px;">Tom</div>
-                            <div style="color: #333; font-weight: 600; font-size: 1.1rem;">${song.key}</div>
+                            <div style="color: #666; font-size: 1rem; margin-bottom: 4px;">Tom</div>
+                            <div style="color: #333; font-weight: 600; font-size: 1.3rem;">${song.key}</div>
                         </div>
                     </div>` : ''}
                     ${duration !== '0:00' ? `<div class="col-md-4 mb-2">
                         <div class="p-3" style="background-color: #f9f9f9; border-radius: 8px;">
-                            <div style="color: #666; font-size: 0.85rem; margin-bottom: 4px;">Duração</div>
-                            <div style="color: #333; font-weight: 600; font-size: 1.1rem;">${duration}</div>
+                            <div style="color: #666; font-size: 1rem; margin-bottom: 4px;">Duração</div>
+                            <div style="color: #333; font-weight: 600; font-size: 1.3rem;">${duration}</div>
                         </div>
                     </div>` : ''}
                     ${song.bpm ? `<div class="col-md-4 mb-2">
                         <div class="p-3" style="background-color: #e3f2fd; border-radius: 8px;">
-                            <div style="color: #666; font-size: 0.85rem; margin-bottom: 4px;">BPM</div>
-                            <div style="color: #1976d2; font-weight: 600; font-size: 1.1rem;">${song.bpm}</div>
+                            <div style="color: #666; font-size: 1rem; margin-bottom: 4px;">BPM</div>
+                            <div style="color: #1976d2; font-weight: 600; font-size: 1.3rem;">${song.bpm}</div>
                         </div>
                     </div>` : ''}
                 </div>
                 
                 <div class="mb-3">
-                    <div style="color: #666; font-size: 0.85rem; margin-bottom: 8px;">Classificações</div>
-                    <div style="color: #333; font-weight: 500;">${song.genre || 'Não informado'}</div>
+                    <div style="color: #666; font-size: 1rem; margin-bottom: 8px;">Classificações</div>
+                    <div style="color: #333; font-weight: 500; font-size: 1.1rem;">${song.genre || 'Não informado'}</div>
                 </div>
                 
                 ${song.observations ? `<div class="mb-3">
-                    <div style="color: #666; font-size: 0.85rem; margin-bottom: 8px;">Observações</div>
-                    <div style="color: #333;">${song.observations}</div>
+                    <div style="color: #666; font-size: 1rem; margin-bottom: 8px;">Observações</div>
+                    <div style="color: #333; font-size: 1.1rem;">${song.observations}</div>
                 </div>` : ''}
                 
                 <div class="mt-4">
-                    <div style="color: #666; font-size: 0.85rem; margin-bottom: 12px; font-weight: 600;">Referências</div>
+                    <div style="color: #666; font-size: 1rem; margin-bottom: 12px; font-weight: 600;">Referências</div>
                     <div class="d-flex flex-column gap-2">
                         ${song.link_letra ? `
                             <a href="${song.link_letra}" target="_blank" class="d-flex align-items-center p-3 text-decoration-none" style="background-color: #fff3e0; border-radius: 8px; border: 1px solid #ffe0b2;">
@@ -765,8 +789,8 @@ function viewSong(id) {
                                     <i class="bx bx-text text-white" style="font-size: 1.2rem;"></i>
                                 </div>
                                 <div class="flex-grow-1">
-                                    <div style="color: #333; font-weight: 500;">Letra</div>
-                                    <div style="color: #666; font-size: 0.85rem; word-break: break-all;">${song.link_letra}</div>
+                                    <div style="color: #333; font-weight: 500; font-size: 1.1rem;">Letra</div>
+                                    <div style="color: #666; font-size: 1rem; word-break: break-all;">${song.link_letra}</div>
                                 </div>
                                 <i class="bx bx-chevron-right" style="color: #999; font-size: 1.5rem;"></i>
                             </a>
@@ -777,8 +801,8 @@ function viewSong(id) {
                                     <i class="bx bx-equalizer text-white" style="font-size: 1.2rem;"></i>
                                 </div>
                                 <div class="flex-grow-1">
-                                    <div style="color: #333; font-weight: 500;">Cifra (Link)</div>
-                                    <div style="color: #666; font-size: 0.85rem; word-break: break-all;">${song.link_cifra}</div>
+                                    <div style="color: #333; font-weight: 500; font-size: 1.1rem;">Cifra (Link)</div>
+                                    <div style="color: #666; font-size: 1rem; word-break: break-all;">${song.link_cifra}</div>
                                 </div>
                                 <i class="bx bx-chevron-right" style="color: #999; font-size: 1.5rem;"></i>
                             </a>
@@ -789,8 +813,8 @@ function viewSong(id) {
                                     <i class="bx bx-file-blank text-white" style="font-size: 1.2rem;"></i>
                                 </div>
                                 <div class="flex-grow-1">
-                                    <div style="color: #333; font-weight: 500;">Cifra (PDF)</div>
-                                    <div style="color: #666; font-size: 0.85rem;">Visualizar PDF da cifra</div>
+                                    <div style="color: #333; font-weight: 500; font-size: 1.1rem;">Cifra (PDF)</div>
+                                    <div style="color: #666; font-size: 1rem;">Visualizar PDF da cifra</div>
                                 </div>
                                 <i class="bx bx-chevron-right" style="color: #999; font-size: 1.5rem;"></i>
                             </a>
@@ -801,8 +825,8 @@ function viewSong(id) {
                                     <i class="bx bx-music text-white" style="font-size: 1.2rem;"></i>
                                 </div>
                                 <div class="flex-grow-1">
-                                    <div style="color: #333; font-weight: 500;">Áudio</div>
-                                    <div style="color: #666; font-size: 0.85rem; word-break: break-all;">${song.link_audio}</div>
+                                    <div style="color: #333; font-weight: 500; font-size: 1.1rem;">Áudio</div>
+                                    <div style="color: #666; font-size: 1rem; word-break: break-all;">${song.link_audio}</div>
                                 </div>
                                 <i class="bx bx-chevron-right" style="color: #999; font-size: 1.5rem;"></i>
                             </a>
@@ -813,14 +837,14 @@ function viewSong(id) {
                                     <i class="bx bx-video text-white" style="font-size: 1.2rem;"></i>
                                 </div>
                                 <div class="flex-grow-1">
-                                    <div style="color: #333; font-weight: 500;">Vídeo</div>
-                                    <div style="color: #666; font-size: 0.85rem; word-break: break-all;">${song.link_video}</div>
+                                    <div style="color: #333; font-weight: 500; font-size: 1.1rem;">Vídeo</div>
+                                    <div style="color: #666; font-size: 1rem; word-break: break-all;">${song.link_video}</div>
                                 </div>
                                 <i class="bx bx-chevron-right" style="color: #999; font-size: 1.5rem;"></i>
                             </a>
                         ` : ''}
                         ${!song.link_letra && !song.link_cifra && !song.cifra_pdf_url && !song.link_audio && !song.link_video ? `
-                            <div class="text-center py-3" style="color: #999;">
+                            <div class="text-center py-3" style="color: #999; font-size: 1.1rem;">
                                 <i class="bx bx-link-external" style="font-size: 2rem; margin-bottom: 8px; display: block;"></i>
                                 Nenhuma referência cadastrada
                             </div>

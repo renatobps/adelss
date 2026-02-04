@@ -187,6 +187,7 @@ Route::put('/permissoes/funcoes/{role}', [PermissionController::class, 'updateRo
         Route::put('schedules/members/{pivotId}/confirm', [MoriahScheduleController::class, 'confirmMember'])->name('schedules.members.confirm');
         Route::put('schedules/members/{pivotId}/reject', [MoriahScheduleController::class, 'rejectMember'])->name('schedules.members.reject');
         Route::put('schedules/members/{pivotId}/status', [MoriahScheduleController::class, 'updateMemberStatus'])->name('schedules.members.updateStatus');
+        Route::get('schedules/{id}/pdf', [MoriahScheduleController::class, 'generatePdf'])->name('schedules.pdf');
 
         // Rotas de Indisponibilidades
         Route::get('unavailabilities', [MoriahUnavailabilityController::class, 'index'])->name('unavailabilities.index');

@@ -706,16 +706,38 @@
                     </script>
                 @endif
 
-                @if($errors->any())
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        <strong>Erro!</strong>
-                        <ul class="mb-0 mt-2">
-                            @foreach($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
+                @if(isset($errors))
+                    @php
+                        $hasErrors = false;
+                        if (is_object($errors) && method_exists($errors, 'any')) {
+                            $hasErrors = $errors->any();
+                        } elseif (is_array($errors)) {
+                            $hasErrors = count($errors) > 0;
+                        }
+                    @endphp
+                    @if($hasErrors)
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <strong>Erro!</strong>
+                            <ul class="mb-0 mt-2">
+                                @if(is_object($errors) && method_exists($errors, 'all'))
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                @elseif(is_array($errors))
+                                    @foreach($errors as $key => $error)
+                                        <li>
+                                            @if(is_array($error))
+                                                {{ $key }}: {{ implode(', ', $error) }}
+                                            @else
+                                                {{ $error }}
+                                            @endif
+                                        </li>
+                                    @endforeach
+                                @endif
+                            </ul>
+                        </div>
+                    @endif
                 @endif
 
                 @yield('content')

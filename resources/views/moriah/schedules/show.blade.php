@@ -205,6 +205,11 @@ $isAdmin = Auth::user()?->is_admin ?? false;
 
                 <div class="mt-4 d-flex justify-content-end gap-2">
                     <a href="{{ route('moriah.schedules.index') }}" class="btn btn-secondary">Voltar</a>
+                    @if($moriahSchedule->status === 'publicada')
+                        <a href="{{ route('moriah.schedules.pdf', $moriahSchedule) }}" class="btn btn-info" target="_blank" title="Salvar escala em PDF">
+                            <i class="bx bx-download me-2"></i>Exportar PDF
+                        </a>
+                    @endif
                     <a href="{{ route('moriah.schedules.edit', $moriahSchedule) }}" class="btn btn-primary">Editar</a>
                 </div>
             </div>

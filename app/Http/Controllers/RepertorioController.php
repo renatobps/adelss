@@ -400,10 +400,53 @@ class RepertorioController extends Controller
      */
     public function processImport(Request $request)
     {
-        $request->validate([
-            'file' => 'required|mimes:xlsx,xls,csv|max:10240',
+        // Validação customizada para aceitar CSV com diferentes tipos MIME
+        $validator = \Validator::make($request->all(), [
+            'file' => 'required|file|max:10240',
             'autofill' => 'boolean',
         ]);
+
+        // Validação customizada da extensão e tipo MIME
+        $validator->after(function ($validator) use ($request) {
+            if ($request->hasFile('file')) {
+                $file = $request->file('file');
+                $extension = strtolower($file->getClientOriginalExtension());
+                $mimeType = $file->getMimeType();
+                
+                // Aceitar por extensão
+                $allowedExtensions = ['csv', 'xlsx', 'xls'];
+                if (!in_array($extension, $allowedExtensions)) {
+                    $validator->errors()->add('file', 'O arquivo deve ter a extensão .csv, .xlsx ou .xls. Extensão detectada: .' . $extension);
+                    return;
+                }
+                
+                // Para CSV, aceitar qualquer tipo MIME (muitos sistemas não detectam corretamente)
+                if ($extension === 'csv') {
+                    return; // Aceitar CSV independente do tipo MIME
+                }
+                
+                // Para Excel, validar tipo MIME
+                $allowedMimeTypes = [
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/excel',
+                    'application/x-excel',
+                    'application/x-msexcel',
+                ];
+                
+                if (!in_array($mimeType, $allowedMimeTypes)) {
+                    $validator->errors()->add('file', 'O arquivo Excel deve ser do tipo: xlsx, xls. Tipo MIME detectado: ' . $mimeType);
+                }
+            } else {
+                $validator->errors()->add('file', 'Nenhum arquivo foi enviado.');
+            }
+        });
+
+        if ($validator->fails()) {
+            return redirect()->route('moriah.repertorio.import')
+                ->withErrors($validator)
+                ->withInput();
+        }
 
         $autofill = $request->has('autofill') && $request->autofill;
 
@@ -433,18 +476,32 @@ class RepertorioController extends Controller
                 }
 
                 // Preparar dados
+                $nomeMusica = trim($row['nomeMusica'] ?? '');
                 $songData = [
-                    'title' => trim($row['nomeMusica']),
-                    'artist' => trim($row['nomeArtista']),
+                    'title' => $nomeMusica,
+                    'version_name' => $nomeMusica, // Usar o nome da música como version_name também
+                    'artist' => trim($row['nomeArtista'] ?? ''),
                     'genre' => $autofill && empty($row['genero']) ? 'Louvor' : trim($row['genero'] ?? 'Louvor'),
-                    'key' => trim($row['tom'] ?? ''),
-                    'lyrics' => trim($row['letra'] ?? ''),
-                    'chords' => trim($row['cifra'] ?? ''),
+                    'key' => trim($row['tom'] ?? '') ?: null,
+                    'lyrics' => trim($row['letra'] ?? '') ?: null,
+                    'chords' => trim($row['cifra'] ?? '') ?: null,
+                    'link_letra' => trim($row['linkLetra'] ?? '') ?: null,
+                    'link_cifra' => trim($row['linkCifra'] ?? '') ?: null,
+                    'link_audio' => trim($row['linkAudio'] ?? '') ?: null,
+                    'link_video' => trim($row['linkVideo'] ?? '') ?: null,
+                    'duration_hours' => 0,
+                    'duration_minutes' => 0,
+                    'duration_seconds' => 0,
                     'has_lyrics' => !empty($row['letra']) || !empty($row['linkLetra']),
                     'has_chords' => !empty($row['cifra']) || !empty($row['linkCifra']),
                     'has_audio' => !empty($row['linkAudio']),
                     'has_video' => !empty($row['linkVideo']),
                 ];
+                
+                // Garantir que campos obrigatórios não sejam vazios
+                if (empty($songData['version_name'])) {
+                    $songData['version_name'] = $songData['title'];
+                }
 
                 // Processar referências (links customizados)
                 if (!empty($row['referencias'])) {
@@ -496,32 +553,55 @@ class RepertorioController extends Controller
     private function readCsv($file)
     {
         $data = [];
-        $handle = fopen($file->getRealPath(), 'r');
         
-        // Detectar delimitador (pode ser ; ou ,)
-        $firstLine = fgets($handle);
-        rewind($handle);
-        $delimiter = strpos($firstLine, ';') !== false ? ';' : ',';
+        // Tentar abrir com diferentes codificações
+        $encodings = ['UTF-8', 'ISO-8859-1', 'Windows-1252'];
+        $content = file_get_contents($file->getRealPath());
+        $detectedEncoding = mb_detect_encoding($content, $encodings, true);
         
-        // Ler cabeçalhos
-        $headers = fgetcsv($handle, 0, $delimiter);
-        
-        // Limpar BOM se existir
-        if (!empty($headers[0])) {
-            $headers[0] = preg_replace('/^\xEF\xBB\xBF/', '', $headers[0]);
+        if ($detectedEncoding && $detectedEncoding !== 'UTF-8') {
+            $content = mb_convert_encoding($content, 'UTF-8', $detectedEncoding);
         }
         
-        // Normalizar headers (remover espaços e converter para minúsculas)
+        // Remover BOM se existir
+        $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+        
+        // Criar arquivo temporário com conteúdo UTF-8
+        $tempFile = tmpfile();
+        fwrite($tempFile, $content);
+        rewind($tempFile);
+        
+        // Detectar delimitador (pode ser ; ou ,)
+        $firstLine = fgets($tempFile);
+        rewind($tempFile);
+        
+        // Contar ocorrências de cada delimitador na primeira linha
+        $semicolonCount = substr_count($firstLine, ';');
+        $commaCount = substr_count($firstLine, ',');
+        $delimiter = $semicolonCount > $commaCount ? ';' : ',';
+        
+        // Ler cabeçalhos
+        $headers = fgetcsv($tempFile, 0, $delimiter);
+        
+        // Normalizar headers (remover espaços)
         $headers = array_map(function($h) {
             return trim($h);
         }, $headers);
 
-        while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
+        while (($row = fgetcsv($tempFile, 0, $delimiter)) !== false) {
+            // Garantir que a linha tenha o mesmo número de colunas dos headers
+            while (count($row) < count($headers)) {
+                $row[] = '';
+            }
+            
             if (count($row) >= count($headers)) {
                 // Combinar headers com valores
                 $rowData = [];
                 foreach ($headers as $index => $header) {
-                    $rowData[$header] = isset($row[$index]) ? trim($row[$index]) : '';
+                    $value = isset($row[$index]) ? trim($row[$index]) : '';
+                    // Limpar caracteres de controle e normalizar espaços
+                    $value = preg_replace('/[\x00-\x1F\x7F]/u', '', $value);
+                    $rowData[$header] = $value;
                 }
                 
                 // Só adicionar se tiver pelo menos nome da música ou artista
@@ -531,7 +611,7 @@ class RepertorioController extends Controller
             }
         }
 
-        fclose($handle);
+        fclose($tempFile);
         return $data;
     }
 

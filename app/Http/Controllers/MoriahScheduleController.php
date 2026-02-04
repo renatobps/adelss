@@ -11,6 +11,8 @@ use App\Models\MoriahUnavailability;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class MoriahScheduleController extends Controller
 {
@@ -19,6 +21,27 @@ class MoriahScheduleController extends Controller
      */
     public function index(Request $request)
     {
+        // Atualizar automaticamente escalas que já passaram o dia para "concluido"
+        $today = Carbon::today();
+        $now = Carbon::now();
+        
+        MoriahSchedule::where('status', '!=', 'concluido')
+            ->where('status', '!=', 'rascunho')
+            ->where(function($query) use ($today, $now) {
+                // Escalas com data anterior à hoje
+                $query->where('date', '<', $today)
+                      // Ou escalas de hoje que já passaram a hora
+                      ->orWhere(function($q) use ($today, $now) {
+                          $q->where('date', '=', $today)
+                            ->where(function($subQuery) use ($now) {
+                                // Se não tem hora definida, considerar como passada se já passou meia-noite
+                                $subQuery->whereNull('time')
+                                         ->orWhere('time', '<=', $now->format('H:i:s'));
+                            });
+                      });
+            })
+            ->update(['status' => 'concluido']);
+
         $month = $request->get('month', Carbon::now()->month);
         $year = $request->get('year', Carbon::now()->year);
         $status = $request->get('status');
@@ -44,9 +67,10 @@ class MoriahScheduleController extends Controller
         $month = $request->get('month', Carbon::now()->month);
         $year = $request->get('year', Carbon::now()->year);
 
-        // Buscar cultos do mês
+        // Buscar cultos do mês que ainda não passaram
         $startDate = Carbon::create($year, $month, 1)->startOfDay();
         $endDate = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+        $now = Carbon::now();
 
         $cultos = Event::whereBetween('start_date', [$startDate, $endDate])
             ->where(function($query) {
@@ -57,6 +81,7 @@ class MoriahScheduleController extends Controller
                             ->orWhere('name', 'like', '%Culto%');
                       });
             })
+            ->where('start_date', '>', $now) // Apenas cultos que ainda não passaram
             ->orderBy('start_date')
             ->get();
 
@@ -87,7 +112,7 @@ class MoriahScheduleController extends Controller
             'date' => 'required|date',
             'time' => 'nullable',
             'observations' => 'nullable|string|max:500',
-            'status' => 'required|in:rascunho,publicada',
+            'status' => 'required|in:rascunho,publicada,concluido',
             'request_confirmation' => 'boolean',
             'members' => 'nullable|array',
             'members.*' => 'exists:members,id',
@@ -202,7 +227,27 @@ class MoriahScheduleController extends Controller
      */
     public function show($id)
     {
-        $moriahSchedule = MoriahSchedule::with(['event', 'members.moriahFunctions', 'songs'])->findOrFail($id);
+        $moriahSchedule = MoriahSchedule::with(['event', 'members.moriahFunctions'])->findOrFail($id);
+        
+        // Carregar músicas diretamente da tabela de relacionamento
+        // Isso garante que todas as músicas sejam carregadas corretamente
+        $scheduleSongs = DB::table('moriah_schedule_songs')
+            ->where('moriah_schedule_id', $moriahSchedule->id)
+            ->orderBy('order', 'asc')
+            ->get();
+        
+        // Carregar os dados completos das músicas
+        $songsData = [];
+        foreach ($scheduleSongs as $scheduleSong) {
+            // Buscar a música incluindo soft deleted
+            $song = Song::withTrashed()->find($scheduleSong->song_id);
+            if ($song) {
+                $songsData[] = $song;
+            }
+        }
+        
+        // Atribuir as músicas ao objeto mantendo a ordem
+        $moriahSchedule->setRelation('songs', collect($songsData));
         
         // Carregar funções selecionadas para cada membro
         $selectedMemberFunctions = [];
@@ -236,9 +281,10 @@ class MoriahScheduleController extends Controller
         $month = Carbon::parse($moriahSchedule->date)->month;
         $year = Carbon::parse($moriahSchedule->date)->year;
 
-        // Buscar cultos do mês
+        // Buscar cultos do mês que ainda não passaram
         $startDate = Carbon::create($year, $month, 1)->startOfDay();
         $endDate = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+        $now = Carbon::now();
 
         $cultos = Event::whereBetween('start_date', [$startDate, $endDate])
             ->where(function($query) {
@@ -248,6 +294,11 @@ class MoriahScheduleController extends Controller
                           $q->where('name', 'like', '%culto%')
                             ->orWhere('name', 'like', '%Culto%');
                       });
+            })
+            ->where(function($query) use ($now, $moriahSchedule) {
+                // Incluir cultos futuros OU o culto já selecionado na escala (mesmo que tenha passado)
+                $query->where('start_date', '>', $now)
+                      ->orWhere('id', $moriahSchedule->event_id);
             })
             ->orderBy('start_date')
             ->get();
@@ -299,7 +350,7 @@ class MoriahScheduleController extends Controller
             'date' => 'required|date',
             'time' => 'nullable',
             'observations' => 'nullable|string|max:500',
-            'status' => 'required|in:rascunho,publicada',
+            'status' => 'required|in:rascunho,publicada,concluido',
             'request_confirmation' => 'boolean',
             'members' => 'nullable|array',
             'members.*' => 'exists:members,id',
@@ -574,6 +625,108 @@ class MoriahScheduleController extends Controller
     /**
      * Atualizar status de confirmação do membro na escala (apenas admin)
      */
+    /**
+     * Gerar PDF da escala do Moriah usando DOMPDF
+     */
+    public function generatePdf($id)
+    {
+        $moriahSchedule = MoriahSchedule::with(['event', 'members.moriahFunctions', 'songs'])->findOrFail($id);
+        
+        // Verificar se a escala está publicada
+        if ($moriahSchedule->status !== 'publicada') {
+            return redirect()->route('moriah.schedules.show', $moriahSchedule)
+                ->with('error', 'Apenas escalas publicadas podem ser exportadas em PDF.');
+        }
+
+        // Carregar funções selecionadas para cada membro
+        $selectedMemberFunctions = [];
+        $membersWithStatus = [];
+        foreach ($moriahSchedule->members as $member) {
+            $scheduleMember = DB::table('moriah_schedule_members')
+                ->where('moriah_schedule_id', $moriahSchedule->id)
+                ->where('member_id', $member->id)
+                ->first();
+            
+            $memberStatus = $scheduleMember ? $scheduleMember->status : 'pendente';
+            $membersWithStatus[$member->id] = $memberStatus;
+            
+            if ($scheduleMember) {
+                $selectedFunctions = DB::table('moriah_schedule_member_functions')
+                    ->where('moriah_schedule_member_id', $scheduleMember->id)
+                    ->join('moriah_functions', 'moriah_schedule_member_functions.moriah_function_id', '=', 'moriah_functions.id')
+                    ->pluck('moriah_functions.name')
+                    ->toArray();
+                
+                $selectedMemberFunctions[$member->id] = $selectedFunctions;
+            }
+        }
+
+        // Organizar músicas com ordem
+        $songsWithOrder = [];
+        foreach ($moriahSchedule->songs as $song) {
+            $pivot = DB::table('moriah_schedule_songs')
+                ->where('moriah_schedule_id', $moriahSchedule->id)
+                ->where('song_id', $song->id)
+                ->first();
+            $order = $pivot ? $pivot->order : 999;
+            $songsWithOrder[] = [
+                'song' => $song,
+                'order' => $order
+            ];
+        }
+        usort($songsWithOrder, function($a, $b) {
+            return $a['order'] <=> $b['order'];
+        });
+
+        // Buscar logo da igreja
+        $logoBase64 = null;
+        $logoPath = null;
+        $logoFileName = 'LOG SS branca.png';
+        $logoPublicPath = public_path("img/img/{$logoFileName}");
+        
+        if (file_exists($logoPublicPath)) {
+            $logoPath = $logoPublicPath;
+            $imageData = file_get_contents($logoPublicPath);
+            $logoBase64 = 'data:image/png;base64,' . base64_encode($imageData);
+        } else {
+            $logoExists = Storage::disk('public')->exists('church/logo.png');
+            if ($logoExists) {
+                $logoPath = storage_path('app/public/church/logo.png');
+                $imageData = file_get_contents($logoPath);
+                $logoBase64 = 'data:image/png;base64,' . base64_encode($imageData);
+            } else {
+                $formats = ['jpg', 'jpeg', 'png', 'gif'];
+                foreach ($formats as $format) {
+                    if (Storage::disk('public')->exists("church/logo.{$format}")) {
+                        $logoPath = storage_path("app/public/church/logo.{$format}");
+                        $imageData = file_get_contents($logoPath);
+                        $mimeType = $format == 'jpg' ? 'jpeg' : $format;
+                        $logoBase64 = "data:image/{$mimeType};base64," . base64_encode($imageData);
+                        break;
+                    }
+                }
+            }
+        }
+
+        $churchName = 'ADELSS';
+        $fileName = 'escala-moriah-' . Str::slug($moriahSchedule->title) . '-' . Carbon::parse($moriahSchedule->date)->format('Y-m-d') . '.pdf';
+
+        // Renderizar view do PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.escalas.escala-moriah', [
+            'moriahSchedule' => $moriahSchedule,
+            'selectedMemberFunctions' => $selectedMemberFunctions,
+            'membersWithStatus' => $membersWithStatus,
+            'songsWithOrder' => $songsWithOrder,
+            'logoPath' => $logoPath,
+            'logoBase64' => $logoBase64,
+            'churchName' => $churchName,
+            'generatedAt' => now(),
+        ])->setPaper('A4', 'portrait')
+          ->setOption('enable-local-file-access', true);
+
+        return $pdf->download($fileName);
+    }
+
     public function updateMemberStatus(Request $request, $pivotId)
     {
         // Verificar se é admin
@@ -586,9 +739,12 @@ class MoriahScheduleController extends Controller
         }
 
         try {
-            $request->validate([
+            // Validar e obter o status
+            $validated = $request->validate([
                 'status' => 'required|in:pendente,confirmado,recusado,cancelado'
             ]);
+            
+            $status = $validated['status']; // Usar o valor validado
 
             $scheduleMember = DB::table('moriah_schedule_members')
                 ->where('id', $pivotId)
@@ -601,12 +757,38 @@ class MoriahScheduleController extends Controller
                 return redirect()->back()->with('error', 'Registro não encontrado');
             }
             
-            DB::table('moriah_schedule_members')
-                ->where('id', $pivotId)
-                ->update([
-                    'status' => $request->status,
-                    'updated_at' => now()
+            // Garantir que o status seja uma string válida
+            $validStatuses = ['pendente', 'confirmado', 'recusado', 'cancelado'];
+            if (!in_array($status, $validStatuses)) {
+                if (request()->expectsJson() || request()->ajax()) {
+                    return response()->json(['success' => false, 'message' => 'Status inválido'], 422);
+                }
+                return redirect()->back()->with('error', 'Status inválido');
+            }
+            
+            // Usar Eloquent através do relacionamento para garantir binding correto
+            // Primeiro, vamos buscar a escala e o membro
+            $schedule = MoriahSchedule::find($scheduleMember->moriah_schedule_id);
+            if ($schedule) {
+                $schedule->members()->updateExistingPivot($scheduleMember->member_id, [
+                    'status' => $status,
+                    'updated_at' => Carbon::now()
                 ]);
+                $updated = 1;
+            } else {
+                // Fallback: usar query SQL direta com CONCAT para forçar string
+                $updated = DB::update(
+                    "UPDATE moriah_schedule_members SET status = CONCAT('', ?), updated_at = ? WHERE id = ?",
+                    [$status, Carbon::now(), $pivotId]
+                );
+            }
+            
+            if ($updated === 0) {
+                if (request()->expectsJson() || request()->ajax()) {
+                    return response()->json(['success' => false, 'message' => 'Nenhum registro foi atualizado'], 404);
+                }
+                return redirect()->back()->with('error', 'Nenhum registro foi atualizado');
+            }
             
             if (request()->expectsJson() || request()->ajax()) {
                 return response()->json([

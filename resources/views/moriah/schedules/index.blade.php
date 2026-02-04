@@ -62,6 +62,7 @@
                             <option value="">Todos</option>
                             <option value="rascunho" {{ request('status') == 'rascunho' ? 'selected' : '' }}>Rascunho</option>
                             <option value="publicada" {{ request('status') == 'publicada' ? 'selected' : '' }}>Publicada</option>
+                            <option value="concluido" {{ request('status') == 'concluido' ? 'selected' : '' }}>Concluído</option>
                         </select>
                     </div>
                 </form>
@@ -89,15 +90,24 @@
                                         <td>{{ $schedule->members->count() }}</td>
                                         <td>{{ $schedule->songs->count() }}</td>
                                         <td>
-                                            <span class="badge bg-{{ $schedule->status == 'publicada' ? 'success' : 'secondary' }}">
-                                                {{ ucfirst($schedule->status) }}
-                                            </span>
+                                            @if($schedule->status == 'publicada')
+                                                <span class="badge bg-success">Publicada</span>
+                                            @elseif($schedule->status == 'concluido')
+                                                <span class="badge bg-info">Concluído</span>
+                                            @else
+                                                <span class="badge bg-secondary">Rascunho</span>
+                                            @endif
                                         </td>
                                         <td>
                                             <div class="btn-group">
-                                                <a href="{{ route('moriah.schedules.show', $schedule) }}" class="btn btn-sm btn-info" title="Ver">
+                                                <a href="{{ route('moriah.schedules.show', $schedule) }}" class="btn btn-sm btn-default" title="Ver">
                                                     <i class="bx bx-show"></i>
                                                 </a>
+                                                @if($schedule->status == 'publicada' || $schedule->status == 'concluido')
+                                                    <a href="{{ route('moriah.schedules.pdf', $schedule) }}" class="btn btn-sm btn-info" title="Imprimir PDF" target="_blank">
+                                                        <i class="bx bx-printer"></i>
+                                                    </a>
+                                                @endif
                                                 <a href="{{ route('moriah.schedules.edit', $schedule) }}" class="btn btn-sm btn-primary" title="Editar">
                                                     <i class="bx bx-edit"></i>
                                                 </a>
