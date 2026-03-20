@@ -620,6 +620,205 @@ class PermissionSeeder extends Seeder
         Permission::where('module', 'Serviço')
             ->whereNotIn('key', $servicoValidKeys)
             ->delete();
+
+        // Módulo Notificações (WhatsApp: grupos, enquetes, painel, configuração, templates)
+        $notificacoesModule = [
+            'module' => 'Notificações',
+            'name' => 'Módulo Notificações',
+            'children' => [
+                [
+                    'name' => 'Notificações',
+                    'key' => 'notificacoes.manage',
+                    'description' => 'Permissões para gerenciar notificações via WhatsApp',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'notificacoes.view'],
+                        ['name' => 'Gerenciar', 'key' => 'notificacoes.manage'],
+                    ],
+                ],
+            ],
+        ];
+
+        $notificacoesModulePermission = Permission::updateOrCreate(
+            ['key' => 'notificacoes.module'],
+            [
+                'module' => $notificacoesModule['module'],
+                'name' => $notificacoesModule['name'],
+                'description' => 'Permissões relacionadas ao módulo de notificações (WhatsApp)',
+                'parent_id' => null,
+            ]
+        );
+
+        $notificacoesValidKeys = ['notificacoes.module'];
+        foreach ($notificacoesModule['children'] as $group) {
+            $notificacoesValidKeys[] = $group['key'];
+            $groupPermission = Permission::updateOrCreate(
+                ['key' => $group['key']],
+                [
+                    'module' => $notificacoesModule['module'],
+                    'name' => $group['name'],
+                    'description' => $group['description'],
+                    'parent_id' => $notificacoesModulePermission->id,
+                ]
+            );
+            if (isset($group['actions'])) {
+                foreach ($group['actions'] as $action) {
+                    $notificacoesValidKeys[] = $action['key'];
+                    Permission::updateOrCreate(
+                        ['key' => $action['key']],
+                        [
+                            'module' => $notificacoesModule['module'],
+                            'name' => $action['name'],
+                            'description' => $group['name'] . ' - ' . $action['name'],
+                            'parent_id' => $groupPermission->id,
+                        ]
+                    );
+                }
+            }
+        }
+        Permission::where('module', 'Notificações')
+            ->whereNotIn('key', $notificacoesValidKeys)
+            ->delete();
+
+        // Módulo Discipulado
+        $discipleshipModule = [
+            'module' => 'Discipulado',
+            'name' => 'Módulo Discipulado',
+            'children' => [
+                // Visão Geral / Acesso ao módulo
+                [
+                    'name' => 'Visão Geral',
+                    'key' => 'discipleship.manage',
+                    'description' => 'Permissões gerais do módulo de discipulado (dashboards e visão geral)',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'discipleship.view'],
+                        ['name' => 'Gerenciar', 'key' => 'discipleship.manage'],
+                    ],
+                ],
+                // Ciclos
+                [
+                    'name' => 'Ciclos',
+                    'key' => 'discipleship.cycles.manage',
+                    'description' => 'Permissões para gerenciar ciclos de discipulado',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'discipleship.cycles.view'],
+                        ['name' => 'Criar', 'key' => 'discipleship.cycles.create'],
+                        ['name' => 'Editar', 'key' => 'discipleship.cycles.edit'],
+                        ['name' => 'Remover', 'key' => 'discipleship.cycles.delete'],
+                    ],
+                ],
+                // Membros
+                [
+                    'name' => 'Membros',
+                    'key' => 'discipleship.members.manage',
+                    'description' => 'Permissões para gerenciar membros vinculados ao discipulado',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'discipleship.members.view'],
+                        ['name' => 'Criar', 'key' => 'discipleship.members.create'],
+                        ['name' => 'Editar', 'key' => 'discipleship.members.edit'],
+                        ['name' => 'Remover', 'key' => 'discipleship.members.delete'],
+                    ],
+                ],
+                // Encontros
+                [
+                    'name' => 'Encontros',
+                    'key' => 'discipleship.meetings.manage',
+                    'description' => 'Permissões para gerenciar encontros de discipulado',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'discipleship.meetings.view'],
+                        ['name' => 'Criar', 'key' => 'discipleship.meetings.create'],
+                        ['name' => 'Editar', 'key' => 'discipleship.meetings.edit'],
+                        ['name' => 'Remover', 'key' => 'discipleship.meetings.delete'],
+                    ],
+                ],
+                // Indicadores
+                [
+                    'name' => 'Indicadores',
+                    'key' => 'discipleship.indicators.manage',
+                    'description' => 'Permissões para gerenciar indicadores de discipulado',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'discipleship.indicators.view'],
+                        ['name' => 'Criar', 'key' => 'discipleship.indicators.create'],
+                        ['name' => 'Editar', 'key' => 'discipleship.indicators.edit'],
+                        ['name' => 'Remover', 'key' => 'discipleship.indicators.delete'],
+                    ],
+                ],
+                // Propósitos / Metas
+                [
+                    'name' => 'Propósitos/Metas',
+                    'key' => 'discipleship.goals.manage',
+                    'description' => 'Permissões para gerenciar propósitos e metas de discipulado',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'discipleship.goals.view'],
+                        ['name' => 'Criar', 'key' => 'discipleship.goals.create'],
+                        ['name' => 'Editar', 'key' => 'discipleship.goals.edit'],
+                        ['name' => 'Remover', 'key' => 'discipleship.goals.delete'],
+                    ],
+                ],
+                // Feedbacks
+                [
+                    'name' => 'Feedbacks',
+                    'key' => 'discipleship.feedbacks.manage',
+                    'description' => 'Permissões para gerenciar feedbacks de discipulado',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'discipleship.feedbacks.view'],
+                        ['name' => 'Criar', 'key' => 'discipleship.feedbacks.create'],
+                        ['name' => 'Editar', 'key' => 'discipleship.feedbacks.edit'],
+                        ['name' => 'Remover', 'key' => 'discipleship.feedbacks.delete'],
+                    ],
+                ],
+            ],
+        ];
+
+        // Criar módulo principal de Discipulado
+        $discipleshipModulePermission = Permission::updateOrCreate(
+            ['key' => 'discipleship.module'],
+            [
+                'module' => $discipleshipModule['module'],
+                'name' => $discipleshipModule['name'],
+                'description' => 'Permissões relacionadas ao módulo de discipulado',
+                'parent_id' => null,
+            ]
+        );
+
+        // Lista de keys válidas para manter (Discipulado)
+        $discipleshipValidKeys = ['discipleship.module'];
+
+        // Criar permissões hierárquicas (grupos e ações) do módulo Discipulado
+        foreach ($discipleshipModule['children'] as $group) {
+            $discipleshipValidKeys[] = $group['key'];
+
+            // Criar o grupo de permissão
+            $groupPermission = Permission::updateOrCreate(
+                ['key' => $group['key']],
+                [
+                    'module' => $discipleshipModule['module'],
+                    'name' => $group['name'],
+                    'description' => $group['description'],
+                    'parent_id' => $discipleshipModulePermission->id,
+                ]
+            );
+
+            // Criar as ações filhas (Ver, Criar, Editar, Remover, etc.)
+            if (isset($group['actions'])) {
+                foreach ($group['actions'] as $action) {
+                    $discipleshipValidKeys[] = $action['key'];
+                    Permission::updateOrCreate(
+                        ['key' => $action['key']],
+                        [
+                            'module' => $discipleshipModule['module'],
+                            'name' => $action['name'],
+                            'description' => $group['name'] . ' - ' . $action['name'],
+                            'parent_id' => $groupPermission->id,
+                        ]
+                    );
+                }
+            }
+        }
+
+        // Remover permissões antigas do módulo Discipulado que não estão mais na lista
+        Permission::where('module', 'Discipulado')
+            ->whereNotIn('key', $discipleshipValidKeys)
+            ->delete();
     }
 }
 

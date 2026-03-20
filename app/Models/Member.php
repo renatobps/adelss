@@ -91,6 +91,14 @@ class Member extends Model
     }
 
     /**
+     * Relacionamento com Discipulado
+     */
+    public function discipleshipMembers()
+    {
+        return $this->hasMany(\App\Models\Discipleship\DiscipleshipMember::class, 'member_id');
+    }
+
+    /**
      * Verifica se o membro é professor de alguma turma
      */
     public function isTeacherOfAnyClass(): bool
@@ -122,6 +130,14 @@ class Member extends Model
     public function user()
     {
         return $this->hasOne(User::class);
+    }
+
+    /**
+     * Grupos de notificação (WhatsApp) aos quais o membro pertence
+     */
+    public function notificacaoGrupos()
+    {
+        return $this->belongsToMany(NotificacaoGrupo::class, 'grupo_member', 'member_id', 'grupo_id')->withTimestamps();
     }
 
 

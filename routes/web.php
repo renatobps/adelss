@@ -33,6 +33,13 @@ use App\Http\Controllers\MoriahFunctionController;
 use App\Http\Controllers\RepertorioController;
 use App\Http\Controllers\MoriahScheduleController;
 use App\Http\Controllers\MoriahUnavailabilityController;
+use App\Http\Controllers\Discipleship\DiscipleshipCycleController;
+use App\Http\Controllers\Discipleship\DiscipleshipMemberController;
+use App\Http\Controllers\Discipleship\DiscipleshipMeetingController;
+use App\Http\Controllers\Discipleship\DiscipleshipIndicatorController;
+use App\Http\Controllers\Discipleship\DiscipleshipGoalController;
+use App\Http\Controllers\Discipleship\DiscipleshipFeedbackController;
+use App\Http\Controllers\Discipleship\DiscipleshipDashboardController;
 
 // Rotas de autenticação
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
@@ -196,6 +203,37 @@ Route::put('/permissoes/funcoes/{role}', [PermissionController::class, 'updateRo
         Route::post('unavailabilities/check', [MoriahUnavailabilityController::class, 'checkUnavailabilities'])->name('unavailabilities.check');
     });
 
+    // Módulo Notificações (WhatsApp: grupos, enquetes, painel, configuração, templates)
+    Route::prefix('notificacoes')->name('notificacoes.')->group(function () {
+        Route::resource('grupos', \App\Http\Controllers\Notificacoes\GrupoController::class)->parameters(['grupos' => 'grupo'])->names('grupos');
+        Route::get('grupos-lista-json', function () {
+            return response()->json(
+                \App\Models\NotificacaoGrupo::where('ativo', true)->orderBy('nome')->get(['id', 'nome'])
+            );
+        })->name('grupos.lista-json');
+        Route::get('departamentos-lista-json', function () {
+            return response()->json(
+                \App\Models\Department::active()->orderBy('name')->get(['id', 'name'])
+            );
+        })->name('departamentos.lista-json');
+        Route::resource('enquetes', \App\Http\Controllers\Notificacoes\EnqueteController::class)->parameters(['enquetes' => 'enquete'])->names('enquetes');
+        Route::post('enquetes/{enquete}/enviar', [\App\Http\Controllers\Notificacoes\EnqueteController::class, 'enviar'])->name('enquetes.enviar');
+        Route::get('painel', [\App\Http\Controllers\Notificacoes\PainelController::class, 'index'])->name('painel.index');
+        Route::post('painel/enviar', [\App\Http\Controllers\Notificacoes\PainelController::class, 'enviar'])->name('painel.enviar');
+        Route::get('config', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'index'])->name('config.index');
+        Route::get('config/status', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'status'])->name('config.status');
+        Route::get('config/conectar', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'conectar'])->name('config.conectar');
+        Route::get('config/instances', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'listarInstancias'])->name('config.instances');
+        Route::post('config/instances', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'criarInstancia'])->name('config.instances.store');
+        Route::delete('config/instances/{instanceName}', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'deletarInstancia'])->name('config.instances.destroy');
+        Route::get('config/instances/{instanceName}/status', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'statusInstancia'])->name('config.instances.status');
+        Route::put('config/webhook-received', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'configurarWebhookReceived'])->name('config.webhook-received');
+        Route::put('config/webhook-delivery', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'configurarWebhookDelivery'])->name('config.webhook-delivery');
+        Route::post('config/teste', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'enviarTeste'])->name('config.teste');
+        Route::get('templates', [\App\Http\Controllers\Notificacoes\TemplateController::class, 'index'])->name('templates.index');
+        Route::put('templates', [\App\Http\Controllers\Notificacoes\TemplateController::class, 'update'])->name('templates.update');
+    });
+
 }); // fim do grupo auth
 
         // Rotas de importação de membros (somente admin)
@@ -300,6 +338,82 @@ Route::resource('pgis', PgiController::class)->middleware('module.access:pgis');
         'edit' => 'cost-centers.edit',
         'update' => 'cost-centers.update',
         'destroy' => 'cost-centers.destroy',
+    ]);
+});
+
+        // Rotas do módulo de Discipulado
+        Route::prefix('discipleship')->name('discipleship.')->middleware('module.access:discipleship')->group(function () {
+    // Dashboard
+    Route::get('dashboard/discipulador', [DiscipleshipDashboardController::class, 'discipulador'])->name('dashboard.discipulador');
+    Route::get('dashboard/lideranca', [DiscipleshipDashboardController::class, 'lideranca'])->name('dashboard.lideranca');
+    
+    // Ciclos
+    Route::resource('cycles', DiscipleshipCycleController::class)->names([
+        'index' => 'cycles.index',
+        'create' => 'cycles.create',
+        'store' => 'cycles.store',
+        'show' => 'cycles.show',
+        'edit' => 'cycles.edit',
+        'update' => 'cycles.update',
+        'destroy' => 'cycles.destroy',
+    ]);
+    
+    // Membros (vinculação ao ciclo)
+    Route::resource('members', DiscipleshipMemberController::class)->names([
+        'index' => 'members.index',
+        'create' => 'members.create',
+        'store' => 'members.store',
+        'show' => 'members.show',
+        'edit' => 'members.edit',
+        'update' => 'members.update',
+        'destroy' => 'members.destroy',
+    ]);
+    
+    // Encontros
+    Route::resource('meetings', DiscipleshipMeetingController::class)->names([
+        'index' => 'meetings.index',
+        'create' => 'meetings.create',
+        'store' => 'meetings.store',
+        'show' => 'meetings.show',
+        'edit' => 'meetings.edit',
+        'update' => 'meetings.update',
+        'destroy' => 'meetings.destroy',
+    ]);
+    
+    // Indicadores
+    Route::resource('indicators', DiscipleshipIndicatorController::class)->names([
+        'index' => 'indicators.index',
+        'create' => 'indicators.create',
+        'store' => 'indicators.store',
+        'edit' => 'indicators.edit',
+        'update' => 'indicators.update',
+        'destroy' => 'indicators.destroy',
+    ]);
+    Route::post('indicators/value', [DiscipleshipIndicatorController::class, 'storeValue'])->name('indicators.value.store');
+    
+    // Propósitos/Metas
+    Route::resource('goals', DiscipleshipGoalController::class)->names([
+        'index' => 'goals.index',
+        'create' => 'goals.create',
+        'store' => 'goals.store',
+        'show' => 'goals.show',
+        'edit' => 'goals.edit',
+        'update' => 'goals.update',
+        'destroy' => 'goals.destroy',
+    ]);
+    Route::get('goals/{goal}/pdf', [DiscipleshipGoalController::class, 'generatePdf'])->name('goals.pdf');
+    
+    // Ajuda
+    Route::get('help', [DiscipleshipDashboardController::class, 'help'])->name('help');
+
+    // Feedbacks
+    Route::resource('feedbacks', DiscipleshipFeedbackController::class)->names([
+        'index' => 'feedbacks.index',
+        'create' => 'feedbacks.create',
+        'store' => 'feedbacks.store',
+        'edit' => 'feedbacks.edit',
+        'update' => 'feedbacks.update',
+        'destroy' => 'feedbacks.destroy',
     ]);
 });
 

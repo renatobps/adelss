@@ -20,6 +20,13 @@ return [
      */
     'convert_entities' => true,
 
+    /*
+     * Emojis no PDF: DomPDF não suporta emojis nativamente (aparecem como quadrados).
+     * true = manter emojis (podem aparecer quebrados em alguns leitores)
+     * false = remover emojis para PDF limpo (padrão)
+     */
+    'emoji_in_pdf' => env('PDF_EMOJI', false),
+
     'options' => [
         /**
          * The location of the DOMPDF font directory

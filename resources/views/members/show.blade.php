@@ -214,9 +214,82 @@
             <header class="card-header">
                 <h2 class="card-title">Acompanhamento pessoal</h2>
             </header>
-            <div class="card-body text-center">
-                <i class="bx bx-data fs-1 text-muted"></i>
-                <p class="text-muted mb-0">Não há dados disponíveis</p>
+            <div class="card-body">
+                @php
+                    $hasDiscipleship = ($beingDiscipled && $beingDiscipled->count() > 0) || ($discipling && $discipling->count() > 0);
+                @endphp
+                
+                @if($hasDiscipleship)
+                    <!-- Se está sendo discipulado -->
+                    @if($beingDiscipled && $beingDiscipled->count() > 0)
+                        <div class="mb-3">
+                            <h6 class="text-primary mb-2">
+                                <i class="bx bx-user-check me-1"></i>Discipulador
+                            </h6>
+                            @foreach($beingDiscipled as $discipulado)
+                                <div class="mb-2 pb-2 border-bottom">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <p class="mb-1 fw-bold">
+                                                <a href="{{ route('discipleship.members.show', $discipulado) }}" class="text-decoration-none" style="color: #007bff;">
+                                                    {{ $discipulado->discipulador->name ?? 'Sem discipulador' }}
+                                                </a>
+                                            </p>
+                                            <p class="text-muted small mb-0">
+                                                <i class="bx bx-cycle me-1"></i>{{ $discipulado->cycle->nome }}
+                                            </p>
+                                            <p class="text-muted small mb-0">
+                                                <i class="bx bx-calendar me-1"></i>Desde {{ $discipulado->data_inicio->format('d/m/Y') }}
+                                            </p>
+                                        </div>
+                                        <a href="{{ route('discipleship.members.show', $discipulado) }}" class="btn btn-sm btn-outline-primary" title="Ver detalhes">
+                                            <i class="bx bx-show"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <!-- Se está discipulando -->
+                    @if($discipling && $discipling->count() > 0)
+                        <div class="{{ ($beingDiscipled && $beingDiscipled->count() > 0) ? 'mt-3 pt-3 border-top' : '' }}">
+                            <h6 class="text-success mb-2">
+                                <i class="bx bx-user-plus me-1"></i>Discipulando
+                            </h6>
+                            @foreach($discipling as $discipulando)
+                                <div class="mb-2 pb-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <p class="mb-1 fw-bold">
+                                                <a href="{{ route('discipleship.members.show', $discipulando) }}" class="text-decoration-none" style="color: #28a745;">
+                                                    {{ $discipulando->member->name }}
+                                                </a>
+                                            </p>
+                                            <p class="text-muted small mb-0">
+                                                <i class="bx bx-cycle me-1"></i>{{ $discipulando->cycle->nome }}
+                                            </p>
+                                            <p class="text-muted small mb-0">
+                                                <i class="bx bx-calendar me-1"></i>Desde {{ $discipulando->data_inicio->format('d/m/Y') }}
+                                            </p>
+                                        </div>
+                                        <a href="{{ route('discipleship.members.show', $discipulando) }}" class="btn btn-sm btn-outline-success" title="Ver detalhes">
+                                            <i class="bx bx-show"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                @else
+                    <div class="text-center">
+                        <i class="bx bx-data fs-1 text-muted d-block mb-2"></i>
+                        <p class="text-muted mb-0">Não há dados disponíveis</p>
+                        <a href="{{ route('discipleship.members.create') }}" class="btn btn-sm btn-primary mt-2">
+                            <i class="bx bx-user-plus me-1"></i>Iniciar Discipulado
+                        </a>
+                    </div>
+                @endif
             </div>
         </section>
     </div>

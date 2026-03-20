@@ -208,6 +208,17 @@
                                     $canViewVoluntariosHistorico = false;
                                     $canViewVoluntariosRelatorios = false;
                                     
+                                    // Permissões do módulo Notificações (WhatsApp)
+                                    $canViewNotificacoes = false;
+                                    // Permissões do módulo Discipulado
+                                    $canViewDiscipulado = false;
+                                    $canViewCiclos = false;
+                                    $canViewMembrosDiscipulado = false;
+                                    $canViewEncontros = false;
+                                    $canViewIndicadores = false;
+                                    $canViewPropositos = false;
+                                    $canViewFeedbacks = false;
+                                    
                                     if ($user) {
                                         if ($isAdmin) {
                                             $canViewMembers = true;
@@ -232,6 +243,14 @@
                                             $canViewVoluntariosEscalas = true;
                                             $canViewVoluntariosHistorico = true;
                                             $canViewVoluntariosRelatorios = true;
+                                            $canViewNotificacoes = true;
+                                            $canViewDiscipulado = true;
+                                            $canViewCiclos = true;
+                                            $canViewMembrosDiscipulado = true;
+                                            $canViewEncontros = true;
+                                            $canViewIndicadores = true;
+                                            $canViewPropositos = true;
+                                            $canViewFeedbacks = true;
                                         } else {
                                             try {
                                                 // Verificar permissões específicas do menu
@@ -298,6 +317,25 @@
                                                                                $user->hasPermission('servico.voluntarios.historico.manage');
                                                 $canViewVoluntariosRelatorios = $user->hasPermission('servico.voluntarios.relatorios.view') || 
                                                                                 $user->hasPermission('servico.voluntarios.relatorios.manage');
+                                                
+                                                // Verificar permissões do módulo Notificações
+                                                $canViewNotificacoes = $user->hasPermission('notificacoes.view') ||
+                                                                      $user->hasPermission('notificacoes.manage');
+                                                // Verificar permissões do módulo Discipulado
+                                                $canViewDiscipulado = $user->hasPermission('discipleship.view') || 
+                                                                      $user->hasPermission('discipleship.manage');
+                                                $canViewCiclos = $user->hasPermission('discipleship.cycles.view') || 
+                                                                 $user->hasPermission('discipleship.cycles.manage');
+                                                $canViewMembrosDiscipulado = $user->hasPermission('discipleship.members.view') || 
+                                                                             $user->hasPermission('discipleship.members.manage');
+                                                $canViewEncontros = $user->hasPermission('discipleship.meetings.view') || 
+                                                                    $user->hasPermission('discipleship.meetings.manage');
+                                                $canViewIndicadores = $user->hasPermission('discipleship.indicators.view') || 
+                                                                      $user->hasPermission('discipleship.indicators.manage');
+                                                $canViewPropositos = $user->hasPermission('discipleship.goals.view') || 
+                                                                     $user->hasPermission('discipleship.goals.manage');
+                                                $canViewFeedbacks = $user->hasPermission('discipleship.feedbacks.view') || 
+                                                                    $user->hasPermission('discipleship.feedbacks.manage');
                                             } catch (\Exception $e) {
                                                 // Em caso de erro, não exibir menu
                                                 $canViewMembers = false;
@@ -322,6 +360,14 @@
                                                 $canViewVoluntariosEscalas = false;
                                                 $canViewVoluntariosHistorico = false;
                                                 $canViewVoluntariosRelatorios = false;
+                                                $canViewNotificacoes = false;
+                                                $canViewDiscipulado = false;
+                                                $canViewCiclos = false;
+                                                $canViewMembrosDiscipulado = false;
+                                                $canViewEncontros = false;
+                                                $canViewIndicadores = false;
+                                                $canViewPropositos = false;
+                                                $canViewFeedbacks = false;
                                             }
                                         }
                                     }
@@ -595,12 +641,109 @@
                                                 <i class="bx bx-right-arrow-alt"></i>Indisponibilidades
                                             </a>
                                         </li>
-                                            <a class="nav-link" href="#">
-                                                <i class="bx bx-x-circle"></i>Indisponibilidades
+                                    </ul>
+                                </li>
+
+                                {{-- MENU NOTIFICAÇÕES (WhatsApp: grupos, enquetes, notificações, configuração, templates) --}}
+                                @if($isAdmin || ($canViewNotificacoes ?? false))
+                                <li class="nav-parent {{ request()->routeIs('notificacoes.*') ? 'nav-expanded nav-active' : '' }}">
+                                    <a class="nav-link" href="#">
+                                        <i class="bx bx-bell" aria-hidden="true"></i>
+                                        <span>Notificações</span>
+                                    </a>
+                                    <ul class="nav nav-children">
+                                        <li class="{{ request()->routeIs('notificacoes.grupos.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('notificacoes.grupos.index') }}">
+                                                <i class="bx bx-group"></i>Grupos
+                                            </a>
+                                        </li>
+                                        <li class="{{ request()->routeIs('notificacoes.enquetes.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('notificacoes.enquetes.index') }}">
+                                                <i class="bx bx-bar-chart-alt-2"></i>Enquetes
+                                            </a>
+                                        </li>
+                                        <li class="{{ request()->routeIs('notificacoes.painel.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('notificacoes.painel.index') }}">
+                                                <i class="bx bx-send"></i>Notificações
+                                            </a>
+                                        </li>
+                                        <li class="{{ request()->routeIs('notificacoes.config.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('notificacoes.config.index') }}">
+                                                <i class="bx bxl-whatsapp"></i>Configuração WPP
+                                            </a>
+                                        </li>
+                                        <li class="{{ request()->routeIs('notificacoes.templates.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('notificacoes.templates.index') }}">
+                                                <i class="bx bx-file-blank"></i>Templates
                                             </a>
                                         </li>
                                     </ul>
                                 </li>
+                                @endif
+
+                                {{-- MENU DISCIPULADO --}}
+                                @if($canViewDiscipulado || $canViewCiclos || $canViewMembrosDiscipulado || $canViewEncontros || $canViewIndicadores || $canViewPropositos || $canViewFeedbacks)
+                                <li class="nav-parent {{ request()->routeIs('discipleship.*') ? 'nav-expanded nav-active' : '' }}">
+                                    <a class="nav-link" href="#">
+                                        <i class="bx bx-group" aria-hidden="true"></i>
+                                        <span>Discipulado</span>
+                                    </a>
+                                    <ul class="nav nav-children">
+                                        @if($canViewCiclos)
+                                        <li class="{{ request()->routeIs('discipleship.cycles.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('discipleship.cycles.index') }}">
+                                                <i class="bx bx-calendar-alt"></i>Ciclos
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if($canViewMembrosDiscipulado)
+                                        <li class="{{ request()->routeIs('discipleship.members.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('discipleship.members.index') }}">
+                                                <i class="bx bx-user"></i>Membros
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if($canViewEncontros)
+                                        <li class="{{ request()->routeIs('discipleship.meetings.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('discipleship.meetings.index') }}">
+                                                <i class="bx bx-calendar"></i>Encontros
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if($canViewIndicadores)
+                                        <li class="{{ request()->routeIs('discipleship.indicators.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('discipleship.indicators.index') }}">
+                                                <i class="bx bx-bar-chart"></i>Indicadores
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if($canViewPropositos)
+                                        <li class="{{ request()->routeIs('discipleship.goals.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('discipleship.goals.index') }}">
+                                                <i class="bx bx-target-lock"></i>Propósitos
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if($canViewFeedbacks)
+                                        <li class="{{ request()->routeIs('discipleship.feedbacks.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('discipleship.feedbacks.index') }}">
+                                                <i class="bx bx-message"></i>Feedbacks
+                                            </a>
+                                        </li>
+                                        @endif
+                                        <li class="{{ request()->routeIs('discipleship.dashboard.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('discipleship.dashboard.discipulador') }}">
+                                                <i class="bx bx-dashboard"></i>Dashboard
+                                            </a>
+                                        </li>
+                                        <li class="{{ request()->routeIs('discipleship.help') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('discipleship.help') }}">
+                                                <i class="bx bx-help-circle"></i>Ajuda
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                                @endif
                             </ul>
                         </nav>
 

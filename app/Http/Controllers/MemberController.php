@@ -332,7 +332,24 @@ class MemberController extends Controller
             $assignedPermissions = $user ? $user->permissions->pluck('id')->toArray() : [];
         }
         
-        return view('members.show', compact('member', 'departments', 'transactions', 'totalDizimo', 'totalOferta', 'volunteer', 'upcomingSchedules', 'pendingSchedulesCount', 'tab', 'user', 'modules', 'assignedPermissions', 'allTurmas', 'memberTurmas', 'teacherTurmas'));
+        // Buscar dados de discipulado
+        // Se o membro está sendo discipulado (tem discipulador)
+        $beingDiscipled = \App\Models\Discipleship\DiscipleshipMember::where('member_id', $member->id)
+            ->where('status', 'ativo')
+            ->with(['cycle', 'discipulador'])
+            ->get();
+        
+        // Se o membro está discipulando alguém (é discipulador)
+        // Precisamos buscar através do user_id do membro
+        $discipling = collect();
+        if ($member->user) {
+            $discipling = \App\Models\Discipleship\DiscipleshipMember::where('discipulador_id', $member->user->id)
+                ->where('status', 'ativo')
+                ->with(['member', 'cycle'])
+                ->get();
+        }
+        
+        return view('members.show', compact('member', 'departments', 'transactions', 'totalDizimo', 'totalOferta', 'volunteer', 'upcomingSchedules', 'pendingSchedulesCount', 'tab', 'user', 'modules', 'assignedPermissions', 'allTurmas', 'memberTurmas', 'teacherTurmas', 'beingDiscipled', 'discipling'));
     }
 
     /**
