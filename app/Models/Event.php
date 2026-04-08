@@ -37,6 +37,9 @@ class Event extends Model
         'hide_phone',
         'hide_address',
         'notify_emails',
+        'responsible_name',
+        'responsible_phone',
+        'registration_success_message',
         'registration_enabled',
         'location_photos',
     ];

@@ -173,6 +173,20 @@
                     <label class="form-label">Notificar e-mails (separados por vírgula)</label>
                     <textarea name="notify_emails" class="form-control" rows="2" placeholder="a@email.com, b@email.com">{{ old('notify_emails', $e->notify_emails ?? '') }}</textarea>
                 </div>
+                <div class="mb-3">
+                    <label class="form-label">Nome do responsável</label>
+                    <input type="text" name="responsible_name" class="form-control" value="{{ old('responsible_name', $e->responsible_name ?? '') }}" placeholder="Ex.: Pr. João Silva">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Telefone do responsável (WhatsApp)</label>
+                    <input type="text" name="responsible_phone" class="form-control js-phone-mask" value="{{ old('responsible_phone', $e->responsible_phone ?? '') }}" placeholder="(11) 99999-9999" maxlength="15">
+                    <small class="text-muted d-block mt-1">Receberá notificação de nova inscrição no evento.</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Mensagem WhatsApp para o inscrito</label>
+                    <textarea name="registration_success_message" class="form-control" rows="4" placeholder="Ex.: Olá @{{nome}}, sua inscrição no evento @{{evento}} foi confirmada!">{{ old('registration_success_message', $e->registration_success_message ?? '') }}</textarea>
+                    <small class="text-muted d-block mt-1">Você pode usar: @{{nome}}, @{{evento}}, @{{data}}, @{{status}}.</small>
+                </div>
                 <div class="form-check mb-0">
                     <input type="checkbox" name="registration_enabled" value="1" class="form-check-input" id="reg_en" {{ old('registration_enabled', $e?->registration_enabled ?? true) ? 'checked' : '' }}>
                     <label class="form-check-label" for="reg_en">Inscrições abertas</label>
@@ -387,6 +401,23 @@
             var row = btn.closest('.schedule-row, .field-row, .speaker-row');
             if (row && row.parentNode.children.length > 1) row.remove();
         }
+    });
+
+    document.querySelectorAll('.js-phone-mask').forEach(function (input) {
+        var applyMask = function () {
+            var digits = (input.value || '').replace(/\D/g, '').slice(0, 11);
+            if (digits.length <= 2) {
+                input.value = digits;
+                return;
+            }
+            if (digits.length <= 7) {
+                input.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
+                return;
+            }
+            input.value = '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7);
+        };
+        input.addEventListener('input', applyMask);
+        applyMask();
     });
 
     var themeInput = document.querySelector('input[name="subtitle"]');

@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Agenda;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventRegistration;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PublicEventController extends Controller
@@ -140,7 +142,79 @@ class PublicEventController extends Controller
             }
         }
 
+        $this->sendWhatsAppNotifications($event, $registration);
+
         return back()->with('success', 'Inscrição realizada com sucesso!');
+    }
+
+    private function sendWhatsAppNotifications(Event $event, EventRegistration $registration): void
+    {
+        try {
+            $service = app(WhatsAppService::class);
+
+            if (! $service->isConfigurado()) {
+                return;
+            }
+
+            if (! empty($registration->phone)) {
+                $service->enviarMensagem(
+                    $registration->phone,
+                    $this->buildRegistrantMessage($event, $registration)
+                );
+            }
+
+            if (! empty($event->responsible_phone)) {
+                $service->enviarMensagem(
+                    $event->responsible_phone,
+                    $this->buildResponsibleMessage($event, $registration)
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Falha ao enviar WhatsApp de inscrição do evento', [
+                'event_id' => $event->id,
+                'registration_id' => $registration->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function buildRegistrantMessage(Event $event, EventRegistration $registration): string
+    {
+        if (! empty($event->registration_success_message)) {
+            return $this->renderRegistrationSuccessMessage(
+                $event->registration_success_message,
+                $event,
+                $registration
+            );
+        }
+
+        return "Olá, {$registration->name}! Sua inscrição no evento \"{$event->title}\" foi recebida com sucesso.\n"
+            ."Data: ".$event->start_date->format('d/m/Y H:i')."\n"
+            ."Status: ".EventRegistration::STATUS_PENDENTE."\n"
+            ."Nos vemos lá!";
+    }
+
+    private function renderRegistrationSuccessMessage(string $template, Event $event, EventRegistration $registration): string
+    {
+        $replacements = [
+            '{{nome}}' => (string) $registration->name,
+            '{{evento}}' => (string) $event->title,
+            '{{data}}' => $event->start_date ? $event->start_date->format('d/m/Y H:i') : '-',
+            '{{status}}' => EventRegistration::STATUS_PENDENTE,
+        ];
+
+        return strtr($template, $replacements);
+    }
+
+    private function buildResponsibleMessage(Event $event, EventRegistration $registration): string
+    {
+        $responsible = $event->responsible_name ?: 'Responsável';
+
+        return "Olá, {$responsible}! Nova inscrição no evento \"{$event->title}\".\n"
+            ."Nome: {$registration->name}\n"
+            ."Telefone: ".($registration->phone ?: '-')."\n"
+            ."E-mail: ".($registration->email ?: '-')."\n"
+            ."Data da inscrição: ".$registration->created_at->format('d/m/Y H:i');
     }
 
     private function isDefaultRegistrationFieldName(string $name): bool

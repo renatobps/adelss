@@ -310,6 +310,9 @@ class EventosController extends Controller
             'hide_phone' => 'nullable|boolean',
             'hide_address' => 'nullable|boolean',
             'notify_emails' => 'nullable|string',
+            'responsible_name' => 'nullable|string|max:255',
+            'responsible_phone' => ['nullable', 'regex:/^\(\d{2}\)\s\d{5}-\d{4}$/'],
+            'registration_success_message' => 'nullable|string|max:2000',
             'registration_enabled' => 'nullable|boolean',
             'banner_image' => 'nullable|image|max:5120',
             'location_photos.*' => 'nullable|image|max:5120',
@@ -379,6 +382,9 @@ class EventosController extends Controller
             'hide_phone' => $request->boolean('hide_phone'),
             'hide_address' => $request->boolean('hide_address'),
             'notify_emails' => $v['notify_emails'] ?? null,
+            'responsible_name' => $v['responsible_name'] ?? null,
+            'responsible_phone' => $v['responsible_phone'] ?? null,
+            'registration_success_message' => $v['registration_success_message'] ?? null,
             'registration_enabled' => $request->boolean('registration_enabled'),
         ];
 
