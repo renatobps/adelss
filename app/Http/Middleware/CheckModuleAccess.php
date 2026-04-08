@@ -454,6 +454,34 @@ class CheckModuleAccess
                         !$user->hasPermission('agenda.events.manage')) {
                         return $denyAccess( 'Acesso negado. Você não tem permissão para excluir eventos.');
                     }
+                } elseif (str_starts_with($routeName ?? '', 'agenda.eventos')) {
+                    if (in_array($routeName, ['agenda.eventos.create', 'agenda.eventos.store', 'agenda.eventos.duplicate'], true)) {
+                        if (!$user->hasPermission('agenda.events.create') &&
+                            !$user->hasPermission('agenda.events.manage')) {
+                            return $denyAccess('Acesso negado. Você não tem permissão para criar eventos.');
+                        }
+                    } elseif (in_array($routeName, ['agenda.eventos.edit', 'agenda.eventos.update'], true)) {
+                        if (!$user->hasPermission('agenda.events.edit') &&
+                            !$user->hasPermission('agenda.events.manage')) {
+                            return $denyAccess('Acesso negado. Você não tem permissão para editar eventos.');
+                        }
+                    } elseif ($routeName === 'agenda.eventos.destroy') {
+                        if (!$user->hasPermission('agenda.events.delete') &&
+                            !$user->hasPermission('agenda.events.manage')) {
+                            return $denyAccess('Acesso negado. Você não tem permissão para excluir eventos.');
+                        }
+                    } elseif ($routeName === 'agenda.eventos.registrations.status') {
+                        if (!$user->hasPermission('agenda.events.edit') &&
+                            !$user->hasPermission('agenda.events.manage')) {
+                            return $denyAccess('Acesso negado. Você não tem permissão para alterar inscrições.');
+                        }
+                    } elseif ($routeName === 'agenda.eventos.editor-upload') {
+                        if (!$user->hasPermission('agenda.events.create') &&
+                            !$user->hasPermission('agenda.events.edit') &&
+                            !$user->hasPermission('agenda.events.manage')) {
+                            return $denyAccess('Acesso negado. Você não tem permissão para enviar imagens no editor.');
+                        }
+                    }
                 } elseif (str_starts_with($routeName ?? '', 'agenda.categories')) {
                     // Categorias
                     if ($routeName === 'agenda.categories.index' || $action === 'index' || 

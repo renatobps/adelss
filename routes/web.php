@@ -25,6 +25,7 @@ use App\Http\Controllers\Ensino\EstudosController;
 use App\Http\Controllers\Ensino\EscolasController;
 use App\Http\Controllers\Ensino\TurmasController;
 use App\Http\Controllers\Agenda\EventosController;
+use App\Http\Controllers\Agenda\PublicEventController;
 use App\Http\Controllers\Agenda\CalendarioController;
 use App\Http\Controllers\Agenda\EventController;
 use App\Http\Controllers\Agenda\EventCategoryController;
@@ -45,6 +46,9 @@ use App\Http\Controllers\Discipleship\DiscipleshipDashboardController;
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+Route::get('/evento/{slug}', [PublicEventController::class, 'show'])->name('events.public.show');
+Route::post('/evento/{slug}/inscricao', [PublicEventController::class, 'register'])->name('events.public.register');
 
 Route::middleware('auth')->group(function () {
 
@@ -495,8 +499,12 @@ Route::resource('pgis', PgiController::class)->middleware('module.access:pgis');
     Route::post('categories', [EventCategoryController::class, 'store'])->name('categories.store');
     Route::delete('categories/{category}', [EventCategoryController::class, 'destroy'])->name('categories.destroy');
     
-    // Eventos (página de listagem)
-    Route::get('eventos', [EventosController::class, 'index'])->name('eventos.index');
+    // Eventos (CRUD + landing pública)
+    Route::resource('eventos', EventosController::class)->parameters(['eventos' => 'event'])->except(['show']);
+    Route::post('eventos/{event}/duplicate', [EventosController::class, 'duplicate'])->name('eventos.duplicate');
+    Route::get('eventos/{event}/inscricoes', [EventosController::class, 'registrations'])->name('eventos.registrations');
+    Route::patch('eventos/{event}/inscricoes/{registration}', [EventosController::class, 'updateRegistrationStatus'])->name('eventos.registrations.status');
+    Route::post('eventos/editor-upload', [EventosController::class, 'uploadEditorImage'])->name('eventos.editor-upload');
 });
 
     // Rotas do módulo Moriah

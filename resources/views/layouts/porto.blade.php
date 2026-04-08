@@ -807,7 +807,8 @@
                 @if(session('error'))
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        <strong>Erro!</strong> {{ session('error') }}
+                        <strong>Erro!</strong>
+                        {{ session('error') ?: 'Ocorreu um problema ao processar sua solicitação. Verifique os campos destacados abaixo ou tente novamente.' }}
                     </div>
                 @endif
 
@@ -861,7 +862,7 @@
                     @if($hasErrors)
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                            <strong>Erro!</strong>
+                            <strong>Corrija os seguintes pontos:</strong>
                             <ul class="mb-0 mt-2">
                                 @if(is_object($errors) && method_exists($errors, 'all'))
                                     @foreach($errors->all() as $error)
@@ -897,14 +898,45 @@
 
                     <div class="sidebar-right-wrapper">
                         <div class="sidebar-widget widget-calendar">
+                            @php
+                                $today = \Carbon\Carbon::today();
+                                $weekStart = $today->copy()->startOfWeek(\Carbon\Carbon::MONDAY);
+                                $weekEnd = $today->copy()->endOfWeek(\Carbon\Carbon::SUNDAY);
+
+                                $weeklyEvents = collect();
+                                if (class_exists(\App\Models\Event::class)) {
+                                    $weeklyEvents = \App\Models\Event::query()
+                                        ->where(function ($query) use ($weekStart, $weekEnd) {
+                                            $query->whereBetween('start_date', [$weekStart, $weekEnd])
+                                                ->orWhereBetween('end_date', [$weekStart, $weekEnd])
+                                                ->orWhere(function ($q) use ($weekStart, $weekEnd) {
+                                                    $q->where('start_date', '<=', $weekStart)
+                                                        ->where('end_date', '>=', $weekEnd);
+                                                });
+                                        })
+                                        ->orderBy('start_date')
+                                        ->limit(8)
+                                        ->get();
+                                }
+                            @endphp
                             <h6>Próximos Eventos</h6>
-                            <div data-plugin-datepicker data-plugin-skin="dark"></div>
+                            <div id="sidebar-datepicker" data-plugin-datepicker data-plugin-skin="dark"></div>
                             <ul>
-                                <li>
-                                    <time datetime="{{ date('Y-m-d') }}">{{ date('d/m/Y') }}</time>
-                                    <span>Nenhum evento</span>
-                                </li>
+                                @forelse($weeklyEvents as $event)
+                                    <li>
+                                        <time datetime="{{ optional($event->start_date)->format('Y-m-d') }}">
+                                            {{ optional($event->start_date)->format('d/m/Y') }}
+                                        </time>
+                                        <span>{{ $event->title }}</span>
+                                    </li>
+                                @empty
+                                    <li>
+                                        <time datetime="{{ $today->format('Y-m-d') }}">{{ $today->format('d/m/Y') }}</time>
+                                        <span>Nenhum evento nesta semana</span>
+                                    </li>
+                                @endforelse
                             </ul>
+                            <a href="{{ route('agenda.eventos.index') }}" class="btn btn-xs btn-primary mt-2">Ver agenda</a>
                         </div>
                     </div>
                 </div>
@@ -918,6 +950,7 @@
     <!-- Popper está incluído no bootstrap.bundle.min.js, não precisa carregar separadamente -->
     <script src="{{ asset('vendor/vendor/bootstrap/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('vendor/vendor/bootstrap-datepicker/js/bootstrap-datepicker.js') }}"></script>
+    <script src="{{ asset('vendor/vendor/bootstrap-datepicker/locales/bootstrap-datepicker.pt-BR.min.js') }}"></script>
     <script src="{{ asset('vendor/vendor/common/common.js') }}"></script>
     <script src="{{ asset('vendor/vendor/nanoscroller/nanoscroller.js') }}"></script>
     <script src="{{ asset('vendor/vendor/magnific-popup/jquery.magnific-popup.js') }}"></script>
@@ -931,6 +964,20 @@
 
     <!-- Theme Initialization Files -->
     <script src="{{ asset('js/js/theme.init.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var $datepicker = $('#sidebar-datepicker');
+            if ($datepicker.length && $.fn.datepicker) {
+                $datepicker.datepicker('destroy');
+                $datepicker.datepicker({
+                    language: 'pt-BR',
+                    format: 'dd/mm/yyyy',
+                    todayHighlight: true,
+                    autoclose: true
+                });
+            }
+        });
+    </script>
 
     <!-- Tratamento de erros de extensões do navegador -->
     <script>

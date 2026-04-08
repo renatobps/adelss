@@ -1,1 +1,208 @@
 /* Add here all your CSS customizations */
+
+.dashboard-events-month {
+    margin-top: 8px;
+    padding: 18px;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #f8fbff 0%, #f1f6fd 100%);
+    border: 1px solid #dce9f8;
+}
+
+.dashboard-events-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.dashboard-events-title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1d3557;
+}
+
+.dashboard-events-subtitle {
+    margin: 2px 0 0;
+    font-size: 0.88rem;
+    color: #5f7896;
+    text-transform: capitalize;
+}
+
+.dashboard-events-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: #1468d5;
+    text-decoration: none;
+}
+
+.dashboard-events-link:hover {
+    color: #0f4fa3;
+}
+
+.dashboard-events-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.dashboard-event-card {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid #e2ecf9;
+    box-shadow: 0 4px 14px rgba(17, 67, 130, 0.06);
+}
+
+.dashboard-event-date {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #1b6fe0 0%, #0f4fa3 100%);
+    color: #fff;
+}
+
+.dashboard-event-date strong {
+    font-size: 1.1rem;
+    line-height: 1;
+}
+
+.dashboard-event-date span {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    opacity: 0.9;
+}
+
+.dashboard-event-content h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #18314d;
+}
+
+.dashboard-event-content p {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    color: #5f7896;
+}
+
+.event-separator {
+    margin: 0 4px;
+}
+
+.dashboard-event-category {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 8px;
+    border-radius: 999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--event-color, #3b82f6);
+    background: color-mix(in srgb, var(--event-color, #3b82f6) 12%, white);
+    border: 1px solid color-mix(in srgb, var(--event-color, #3b82f6) 32%, white);
+}
+
+.dashboard-events-empty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px dashed #bfd4ee;
+    color: #4d6581;
+}
+
+.dashboard-events-empty i {
+    font-size: 1.2rem;
+}
+
+/* Dashboard mobile welcome shortcuts */
+@media (max-width: 991px) {
+    .dashboard-events-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-event-card {
+        grid-template-columns: 52px 1fr;
+    }
+
+    .dashboard-event-category {
+        grid-column: 1 / -1;
+        justify-self: start;
+        margin-left: 64px;
+    }
+
+    .welcome-mobile-menu {
+        margin-top: 12px;
+        padding: 22px 14px 16px;
+        border-radius: 18px;
+        background:
+            linear-gradient(180deg, rgba(7, 25, 50, 0.96) 0%, rgba(3, 14, 32, 0.98) 100%),
+            radial-gradient(circle at 10% 10%, rgba(50, 112, 202, 0.35), transparent 45%);
+        box-shadow: 0 14px 30px rgba(7, 20, 40, 0.28);
+    }
+
+    .welcome-mobile-title {
+        margin: 0 0 16px;
+        color: #fff;
+        text-align: center;
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+
+    .welcome-mobile-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .welcome-mobile-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        min-height: 94px;
+        padding: 12px 8px;
+        text-align: center;
+        border-radius: 14px;
+        color: #ffffff;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(2px);
+    }
+
+    .welcome-mobile-item i {
+        font-size: 1.3rem;
+        line-height: 1;
+        color: #ffffff;
+    }
+
+    .welcome-mobile-item span {
+        font-size: 0.78rem;
+        font-weight: 500;
+        line-height: 1.2;
+    }
+
+    .welcome-mobile-item:active,
+    .welcome-mobile-item:focus {
+        color: #fff;
+        text-decoration: none;
+        background: rgba(34, 139, 255, 0.28);
+        border-color: rgba(117, 181, 255, 0.7);
+        transform: translateY(1px);
+    }
+}
