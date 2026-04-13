@@ -89,6 +89,36 @@ class WhatsAppService
     }
 
     /**
+     * Envia imagem por URL.
+     *
+     * @return array{success: bool, data?: array, error?: string, status?: int}
+     */
+    public function enviarImagem(string $numero, string $imageUrl, string $caption = ''): array
+    {
+        $numero = self::normalizarNumero($numero);
+        return $this->enviarComPayload('send-image', [
+            'phone' => $numero,
+            'image' => $imageUrl,
+            'caption' => $caption,
+        ], 'Erro ao enviar imagem');
+    }
+
+    /**
+     * Envia vídeo por URL.
+     *
+     * @return array{success: bool, data?: array, error?: string, status?: int}
+     */
+    public function enviarVideo(string $numero, string $videoUrl, string $caption = ''): array
+    {
+        $numero = self::normalizarNumero($numero);
+        return $this->enviarComPayload('send-video', [
+            'phone' => $numero,
+            'video' => $videoUrl,
+            'caption' => $caption,
+        ], 'Erro ao enviar vídeo');
+    }
+
+    /**
      * Verifica se a API está configurada (não testa conexão).
      */
     public function isConfigurado(): bool
@@ -148,6 +178,37 @@ class WhatsAppService
         return [
             'success' => false,
             'error' => $body['message'] ?? $body['error'] ?? 'Erro ao enviar enquete',
+            'status' => $res->status(),
+        ];
+    }
+
+    /**
+     * @return array{success: bool, data?: array, error?: string, status?: int}
+     */
+    private function enviarComPayload(string $endpoint, array $payload, string $erroPadrao): array
+    {
+        if (empty($this->apiUrl) || empty($this->instanceId) || empty($this->instanceToken)) {
+            Log::warning('WhatsApp: credenciais não configuradas.');
+            return [
+                'success' => false,
+                'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_INSTANCE_ID e WHATSAPP_INSTANCE_TOKEN no .env',
+            ];
+        }
+
+        $url = $this->buildUrl($endpoint);
+        $res = Http::withHeaders($this->getApiHeaders())
+            ->asJson()
+            ->timeout(config('whatsapp.timeout', 120))
+            ->post($url, $payload);
+
+        $body = $res->json() ?? [];
+        if ($res->successful() && empty($body['error'])) {
+            return ['success' => true, 'data' => $body];
+        }
+
+        return [
+            'success' => false,
+            'error' => $body['message'] ?? $body['error'] ?? $erroPadrao,
             'status' => $res->status(),
         ];
     }

@@ -265,6 +265,7 @@ Route::resource('pgis', PgiController::class)->middleware('module.access:pgis');
     // Rotas para atualizar logo e banner
     Route::post('logo', [PgiController::class, 'updateLogo'])->name('logo.update');
     Route::post('banner', [PgiController::class, 'updateBanner'])->name('banner.update');
+    Route::post('notificacoes/enviar', [PgiController::class, 'enviarNotificacao'])->name('notificacoes.enviar');
 });
 
         // Rotas do módulo Financeiro (somente admin)

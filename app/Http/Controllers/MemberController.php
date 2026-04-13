@@ -44,17 +44,21 @@ class MemberController extends Controller
             $query->where('role_id', $request->role_id);
         }
 
+        // Filtro por vínculo com PGI
+        if ($request->filled('pgi_vinculo')) {
+            if ($request->pgi_vinculo === 'com_pgi') {
+                $query->whereNotNull('pgi_id');
+            } elseif ($request->pgi_vinculo === 'sem_pgi') {
+                $query->whereNull('pgi_id');
+            }
+        }
+
         // Ordenação
         $sortBy = $request->get('sort_by', 'name');
         $sortOrder = $request->get('sort_order', 'asc');
         $query->orderBy($sortBy, $sortOrder);
 
-        // Itens por página (padrão: 10, opções: 10, 50, 100)
-        $perPage = $request->get('per_page', 10);
-        $perPage = in_array($perPage, [10, 50, 100]) ? $perPage : 10;
-
-        $members = $query->paginate($perPage);
-        $members->appends($request->except('page')); // Preservar filtros na paginação
+        $members = $query->get();
 
         return view('members.index', compact('members'));
     }

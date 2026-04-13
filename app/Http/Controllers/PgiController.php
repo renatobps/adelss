@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Enquete;
 use App\Models\Pgi;
 use App\Models\Member;
+use App\Services\EnqueteService;
+use App\Services\NotificacaoService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -186,7 +189,9 @@ class PgiController extends Controller
                 ];
             });
         
-        return view('pgis.show', compact('pgi', 'meetings', 'chartData'));
+        $enquetes = Enquete::ativas()->orderByDesc('created_at')->get(['id', 'titulo']);
+
+        return view('pgis.show', compact('pgi', 'meetings', 'chartData', 'enquetes'));
     }
 
     /**
@@ -389,6 +394,65 @@ class PgiController extends Controller
 
         return redirect()->route('pgis.show', $pgi)
             ->with('success', 'Banner atualizado com sucesso!');
+    }
+
+    /**
+     * Envia notificações WhatsApp para os participantes do PGI.
+     */
+    public function enviarNotificacao(Request $request, Pgi $pgi)
+    {
+        $request->validate([
+            'tipo_envio' => 'required|in:texto,imagem,video,enquete',
+            'mensagem' => 'nullable|string|max:4096',
+            'arquivo' => 'nullable|file|mimes:jpeg,jpg,png,webp,mp4,mov,avi|max:51200',
+            'enquete_id' => 'nullable|integer|exists:notificacao_enquetes,id',
+        ]);
+
+        $user = auth()->user();
+        $isAdmin = $user?->is_admin ?? false;
+        $member = $user?->member;
+        $isLeader = $member && $pgi->isLeader($member);
+        if (! $isAdmin && ! $isLeader) {
+            abort(403, 'Apenas administradores ou líderes podem enviar notificações para o PGI.');
+        }
+
+        $tipo = $request->input('tipo_envio');
+        $mensagem = (string) $request->input('mensagem', '');
+        $members = $pgi->members()->whereNotNull('phone')->where('phone', '!=', '')->get();
+
+        if ($members->isEmpty()) {
+            return back()->withErrors(['destinatarios' => 'Este PGI não possui participantes com telefone cadastrado.']);
+        }
+
+        if ($tipo === 'enquete') {
+            $request->validate([
+                'enquete_id' => 'required|integer|exists:notificacao_enquetes,id',
+            ]);
+            $enquete = Enquete::findOrFail((int) $request->input('enquete_id'));
+            $memberIds = $members->pluck('id')->all();
+            $totais = app(EnqueteService::class)->enviarEnquete($enquete, $memberIds, []);
+
+            return back()->with('success', "Enquete enviada para participantes do PGI: {$totais['enviadas']} enviadas, {$totais['erros']} erros.");
+        }
+
+        $service = app(NotificacaoService::class);
+        $totais = ['enviadas' => 0, 'erros' => 0, 'total' => $members->count()];
+
+        if ($tipo === 'texto') {
+            if (trim($mensagem) === '') {
+                return back()->withErrors(['mensagem' => 'Digite uma mensagem para envio em texto.'])->withInput();
+            }
+            $totais = $service->enviarParaMembros($members, $mensagem);
+        }
+
+        if (in_array($tipo, ['imagem', 'video'], true)) {
+            if (! $request->hasFile('arquivo')) {
+                return back()->withErrors(['arquivo' => 'Selecione um arquivo para envio.'])->withInput();
+            }
+            $totais = $service->enviarMidiaParaMembros($members, $request->file('arquivo'), $tipo, $mensagem);
+        }
+
+        return back()->with('success', "Envio concluído para participantes do PGI: {$totais['enviadas']} enviadas, {$totais['erros']} erros.");
     }
 }
 

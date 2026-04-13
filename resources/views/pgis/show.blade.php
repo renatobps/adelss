@@ -33,7 +33,21 @@
     $canCreateMeetings = $isAdmin || $isLeader;
     $canEditMeetings = $isAdmin || $isLeader;
     $canDeleteMeetings = $isAdmin || $isLeader;
+    $canSendPgiNotification = $isAdmin || $isLeader;
 @endphp
+
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bx bx-check-circle me-2"></i>{{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+@if($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
 
 <div class="row">
     <!-- Painel Esquerdo: Header do PGI e Liderança -->
@@ -292,6 +306,59 @@
 
 <!-- Dashboard de Reuniões -->
 <div class="row">
+    @if($canSendPgiNotification)
+    <div class="col-12 mb-4">
+        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <header class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="bx bxl-whatsapp me-2"></i>Notificar participantes do PGI
+                </h5>
+            </header>
+            <div class="card-body">
+                <form action="{{ route('pgis.notificacoes.enviar', $pgi) }}" method="POST" enctype="multipart/form-data">
+                    @csrf
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo de envio <span class="text-danger">*</span></label>
+                            <select class="form-select" name="tipo_envio" id="tipo_envio" required>
+                                <option value="texto" {{ old('tipo_envio', 'texto') === 'texto' ? 'selected' : '' }}>Texto</option>
+                                <option value="imagem" {{ old('tipo_envio') === 'imagem' ? 'selected' : '' }}>Imagem</option>
+                                <option value="video" {{ old('tipo_envio') === 'video' ? 'selected' : '' }}>Vídeo</option>
+                                <option value="enquete" {{ old('tipo_envio') === 'enquete' ? 'selected' : '' }}>Enquete cadastrada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Mensagem / legenda</label>
+                            <textarea class="form-control" name="mensagem" rows="2" maxlength="4096" placeholder="Mensagem para os participantes...">{{ old('mensagem') }}</textarea>
+                            <small class="text-muted">Obrigatória para envio em texto; opcional para imagem e vídeo.</small>
+                        </div>
+                        <div class="col-md-6" id="arquivoWrapper" style="display:none;">
+                            <label class="form-label">Arquivo (imagem ou vídeo)</label>
+                            <input type="file" class="form-control" name="arquivo" accept="image/*,video/mp4,video/mov,video/avi">
+                        </div>
+                        <div class="col-md-6" id="enqueteWrapper" style="display:none;">
+                            <label class="form-label">Enquete cadastrada</label>
+                            <select class="form-select" name="enquete_id">
+                                <option value="">Selecione...</option>
+                                @foreach($enquetes as $enquete)
+                                    <option value="{{ $enquete->id }}" {{ (string) old('enquete_id') === (string) $enquete->id ? 'selected' : '' }}>{{ $enquete->titulo }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">As enquetes vêm do menu Notificações &gt; Enquetes.</small>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <small class="text-muted">Destinatários: {{ $pgi->members->whereNotNull('phone')->where('phone', '!=', '')->count() }} participante(s) com telefone.</small>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bx bx-send me-1"></i>Enviar via WhatsApp
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <!-- Painel: Reuniões -->
     <div class="col-lg-5 mb-4">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
@@ -722,6 +789,32 @@
     }
 
     // Busca de membros na lista do PGI
+    const tipoEnvioEl = document.getElementById('tipo_envio');
+    const arquivoWrapper = document.getElementById('arquivoWrapper');
+    const enqueteWrapper = document.getElementById('enqueteWrapper');
+    const arquivoInput = document.querySelector('input[name="arquivo"]');
+    const enqueteSelect = document.querySelector('select[name="enquete_id"]');
+
+    function atualizarCamposEnvioPgi() {
+        if (!tipoEnvioEl || !arquivoWrapper || !enqueteWrapper) {
+            return;
+        }
+        const tipo = tipoEnvioEl.value;
+        const isMidia = tipo === 'imagem' || tipo === 'video';
+        arquivoWrapper.style.display = isMidia ? '' : 'none';
+        enqueteWrapper.style.display = tipo === 'enquete' ? '' : 'none';
+
+        if (arquivoInput) {
+            arquivoInput.required = isMidia;
+        }
+        if (enqueteSelect) {
+            enqueteSelect.required = tipo === 'enquete';
+        }
+    }
+
+    tipoEnvioEl?.addEventListener('change', atualizarCamposEnvioPgi);
+    atualizarCamposEnvioPgi();
+
     document.getElementById('memberSearch')?.addEventListener('input', function(e) {
         const searchTerm = e.target.value.toLowerCase();
         const memberItems = document.querySelectorAll('#memberList li');

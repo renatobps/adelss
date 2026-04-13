@@ -8,7 +8,27 @@
     <li><span>Membros</span></li>
 @endsection
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('vendor/vendor/datatables/media/css/dataTables.bootstrap5.css') }}" />
+@endpush
+
 @section('content')
+@php
+    $formatPhone = function (?string $phone): string {
+        $digits = preg_replace('/\D+/', '', (string) $phone);
+        if (str_starts_with($digits, '55') && strlen($digits) > 11) {
+            $digits = substr($digits, 2);
+        }
+        if (strlen($digits) === 11) {
+            return sprintf('(%s) %s %s-%s', substr($digits, 0, 2), substr($digits, 2, 1), substr($digits, 3, 4), substr($digits, 7, 4));
+        }
+        if (strlen($digits) === 10) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 4), substr($digits, 6, 4));
+        }
+
+        return $phone ?: '-';
+    };
+@endphp
 <div class="row">
     <div class="col-12">
         <section class="card">
@@ -303,19 +323,19 @@
                                 </select>
                             </div>
                             <div class="col-md-2">
+                                <label for="pgi_vinculo" class="form-label">PGI</label>
+                                <select class="form-select" id="pgi_vinculo" name="pgi_vinculo">
+                                    <option value="">Todos</option>
+                                    <option value="com_pgi" {{ request('pgi_vinculo') == 'com_pgi' ? 'selected' : '' }}>Com PGI</option>
+                                    <option value="sem_pgi" {{ request('pgi_vinculo') == 'sem_pgi' ? 'selected' : '' }}>Sem PGI</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
                                 <label for="sort_by" class="form-label">Ordenar por</label>
                                 <select class="form-select" id="sort_by" name="sort_by">
                                     <option value="name" {{ request('sort_by') == 'name' ? 'selected' : '' }}>Nome</option>
                                     <option value="created_at" {{ request('sort_by') == 'created_at' ? 'selected' : '' }}>Data de Cadastro</option>
                                     <option value="status" {{ request('sort_by') == 'status' ? 'selected' : '' }}>Status</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label for="per_page" class="form-label">Itens por página</label>
-                                <select class="form-select" id="per_page" name="per_page" onchange="this.form.submit()">
-                                    <option value="10" {{ (request('per_page', 10)) == '10' ? 'selected' : '' }}>10</option>
-                                    <option value="50" {{ request('per_page') == '50' ? 'selected' : '' }}>50</option>
-                                    <option value="100" {{ request('per_page') == '100' ? 'selected' : '' }}>100</option>
                                 </select>
                             </div>
                             <div class="col-md-2 d-flex align-items-end">
@@ -329,24 +349,31 @@
 
                 @if($members->count() > 0)
                     <div class="table-responsive">
-                        <table class="table table-bordered table-striped table-hover mb-0">
+                        <table class="table table-bordered table-striped table-hover mb-0" id="datatable-details">
                             <thead>
                                 <tr>
                                     <th>Foto</th>
                                     <th>Nome</th>
-                                    <th>Email</th>
                                     <th>Telefone</th>
                                     <th>Gênero</th>
                                     <th>Status</th>
                                     <th>Departamento</th>
                                     <th>PGI</th>
-                                    <th>Cargo</th>
                                     <th width="150">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach($members as $member)
-                                    <tr>
+                                    <tr
+                                        data-details-nome="{{ e($member->name) }}"
+                                        data-details-email="{{ e($member->email ?? '-') }}"
+                                        data-details-telefone="{{ e($formatPhone($member->phone)) }}"
+                                        data-details-status="{{ e(ucfirst(str_replace('_', ' ', $member->status ?? '-'))) }}"
+                                        data-details-departamentos="{{ e($member->departments->pluck('name')->join(', ') ?: ($member->department->name ?? '-')) }}"
+                                        data-details-pgi="{{ e($member->pgi->name ?? '-') }}"
+                                        data-details-cargo="{{ e($member->role->name ?? '-') }}"
+                                        data-details-genero="{{ e($member->gender == 'M' ? 'Masculino' : ($member->gender == 'F' ? 'Feminino' : '-')) }}"
+                                    >
                                         <td>
                                             @if($member->photo_url)
                                                 <img src="{{ $member->photo_url }}" 
@@ -367,8 +394,7 @@
                                                 {{ $member->name }}
                                             </a>
                                         </td>
-                                        <td>{{ $member->email ?? '-' }}</td>
-                                        <td>{{ $member->phone ?? '-' }}</td>
+                                        <td>{{ $formatPhone($member->phone) }}</td>
                                         <td>
                                             @if($member->gender == 'M')
                                                 <span class="badge badge-info">Masculino</span>
@@ -401,13 +427,6 @@
                                             @endif
                                         </td>
                                         <td>{{ $member->pgi->name ?? '-' }}</td>
-                                        <td>
-                                            @if($member->role)
-                                                <span class="badge badge-success">{{ $member->role->name }}</span>
-                                            @else
-                                                <span class="text-muted">-</span>
-                                            @endif
-                                        </td>
                                         <td>
                                             <div class="btn-group btn-group-sm" role="group">
                                                 <a href="{{ route('members.show', $member) }}" 
@@ -442,11 +461,6 @@
                                 @endforeach
                             </tbody>
                         </table>
-                    </div>
-
-                    <!-- Paginação -->
-                    <div class="mt-4">
-                        {{ $members->links() }}
                     </div>
                 @else
                     <div class="alert alert-info text-center">
@@ -516,58 +530,76 @@
 @endif
 
 @push('scripts')
+<script src="{{ asset('vendor/vendor/datatables/media/js/jquery.dataTables.min.js') }}"></script>
+<script src="{{ asset('vendor/vendor/datatables/media/js/dataTables.bootstrap5.min.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form[action="{{ route('members.index') }}"]');
-    const searchInput = document.getElementById('search');
-    const statusSelect = document.getElementById('status');
-    const genderSelect = document.getElementById('gender');
-    const sortSelect = document.getElementById('sort_by');
-    
-    let searchTimeout;
-    
-    // Função para submeter o formulário com debounce
-    function submitForm() {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(function() {
-            form.submit();
-        }, 500); // Aguarda 500ms após parar de digitar
+    if (typeof $ === 'undefined' || !$.fn.dataTable) {
+        return;
     }
-    
-    // Busca em tempo real no campo de busca
-    if (searchInput) {
-        searchInput.addEventListener('input', function() {
-            submitForm();
-        });
-        
-        // Permite Enter para buscar imediatamente
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                clearTimeout(searchTimeout);
-                e.preventDefault();
-                form.submit();
+
+    var $table = $('#datatable-details');
+    if (!$table.length) return;
+
+    var th = document.createElement('th');
+    var td = document.createElement('td');
+    td.innerHTML = '<i data-toggle class="far fa-plus-square text-primary h5 m-0" style="cursor: pointer;"></i>';
+    td.className = 'text-center';
+
+    $table.find('thead tr').each(function() {
+        this.insertBefore(th.cloneNode(true), this.childNodes[0]);
+    });
+
+    $table.find('tbody tr').each(function() {
+        this.insertBefore(td.cloneNode(true), this.childNodes[0]);
+    });
+
+    var datatable = $table.dataTable({
+        dom: '<"row"<"col-lg-6"l><"col-lg-6"f>><"table-responsive"t><"row"<"col-lg-6"i><"col-lg-6"p>>',
+        pageLength: 25,
+        aoColumnDefs: [{ bSortable: false, aTargets: [0, 1, 8] }],
+        aaSorting: [[2, 'asc']],
+        language: {
+            search: 'Pesquisar:',
+            lengthMenu: 'Mostrar _MENU_ registros',
+            info: 'Mostrando _START_ até _END_ de _TOTAL_ registros',
+            infoEmpty: 'Mostrando 0 até 0 de 0 registros',
+            zeroRecords: 'Nenhum membro encontrado',
+            paginate: {
+                first: 'Primeiro',
+                last: 'Último',
+                next: 'Próximo',
+                previous: 'Anterior'
             }
-        });
+        }
+    });
+
+    function formatDetails(tr) {
+        return [
+            '<table class="table table-striped mb-0">',
+            '<tr class="b-top-0"><td><label class="mb-0">Nome:</label></td><td>' + (tr.dataset.detailsNome || '-') + '</td></tr>',
+            '<tr><td><label class="mb-0">Email:</label></td><td>' + (tr.dataset.detailsEmail || '-') + '</td></tr>',
+            '<tr><td><label class="mb-0">Telefone:</label></td><td>' + (tr.dataset.detailsTelefone || '-') + '</td></tr>',
+            '<tr><td><label class="mb-0">Status:</label></td><td>' + (tr.dataset.detailsStatus || '-') + '</td></tr>',
+            '<tr><td><label class="mb-0">Gênero:</label></td><td>' + (tr.dataset.detailsGenero || '-') + '</td></tr>',
+            '<tr><td><label class="mb-0">Departamentos:</label></td><td>' + (tr.dataset.detailsDepartamentos || '-') + '</td></tr>',
+            '<tr><td><label class="mb-0">PGI:</label></td><td>' + (tr.dataset.detailsPgi || '-') + '</td></tr>',
+            '<tr><td><label class="mb-0">Cargo:</label></td><td>' + (tr.dataset.detailsCargo || '-') + '</td></tr>',
+            '</table>'
+        ].join('');
     }
-    
-    // Filtros de select também atualizam automaticamente
-    if (statusSelect) {
-        statusSelect.addEventListener('change', function() {
-            form.submit();
-        });
-    }
-    
-    if (genderSelect) {
-        genderSelect.addEventListener('change', function() {
-            form.submit();
-        });
-    }
-    
-    if (sortSelect) {
-        sortSelect.addEventListener('change', function() {
-            form.submit();
-        });
-    }
+
+    $table.on('click', 'i[data-toggle]', function() {
+        var $this = $(this);
+        var tr = $(this).closest('tr').get(0);
+        if (datatable.fnIsOpen(tr)) {
+            $this.removeClass('fa-minus-square').addClass('fa-plus-square');
+            datatable.fnClose(tr);
+        } else {
+            $this.removeClass('fa-plus-square').addClass('fa-minus-square');
+            datatable.fnOpen(tr, formatDetails(tr), 'details');
+        }
+    });
 });
 </script>
 @endpush
