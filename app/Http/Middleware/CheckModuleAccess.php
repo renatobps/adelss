@@ -921,6 +921,49 @@ class CheckModuleAccess
                 }
                 break;
 
+            case 'rifas':
+                $routeName = $request->route()?->getName();
+                $action = $request->route()?->getActionMethod();
+
+                if ($routeName === 'rifas.index' || $action === 'index' ||
+                    $routeName === 'rifas.show' || $action === 'show' ||
+                    $routeName === 'rifas.sorteios.index' ||
+                    $routeName === 'rifas.cartelas.index' ||
+                    str_starts_with((string) $routeName, 'rifas.relatorios')) {
+                    if (!$user->hasPermission('rifas.index.view') &&
+                        !$user->hasPermission('rifas.index.manage') &&
+                        !$user->hasPermission('rifas.reports.view') &&
+                        !$user->hasPermission('rifas.reports.manage') &&
+                        !$user->hasPermission('rifas.sales.view') &&
+                        !$user->hasPermission('rifas.sales.manage')) {
+                        return $denyAccess('Acesso negado. Você não tem permissão para visualizar rifas.');
+                    }
+                } elseif ($routeName === 'rifas.create' || $action === 'create' || $routeName === 'rifas.store' || $action === 'store') {
+                    if (!$user->hasPermission('rifas.index.create') &&
+                        !$user->hasPermission('rifas.index.manage')) {
+                        return $denyAccess('Acesso negado. Você não tem permissão para criar rifas.');
+                    }
+                } elseif ($routeName === 'rifas.edit' || $action === 'edit' || $routeName === 'rifas.update' || $action === 'update' || $routeName === 'rifas.status.update') {
+                    if (!$user->hasPermission('rifas.index.edit') &&
+                        !$user->hasPermission('rifas.index.manage')) {
+                        return $denyAccess('Acesso negado. Você não tem permissão para editar rifas.');
+                    }
+                } elseif ($routeName === 'rifas.destroy' || $action === 'destroy' || $routeName === 'rifas.sorteios.destroy') {
+                    if (!$user->hasPermission('rifas.index.delete') &&
+                        !$user->hasPermission('rifas.index.manage')) {
+                        return $denyAccess('Acesso negado. Você não tem permissão para excluir/cancelar rifas.');
+                    }
+                } elseif (str_starts_with((string) $routeName, 'rifas.vendas') ||
+                          str_starts_with((string) $routeName, 'rifas.numeros') ||
+                          $routeName === 'rifas.sortear') {
+                    if (!$user->hasPermission('rifas.sales.create') &&
+                        !$user->hasPermission('rifas.sales.manage') &&
+                        !$user->hasPermission('rifas.index.manage')) {
+                        return $denyAccess('Acesso negado. Você não tem permissão para gerenciar vendas de rifa.');
+                    }
+                }
+                break;
+
             default:
                 return $denyAccess( 'Acesso negado.');
         }

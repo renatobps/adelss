@@ -819,6 +819,84 @@ class PermissionSeeder extends Seeder
         Permission::where('module', 'Discipulado')
             ->whereNotIn('key', $discipleshipValidKeys)
             ->delete();
+
+        // Módulo Rifas
+        $rifasModule = [
+            'module' => 'Rifas',
+            'name' => 'Módulo Rifas',
+            'children' => [
+                [
+                    'name' => 'Cadastro de Rifas',
+                    'key' => 'rifas.index.manage',
+                    'description' => 'Permissões para criar e gerenciar rifas',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'rifas.index.view'],
+                        ['name' => 'Criar', 'key' => 'rifas.index.create'],
+                        ['name' => 'Editar', 'key' => 'rifas.index.edit'],
+                        ['name' => 'Excluir', 'key' => 'rifas.index.delete'],
+                    ],
+                ],
+                [
+                    'name' => 'Vendas de Rifas',
+                    'key' => 'rifas.sales.manage',
+                    'description' => 'Permissões para registrar e cancelar vendas de números',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'rifas.sales.view'],
+                        ['name' => 'Registrar', 'key' => 'rifas.sales.create'],
+                    ],
+                ],
+                [
+                    'name' => 'Relatórios de Rifas',
+                    'key' => 'rifas.reports.manage',
+                    'description' => 'Permissões para visualizar relatórios de rifas',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'rifas.reports.view'],
+                    ],
+                ],
+            ],
+        ];
+
+        $rifasModulePermission = Permission::updateOrCreate(
+            ['key' => 'rifas.module'],
+            [
+                'module' => $rifasModule['module'],
+                'name' => $rifasModule['name'],
+                'description' => 'Permissões relacionadas ao módulo de rifas',
+                'parent_id' => null,
+            ]
+        );
+
+        $rifasValidKeys = ['rifas.module'];
+        foreach ($rifasModule['children'] as $group) {
+            $rifasValidKeys[] = $group['key'];
+
+            $groupPermission = Permission::updateOrCreate(
+                ['key' => $group['key']],
+                [
+                    'module' => $rifasModule['module'],
+                    'name' => $group['name'],
+                    'description' => $group['description'],
+                    'parent_id' => $rifasModulePermission->id,
+                ]
+            );
+
+            foreach ($group['actions'] as $action) {
+                $rifasValidKeys[] = $action['key'];
+                Permission::updateOrCreate(
+                    ['key' => $action['key']],
+                    [
+                        'module' => $rifasModule['module'],
+                        'name' => $action['name'],
+                        'description' => $group['name'] . ' - ' . $action['name'],
+                        'parent_id' => $groupPermission->id,
+                    ]
+                );
+            }
+        }
+
+        Permission::where('module', 'Rifas')
+            ->whereNotIn('key', $rifasValidKeys)
+            ->delete();
     }
 }
 

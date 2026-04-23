@@ -125,6 +125,22 @@ class Member extends Model
     }
 
     /**
+     * Vendas de rifa realizadas pelo membro como vendedor.
+     */
+    public function rifaVendas()
+    {
+        return $this->hasMany(\App\Models\RifaVenda::class, 'vendedor_id');
+    }
+
+    /**
+     * Números de rifa vendidos/reservados por este membro.
+     */
+    public function numerosRifaVendidos()
+    {
+        return $this->hasMany(\App\Models\NumeroRifa::class, 'vendedor_id');
+    }
+
+    /**
      * Relacionamento com o usuário do sistema (login)
      */
     public function user()
