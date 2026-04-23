@@ -210,6 +210,10 @@
                                     
                                     // Permissões do módulo Notificações (WhatsApp)
                                     $canViewNotificacoes = false;
+                                    // Permissões do módulo Rifas
+                                    $canViewRifas = false;
+                                    $canManageRifaSales = false;
+                                    $canViewRifaReports = false;
                                     // Permissões do módulo Discipulado
                                     $canViewDiscipulado = false;
                                     $canViewCiclos = false;
@@ -244,6 +248,9 @@
                                             $canViewVoluntariosHistorico = true;
                                             $canViewVoluntariosRelatorios = true;
                                             $canViewNotificacoes = true;
+                                            $canViewRifas = true;
+                                            $canManageRifaSales = true;
+                                            $canViewRifaReports = true;
                                             $canViewDiscipulado = true;
                                             $canViewCiclos = true;
                                             $canViewMembrosDiscipulado = true;
@@ -321,6 +328,15 @@
                                                 // Verificar permissões do módulo Notificações
                                                 $canViewNotificacoes = $user->hasPermission('notificacoes.view') ||
                                                                       $user->hasPermission('notificacoes.manage');
+
+                                                // Verificar permissões do módulo Rifas
+                                                $canViewRifas = $user->hasPermission('rifas.index.view') ||
+                                                                $user->hasPermission('rifas.index.manage');
+                                                $canManageRifaSales = $user->hasPermission('rifas.sales.create') ||
+                                                                      $user->hasPermission('rifas.sales.manage') ||
+                                                                      $user->hasPermission('rifas.index.manage');
+                                                $canViewRifaReports = $user->hasPermission('rifas.reports.view') ||
+                                                                      $user->hasPermission('rifas.reports.manage');
                                                 // Verificar permissões do módulo Discipulado
                                                 $canViewDiscipulado = $user->hasPermission('discipleship.view') || 
                                                                       $user->hasPermission('discipleship.manage');
@@ -361,6 +377,9 @@
                                                 $canViewVoluntariosHistorico = false;
                                                 $canViewVoluntariosRelatorios = false;
                                                 $canViewNotificacoes = false;
+                                                $canViewRifas = false;
+                                                $canManageRifaSales = false;
+                                                $canViewRifaReports = false;
                                                 $canViewDiscipulado = false;
                                                 $canViewCiclos = false;
                                                 $canViewMembrosDiscipulado = false;
@@ -598,6 +617,39 @@
                                                 </li>
                                                 @endif
                                             </ul>
+                                        </li>
+                                        @endif
+                                    </ul>
+                                </li>
+                                @endif
+
+                                {{-- MENU RIFAS --}}
+                                @if($isAdmin || $canViewRifas || $canManageRifaSales || $canViewRifaReports)
+                                <li class="nav-parent {{ request()->routeIs('rifas.*') ? 'nav-expanded nav-active' : '' }}">
+                                    <a class="nav-link" href="#">
+                                        <i class="bx bx-grid-alt" aria-hidden="true"></i>
+                                        <span>Rifas</span>
+                                    </a>
+                                    <ul class="nav nav-children">
+                                        @if($isAdmin || $canViewRifas)
+                                        <li class="{{ request()->routeIs('rifas.index') || request()->routeIs('rifas.create') || request()->routeIs('rifas.edit') || request()->routeIs('rifas.show') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('rifas.index') }}">
+                                                <i class="bx bx-list-ul"></i>Cadastro
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if($isAdmin || $canManageRifaSales)
+                                        <li class="{{ request()->routeIs('rifas.vendas.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('rifas.index') }}">
+                                                <i class="bx bx-credit-card"></i>Vendas
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if($isAdmin || $canViewRifaReports)
+                                        <li class="{{ request()->routeIs('rifas.relatorios.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('rifas.relatorios.dashboard') }}">
+                                                <i class="bx bx-bar-chart-alt-2"></i>Relatórios
+                                            </a>
                                         </li>
                                         @endif
                                     </ul>
