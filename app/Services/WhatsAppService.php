@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -218,18 +219,17 @@ class WhatsAppService
     }
 
     /**
-     * Envia mídia por URL usando Evolution API (sendMediaURL).
+     * Envia arquivo de mídia usando Evolution API (sendMedia).
      *
      * @return array{success: bool, data?: array, error?: string, status?: int}
      */
-    public function enviarMidiaPorUrl(
+    public function enviarMidiaArquivo(
         string $numero,
-        string $mediaUrl,
+        UploadedFile $arquivo,
         string $tipoMidia,
-        string $mimeType,
+        bool $isPdfDocumento = false,
         ?string $fileName = null,
-        string $legenda = '',
-        bool $isViewOnce = false
+        string $legenda = ''
     ): array
     {
         if (empty($this->apiUrl) || empty($this->apiKey) || empty($this->instanceName)) {
@@ -248,37 +248,29 @@ class WhatsAppService
                 'error' => 'Tipo de mídia inválido. Use: image, document, video ou audio.',
             ];
         }
-        if (trim($mediaUrl) === '') {
-            return [
-                'success' => false,
-                'error' => 'URL da mídia é obrigatória para envio.',
-            ];
-        }
-
         $numero = self::normalizarNumero($numero);
-        $url = $this->buildEvolutionUrl('sendMediaURL');
+        $url = $this->buildEvolutionUrl('sendMedia');
 
         $payload = [
             'number' => $numero,
             'mediatype' => $tipoMidia,
-            'mimetype' => $mimeType,
-            'media' => $mediaUrl,
         ];
-        if ($isViewOnce) {
-            $payload['isViewOnce'] = true;
-        }
-        if (!empty($fileName)) {
-            $payload['fileName'] = $fileName;
+        if ($isPdfDocumento) {
+            $payload['mimetype'] = 'application/pdf';
+            $payload['fileName'] = $fileName ?: 'proposta.pdf';
         }
         if (trim($legenda) !== '') {
             $payload['caption'] = $legenda;
         }
 
-        $res = $this->postJson($url, $payload);
-        if (!$res->successful() && in_array($res->status(), [400, 404], true)) {
-            // Compatibilidade com instalações que usam sendMedia no lugar de sendMediaURL.
-            $res = $this->postJson($this->buildEvolutionUrl('sendMedia'), $payload);
-        }
+        $res = Http::withHeaders(['apikey' => $this->apiKey])
+            ->timeout(config('whatsapp.timeout', 120))
+            ->attach(
+                'file',
+                fopen($arquivo->getRealPath(), 'r'),
+                $arquivo->getClientOriginalName()
+            )
+            ->post($url, $payload);
 
         $body = $res->json() ?? [];
         if ($res->successful() && empty($body['error'])) {
@@ -290,7 +282,7 @@ class WhatsAppService
             'url' => $url,
             'numero' => $numero,
             'mediatype' => $tipoMidia,
-            'payload' => $payload,
+            'is_pdf_document' => $isPdfDocumento,
             'response' => $body,
         ]);
 

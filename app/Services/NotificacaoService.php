@@ -7,7 +7,6 @@ use App\Models\Member;
 use App\Models\NotificacaoEnviada;
 use App\Models\NotificacaoGrupo;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 class NotificacaoService
 {
@@ -122,7 +121,7 @@ class NotificacaoService
      */
     public function enviarMidiaParaMembros(iterable $members, UploadedFile $arquivo, ?string $tipoMidia = null, string $legenda = ''): array
     {
-        $midia = $this->prepararMidiaParaEnvioUrl($arquivo, $tipoMidia);
+        $midia = $this->detectarMidiaArquivo($arquivo, $tipoMidia);
         $enviadas = 0;
         $erros = 0;
         foreach ($members as $member) {
@@ -134,14 +133,13 @@ class NotificacaoService
                 $erros++;
                 continue;
             }
-            $resultado = $this->whatsappService->enviarMidiaPorUrl(
+            $resultado = $this->whatsappService->enviarMidiaArquivo(
                 $phone,
-                $midia['url'],
+                $arquivo,
                 $midia['tipo'],
-                $midia['mime'],
+                $midia['is_pdf_document'],
                 $midia['file_name'],
-                $legenda,
-                false
+                $legenda
             );
 
             $this->registrarEnvio(
@@ -180,7 +178,7 @@ class NotificacaoService
      */
     public function enviarMidiaParaTelefone(string $telefoneBruto, UploadedFile $arquivo, ?string $tipoMidia = null, string $legenda = ''): array
     {
-        $midia = $this->prepararMidiaParaEnvioUrl($arquivo, $tipoMidia);
+        $midia = $this->detectarMidiaArquivo($arquivo, $tipoMidia);
         $phone = WhatsAppService::normalizarNumero($telefoneBruto);
         if (strlen($phone) < 12) {
             $resultado = ['success' => false, 'error' => 'Número inválido ou incompleto (use DDD + número).'];
@@ -188,14 +186,13 @@ class NotificacaoService
             return $resultado;
         }
 
-        $resultado = $this->whatsappService->enviarMidiaPorUrl(
+        $resultado = $this->whatsappService->enviarMidiaArquivo(
             $phone,
-            $midia['url'],
+            $arquivo,
             $midia['tipo'],
-            $midia['mime'],
+            $midia['is_pdf_document'],
             $midia['file_name'],
-            $legenda,
-            false
+            $legenda
         );
         $this->registrarEnvio(null, $phone, $legenda !== '' ? $legenda : '[Mídia enviada]', $resultado, $midia['tipo']);
         return $resultado;
@@ -228,12 +225,10 @@ class NotificacaoService
     }
 
     /**
-     * @return array{url: string, tipo: string, mime: string, file_name: string}
+     * @return array{tipo: string, is_pdf_document: bool, file_name: string}
      */
-    private function prepararMidiaParaEnvioUrl(UploadedFile $arquivo, ?string $tipoInformado = null): array
+    private function detectarMidiaArquivo(UploadedFile $arquivo, ?string $tipoInformado = null): array
     {
-        $path = $arquivo->store('notificacoes/midias', 'public');
-        $url = url(Storage::disk('public')->url($path));
         $fileName = $arquivo->getClientOriginalName();
 
         $mime = strtolower((string) $arquivo->getMimeType());
@@ -248,23 +243,11 @@ class NotificacaoService
             $tipo = 'audio';
         }
 
-        $mimeParaApi = $mime;
-        if ($tipo === 'document' && $mime === 'application/pdf') {
-            $mimeParaApi = 'document/pdf';
-        }
-
-        if ($mimeParaApi === '') {
-            $mimeParaApi = $tipo === 'image'
-                ? 'image/png'
-                : ($tipo === 'video'
-                    ? 'video/mp4'
-                    : ($tipo === 'audio' ? 'audio/mpeg' : 'document/pdf'));
-        }
+        $isPdfDocumento = $tipo === 'document' && $mime === 'application/pdf';
 
         return [
-            'url' => $url,
             'tipo' => $tipo,
-            'mime' => $mimeParaApi,
+            'is_pdf_document' => $isPdfDocumento,
             'file_name' => $fileName,
         ];
     }
