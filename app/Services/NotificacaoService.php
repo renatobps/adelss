@@ -141,7 +141,7 @@ class NotificacaoService
                 $midia['mime'],
                 $midia['file_name'],
                 $legenda,
-                true
+                false
             );
 
             $this->registrarEnvio(
@@ -195,7 +195,7 @@ class NotificacaoService
             $midia['mime'],
             $midia['file_name'],
             $legenda,
-            true
+            false
         );
         $this->registrarEnvio(null, $phone, $legenda !== '' ? $legenda : '[Mídia enviada]', $resultado, $midia['tipo']);
         return $resultado;

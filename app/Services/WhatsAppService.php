@@ -229,7 +229,7 @@ class WhatsAppService
         string $mimeType,
         ?string $fileName = null,
         string $legenda = '',
-        bool $isViewOnce = true
+        bool $isViewOnce = false
     ): array
     {
         if (empty($this->apiUrl) || empty($this->apiKey) || empty($this->instanceName)) {
@@ -263,8 +263,10 @@ class WhatsAppService
             'mediatype' => $tipoMidia,
             'mimetype' => $mimeType,
             'media' => $mediaUrl,
-            'isViewOnce' => $isViewOnce,
         ];
+        if ($isViewOnce) {
+            $payload['isViewOnce'] = true;
+        }
         if (!empty($fileName)) {
             $payload['fileName'] = $fileName;
         }
