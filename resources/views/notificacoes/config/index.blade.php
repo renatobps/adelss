@@ -42,51 +42,16 @@
                     <button type="button" class="btn btn-success" onclick="verificarStatus()">
                         <i class="bx bx-refresh me-1"></i> Verificar Status
                     </button>
-                    <button type="button" class="btn btn-primary" onclick="conectar()">
-                        <i class="bx bxl-whatsapp me-1"></i> Obter QR Code
-                    </button>
                 </div>
             </div>
         </section>
     </div>
 
-    <!-- QR Code -->
+    <!-- Instâncias -->
     <div class="col-md-6 mb-4">
         <section class="card">
             <header class="card-header">
-                <h5 class="mb-0"><i class="bx bx-qr-scan me-2"></i> QR Code de Conexão</h5>
-            </header>
-            <div class="card-body">
-                <div id="qrcode-container" class="text-center">
-                    <i class="bx bx-qr-scan" style="font-size: 5rem; color: #ddd;"></i>
-                    <p class="text-muted mt-3">Clique em "Obter QR Code" para conectar</p>
-                </div>
-                <div id="qrcode-instructions" class="mt-3 d-none">
-                    <div class="alert alert-info">
-                        <strong><i class="bx bx-info-circle me-1"></i> Como conectar:</strong>
-                        <ol class="mb-0 mt-2">
-                            <li>Abra o WhatsApp no seu celular</li>
-                            <li>Toque em <strong>Configurações</strong> → <strong>Dispositivos Conectados</strong></li>
-                            <li>Toque em <strong>Conectar um Dispositivo</strong></li>
-                            <li>Aponte o celular para este QR Code</li>
-                        </ol>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </div>
-</div>
-
-<!-- Instâncias -->
-<div class="row">
-    <div class="col-12 mb-4">
-        <section class="card">
-            <header class="card-header d-flex justify-content-between align-items-center flex-wrap">
                 <h5 class="mb-0"><i class="bx bx-hdd me-2"></i> Instâncias</h5>
-                <div class="d-flex gap-2 mt-2 mt-md-0">
-                    <input type="text" id="newInstanceName" class="form-control form-control-sm" placeholder="nome da instância" style="width:220px">
-                    <button class="btn btn-sm btn-primary" onclick="criarInstancia()"><i class="bx bx-plus-circle me-1"></i> Criar</button>
-                </div>
             </header>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -122,31 +87,31 @@
                         <p class="mb-0"><strong>URL da API:</strong><br><code>{{ config('whatsapp.api_url') ?: '—' }}</code></p>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <p class="mb-0"><strong>Tipo de Autenticação:</strong><br><span class="badge bg-success">Z-API (Client-Token)</span></p>
+                        <p class="mb-0"><strong>Tipo de Autenticação:</strong><br><span class="badge bg-success">Evolution API (apikey)</span></p>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <p class="mb-0"><strong>Endpoint de Envio:</strong><br><code>/instances/{id}/token/{token}/send-text</code></p>
+                        <p class="mb-0"><strong>Endpoint de Envio:</strong><br><code>/message/sendText/{instanceName}</code></p>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-4 mb-2">
                         <p class="mb-0"><strong>API Docs:</strong><br>
-                            <a href="https://developer.z-api.io" target="_blank" rel="noopener"><i class="bx bx-link-external me-1"></i> Ver Documentação Z-API</a>
+                            <a href="https://docs.evolutionfoundation.com.br/evolution-api/send-text-message" target="_blank" rel="noopener"><i class="bx bx-link-external me-1"></i> Ver Documentação Evolution API</a>
                         </p>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <p class="mb-0"><strong>Instance ID:</strong><br><code>{{ config('whatsapp.instance_id') ?: 'Não configurado' }}</code></p>
+                        <p class="mb-0"><strong>Instance Name:</strong><br><code>{{ config('whatsapp.instance_name') ?: 'Não configurado' }}</code></p>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <p class="mb-0"><strong>Instance Token:</strong><br><code>{{ config('whatsapp.instance_token') ? (substr(config('whatsapp.instance_token'), 0, 10) . '...') : 'Não configurado' }}</code></p>
+                        <p class="mb-0"><strong>API Key:</strong><br><code>{{ config('whatsapp.api_key') ? (substr(config('whatsapp.api_key'), 0, 10) . '...') : 'Não configurado' }}</code></p>
                     </div>
                 </div>
                 <div class="alert alert-success mt-3 mb-0">
-                    <strong><i class="bx bx-info-circle me-1"></i> Configuração Z-API:</strong><br>
+                    <strong><i class="bx bx-info-circle me-1"></i> Configuração Evolution API:</strong><br>
                     <small>
-                        A API Z-API usa <strong>Client-Token</strong> no header e <strong>Instance ID + Token</strong> no path da URL.
-                        @if(config('whatsapp.client_token'))
-                            <strong>Client-Token:</strong> {{ substr(config('whatsapp.client_token'), 0, 10) }}...
+                        A Evolution API usa <strong>apikey</strong> no header e <strong>Instance Name</strong> no path.
+                        @if(config('whatsapp.api_key'))
+                            <strong>API Key:</strong> {{ substr(config('whatsapp.api_key'), 0, 10) }}...
                         @endif
                     </small>
                 </div>
@@ -290,33 +255,12 @@
                 var open = state === 'open' || state === 'connected' || state === 'conectado';
                 document.getElementById('connection-status').innerHTML =
                     open ? '<div class="alert alert-success mb-0"><i class="bx bx-check-circle me-2"></i><strong>Conectado!</strong><br>WhatsApp está online e pronto para enviar mensagens.</div>'
-                        : '<div class="alert alert-warning mb-0"><i class="bx bx-error-circle me-2"></i><strong>Desconectado</strong><br>Clique em "Obter QR Code" para conectar.</div>';
+                        : '<div class="alert alert-warning mb-0"><i class="bx bx-error-circle me-2"></i><strong>Desconectado</strong><br>Verifique a conexão da instância na Evolution API.</div>';
                 addLog('Status verificado', 'success');
             })
             .catch(function() {
                 document.getElementById('connection-status').innerHTML = '<div class="alert alert-warning mb-0"><i class="bx bx-error-circle me-2"></i><strong>Não foi possível verificar status</strong></div>';
                 addLog('Erro ao verificar status', 'warning');
-            });
-    };
-
-    window.conectar = function() {
-        document.getElementById('qrcode-container').innerHTML = '<div class="text-center py-3"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Gerando QR Code...</p></div>';
-        document.getElementById('qrcode-instructions').classList.remove('d-none');
-        fetch(base + '/config/conectar')
-            .then(function(r) { return r.json(); })
-            .then(function(res) {
-                if (res.success && res.data && res.data.base64) {
-                    document.getElementById('qrcode-container').innerHTML = '<img src="' + res.data.base64 + '" class="img-fluid" style="max-width:300px">';
-                    addLog('QR Code gerado com sucesso', 'success');
-                    setTimeout(verificarStatus, 10000);
-                } else {
-                    document.getElementById('qrcode-container').innerHTML = '<div class="alert alert-danger">' + (res.error || 'Erro ao gerar QR Code') + '</div>';
-                    addLog('Erro ao gerar QR Code', 'danger');
-                }
-            })
-            .catch(function() {
-                document.getElementById('qrcode-container').innerHTML = '<div class="alert alert-danger">Erro de conexão com a API.</div>';
-                addLog('Erro de conexão', 'danger');
             });
     };
 
@@ -420,8 +364,9 @@
                     var inst = it.instance || it;
                     var name = inst.instanceName || '—';
                     var owner = inst.owner || '—';
-                    var status = inst.status || 'active';
-                    html += '<tr><td>' + name + '</td><td>' + owner + '</td><td><span class="badge bg-warning">' + status + '</span></td><td class="text-end"><button class="btn btn-sm btn-outline-secondary" onclick="verificarStatus()"><i class="bx bx-refresh"></i></button></td></tr>';
+                    var status = (inst.status || 'unknown').toLowerCase();
+                    var badgeClass = (status === 'open' || status === 'connected' || status === 'conectado' || status === 'active') ? 'bg-success' : 'bg-warning';
+                    html += '<tr><td>' + name + '</td><td>' + owner + '</td><td><span class="badge ' + badgeClass + '">' + status + '</span></td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="reiniciarInstancia(\'' + name + '\')"><i class="bx bx-reset me-1"></i> Reiniciar</button></td></tr>';
                 });
                 tbody.innerHTML = html;
             })
@@ -430,19 +375,38 @@
             });
     };
 
-    window.criarInstancia = function() {
-        var name = (document.getElementById('newInstanceName').value || '').trim();
-        if (!name) { alert('Informe um nome para a instância'); return; }
-        var formData = new FormData();
-        formData.append('_token', csrf);
-        formData.append('instanceName', name);
-        fetch(base + '/config/instances', { method: 'POST', body: formData })
-            .then(function(r) { return r.json(); })
+    window.reiniciarInstancia = function(instanceName) {
+        if (!instanceName) { return; }
+        var resultEl = document.getElementById('teste-result');
+        if (resultEl) {
+            resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner-border spinner-border-sm me-2"></span>Reiniciando instância...</div>';
+        }
+        fetch(base + '/config/instances/' + encodeURIComponent(instanceName) + '/restart', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
+            .then(function(r) { return r.json().catch(function() { return {}; }); })
             .then(function(res) {
-                if (res.success) { carregarInstancias(); addLog('Instância ' + name + ' criada (configure no .env)', 'success'); }
-                else { alert(res.error || 'Erro'); }
+                if (res.success) {
+                    if (resultEl) {
+                        resultEl.innerHTML = '<div class="alert alert-success"><i class="bx bx-check-circle me-2"></i>Instância reiniciada com sucesso.</div>';
+                    }
+                    addLog('Instância ' + instanceName + ' reiniciada', 'success');
+                    verificarStatus();
+                    carregarInstancias();
+                } else {
+                    if (resultEl) {
+                        resultEl.innerHTML = '<div class="alert alert-danger"><i class="bx bx-error-circle me-2"></i>' + (res.error || 'Erro ao reiniciar instância') + '</div>';
+                    }
+                    addLog('Erro ao reiniciar instância: ' + (res.error || ''), 'danger');
+                }
             })
-            .catch(function() { alert('Falha na requisição'); });
+            .catch(function() {
+                if (resultEl) {
+                    resultEl.innerHTML = '<div class="alert alert-danger">Erro de conexão ao reiniciar instância.</div>';
+                }
+                addLog('Erro de conexão ao reiniciar instância', 'danger');
+            });
     };
 
     window.configurarWebhookReceived = function() {

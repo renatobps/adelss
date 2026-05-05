@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Member;
 use App\Models\NotificacaoEnviada;
 use App\Services\NotificacaoService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 
 class PainelController extends Controller
@@ -43,19 +44,29 @@ class PainelController extends Controller
     public function enviar(Request $request)
     {
         $request->validate([
-            'mensagem' => 'required|string|max:4096',
+            'mensagem' => 'nullable|string|max:4096|required_without:arquivo',
             'members' => 'nullable|array',
             'members.*' => 'integer|exists:members,id',
             'departments' => 'nullable|array',
             'departments.*' => 'integer|exists:departments,id',
+            'telefones_manual' => 'nullable|string|max:5000',
+            'arquivo' => 'nullable|file|max:20480|required_without:mensagem',
         ]);
 
-        $mensagem = $request->mensagem;
+        $mensagem = (string) $request->input('mensagem', '');
         $memberIds = $request->input('members', []);
         $departmentIds = $request->input('departments', []);
+        $telefonesManuais = $this->parseTelefonesManuais($request->input('telefones_manual'));
+        $arquivo = $request->file('arquivo');
+        $isEnvioMidia = $arquivo !== null;
 
-        if (empty($memberIds) && empty($departmentIds)) {
-            return back()->withErrors(['destinatarios' => 'Selecione pelo menos um membro ou departamento.'])->withInput();
+        if (empty($memberIds) && empty($departmentIds) && empty($telefonesManuais)) {
+            $rawManual = trim((string) $request->input('telefones_manual', ''));
+            if ($rawManual !== '') {
+                return back()->withErrors(['telefones_manual' => 'Nenhum telefone válido encontrado. Use DDD + número (ex.: 61999999999), um por linha ou separados por vírgula.'])->withInput();
+            }
+
+            return back()->withErrors(['destinatarios' => 'Selecione pelo menos um membro, um departamento ou informe um telefone.'])->withInput();
         }
 
         $service = app(NotificacaoService::class);
@@ -64,18 +75,63 @@ class PainelController extends Controller
 
         if (!empty($memberIds)) {
             $members = Member::whereIn('id', $memberIds)->get();
-            $r = $service->enviarParaMembros($members, $mensagem);
+            $r = $isEnvioMidia
+                ? $service->enviarMidiaParaMembros($members, $arquivo, null, $mensagem)
+                : $service->enviarParaMembros($members, $mensagem);
             $enviadas += $r['enviadas'];
             $erros += $r['erros'];
         }
         if (!empty($departmentIds)) {
             foreach (Department::whereIn('id', $departmentIds)->get() as $department) {
-                $r = $service->enviarParaDepartamento($department, $mensagem);
+                $r = $isEnvioMidia
+                    ? $service->enviarMidiaParaDepartamento($department, $arquivo, null, $mensagem)
+                    : $service->enviarParaDepartamento($department, $mensagem);
                 $enviadas += $r['enviadas'];
                 $erros += $r['erros'];
             }
         }
+        if (! empty($telefonesManuais)) {
+            $r = $isEnvioMidia
+                ? $service->enviarMidiaParaTelefonesManuais($telefonesManuais, $arquivo, null, $mensagem)
+                : $service->enviarParaTelefonesManuais($telefonesManuais, $mensagem);
+            $enviadas += $r['enviadas'];
+            $erros += $r['erros'];
+        }
 
         return back()->with('success', "Envio concluído: {$enviadas} enviadas, {$erros} erros.");
+    }
+
+    /**
+     * Extrai números únicos a partir de texto (linhas, vírgulas ou ponto e vírgula).
+     * Só retorna entradas que, após normalização, tenham tamanho mínimo para BR (55 + DDD + número).
+     *
+     * @return list<string>
+     */
+    private function parseTelefonesManuais(?string $raw): array
+    {
+        if ($raw === null || trim($raw) === '') {
+            return [];
+        }
+
+        $normalized = str_replace(["\r\n", "\r"], "\n", $raw);
+        $parts = preg_split('/[\n,;]+/', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $seen = [];
+        $out = [];
+        foreach ($parts as $part) {
+            $part = trim($part);
+            if ($part === '') {
+                continue;
+            }
+            $n = WhatsAppService::normalizarNumero($part);
+            if (strlen($n) < 12) {
+                continue;
+            }
+            if (! isset($seen[$n])) {
+                $seen[$n] = true;
+                $out[] = $part;
+            }
+        }
+
+        return $out;
     }
 }

@@ -31,11 +31,21 @@ class ConfigController extends Controller
     private function apiHeaders(): array
     {
         $headers = ['Content-Type' => 'application/json'];
+        $apiKey = config('whatsapp.api_key');
+        if ($apiKey) {
+            $headers['apikey'] = $apiKey;
+            return $headers;
+        }
         $token = config('whatsapp.client_token');
         if ($token) {
             $headers['Client-Token'] = $token;
         }
         return $headers;
+    }
+
+    private function buildEvolutionUrl(string $endpoint): string
+    {
+        return $this->apiUrl() . '/' . ltrim($endpoint, '/');
     }
 
     private function buildZApiUrl(string $endpoint): string
@@ -55,23 +65,51 @@ class ConfigController extends Controller
     {
         try {
             $apiUrl = $this->apiUrl();
+            $instanceName = (string) (config('whatsapp.instance_name') ?: $this->instanceId());
+            $apiKey = (string) (config('whatsapp.api_key') ?? '');
             $instanceId = $this->instanceId();
             $instanceToken = $this->instanceToken();
-            if (empty($apiUrl) || empty($instanceId) || empty($instanceToken)) {
+
+            if (empty($apiUrl)) {
                 return response()->json([
                     'success' => true,
-                    'data' => ['state' => 'close', 'note' => 'Configure WHATSAPP_* no .env'],
+                    'data' => ['state' => 'close', 'note' => 'Configure WHATSAPP_API_URL no .env'],
                 ]);
             }
-            $url = $this->buildZApiUrl('status');
+
+            if (!empty($apiKey) && !empty($instanceName)) {
+                $url = $this->buildEvolutionUrl('instance/connectionState/' . $instanceName);
+            } elseif (!empty($instanceId) && !empty($instanceToken)) {
+                $url = $this->buildZApiUrl('status');
+            } else {
+                return response()->json([
+                    'success' => true,
+                    'data' => ['state' => 'close', 'note' => 'Configure credenciais do WhatsApp no .env'],
+                ]);
+            }
+
             $res = Http::withHeaders($this->apiHeaders())->timeout(15)->get($url);
-            $body = $res->json() ?? [];
-            $state = $body['connectionStatus']['state'] ?? $body['state'] ?? $body['status'] ?? 'unknown';
-            $open = in_array(strtolower((string) $state), ['open', 'connected', 'conectado'], true);
+            $body = $res->json();
+            if (!is_array($body)) {
+                $body = [];
+            }
+
+            $state = $body['instance']['state']
+                ?? $body['instance']['connectionStatus']
+                ?? $body['connectionStatus']['state']
+                ?? $body['connectionState']
+                ?? $body['state']
+                ?? $body['status']
+                ?? $body['data']['instance']['state']
+                ?? $body['data']['state']
+                ?? 'unknown';
+
+            $normalizedState = strtolower((string) $state);
+            $open = in_array($normalizedState, ['open', 'connected', 'conectado'], true);
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'state' => $open ? 'open' : ($state ?: 'close'),
+                    'state' => $open ? 'open' : ($normalizedState ?: 'close'),
                     'raw' => $body,
                 ],
             ]);
@@ -118,16 +156,39 @@ class ConfigController extends Controller
     public function listarInstancias()
     {
         try {
-            $instanceId = $this->instanceId();
-            if (empty($instanceId)) {
+            $apiUrl = $this->apiUrl();
+            $instanceName = (string) (config('whatsapp.instance_name') ?: $this->instanceId());
+            $apiKey = (string) (config('whatsapp.api_key') ?? '');
+
+            if (empty($instanceName)) {
                 return response()->json(['success' => true, 'data' => []]);
             }
+
+            $status = 'unknown';
+            if (!empty($apiUrl) && !empty($apiKey)) {
+                $url = $this->buildEvolutionUrl('instance/connectionState/' . $instanceName);
+                $res = Http::withHeaders($this->apiHeaders())->timeout(15)->get($url);
+                $body = $res->json();
+                if (!is_array($body)) {
+                    $body = [];
+                }
+                $status = strtolower((string) (
+                    $body['instance']['state']
+                    ?? $body['instance']['connectionStatus']
+                    ?? $body['connectionStatus']['state']
+                    ?? $body['connectionState']
+                    ?? $body['state']
+                    ?? $body['status']
+                    ?? 'unknown'
+                ));
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [[
                     'instance' => [
-                        'instanceName' => $instanceId,
-                        'status' => 'active',
+                        'instanceName' => $instanceName,
+                        'status' => $status,
                         'owner' => '—',
                     ],
                 ]],
@@ -158,6 +219,40 @@ class ConfigController extends Controller
     {
         $state = ($this->instanceId() === $instanceName) ? 'active' : 'unknown';
         return response()->json(['success' => true, 'data' => ['state' => $state]]);
+    }
+
+    public function reiniciarInstancia(string $instanceName)
+    {
+        try {
+            $apiUrl = $this->apiUrl();
+            $apiKey = (string) (config('whatsapp.api_key') ?? '');
+            if (empty($apiUrl) || empty($apiKey)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Configure WHATSAPP_API_URL e WHATSAPP_API_KEY no .env',
+                ], 400);
+            }
+
+            $url = $this->buildEvolutionUrl('instance/restart/' . $instanceName);
+            $res = Http::withHeaders($this->apiHeaders())->timeout(30)->post($url);
+            $body = $res->json() ?? [];
+
+            if ($res->successful()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Instância reiniciada com sucesso.',
+                    'data' => $body,
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $body['message'] ?? $body['error'] ?? 'Falha ao reiniciar instância',
+            ], $res->status());
+        } catch (\Throwable $e) {
+            Log::error('WhatsApp restart instance failed', ['error' => $e->getMessage(), 'instance' => $instanceName]);
+            return response()->json(['success' => false, 'error' => $e->getMessage()], 500);
+        }
     }
 
     public function configurarWebhookReceived(Request $request)

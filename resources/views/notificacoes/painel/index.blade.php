@@ -29,31 +29,31 @@
 
 <div class="row mb-3">
     <div class="col-md-3">
-        <div class="card bg-success text-white">
+        <div class="card border-start border-4 border-success">
             <div class="card-body py-3">
                 <div class="d-flex justify-content-between align-items-center">
-                    <span>Enviadas (30 dias)</span>
-                    <strong>{{ $stats['enviadas'] }}</strong>
+                    <span class="text-dark">Enviadas (30 dias)</span>
+                    <strong class="text-success">{{ $stats['enviadas'] }}</strong>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-danger text-white">
+        <div class="card border-start border-4 border-danger">
             <div class="card-body py-3">
                 <div class="d-flex justify-content-between align-items-center">
-                    <span>Erros (30 dias)</span>
-                    <strong>{{ $stats['erros'] }}</strong>
+                    <span class="text-dark">Erros (30 dias)</span>
+                    <strong class="text-danger">{{ $stats['erros'] }}</strong>
                 </div>
             </div>
         </div>
     </div>
     <div class="col-md-3">
-        <div class="card bg-secondary text-white">
+        <div class="card border-start border-4 border-secondary">
             <div class="card-body py-3">
                 <div class="d-flex justify-content-between align-items-center">
-                    <span>Total (30 dias)</span>
-                    <strong>{{ $stats['total'] }}</strong>
+                    <span class="text-dark">Total (30 dias)</span>
+                    <strong class="text-secondary">{{ $stats['total'] }}</strong>
                 </div>
             </div>
         </div>
@@ -67,12 +67,20 @@
                 <h2 class="card-title"><i class="bx bx-send me-2"></i>Enviar notificação</h2>
             </header>
             <div class="card-body">
-                <form method="POST" action="{{ route('notificacoes.painel.enviar') }}">
+                <form method="POST" action="{{ route('notificacoes.painel.enviar') }}" enctype="multipart/form-data">
                     @csrf
                     <div class="mb-3">
-                        <label class="form-label">Mensagem <span class="text-danger">*</span></label>
-                        <textarea name="mensagem" class="form-control @error('mensagem') is-invalid @enderror" rows="4" required maxlength="4096" placeholder="Digite a mensagem...">{{ old('mensagem') }}</textarea>
+                        <label class="form-label">Mensagem / Legenda</label>
+                        <textarea name="mensagem" class="form-control @error('mensagem') is-invalid @enderror" rows="4" maxlength="4096" placeholder="Digite a mensagem (ou legenda da mídia)...">{{ old('mensagem') }}</textarea>
                         @error('mensagem')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label">Arquivo de mídia</label>
+                            <input type="file" name="arquivo" class="form-control @error('arquivo') is-invalid @enderror" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
+                            <small class="text-muted">Opcional. Máximo de 20MB. O tipo é detectado automaticamente (image/document/video/audio).</small>
+                            @error('arquivo')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Membros</label>
@@ -84,6 +92,12 @@
                         <small class="text-muted">Ctrl para múltipla seleção.</small>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Telefone(s) manual(is)</label>
+                        <textarea name="telefones_manual" class="form-control @error('telefones_manual') is-invalid @enderror" rows="2" maxlength="5000" placeholder="Ex.: 61999999999">{{ old('telefones_manual') }}</textarea>
+                        <small class="text-muted">Opcional. DDD + número; vários separados por vírgula ou um por linha. O 55 é acrescentado se faltar.</small>
+                        @error('telefones_manual')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Departamentos</label>
                         <select name="departments[]" class="form-select" multiple size="3">
                             @foreach($departments as $d)
@@ -92,7 +106,7 @@
                         </select>
                         <small class="text-muted">Envia para todos os membros do departamento (com telefone).</small>
                     </div>
-                    <p class="text-muted small">Selecione pelo menos um membro ou um departamento.</p>
+                    <p class="text-muted small">Selecione destinatários e envie texto, mídia (arquivo + tipo) ou ambos.</p>
                     <button type="submit" class="btn btn-primary"><i class="bx bx-send me-1"></i>Enviar</button>
                 </form>
             </div>

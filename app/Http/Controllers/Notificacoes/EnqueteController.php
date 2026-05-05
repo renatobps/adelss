@@ -121,6 +121,10 @@ class EnqueteController extends Controller
         }
 
         $totais = app(EnqueteService::class)->enviarEnquete($enquete, $memberIds, $departmentIds);
+        if (($totais['erros'] ?? 0) > 0) {
+            $mensagemErro = $totais['primeiro_erro'] ?? 'Falha ao enviar enquete';
+            return back()->with('warning', "Envio parcial: {$totais['enviadas']} enviadas, {$totais['erros']} erros. Detalhe: {$mensagemErro}");
+        }
         return back()->with('success', "Envio concluído: {$totais['enviadas']} enviadas, {$totais['erros']} erros.");
     }
 }

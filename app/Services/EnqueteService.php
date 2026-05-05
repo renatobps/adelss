@@ -42,10 +42,10 @@ class EnqueteService
         }
 
         $members = $members->unique('id');
-        $mensagem = $this->montarMensagemEnquete($enquete);
         $opcoes = $enquete->opcoes ?? [];
         $enviadas = 0;
         $erros = 0;
+        $primeiroErro = null;
 
         foreach ($members as $member) {
             $phone = $member->phone;
@@ -54,7 +54,8 @@ class EnqueteService
             }
             $r = $this->whatsappService->enviarEnquetePoll(
                 $phone,
-                $mensagem,
+                (string) $enquete->titulo,
+                (string) ($enquete->descricao ?? ''),
                 $opcoes,
                 $enquete->id
             );
@@ -69,25 +70,17 @@ class EnqueteService
                 ]);
             } else {
                 $erros++;
+                if ($primeiroErro === null) {
+                    $primeiroErro = (string) ($r['error'] ?? 'Falha ao enviar enquete');
+                }
             }
         }
 
-        return ['enviadas' => $enviadas, 'erros' => $erros, 'total' => $members->count()];
-    }
-
-    private function montarMensagemEnquete(Enquete $enquete): string
-    {
-        $linhas = [];
-        if ($enquete->titulo) {
-            $linhas[] = "📊 *{$enquete->titulo}*";
-        }
-        if ($enquete->descricao) {
-            $linhas[] = "\n" . $enquete->descricao;
-        }
-        $linhas[] = "\nPor favor, responda com uma das opções:";
-        foreach ($enquete->opcoes ?? [] as $i => $op) {
-            $linhas[] = ($i + 1) . ". " . $op;
-        }
-        return implode("\n", $linhas);
+        return [
+            'enviadas' => $enviadas,
+            'erros' => $erros,
+            'total' => $members->count(),
+            'primeiro_erro' => $primeiroErro,
+        ];
     }
 }

@@ -233,6 +233,7 @@ Route::put('/permissoes/funcoes/{role}', [PermissionController::class, 'updateRo
         Route::get('config/conectar', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'conectar'])->name('config.conectar');
         Route::get('config/instances', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'listarInstancias'])->name('config.instances');
         Route::post('config/instances', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'criarInstancia'])->name('config.instances.store');
+        Route::post('config/instances/{instanceName}/restart', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'reiniciarInstancia'])->name('config.instances.restart');
         Route::delete('config/instances/{instanceName}', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'deletarInstancia'])->name('config.instances.destroy');
         Route::get('config/instances/{instanceName}/status', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'statusInstancia'])->name('config.instances.status');
         Route::put('config/webhook-received', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'configurarWebhookReceived'])->name('config.webhook-received');
