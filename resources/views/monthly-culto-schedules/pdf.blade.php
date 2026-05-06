@@ -137,6 +137,12 @@
     </style>
 </head>
 <body>
+    @php
+        $shortName = function ($fullName) {
+            $parts = preg_split('/\s+/', trim((string) $fullName), -1, PREG_SPLIT_NO_EMPTY);
+            return empty($parts) ? 'Sem nome' : implode(' ', array_slice($parts, 0, 2));
+        };
+    @endphp
     <div class="page">
         <!-- Header -->
         <div class="header">
@@ -196,7 +202,7 @@
                 <div class="area-body">
                     @foreach($areaData['volunteers'] as $volunteer)
                         <div class="volunteer-item">
-                            <span class="volunteer-name">{{ $volunteer->member->name ?? 'Sem nome' }}</span>
+                            <span class="volunteer-name">{{ $shortName($volunteer->member->name ?? null) }}</span>
                         </div>
                     @endforeach
                 </div>

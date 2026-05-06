@@ -3,8 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\ServiceArea;
+use App\Models\Department;
 use App\Models\Member;
+use App\Models\Volunteer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ServiceAreaController extends Controller
 {
@@ -41,8 +44,14 @@ class ServiceAreaController extends Controller
     public function create()
     {
         $members = Member::orderBy('name')->get();
+        $departments = Department::active()
+            ->with(['members' => function ($query) {
+                $query->orderBy('name');
+            }])
+            ->orderBy('name')
+            ->get();
         
-        return view('service-areas.create', compact('members'));
+        return view('service-areas.create', compact('members', 'departments'));
     }
 
     /**
@@ -57,6 +66,10 @@ class ServiceAreaController extends Controller
             'leader_id' => 'nullable|exists:members,id',
             'min_quantity' => 'required|integer|min:1',
             'allowed_audience' => 'required|in:adulto,jovem,ambos',
+            'department_ids' => 'nullable|array',
+            'department_ids.*' => 'exists:departments,id',
+            'participant_member_ids' => 'nullable|array',
+            'participant_member_ids.*' => 'exists:members,id',
         ], [
             'name.required' => 'O campo nome da área é obrigatório.',
             'name.string' => 'O nome da área deve ser um texto.',
@@ -69,9 +82,29 @@ class ServiceAreaController extends Controller
             'min_quantity.min' => 'A quantidade mínima deve ser pelo menos 1.',
             'allowed_audience.required' => 'O campo público permitido é obrigatório.',
             'allowed_audience.in' => 'O público permitido deve ser: adulto, jovem ou ambos.',
+            'department_ids.array' => 'A lista de departamentos é inválida.',
+            'department_ids.*.exists' => 'Um dos departamentos selecionados não existe.',
+            'participant_member_ids.array' => 'A lista de voluntários participantes é inválida.',
+            'participant_member_ids.*.exists' => 'Um dos membros selecionados não existe.',
         ]);
 
-        ServiceArea::create($validated);
+        $areaData = collect($validated)->only([
+            'name',
+            'description',
+            'status',
+            'leader_id',
+            'min_quantity',
+            'allowed_audience',
+        ])->all();
+
+        DB::transaction(function () use ($areaData, $validated) {
+            $area = ServiceArea::create($areaData);
+            $this->syncParticipantVolunteers(
+                $area,
+                $validated['department_ids'] ?? [],
+                $validated['participant_member_ids'] ?? []
+            );
+        });
 
         return redirect()->route('voluntarios.areas.index')
             ->with('success', 'Área de serviço cadastrada com sucesso!');
@@ -93,8 +126,15 @@ class ServiceAreaController extends Controller
     public function edit(ServiceArea $area)
     {
         $members = Member::orderBy('name')->get();
+        $departments = Department::active()
+            ->with(['members' => function ($query) {
+                $query->orderBy('name');
+            }])
+            ->orderBy('name')
+            ->get();
+        $area->load('volunteers.member');
         
-        return view('service-areas.edit', compact('area', 'members'));
+        return view('service-areas.edit', compact('area', 'members', 'departments'));
     }
 
     /**
@@ -109,6 +149,10 @@ class ServiceAreaController extends Controller
             'leader_id' => 'nullable|exists:members,id',
             'min_quantity' => 'required|integer|min:1',
             'allowed_audience' => 'required|in:adulto,jovem,ambos',
+            'department_ids' => 'nullable|array',
+            'department_ids.*' => 'exists:departments,id',
+            'participant_member_ids' => 'nullable|array',
+            'participant_member_ids.*' => 'exists:members,id',
         ], [
             'name.required' => 'O campo nome da área é obrigatório.',
             'name.string' => 'O nome da área deve ser um texto.',
@@ -121,9 +165,29 @@ class ServiceAreaController extends Controller
             'min_quantity.min' => 'A quantidade mínima deve ser pelo menos 1.',
             'allowed_audience.required' => 'O campo público permitido é obrigatório.',
             'allowed_audience.in' => 'O público permitido deve ser: adulto, jovem ou ambos.',
+            'department_ids.array' => 'A lista de departamentos é inválida.',
+            'department_ids.*.exists' => 'Um dos departamentos selecionados não existe.',
+            'participant_member_ids.array' => 'A lista de voluntários participantes é inválida.',
+            'participant_member_ids.*.exists' => 'Um dos membros selecionados não existe.',
         ]);
 
-        $area->update($validated);
+        $areaData = collect($validated)->only([
+            'name',
+            'description',
+            'status',
+            'leader_id',
+            'min_quantity',
+            'allowed_audience',
+        ])->all();
+
+        DB::transaction(function () use ($area, $areaData, $validated) {
+            $area->update($areaData);
+            $this->syncParticipantVolunteers(
+                $area,
+                $validated['department_ids'] ?? [],
+                $validated['participant_member_ids'] ?? []
+            );
+        });
 
         return redirect()->route('voluntarios.areas.index')
             ->with('success', 'Área de serviço atualizada com sucesso!');
@@ -138,5 +202,52 @@ class ServiceAreaController extends Controller
 
         return redirect()->route('voluntarios.areas.index')
             ->with('success', 'Área de serviço removida com sucesso!');
+    }
+
+    private function syncParticipantVolunteers(ServiceArea $area, array $departmentIds = [], array $memberIds = []): void
+    {
+        $departmentMemberIds = Department::whereIn('id', $departmentIds)
+            ->with('members:id')
+            ->get()
+            ->flatMap(function ($department) {
+                return $department->members->pluck('id');
+            });
+
+        $allMemberIds = collect($memberIds)
+            ->merge($departmentMemberIds)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($allMemberIds->isEmpty()) {
+            $area->volunteers()->sync([]);
+            return;
+        }
+
+        $existingVolunteers = Volunteer::withTrashed()
+            ->whereIn('member_id', $allMemberIds)
+            ->get()
+            ->keyBy('member_id');
+
+        $volunteerIds = $allMemberIds->map(function ($memberId) use ($existingVolunteers) {
+            $volunteer = $existingVolunteers->get($memberId);
+
+            if ($volunteer) {
+                if ($volunteer->trashed()) {
+                    $volunteer->restore();
+                }
+
+                return $volunteer->id;
+            }
+
+            return Volunteer::create([
+                'member_id' => $memberId,
+                'experience_level' => 'novo',
+                'start_date' => now()->toDateString(),
+                'status' => 'ativo',
+            ])->id;
+        })->filter()->values()->all();
+
+        $area->volunteers()->sync($volunteerIds);
     }
 }

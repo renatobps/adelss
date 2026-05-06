@@ -909,7 +909,7 @@
         <section class="card mb-3" id="escalas-card">
             <header class="card-header">
                 <h2 class="card-title">
-                    <i class="bx bx-calendar-check me-2"></i>Minhas Escalas
+                    <i class="bx bx-calendar-check me-2"></i>Minhas Escalas do Mês
                 </h2>
             </header>
             <div class="card-body">
@@ -1082,12 +1082,12 @@
         <section class="card mb-3">
             <header class="card-header">
                 <h2 class="card-title">
-                    <i class="bx bx-calendar-check me-2"></i>Minhas Escalas
+                    <i class="bx bx-calendar-check me-2"></i>Minhas Escalas do Mês
                 </h2>
             </header>
             <div class="card-body text-center">
                 <i class="bx bx-calendar-x fs-1 text-muted d-block mb-2"></i>
-                <p class="text-muted mb-0">Nenhuma escala agendada</p>
+                <p class="text-muted mb-0">Nenhuma escala agendada neste mês</p>
             </div>
         </section>
         @endif
@@ -1135,7 +1135,7 @@
                 <div class="text-center mb-3">
                     <i class="bx bx-calendar-x fs-1 text-warning mb-3"></i>
                     <h4 class="mb-2">Você tem {{ $pendingSchedulesCount }} {{ $pendingSchedulesCount == 1 ? 'escala pendente' : 'escalas pendentes' }} de confirmação!</h4>
-                    <p class="text-muted mb-3">Por favor, confirme sua presença nas escalas abaixo para que possamos organizar melhor o serviço.</p>
+                    <p class="text-muted mb-3">Por favor, confirme sua presença nas escalas deste mês para que possamos organizar melhor o serviço.</p>
                 </div>
                 
                 @if($upcomingSchedules->count() > 0)

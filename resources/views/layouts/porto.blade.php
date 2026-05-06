@@ -568,55 +568,32 @@
                                             </a>
                                         </li>
                                         @endif
-                                        @if($isAdmin || $canViewVoluntariosCadastro || $canViewVoluntariosAreas || $canViewVoluntariosEscalas || $canViewVoluntariosHistorico || $canViewVoluntariosRelatorios)
-                                        <li class="nav-parent {{ request()->routeIs('voluntarios.*') ? 'nav-expanded nav-active' : '' }}">
-                                            <a class="nav-link" href="#">
-                                                <i class="bx bx-user"></i>Voluntários
+                                        @if($isAdmin || $canViewVoluntariosAreas)
+                                        <li class="{{ request()->routeIs('voluntarios.areas.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('voluntarios.areas.index') }}">
+                                                <i class="bx bx-category"></i>Áreas de Serviço
                                             </a>
-                                            <ul class="nav nav-children">
-                                                @if($isAdmin || $canViewVoluntariosCadastro)
-                                                <li class="{{ request()->routeIs('voluntarios.cadastro.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="{{ route('voluntarios.cadastro.index') }}">
-                                                        <i class="bx bx-user-plus"></i>Cadastro de Voluntários
-                                                    </a>
-                                                </li>
-                                                @endif
-                                                @if($isAdmin || $canViewVoluntariosAreas)
-                                                <li class="{{ request()->routeIs('voluntarios.areas.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="{{ route('voluntarios.areas.index') }}">
-                                                        <i class="bx bx-category"></i>Áreas de Serviço
-                                                    </a>
-                                                </li>
-                                                @endif
-                                                @if($isAdmin || $canViewVoluntariosEscalas)
-                                                <li class="{{ request()->routeIs('voluntarios.escalas.*') && !request()->routeIs('voluntarios.escalas-mensais.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="{{ route('voluntarios.escalas.index') }}">
-                                                        <i class="bx bx-calendar-check"></i>Escalas
-                                                    </a>
-                                                </li>
-                                                @endif
-                                                @if($isAdmin || $canViewVoluntariosEscalas)
-                                                <li class="{{ request()->routeIs('voluntarios.escalas-mensais.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="{{ route('voluntarios.escalas-mensais.index') }}">
-                                                        <i class="bx bx-calendar"></i>Escalas Mensais (Cultos)
-                                                    </a>
-                                                </li>
-                                                @endif
-                                                @if($isAdmin || $canViewVoluntariosHistorico)
-                                                <li class="{{ request()->routeIs('voluntarios.historico.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="{{ route('voluntarios.historico.index') }}">
-                                                        <i class="bx bx-history"></i>Histórico de Serviço
-                                                    </a>
-                                                </li>
-                                                @endif
-                                                @if($isAdmin || $canViewVoluntariosRelatorios)
-                                                <li class="{{ request()->routeIs('voluntarios.relatorios.*') ? 'nav-active' : '' }}">
-                                                    <a class="nav-link" href="{{ route('voluntarios.relatorios.dashboard') }}">
-                                                        <i class="bx bx-bar-chart-alt-2"></i>Relatórios
-                                                    </a>
-                                                </li>
-                                                @endif
-                                            </ul>
+                                        </li>
+                                        @endif
+                                        @if($isAdmin || $canViewVoluntariosEscalas)
+                                        <li class="{{ request()->routeIs('voluntarios.escalas-mensais.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('voluntarios.escalas-mensais.index') }}">
+                                                <i class="bx bx-calendar"></i>Escalas Mensais (Cultos)
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if($isAdmin || $canViewVoluntariosHistorico)
+                                        <li class="{{ request()->routeIs('voluntarios.historico.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('voluntarios.historico.index') }}">
+                                                <i class="bx bx-history"></i>Histórico de Serviço
+                                            </a>
+                                        </li>
+                                        @endif
+                                        @if($isAdmin || $canViewVoluntariosRelatorios)
+                                        <li class="{{ request()->routeIs('voluntarios.relatorios.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('voluntarios.relatorios.dashboard') }}">
+                                                <i class="bx bx-bar-chart-alt-2"></i>Relatórios
+                                            </a>
                                         </li>
                                         @endif
                                     </ul>

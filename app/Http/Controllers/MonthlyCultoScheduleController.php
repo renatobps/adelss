@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\MonthlyCultoSchedule;
+use App\Models\ConfiguracaoMensagem;
 use App\Models\Event;
 use App\Models\Member;
 use App\Models\Volunteer;
 use App\Models\ServiceArea;
+use App\Services\NotificacaoService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\UploadedFile;
 
 class MonthlyCultoScheduleController extends Controller
 {
@@ -36,7 +40,51 @@ class MonthlyCultoScheduleController extends Controller
         // Buscar todas as áreas de serviço para exibição
         $serviceAreas = ServiceArea::where('status', 'ativo')->orderBy('name')->get();
 
-        return view('monthly-culto-schedules.index', compact('schedules', 'month', 'year', 'serviceAreas'));
+        $startDate = Carbon::create($year, $month, 1)->startOfDay();
+        $endDate = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+
+        $cultos = Event::whereBetween('start_date', [$startDate, $endDate])
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(title) LIKE ?', ['%culto%'])
+                    ->orWhereHas('category', function ($q) {
+                        $q->whereRaw('LOWER(name) LIKE ?', ['%culto%']);
+                    });
+            })
+            ->orderBy('start_date')
+            ->get();
+
+        $preletorArea = ServiceArea::where('status', 'ativo')
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(name) LIKE ?', ['%preletor%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%pregador%']);
+            })
+            ->first();
+
+        $preletorVolunteers = collect();
+        if ($preletorArea) {
+            $preletorVolunteers = Volunteer::where('status', 'ativo')
+                ->whereHas('serviceAreas', function ($query) use ($preletorArea) {
+                    $query->where('service_areas.id', $preletorArea->id);
+                })
+                ->with('member')
+                ->orderBy('id')
+                ->get();
+        }
+
+        $templates = ConfiguracaoMensagem::where('ativo', true)
+            ->orderBy('tipo_notificacao')
+            ->get(['id', 'tipo_notificacao', 'template']);
+
+        return view('monthly-culto-schedules.index', compact(
+            'schedules',
+            'month',
+            'year',
+            'serviceAreas',
+            'cultos',
+            'preletorArea',
+            'preletorVolunteers',
+            'templates'
+        ));
     }
 
     /**
@@ -158,6 +206,12 @@ class MonthlyCultoScheduleController extends Controller
                 ->with('error', 'Já existe uma escala cadastrada para este culto neste mês.');
         }
 
+        if ($this->hasDuplicateVolunteersInPayload($validated['service_areas'] ?? [])) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Regra aplicada: no mesmo culto, o mesmo voluntário não pode ser repetido em mais de uma área.');
+        }
+
         $schedule = MonthlyCultoSchedule::create([
             'event_id' => $validated['event_id'],
             'month' => $validated['month'],
@@ -239,6 +293,12 @@ class MonthlyCultoScheduleController extends Controller
             'service_areas.array' => 'As áreas de serviço devem ser uma lista válida.',
         ]);
 
+        if ($this->hasDuplicateVolunteersInPayload($validated['service_areas'] ?? [])) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Regra aplicada: no mesmo culto, o mesmo voluntário não pode ser repetido em mais de uma área.');
+        }
+
         // Remover todas as áreas de serviço existentes e adicionar as novas
         $escala->serviceAreaVolunteers()->detach();
 
@@ -302,7 +362,11 @@ class MonthlyCultoScheduleController extends Controller
             $volunteersByArea[$area->id] = $volunteers;
         }
 
-        return view('monthly-culto-schedules.show', compact('escala', 'serviceAreas', 'volunteersByArea'));
+        $templates = ConfiguracaoMensagem::where('ativo', true)
+            ->orderBy('tipo_notificacao')
+            ->get(['id', 'tipo_notificacao', 'template']);
+
+        return view('monthly-culto-schedules.show', compact('escala', 'serviceAreas', 'volunteersByArea', 'templates'));
     }
 
     /**
@@ -478,10 +542,9 @@ class MonthlyCultoScheduleController extends Controller
             ], 404);
         }
 
-        // Verificar se o novo voluntário já está na mesma área
+        // Verificar se o novo voluntário já está em qualquer área do mesmo culto
         $existing = \DB::table('monthly_culto_service_areas')
             ->where('monthly_culto_schedule_id', $pivot->monthly_culto_schedule_id)
-            ->where('service_area_id', $pivot->service_area_id)
             ->where('volunteer_id', $validated['new_volunteer_id'])
             ->where('id', '!=', $pivotId)
             ->first();
@@ -535,6 +598,7 @@ class MonthlyCultoScheduleController extends Controller
     public function getAvailableVolunteers(Request $request)
     {
         $serviceAreaId = $request->get('service_area_id');
+        $scheduleId = $request->get('schedule_id');
         
         if (!$serviceAreaId) {
             return response()->json([
@@ -543,13 +607,25 @@ class MonthlyCultoScheduleController extends Controller
             ], 400);
         }
 
-        $volunteers = Volunteer::where('status', 'ativo')
+        $query = Volunteer::where('status', 'ativo')
             ->whereHas('serviceAreas', function($query) use ($serviceAreaId) {
                 $query->where('service_areas.id', $serviceAreaId);
             })
             ->with('member')
-            ->orderBy('id')
-            ->get()
+            ->orderBy('id');
+
+        if ($scheduleId) {
+            $assignedVolunteerIds = \DB::table('monthly_culto_service_areas')
+                ->where('monthly_culto_schedule_id', $scheduleId)
+                ->pluck('volunteer_id')
+                ->toArray();
+
+            if (!empty($assignedVolunteerIds)) {
+                $query->whereNotIn('id', $assignedVolunteerIds);
+            }
+        }
+
+        $volunteers = $query->get()
             ->map(function($volunteer) {
                 return [
                     'id' => $volunteer->id,
@@ -561,5 +637,694 @@ class MonthlyCultoScheduleController extends Controller
             'success' => true,
             'volunteers' => $volunteers
         ]);
+    }
+
+    public function addVolunteer(Request $request, MonthlyCultoSchedule $escala)
+    {
+        $validated = $request->validate([
+            'service_area_id' => 'required|exists:service_areas,id',
+            'volunteer_id' => 'required|exists:volunteers,id',
+        ]);
+
+        $alreadyAssigned = \DB::table('monthly_culto_service_areas')
+            ->where('monthly_culto_schedule_id', $escala->id)
+            ->where('volunteer_id', $validated['volunteer_id'])
+            ->exists();
+
+        if ($alreadyAssigned) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Regra aplicada: no mesmo culto, o voluntário não pode ser repetido.',
+            ], 422);
+        }
+
+        $belongsToArea = Volunteer::where('id', $validated['volunteer_id'])
+            ->where('status', 'ativo')
+            ->whereHas('serviceAreas', function ($query) use ($validated) {
+                $query->where('service_areas.id', $validated['service_area_id']);
+            })
+            ->exists();
+
+        if (!$belongsToArea) {
+            return response()->json([
+                'success' => false,
+                'message' => 'O voluntário selecionado não pertence à área de serviço.',
+            ], 422);
+        }
+
+        $escala->serviceAreaVolunteers()->attach($validated['volunteer_id'], [
+            'service_area_id' => $validated['service_area_id'],
+            'status' => 'pendente',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Voluntário adicionado manualmente com sucesso!',
+        ]);
+    }
+
+    public function notifyVolunteer(Request $request, NotificacaoService $notificacaoService)
+    {
+        $validated = $request->validate([
+            'pivot_id' => 'required|integer|exists:monthly_culto_service_areas,id',
+            'template_id' => 'nullable|integer|exists:configuracoes_mensagens,id',
+            'mensagem' => 'nullable|string|max:4096',
+            'arquivo' => 'nullable|file|max:20480',
+            'enviar_pdf' => 'nullable|boolean',
+        ]);
+
+        $pivot = DB::table('monthly_culto_service_areas')->where('id', $validated['pivot_id'])->first();
+        if (!$pivot) {
+            return back()->with('error', 'Registro de escala não encontrado.');
+        }
+
+        $schedule = MonthlyCultoSchedule::with('event')->find($pivot->monthly_culto_schedule_id);
+        $serviceArea = ServiceArea::find($pivot->service_area_id);
+        $volunteer = Volunteer::with('member')->find($pivot->volunteer_id);
+
+        if (!$schedule || !$schedule->event || !$volunteer || !$volunteer->member) {
+            return back()->with('error', 'Dados da escala incompletos para notificação.');
+        }
+
+        $member = $volunteer->member;
+        if (empty($member->phone)) {
+            return back()->with('error', 'A pessoa escalada não possui telefone vinculado.');
+        }
+
+        $variables = [
+            '{nome}' => $member->name,
+            '{culto}' => $schedule->event->title ?? '',
+            '{dia_culto}' => optional($schedule->event->start_date)->format('d/m/Y') ?? '',
+            '{hora_culto}' => optional($schedule->event->start_date)->format('H:i') ?? '',
+            '{area_servico}' => $serviceArea->name ?? '',
+            '{local_servico}' => $schedule->event->location ?? 'Não informado',
+        ];
+
+        $templateMessage = '';
+        if (!empty($validated['template_id'])) {
+            $template = ConfiguracaoMensagem::find($validated['template_id']);
+            if ($template) {
+                $templateMessage = ConfiguracaoMensagem::aplicarVariaveis($template->template, $variables);
+            }
+        }
+
+        $rawMessage = trim((string) ($validated['mensagem'] ?? ''));
+        $message = $rawMessage !== ''
+            ? ConfiguracaoMensagem::aplicarVariaveis($rawMessage, $variables)
+            : $templateMessage;
+
+        $sendPdf = (bool) $request->boolean('enviar_pdf');
+        $hasFile = $request->hasFile('arquivo');
+
+        if ($message === '' && !$hasFile && !$sendPdf) {
+            return back()->with('error', 'Digite uma mensagem ou selecione um template para enviar a notificação.');
+        }
+
+        $errors = [];
+
+        if ($hasFile) {
+            $result = $notificacaoService->enviarMidiaParaMembros(
+                collect([$member]),
+                $request->file('arquivo'),
+                null,
+                $message
+            );
+
+            if (($result['enviadas'] ?? 0) <= 0) {
+                $errors[] = 'Falha ao enviar arquivo de mídia.';
+            }
+        } elseif ($message !== '') {
+            $result = $notificacaoService->enviarParaMembro($member, $message);
+            if (!($result['success'] ?? false)) {
+                $errors[] = $result['error'] ?? 'Falha ao enviar mensagem.';
+            }
+        }
+
+        if ($sendPdf) {
+            $tempPdfPath = null;
+            try {
+                $pdfOutput = $this->buildMonthlySchedulePdfOutput($schedule);
+                $tempDirectory = storage_path('app/tmp');
+                if (!is_dir($tempDirectory)) {
+                    mkdir($tempDirectory, 0775, true);
+                }
+
+                $tempPdfPath = $tempDirectory . DIRECTORY_SEPARATOR . 'escala-mensal-' . $schedule->id . '-' . time() . '.pdf';
+                file_put_contents($tempPdfPath, $pdfOutput);
+
+                $pdfFile = new UploadedFile(
+                    $tempPdfPath,
+                    'escala-mensal-' . $schedule->id . '.pdf',
+                    'application/pdf',
+                    null,
+                    true
+                );
+
+                $resultPdf = $notificacaoService->enviarMidiaParaMembros(
+                    collect([$member]),
+                    $pdfFile,
+                    'document',
+                    'PDF da escala do dia.'
+                );
+
+                if (($resultPdf['enviadas'] ?? 0) <= 0) {
+                    $errors[] = 'Falha ao enviar PDF da escala.';
+                }
+            } catch (\Throwable $exception) {
+                $errors[] = 'Falha ao gerar/enviar PDF da escala.';
+            } finally {
+                if ($tempPdfPath && file_exists($tempPdfPath)) {
+                    @unlink($tempPdfPath);
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            return back()->with('error', implode(' ', $errors));
+        }
+
+        return back()->with('success', 'Notificação enviada com sucesso para a pessoa escalada.');
+    }
+
+    public function notifyAllVolunteers(Request $request, MonthlyCultoSchedule $escala, NotificacaoService $notificacaoService)
+    {
+        $validated = $request->validate([
+            'template_id' => 'nullable|integer|exists:configuracoes_mensagens,id',
+            'mensagem' => 'nullable|string|max:4096',
+            'arquivo' => 'nullable|file|max:20480',
+            'enviar_pdf' => 'nullable|boolean',
+        ]);
+
+        $escala->loadMissing(['event', 'serviceAreaVolunteers.member']);
+
+        $assignedVolunteers = $escala->serviceAreaVolunteers;
+        if ($assignedVolunteers->isEmpty()) {
+            return back()->with('error', 'Não há voluntários escalados para notificar.');
+        }
+
+        $serviceAreaNames = ServiceArea::whereIn('id', $assignedVolunteers->pluck('pivot.service_area_id')->unique()->all())
+            ->pluck('name', 'id');
+
+        $templateText = '';
+        if (!empty($validated['template_id'])) {
+            $template = ConfiguracaoMensagem::find($validated['template_id']);
+            if ($template) {
+                $templateText = $template->template;
+            }
+        }
+
+        $rawMessage = trim((string) ($validated['mensagem'] ?? ''));
+        $baseMessage = $rawMessage !== '' ? $rawMessage : $templateText;
+
+        $sendPdf = (bool) $request->boolean('enviar_pdf');
+        $hasFile = $request->hasFile('arquivo');
+
+        if ($baseMessage === '' && !$hasFile && !$sendPdf) {
+            return back()->with('error', 'Digite uma mensagem ou selecione um template para enviar a notificação.');
+        }
+
+        $enviadas = 0;
+        $erros = 0;
+        $semTelefone = 0;
+
+        $tempPdfPath = null;
+        $pdfFile = null;
+        if ($sendPdf) {
+            try {
+                $pdfOutput = $this->buildMonthlySchedulePdfOutput($escala);
+                $tempDirectory = storage_path('app/tmp');
+                if (!is_dir($tempDirectory)) {
+                    mkdir($tempDirectory, 0775, true);
+                }
+
+                $tempPdfPath = $tempDirectory . DIRECTORY_SEPARATOR . 'escala-mensal-lote-' . $escala->id . '-' . time() . '.pdf';
+                file_put_contents($tempPdfPath, $pdfOutput);
+
+                $pdfFile = new UploadedFile(
+                    $tempPdfPath,
+                    'escala-mensal-' . $escala->id . '.pdf',
+                    'application/pdf',
+                    null,
+                    true
+                );
+            } catch (\Throwable $exception) {
+                return back()->with('error', 'Falha ao gerar PDF da escala para envio.');
+            }
+        }
+
+        try {
+            foreach ($assignedVolunteers as $volunteer) {
+                $member = $volunteer->member;
+                if (!$member || empty($member->phone)) {
+                    $semTelefone++;
+                    continue;
+                }
+
+                $areaName = $serviceAreaNames[$volunteer->pivot->service_area_id] ?? '';
+                $variables = [
+                    '{nome}' => $member->name,
+                    '{culto}' => $escala->event->title ?? '',
+                    '{dia_culto}' => optional($escala->event->start_date)->format('d/m/Y') ?? '',
+                    '{hora_culto}' => optional($escala->event->start_date)->format('H:i') ?? '',
+                    '{area_servico}' => $areaName,
+                    '{local_servico}' => $escala->event->location ?? 'Não informado',
+                ];
+
+                $message = $baseMessage !== '' ? ConfiguracaoMensagem::aplicarVariaveis($baseMessage, $variables) : '';
+
+                if ($hasFile) {
+                    $resultMidia = $notificacaoService->enviarMidiaParaMembros(
+                        collect([$member]),
+                        $request->file('arquivo'),
+                        null,
+                        $message
+                    );
+                    if (($resultMidia['enviadas'] ?? 0) > 0) {
+                        $enviadas++;
+                    } else {
+                        $erros++;
+                    }
+                } elseif ($message !== '') {
+                    $resultText = $notificacaoService->enviarParaMembro($member, $message);
+                    if ($resultText['success'] ?? false) {
+                        $enviadas++;
+                    } else {
+                        $erros++;
+                    }
+                }
+
+                if ($pdfFile) {
+                    $resultPdf = $notificacaoService->enviarMidiaParaMembros(
+                        collect([$member]),
+                        $pdfFile,
+                        'document',
+                        'PDF da escala do dia.'
+                    );
+                    if (($resultPdf['enviadas'] ?? 0) > 0) {
+                        $enviadas++;
+                    } else {
+                        $erros++;
+                    }
+                }
+            }
+        } finally {
+            if ($tempPdfPath && file_exists($tempPdfPath)) {
+                @unlink($tempPdfPath);
+            }
+        }
+
+        return back()->with(
+            'success',
+            "Notificação em lote concluída. Enviadas: {$enviadas}. Erros: {$erros}. Sem telefone: {$semTelefone}."
+        );
+    }
+
+    /**
+     * Cadastro manual específico para área de Preletor
+     */
+    public function storeManualPreletor(Request $request)
+    {
+        $validated = $request->validate([
+            'event_id' => 'required|exists:events,id',
+            'preletor_volunteer_id' => 'required|exists:volunteers,id',
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:2020|max:2100',
+        ], [
+            'event_id.required' => 'Selecione um culto.',
+            'event_id.exists' => 'O culto selecionado não existe.',
+            'preletor_volunteer_id.required' => 'Selecione o voluntário preletor.',
+            'preletor_volunteer_id.exists' => 'O voluntário selecionado não existe.',
+        ]);
+
+        $preletorArea = ServiceArea::where('status', 'ativo')
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(name) LIKE ?', ['%preletor%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%pregador%']);
+            })
+            ->first();
+
+        if (!$preletorArea) {
+            return redirect()->route('voluntarios.escalas-mensais.index', [
+                'month' => $validated['month'],
+                'year' => $validated['year'],
+            ])->with('error', 'Área de serviço "Preletor" não encontrada.');
+        }
+
+        $isVolunteerFromPreletorArea = Volunteer::where('id', $validated['preletor_volunteer_id'])
+            ->where('status', 'ativo')
+            ->whereHas('serviceAreas', function ($query) use ($preletorArea) {
+                $query->where('service_areas.id', $preletorArea->id);
+            })
+            ->exists();
+
+        if (!$isVolunteerFromPreletorArea) {
+            return redirect()->route('voluntarios.escalas-mensais.index', [
+                'month' => $validated['month'],
+                'year' => $validated['year'],
+            ])->with('error', 'O voluntário selecionado não pertence à área de serviço Preletor.');
+        }
+
+        try {
+            DB::transaction(function () use ($validated, $preletorArea) {
+                $schedule = MonthlyCultoSchedule::firstOrCreate(
+                    [
+                        'event_id' => $validated['event_id'],
+                        'month' => $validated['month'],
+                        'year' => $validated['year'],
+                    ],
+                    [
+                        'status' => 'rascunho',
+                    ]
+                );
+
+                $alreadyAssignedToOtherArea = DB::table('monthly_culto_service_areas')
+                    ->where('monthly_culto_schedule_id', $schedule->id)
+                    ->where('volunteer_id', $validated['preletor_volunteer_id'])
+                    ->where('service_area_id', '!=', $preletorArea->id)
+                    ->exists();
+
+                if ($alreadyAssignedToOtherArea) {
+                    throw new \RuntimeException('Regra aplicada: no mesmo culto, o voluntário já está escalado em outra área.');
+                }
+
+                $schedule->serviceAreaVolunteers()
+                    ->wherePivot('service_area_id', $preletorArea->id)
+                    ->detach();
+
+                $schedule->serviceAreaVolunteers()->attach($validated['preletor_volunteer_id'], [
+                    'service_area_id' => $preletorArea->id,
+                    'status' => 'pendente',
+                ]);
+            });
+        } catch (\RuntimeException $exception) {
+            return redirect()->route('voluntarios.escalas-mensais.index', [
+                'month' => $validated['month'],
+                'year' => $validated['year'],
+            ])->with('error', $exception->getMessage());
+        }
+
+        return redirect()->route('voluntarios.escalas-mensais.index', [
+            'month' => $validated['month'],
+            'year' => $validated['year'],
+        ])->with('success', 'Escala manual de preletor cadastrada com sucesso!');
+    }
+
+    /**
+     * Geração automática mensal por área e tipo de culto
+     */
+    public function generateMonthly(Request $request)
+    {
+        $validated = $request->validate([
+            'service_area_id' => 'required|exists:service_areas,id',
+            'culto_tipo' => 'required|in:familia,graca',
+            'month' => 'required|integer|min:1|max:12',
+            'year' => 'required|integer|min:2020|max:2100',
+        ], [
+            'service_area_id.required' => 'Selecione uma área de serviço.',
+            'service_area_id.exists' => 'A área de serviço selecionada não existe.',
+            'culto_tipo.required' => 'Selecione o tipo de culto.',
+            'culto_tipo.in' => 'Tipo de culto inválido.',
+            'month.required' => 'O mês é obrigatório.',
+            'year.required' => 'O ano é obrigatório.',
+        ]);
+
+        $serviceArea = ServiceArea::findOrFail($validated['service_area_id']);
+        $requiredVolunteers = $this->getRequiredVolunteersForArea($serviceArea);
+
+        $events = $this->getCultosByType($validated['culto_tipo'], $validated['month'], $validated['year']);
+
+        if ($events->isEmpty()) {
+            return redirect()->route('voluntarios.escalas-mensais.index', [
+                'month' => $validated['month'],
+                'year' => $validated['year'],
+            ])->with('error', 'Nenhum culto encontrado para o tipo selecionado no mês informado.');
+        }
+
+        $volunteers = Volunteer::where('status', 'ativo')
+            ->whereHas('serviceAreas', function ($query) use ($serviceArea) {
+                $query->where('service_areas.id', $serviceArea->id);
+            })
+            ->orderBy('id')
+            ->get();
+
+        if ($volunteers->count() < $requiredVolunteers) {
+            return redirect()->route('voluntarios.escalas-mensais.index', [
+                'month' => $validated['month'],
+                'year' => $validated['year'],
+            ])->with('error', "A área {$serviceArea->name} não possui voluntários ativos suficientes. Necessário: {$requiredVolunteers}.");
+        }
+
+        $createdSchedules = 0;
+        $updatedSchedules = 0;
+        $rotationCursor = 0;
+        $previousAreaVolunteerIds = $this->getPreviousAreaVolunteerIdsForRule(
+            $serviceArea->id,
+            $validated['culto_tipo'],
+            $events->first()?->start_date
+        );
+
+        try {
+            DB::transaction(function () use (
+                $validated,
+                $events,
+                $serviceArea,
+                $volunteers,
+                $requiredVolunteers,
+                &$createdSchedules,
+                &$updatedSchedules,
+                &$rotationCursor,
+                &$previousAreaVolunteerIds
+            ) {
+                foreach ($events as $event) {
+                    $schedule = MonthlyCultoSchedule::where('event_id', $event->id)
+                        ->where('month', $validated['month'])
+                        ->where('year', $validated['year'])
+                        ->first();
+
+                    if (!$schedule) {
+                        $schedule = MonthlyCultoSchedule::create([
+                            'event_id' => $event->id,
+                            'month' => $validated['month'],
+                            'year' => $validated['year'],
+                            'status' => 'rascunho',
+                        ]);
+                        $createdSchedules++;
+                    } else {
+                        $updatedSchedules++;
+                    }
+
+                    // Remove apenas voluntários da área selecionada para regenerar sem duplicidade
+                    $schedule->serviceAreaVolunteers()
+                        ->wherePivot('service_area_id', $serviceArea->id)
+                        ->detach();
+
+                    $alreadyAssignedVolunteerIds = DB::table('monthly_culto_service_areas')
+                        ->where('monthly_culto_schedule_id', $schedule->id)
+                        ->pluck('volunteer_id')
+                        ->unique()
+                        ->values()
+                        ->all();
+
+                    $availableVolunteers = $volunteers
+                        ->reject(function ($volunteer) use ($alreadyAssignedVolunteerIds) {
+                            return in_array($volunteer->id, $alreadyAssignedVolunteerIds);
+                        })
+                        ->reject(function ($volunteer) use ($previousAreaVolunteerIds) {
+                            return in_array($volunteer->id, $previousAreaVolunteerIds);
+                        })
+                        ->values();
+
+                    if ($availableVolunteers->count() < $requiredVolunteers) {
+                        throw new \RuntimeException("Regra aplicada: no culto {$event->title} ({$event->start_date->format('d/m/Y H:i')}), não há voluntários suficientes sem repetição para a área {$serviceArea->name} (mesmo culto e cultos consecutivos).");
+                    }
+
+                    $selectedVolunteerIds = [];
+                    for ($i = 0; $i < $requiredVolunteers; $i++) {
+                        $selectedVolunteerIds[] = $availableVolunteers[($rotationCursor + $i) % $availableVolunteers->count()]->id;
+                    }
+                    $rotationCursor++;
+
+                    foreach ($selectedVolunteerIds as $volunteerId) {
+                        $schedule->serviceAreaVolunteers()->attach($volunteerId, [
+                            'service_area_id' => $serviceArea->id,
+                            'status' => 'pendente',
+                        ]);
+                    }
+
+                    // Regra: não pode escalar a mesma pessoa em dois cultos seguidos
+                    $previousAreaVolunteerIds = $selectedVolunteerIds;
+                }
+            });
+        } catch (\RuntimeException $exception) {
+            return redirect()->route('voluntarios.escalas-mensais.index', [
+                'month' => $validated['month'],
+                'year' => $validated['year'],
+            ])->with('error', $exception->getMessage());
+        }
+
+        return redirect()->route('voluntarios.escalas-mensais.index', [
+            'month' => $validated['month'],
+            'year' => $validated['year'],
+        ])->with(
+            'success',
+            "Escala mensal gerada para {$serviceArea->name}. Cultos processados: {$events->count()} (novos: {$createdSchedules}, atualizados: {$updatedSchedules})."
+        );
+    }
+
+    private function getCultosByType(string $cultoTipo, int $month, int $year)
+    {
+        $startDate = Carbon::create($year, $month, 1)->startOfDay();
+        $endDate = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+
+        $query = Event::whereBetween('start_date', [$startDate, $endDate]);
+
+        if ($cultoTipo === 'familia') {
+            $events = $query
+                ->where('title', 'like', '%fam%')
+                ->orderBy('start_date')
+                ->get();
+
+            return $events->filter(function ($event) {
+                return optional($event->start_date)->dayOfWeek === Carbon::SUNDAY;
+            })->values();
+        }
+
+        $events = $query
+            ->where(function ($q) {
+                $q->where('title', 'like', '%gra%')
+                    ->orWhere('title', 'like', '%Gra%');
+            })
+            ->orderBy('start_date')
+            ->get();
+
+        return $events->filter(function ($event) {
+            return optional($event->start_date)->dayOfWeek === Carbon::WEDNESDAY;
+        })->values();
+    }
+
+    private function getRequiredVolunteersForArea(ServiceArea $serviceArea): int
+    {
+        $normalized = Str::of($serviceArea->name)
+            ->lower()
+            ->ascii()
+            ->replaceMatches('/\s+/', ' ')
+            ->trim()
+            ->value();
+
+        $rules = [
+            'apoio geral' => 1,
+            'direcao do culto' => 1,
+            'direcao' => 1,
+            'intercessao' => 4,
+            'portaria' => 1,
+            'preletor' => 1,
+            'recepcao' => 2,
+            'sala das criancas' => 2, // 1 professor + 1 monitor
+        ];
+
+        foreach ($rules as $areaKey => $quantity) {
+            if (str_contains($normalized, $areaKey)) {
+                return $quantity;
+            }
+        }
+
+        return max(1, (int) $serviceArea->min_quantity);
+    }
+
+    private function hasDuplicateVolunteersInPayload(array $serviceAreas): bool
+    {
+        $allVolunteerIds = collect($serviceAreas)
+            ->flatten()
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        return $allVolunteerIds->count() !== $allVolunteerIds->unique()->count();
+    }
+
+    private function getPreviousAreaVolunteerIdsForRule(int $serviceAreaId, string $cultoTipo, $firstEventDate): array
+    {
+        if (!$firstEventDate) {
+            return [];
+        }
+
+        $firstEventDate = $firstEventDate instanceof Carbon ? $firstEventDate : Carbon::parse($firstEventDate);
+
+        $previousEvent = $this->buildCultoTypeQuery($cultoTipo)
+            ->where('start_date', '<', $firstEventDate)
+            ->orderByDesc('start_date')
+            ->first();
+
+        if (!$previousEvent) {
+            return [];
+        }
+
+        $previousSchedule = MonthlyCultoSchedule::where('event_id', $previousEvent->id)->first();
+        if (!$previousSchedule) {
+            return [];
+        }
+
+        return DB::table('monthly_culto_service_areas')
+            ->where('monthly_culto_schedule_id', $previousSchedule->id)
+            ->where('service_area_id', $serviceAreaId)
+            ->pluck('volunteer_id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    private function buildCultoTypeQuery(string $cultoTipo)
+    {
+        $query = Event::query();
+
+        if ($cultoTipo === 'familia') {
+            return $query
+                ->where('title', 'like', '%fam%')
+                ->whereRaw('DAYOFWEEK(start_date) = 1');
+        }
+
+        return $query
+            ->where(function ($q) {
+                $q->where('title', 'like', '%gra%')
+                    ->orWhere('title', 'like', '%Gra%');
+            })
+            ->whereRaw('DAYOFWEEK(start_date) = 4');
+    }
+
+    private function buildMonthlySchedulePdfOutput(MonthlyCultoSchedule $escala): string
+    {
+        $escala->loadMissing(['event', 'serviceAreaVolunteers.member']);
+
+        $serviceAreas = ServiceArea::where('status', 'ativo')->orderBy('name')->get();
+
+        $volunteersByArea = [];
+        foreach ($serviceAreas as $area) {
+            $volunteersByArea[$area->id] = $escala->getVolunteersByServiceArea($area->id);
+        }
+
+        $logoBase64 = null;
+        $logoPath = null;
+        $logoFileName = 'LOG SS branca.png';
+        $logoPublicPath = public_path("img/img/{$logoFileName}");
+
+        if (file_exists($logoPublicPath)) {
+            $logoPath = $logoPublicPath;
+            $imageData = file_get_contents($logoPublicPath);
+            $logoBase64 = 'data:image/png;base64,' . base64_encode($imageData);
+        }
+
+        $churchName = 'ADELSS';
+
+        return \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.escalas.escala-mensal', [
+            'escala' => $escala,
+            'serviceAreas' => $serviceAreas,
+            'volunteersByArea' => $volunteersByArea,
+            'logoPath' => $logoPath,
+            'logoBase64' => $logoBase64,
+            'churchName' => $churchName,
+            'generatedAt' => now(),
+        ])->setPaper('A4', 'portrait')
+            ->setOption('enable-local-file-access', true)
+            ->output();
     }
 }

@@ -27,6 +27,10 @@
                     @csrf
 
                     <div class="row">
+                        @php
+                            $selectedDepartments = old('department_ids', []);
+                            $selectedParticipantMembers = old('participant_member_ids', []);
+                        @endphp
                         <div class="col-md-12 mb-3">
                             <h5 class="border-bottom pb-2">Informações da Área</h5>
                         </div>
@@ -99,6 +103,51 @@
                                 <option value="inativo" {{ old('status') == 'inativo' ? 'selected' : '' }}>Inativo</option>
                             </select>
                             @error('status')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            <h5 class="border-bottom pb-2 mt-2">Voluntários Participantes</h5>
+                            <p class="text-muted mb-2">
+                                Você pode selecionar departamentos (todos os membros do departamento serão incluídos) ou escolher membros específicos.
+                            </p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="department_ids" class="form-label">Departamentos</label>
+                            <select class="form-select @error('department_ids') is-invalid @enderror" 
+                                    id="department_ids" 
+                                    name="department_ids[]" 
+                                    multiple 
+                                    size="6">
+                                @foreach($departments as $department)
+                                    <option value="{{ $department->id }}" {{ in_array($department->id, $selectedDepartments) ? 'selected' : '' }}>
+                                        {{ $department->name }} ({{ $department->members->count() }} membro(s))
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="form-text text-muted">Segure Ctrl (ou Cmd no Mac) para selecionar múltiplos departamentos</small>
+                            @error('department_ids')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="participant_member_ids" class="form-label">Membros Cadastrados</label>
+                            <select class="form-select @error('participant_member_ids') is-invalid @enderror" 
+                                    id="participant_member_ids" 
+                                    name="participant_member_ids[]" 
+                                    multiple 
+                                    size="6">
+                                @foreach($members as $member)
+                                    <option value="{{ $member->id }}" {{ in_array($member->id, $selectedParticipantMembers) ? 'selected' : '' }}>
+                                        {{ $member->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <small class="form-text text-muted">Selecione membros individuais para complementar os departamentos</small>
+                            @error('participant_member_ids')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>

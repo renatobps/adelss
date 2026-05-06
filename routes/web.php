@@ -126,6 +126,8 @@ Route::prefix('servico/voluntarios')->name('voluntarios.')->middleware('module.a
     Route::get('escalas-mensais', [MonthlyCultoScheduleController::class, 'index'])->name('escalas-mensais.index');
     Route::get('escalas-mensais/create', [MonthlyCultoScheduleController::class, 'create'])->name('escalas-mensais.create');
     Route::post('escalas-mensais', [MonthlyCultoScheduleController::class, 'store'])->name('escalas-mensais.store');
+    Route::post('escalas-mensais/generate-monthly', [MonthlyCultoScheduleController::class, 'generateMonthly'])->name('escalas-mensais.generate-monthly');
+    Route::post('escalas-mensais/preletor/manual', [MonthlyCultoScheduleController::class, 'storeManualPreletor'])->name('escalas-mensais.preletor.manual');
     Route::get('escalas-mensais/{escala}', [MonthlyCultoScheduleController::class, 'show'])->name('escalas-mensais.show');
     Route::get('escalas-mensais/{escala}/edit', [MonthlyCultoScheduleController::class, 'edit'])->name('escalas-mensais.edit');
     Route::put('escalas-mensais/{escala}', [MonthlyCultoScheduleController::class, 'update'])->name('escalas-mensais.update');
@@ -134,6 +136,9 @@ Route::prefix('servico/voluntarios')->name('voluntarios.')->middleware('module.a
     Route::put('escalas-mensais/{escala}/cancel', [MonthlyCultoScheduleController::class, 'cancel'])->name('escalas-mensais.cancel');
     Route::get('escalas-mensais/{escala}/pdf', [MonthlyCultoScheduleController::class, 'generatePdf'])->name('escalas-mensais.pdf');
     Route::get('escalas-mensais/volunteers/available', [MonthlyCultoScheduleController::class, 'getAvailableVolunteers'])->name('escalas-mensais.volunteers.available');
+    Route::post('escalas-mensais/{escala}/volunteers/add', [MonthlyCultoScheduleController::class, 'addVolunteer'])->name('escalas-mensais.volunteers.add');
+    Route::post('escalas-mensais/volunteers/notify', [MonthlyCultoScheduleController::class, 'notifyVolunteer'])->name('escalas-mensais.volunteers.notify');
+    Route::post('escalas-mensais/{escala}/volunteers/notify-all', [MonthlyCultoScheduleController::class, 'notifyAllVolunteers'])->name('escalas-mensais.volunteers.notify-all');
     Route::put('escalas-mensais/volunteers/{pivot}/confirm', [MonthlyCultoScheduleController::class, 'confirmVolunteer'])->name('escalas-mensais.volunteers.confirm');
     Route::put('escalas-mensais/volunteers/{pivot}/substitute', [MonthlyCultoScheduleController::class, 'substituteVolunteer'])->name('escalas-mensais.volunteers.substitute');
     Route::delete('escalas-mensais/volunteers/{pivot}', [MonthlyCultoScheduleController::class, 'removeVolunteer'])->name('escalas-mensais.volunteers.remove');
@@ -240,7 +245,9 @@ Route::put('/permissoes/funcoes/{role}', [PermissionController::class, 'updateRo
         Route::put('config/webhook-delivery', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'configurarWebhookDelivery'])->name('config.webhook-delivery');
         Route::post('config/teste', [\App\Http\Controllers\Notificacoes\ConfigController::class, 'enviarTeste'])->name('config.teste');
         Route::get('templates', [\App\Http\Controllers\Notificacoes\TemplateController::class, 'index'])->name('templates.index');
-        Route::put('templates', [\App\Http\Controllers\Notificacoes\TemplateController::class, 'update'])->name('templates.update');
+        Route::post('templates', [\App\Http\Controllers\Notificacoes\TemplateController::class, 'store'])->name('templates.store');
+        Route::put('templates/{template}', [\App\Http\Controllers\Notificacoes\TemplateController::class, 'update'])->name('templates.update');
+        Route::delete('templates/{template}', [\App\Http\Controllers\Notificacoes\TemplateController::class, 'destroy'])->name('templates.destroy');
     });
 
     // Módulo de Rifas

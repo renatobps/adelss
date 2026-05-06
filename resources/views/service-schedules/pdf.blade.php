@@ -197,6 +197,12 @@
 </head>
 
 <body>
+@php
+    $shortName = function ($fullName) {
+        $parts = preg_split('/\s+/', trim((string) $fullName), -1, PREG_SPLIT_NO_EMPTY);
+        return empty($parts) ? 'Sem nome' : implode(' ', array_slice($parts, 0, 2));
+    };
+@endphp
 <div class="page">
 
     <!-- HEADER -->
@@ -248,7 +254,7 @@
             <div class="area-header">
                 <div class="area-title">{{ $area->serviceArea->name }}</div>
                 <div class="area-responsible">
-                    Responsável: {{ $area->responsible ? $area->responsible->name : '—' }}
+                    Responsável: {{ $area->responsible ? $shortName($area->responsible->name) : '—' }}
                 </div>
             </div>
 
@@ -257,7 +263,7 @@
                     @foreach($area->volunteers as $volunteerSchedule)
                         <tr>
                             <td class="volunteer-name">
-                              Voluntário Escalado: {{ $volunteerSchedule->volunteer->member->name }}
+                              Voluntário Escalado: {{ $shortName($volunteerSchedule->volunteer->member->name ?? null) }}
                             </td>
                             <td class="status
                                 @if($volunteerSchedule->status == 'confirmado') status-confirmed

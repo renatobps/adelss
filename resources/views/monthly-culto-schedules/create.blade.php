@@ -16,6 +16,13 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 @endif
+@if(request('manual_area') === 'preletor')
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="bx bx-user-voice me-2"></i>
+        Modo manual de Preletor ativo: selecione o culto e faça o cadastro manual na área de serviço "Preletor".
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
 
 <div class="row">
     <div class="col-12">

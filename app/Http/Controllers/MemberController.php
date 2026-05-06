@@ -185,6 +185,8 @@ class MemberController extends Controller
         $upcomingSchedules = collect();
         $upcomingMonthlySchedules = collect();
         $moriahSchedules = collect();
+        $currentMonth = now()->month;
+        $currentYear = now()->year;
         
         // Buscar escalas do Moriah onde o membro está escalado (independente de ser voluntário)
         $moriahSchedulePivots = \DB::table('moriah_schedule_members')
@@ -286,6 +288,24 @@ class MemberController extends Controller
                     return $date . ' ' . $time;
                 }
             })->values();
+
+            // Exibir somente escalas do mês atual no perfil
+            $allSchedules = $allSchedules->filter(function ($item) use ($currentMonth, $currentYear) {
+                if ($item['type'] === 'normal') {
+                    $scheduleDate = $item['schedule']->date;
+                    return $scheduleDate && $scheduleDate->month === $currentMonth && $scheduleDate->year === $currentYear;
+                }
+
+                if ($item['type'] === 'monthly') {
+                    $eventDate = $item['schedule']->event->start_date ?? null;
+                    return $eventDate && $eventDate->month === $currentMonth && $eventDate->year === $currentYear;
+                }
+
+                // moriah
+                $moriahDate = $item['schedule']->date;
+                $moriahDate = is_string($moriahDate) ? \Carbon\Carbon::parse($moriahDate) : $moriahDate;
+                return $moriahDate && $moriahDate->month === $currentMonth && $moriahDate->year === $currentYear;
+            })->values();
             
             // Contar escalas pendentes de confirmação
             $pendingSchedulesCount = $allSchedules->filter(function($item) {
@@ -307,6 +327,12 @@ class MemberController extends Controller
                     $date = $scheduleDate ? $scheduleDate->format('Y-m-d') : '9999-12-31';
                     $time = $item['schedule']->time ? (is_object($item['schedule']->time) ? $item['schedule']->time->format('H:i') : \Carbon\Carbon::parse($item['schedule']->time)->format('H:i')) : '00:00';
                     return $date . ' ' . $time;
+                })->filter(function ($item) use ($currentMonth, $currentYear) {
+                    $scheduleDate = is_string($item['schedule']->date)
+                        ? \Carbon\Carbon::parse($item['schedule']->date)
+                        : $item['schedule']->date;
+
+                    return $scheduleDate && $scheduleDate->month === $currentMonth && $scheduleDate->year === $currentYear;
                 })->values();
                 
                 $pendingSchedulesCount = $upcomingSchedules->filter(function($item) {

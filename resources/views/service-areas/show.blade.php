@@ -107,6 +107,27 @@
                             </div>
                         </section>
                     </div>
+
+                    <div class="col-md-12 mb-4">
+                        <section class="card">
+                            <header class="card-header">
+                                <h2 class="card-title">Voluntários Participantes</h2>
+                            </header>
+                            <div class="card-body">
+                                @if($area->volunteers->count() > 0)
+                                    <div class="row">
+                                        @foreach($area->volunteers as $volunteer)
+                                            <div class="col-md-4 mb-2">
+                                                <i class="bx bx-user me-1"></i>{{ $volunteer->member->name ?? 'Membro não encontrado' }}
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @else
+                                    <p class="text-muted mb-0">Nenhum voluntário participante vinculado.</p>
+                                @endif
+                            </div>
+                        </section>
+                    </div>
                 </div>
             </div>
         </section>

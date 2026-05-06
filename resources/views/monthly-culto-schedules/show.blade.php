@@ -23,6 +23,16 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 @endif
+@php
+    $shortName = function ($fullName) {
+        $parts = preg_split('/\s+/', trim((string) $fullName), -1, PREG_SPLIT_NO_EMPTY);
+        return empty($parts) ? 'Sem nome' : implode(' ', array_slice($parts, 0, 2));
+    };
+    $firstName = function ($fullName) {
+        $parts = preg_split('/\s+/', trim((string) $fullName), -1, PREG_SPLIT_NO_EMPTY);
+        return empty($parts) ? 'Sem nome' : ($parts[0] ?? 'Sem nome');
+    };
+@endphp
 
 <!-- Header da Escala -->
 <div class="row mb-4">
@@ -71,6 +81,9 @@
                         </div>
                     </div>
                     <div class="d-flex gap-2 flex-wrap">
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#notifyAllVolunteersModal">
+                            <i class="bx bxl-whatsapp me-2"></i>Notificar Todo Mundo
+                        </button>
                         @if($escala->status == 'publicada')
                             <a href="{{ route('voluntarios.escalas-mensais.pdf', $escala) }}" class="btn btn-info" target="_blank" title="Salvar escala em PDF">
                                 <i class="bx bx-download me-2"></i>Exportar PDF
@@ -183,7 +196,7 @@
                             <small class="text-muted d-block mb-1">Responsável</small>
                             <div class="d-flex align-items-center">
                                 <i class="bx bx-user me-2 text-primary"></i>
-                                <strong>{{ $area->leader->name }}</strong>
+                                <strong>{{ $shortName($area->leader->name) }}</strong>
                             </div>
                         </div>
                     @endif
@@ -201,7 +214,7 @@
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-center mb-1">
-                                                <strong class="me-2">{{ $volunteer->member->name ?? 'Sem nome' }}</strong>
+                                                <strong class="me-2">{{ $firstName($volunteer->member->name ?? null) }}</strong>
                                                 @if($status == 'confirmado')
                                                     <span class="badge badge-success badge-sm">
                                                         <i class="bx bx-check-circle me-1"></i>Confirmado
@@ -232,6 +245,13 @@
                                                         title="Substituir">
                                                     <i class="bx bx-refresh"></i>
                                                 </button>
+                                                <button type="button" class="btn btn-sm btn-info notify-volunteer"
+                                                        data-pivot-id="{{ $pivotId }}"
+                                                        data-volunteer-name="{{ $volunteer->member->name ?? 'Sem nome' }}"
+                                                        data-service-area-name="{{ $area->name }}"
+                                                        title="Notificar WhatsApp">
+                                                    <i class="bx bxl-whatsapp"></i>
+                                                </button>
                                                 <button type="button" class="btn btn-sm btn-danger remove-volunteer" 
                                                         data-pivot-id="{{ $pivotId }}"
                                                         title="Remover">
@@ -247,12 +267,172 @@
                         <div class="text-center py-4">
                             <i class="bx bx-user-x fs-1 text-muted mb-2 d-block"></i>
                             <p class="text-muted mb-0">Nenhum voluntário atribuído</p>
+                            <button type="button"
+                                    class="btn btn-sm btn-primary mt-2 add-volunteer-manual"
+                                    data-service-area-id="{{ $area->id }}">
+                                <i class="bx bx-plus me-1"></i>Adicionar Manualmente
+                            </button>
                         </div>
                     @endif
                 </div>
             </div>
         </div>
     @endforeach
+</div>
+
+<!-- Modal: Notificar Todos -->
+<div class="modal fade" id="notifyAllVolunteersModal" tabindex="-1" aria-labelledby="notifyAllVolunteersModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('voluntarios.escalas-mensais.volunteers.notify-all', $escala) }}" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title" id="notifyAllVolunteersModalLabel">
+                        <i class="bx bxl-whatsapp me-2"></i>Notificar Todos os Escalados
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Template de mensagem (opcional)</label>
+                        <select class="form-select" id="notify_all_template_id" name="template_id">
+                            <option value="">Sem template (digitar manualmente)</option>
+                            @foreach($templates as $template)
+                                <option value="{{ $template->id }}" data-template="{{ e($template->template) }}">
+                                    {{ $template->tipo_notificacao }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Mensagem</label>
+                        <textarea class="form-control" id="notify_all_message" name="mensagem" rows="5" placeholder="Digite a mensagem ou selecione um template acima"></textarea>
+                        <small class="text-muted">
+                            Variáveis disponíveis: <code>{nome}</code>, <code>{culto}</code>, <code>{dia_culto}</code>, <code>{hora_culto}</code>, <code>{area_servico}</code>, <code>{local_servico}</code>
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Arquivo de mídia (opcional)</label>
+                        <input type="file" class="form-control" name="arquivo" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx">
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="notify_all_send_pdf" name="enviar_pdf">
+                        <label class="form-check-label" for="notify_all_send_pdf">
+                            Enviar também o PDF da escala para todos
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bx bxl-whatsapp me-1"></i>Enviar para Todos
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Notificar Voluntário -->
+<div class="modal fade" id="notifyVolunteerModal" tabindex="-1" aria-labelledby="notifyVolunteerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="POST" action="{{ route('voluntarios.escalas-mensais.volunteers.notify') }}" enctype="multipart/form-data">
+                @csrf
+                <input type="hidden" id="notify_pivot_id" name="pivot_id">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="notifyVolunteerModalLabel">
+                        <i class="bx bxl-whatsapp me-2"></i>Notificar Voluntário no WhatsApp
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info py-2">
+                        <strong id="notify_volunteer_name">Voluntário</strong>
+                        <span class="text-muted"> - Área: <span id="notify_area_name"></span></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Template de mensagem (opcional)</label>
+                        <select class="form-select" id="notify_template_id" name="template_id">
+                            <option value="">Sem template (digitar manualmente)</option>
+                            @foreach($templates as $template)
+                                <option value="{{ $template->id }}" data-template="{{ e($template->template) }}">
+                                    {{ $template->tipo_notificacao }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Mensagem</label>
+                        <textarea class="form-control" id="notify_message" name="mensagem" rows="5" placeholder="Digite a mensagem ou selecione um template acima"></textarea>
+                        <small class="text-muted">
+                            Você pode usar variáveis como: <code>{nome}</code>, <code>{culto}</code>, <code>{dia_culto}</code>, <code>{hora_culto}</code>, <code>{area_servico}</code>, <code>{local_servico}</code>
+                        </small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Arquivo de mídia (opcional)</label>
+                        <input type="file" class="form-control" name="arquivo" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx">
+                        <small class="text-muted">Se informar arquivo, ele será enviado com a mensagem como legenda.</small>
+                    </div>
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="1" id="notify_send_pdf" name="enviar_pdf">
+                        <label class="form-check-label" for="notify_send_pdf">
+                            Enviar também o PDF da escala do dia
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bx bxl-whatsapp me-1"></i>Enviar Notificação
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Adicionar Voluntário Manualmente -->
+<div class="modal fade" id="addVolunteerModal" tabindex="-1" aria-labelledby="addVolunteerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addVolunteerModalLabel">
+                    <i class="bx bx-user-plus me-2"></i>Adicionar Voluntário Manualmente
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <form id="addVolunteerForm">
+                @csrf
+                <div class="modal-body">
+                    <input type="hidden" id="add_service_area_id" name="service_area_id">
+
+                    <div class="mb-3">
+                        <label for="add_volunteer_id" class="form-label">Selecione o voluntário <span class="text-danger">*</span></label>
+                        <select class="form-select" id="add_volunteer_id" name="volunteer_id" required>
+                            <option value="">Carregando voluntários...</option>
+                        </select>
+                        <small class="form-text text-muted">
+                            Só aparecem voluntários da área selecionada e ainda não escalados neste culto.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bx bx-check me-1"></i>Adicionar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
 <!-- Modal: Substituir Voluntário -->
@@ -380,7 +560,7 @@ document.addEventListener('DOMContentLoaded', function() {
             newVolunteerSelect.innerHTML = '<option value="">Carregando...</option>';
             
             // Buscar voluntários disponíveis para a área
-            fetch(`{{ url('/servico/voluntarios/escalas-mensais') }}/volunteers/available?service_area_id=${serviceAreaId}`)
+            fetch(`{{ url('/servico/voluntarios/escalas-mensais') }}/volunteers/available?service_area_id=${serviceAreaId}&schedule_id={{ $escala->id }}`)
                 .then(response => response.json())
                 .then(data => {
                     newVolunteerSelect.innerHTML = '<option value="">Selecione um voluntário...</option>';
@@ -403,6 +583,57 @@ document.addEventListener('DOMContentLoaded', function() {
             // Abrir modal
             const modal = new bootstrap.Modal(document.getElementById('substituteVolunteerModal'));
             modal.show();
+        }
+
+        // Notificar voluntário no WhatsApp
+        if (e.target.closest('.notify-volunteer')) {
+            const btn = e.target.closest('.notify-volunteer');
+            const pivotId = btn.getAttribute('data-pivot-id');
+            const volunteerName = btn.getAttribute('data-volunteer-name') || 'Voluntário';
+            const areaName = btn.getAttribute('data-service-area-name') || '-';
+
+            document.getElementById('notify_pivot_id').value = pivotId;
+            document.getElementById('notify_volunteer_name').textContent = volunteerName;
+            document.getElementById('notify_area_name').textContent = areaName;
+            document.getElementById('notify_template_id').value = '';
+            document.getElementById('notify_message').value = '';
+            document.getElementById('notify_send_pdf').checked = false;
+
+            const notifyModal = new bootstrap.Modal(document.getElementById('notifyVolunteerModal'));
+            notifyModal.show();
+        }
+
+        // Adicionar voluntário manualmente
+        if (e.target.closest('.add-volunteer-manual')) {
+            const btn = e.target.closest('.add-volunteer-manual');
+            const serviceAreaId = btn.getAttribute('data-service-area-id');
+
+            document.getElementById('add_service_area_id').value = serviceAreaId;
+            const addVolunteerSelect = document.getElementById('add_volunteer_id');
+            addVolunteerSelect.innerHTML = '<option value="">Carregando...</option>';
+
+            fetch(`{{ url('/servico/voluntarios/escalas-mensais') }}/volunteers/available?service_area_id=${serviceAreaId}&schedule_id={{ $escala->id }}`)
+                .then(response => response.json())
+                .then(data => {
+                    addVolunteerSelect.innerHTML = '<option value="">Selecione um voluntário...</option>';
+                    if (data.volunteers && data.volunteers.length > 0) {
+                        data.volunteers.forEach(volunteer => {
+                            const option = document.createElement('option');
+                            option.value = volunteer.id;
+                            option.textContent = volunteer.name;
+                            addVolunteerSelect.appendChild(option);
+                        });
+                    } else {
+                        addVolunteerSelect.innerHTML = '<option value="">Nenhum voluntário disponível</option>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar voluntários:', error);
+                    addVolunteerSelect.innerHTML = '<option value="">Erro ao carregar voluntários</option>';
+                });
+
+            const addModal = new bootstrap.Modal(document.getElementById('addVolunteerModal'));
+            addModal.show();
         }
         
         // Remover voluntário
@@ -472,6 +703,78 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Erro ao substituir voluntário');
         });
     });
+
+    // Formulário de adição manual
+    document.getElementById('addVolunteerForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const form = this;
+        const serviceAreaId = document.getElementById('add_service_area_id').value;
+        const volunteerId = document.getElementById('add_volunteer_id').value;
+
+        if (!volunteerId) {
+            alert('Selecione um voluntário');
+            return;
+        }
+
+        fetch(`{{ route('voluntarios.escalas-mensais.volunteers.add', $escala) }}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                service_area_id: serviceAreaId,
+                volunteer_id: volunteerId
+            })
+        })
+        .then(async response => {
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Erro ao adicionar voluntário');
+            }
+            return data;
+        })
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('addVolunteerModal')).hide();
+                location.reload();
+            } else {
+                alert(data.message || 'Erro ao adicionar voluntário');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert(error.message || 'Erro ao adicionar voluntário');
+        });
+    });
+
+    // Preencher mensagem a partir do template selecionado
+    const templateSelect = document.getElementById('notify_template_id');
+    const messageTextarea = document.getElementById('notify_message');
+    if (templateSelect && messageTextarea) {
+        templateSelect.addEventListener('change', function () {
+            const selectedOption = this.options[this.selectedIndex];
+            const templateText = selectedOption.getAttribute('data-template') || '';
+            if (templateText) {
+                messageTextarea.value = templateText;
+            }
+        });
+    }
+
+    // Preencher mensagem de lote a partir do template selecionado
+    const allTemplateSelect = document.getElementById('notify_all_template_id');
+    const allMessageTextarea = document.getElementById('notify_all_message');
+    if (allTemplateSelect && allMessageTextarea) {
+        allTemplateSelect.addEventListener('change', function () {
+            const selectedOption = this.options[this.selectedIndex];
+            const templateText = selectedOption.getAttribute('data-template') || '';
+            if (templateText) {
+                allMessageTextarea.value = templateText;
+            }
+        });
+    }
 });
 </script>
 @endpush

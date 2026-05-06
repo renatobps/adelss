@@ -16,6 +16,16 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 @endif
+@php
+    $shortName = function ($fullName) {
+        $parts = preg_split('/\s+/', trim((string) $fullName), -1, PREG_SPLIT_NO_EMPTY);
+        return empty($parts) ? 'Sem nome' : implode(' ', array_slice($parts, 0, 2));
+    };
+    $firstName = function ($fullName) {
+        $parts = preg_split('/\s+/', trim((string) $fullName), -1, PREG_SPLIT_NO_EMPTY);
+        return empty($parts) ? 'Sem nome' : ($parts[0] ?? 'Sem nome');
+    };
+@endphp
 
 <!-- Header da Escala -->
 <div class="row mb-4">
@@ -167,7 +177,7 @@
                             <small class="text-muted d-block mb-1">Responsável</small>
                             <div class="d-flex align-items-center">
                                 <i class="bx bx-user me-2 text-primary"></i>
-                                <strong>{{ $area->responsible->name }}</strong>
+                                <strong>{{ $shortName($area->responsible->name) }}</strong>
                             </div>
                         </div>
                     @endif
@@ -182,7 +192,7 @@
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div class="flex-grow-1">
                                             <div class="d-flex align-items-center mb-1">
-                                                <strong class="me-2">{{ $volunteerSchedule->volunteer->member->name }}</strong>
+                                                <strong class="me-2">{{ $firstName($volunteerSchedule->volunteer->member->name ?? null) }}</strong>
                                                 @if($volunteerSchedule->status == 'confirmado')
                                                     <span class="badge badge-success badge-sm">
                                                         <i class="bx bx-check-circle me-1"></i>Confirmado
