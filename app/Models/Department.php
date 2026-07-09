@@ -20,10 +20,15 @@ class Department extends Model
         'leader_id',
         'banner_url',
         'logo_url',
+        'show_on_homepage',
+        'homepage_order',
+        'homepage_url',
     ];
 
     protected $casts = [
         'status' => 'string',
+        'show_on_homepage' => 'boolean',
+        'homepage_order' => 'integer',
     ];
 
     /**

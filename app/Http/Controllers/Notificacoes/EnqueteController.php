@@ -13,6 +13,7 @@ class EnqueteController extends Controller
 {
     public function index()
     {
+        $this->authorize('notificacoes.view');
         $enquetes = Enquete::withCount('respostas')
             ->orderByDesc('created_at')
             ->paginate(10);
@@ -21,11 +22,13 @@ class EnqueteController extends Controller
 
     public function create()
     {
+        $this->authorize('notificacoes.manage');
         return view('notificacoes.enquetes.create');
     }
 
     public function store(Request $request)
     {
+        $this->authorize('notificacoes.manage');
         $request->validate([
             'titulo' => 'required|string|max:255',
             'descricao' => 'nullable|string',
@@ -50,6 +53,7 @@ class EnqueteController extends Controller
 
     public function show(Enquete $enquete)
     {
+        $this->authorize('notificacoes.view');
         $enquete->loadCount('respostas');
         $respostas = $enquete->respostas()->with('member:id,name')->latest('respondido_em')->paginate(20);
         $members = Member::active()->orderBy('name')->get(['id', 'name']);
@@ -70,11 +74,13 @@ class EnqueteController extends Controller
 
     public function edit(Enquete $enquete)
     {
+        $this->authorize('notificacoes.manage');
         return view('notificacoes.enquetes.edit', compact('enquete'));
     }
 
     public function update(Request $request, Enquete $enquete)
     {
+        $this->authorize('notificacoes.manage');
         $request->validate([
             'titulo' => 'required|string|max:255',
             'descricao' => 'nullable|string',
@@ -100,6 +106,7 @@ class EnqueteController extends Controller
 
     public function destroy(Enquete $enquete)
     {
+        $this->authorize('notificacoes.manage');
         $enquete->delete();
         return redirect()->route('notificacoes.enquetes.index')
             ->with('success', 'Enquete excluída com sucesso.');
@@ -107,6 +114,7 @@ class EnqueteController extends Controller
 
     public function enviar(Request $request, Enquete $enquete)
     {
+        $this->authorize('notificacoes.manage');
         $request->validate([
             'members' => 'nullable|array',
             'members.*' => 'integer|exists:members,id',

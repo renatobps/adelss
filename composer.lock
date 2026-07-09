@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "4f7356a5f02f4d280c25134ac9663bea",
+    "content-hash": "5d802272ee1549f9f8b7082d7254db88",
     "packages": [
         {
             "name": "barryvdh/laravel-dompdf",
@@ -2247,6 +2247,45 @@
                 "source": "https://github.com/Masterminds/html5-php/tree/2.10.0"
             },
             "time": "2025-07-25T09:04:22+00:00"
+        },
+        {
+            "name": "mercadopago/dx-php",
+            "version": "v3.9.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/mercadopago/sdk-php.git",
+                "reference": "7eeafc66b90ffda3d49dba6d81aeacc43e8621b4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/mercadopago/sdk-php/zipball/7eeafc66b90ffda3d49dba6d81aeacc43e8621b4",
+                "reference": "7eeafc66b90ffda3d49dba6d81aeacc43e8621b4",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.22",
+                "phpunit/phpunit": "^10.2",
+                "squizlabs/php_codesniffer": "3.*"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "MercadoPago\\": "src/MercadoPago"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Mercado Pago PHP SDK",
+            "homepage": "https://github.com/mercadopago/sdk-php",
+            "support": {
+                "source": "https://github.com/mercadopago/sdk-php/tree/v3.9.0"
+            },
+            "time": "2026-04-17T17:41:52+00:00"
         },
         {
             "name": "mews/purifier",

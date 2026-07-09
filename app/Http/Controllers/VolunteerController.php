@@ -14,6 +14,7 @@ class VolunteerController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Volunteer::class);
         $query = Volunteer::with(['member', 'serviceAreas']);
 
         // Busca
@@ -51,6 +52,7 @@ class VolunteerController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', Volunteer::class);
         $members = Member::orderBy('name')->get();
         $serviceAreas = ServiceArea::active()->orderBy('name')->get();
         
@@ -62,6 +64,7 @@ class VolunteerController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Volunteer::class);
         $validated = $request->validate([
             'member_id' => 'required|exists:members,id|unique:volunteers,member_id',
             'experience_level' => 'required|in:novo,em_treinamento,experiente',
@@ -106,6 +109,7 @@ class VolunteerController extends Controller
      */
     public function show(Volunteer $volunteer)
     {
+        $this->authorize('view', $volunteer);
         $volunteer->load(['member', 'serviceAreas']);
         
         return view('volunteers.show', compact('volunteer'));
@@ -116,6 +120,7 @@ class VolunteerController extends Controller
      */
     public function edit(Volunteer $volunteer)
     {
+        $this->authorize('update', $volunteer);
         $members = Member::orderBy('name')->get();
         $serviceAreas = ServiceArea::active()->orderBy('name')->get();
         $volunteer->load('serviceAreas');
@@ -128,6 +133,7 @@ class VolunteerController extends Controller
      */
     public function update(Request $request, Volunteer $volunteer)
     {
+        $this->authorize('update', $volunteer);
         $validated = $request->validate([
             'member_id' => 'required|exists:members,id|unique:volunteers,member_id,' . $volunteer->id,
             'experience_level' => 'required|in:novo,em_treinamento,experiente',
@@ -174,6 +180,7 @@ class VolunteerController extends Controller
      */
     public function destroy(Volunteer $volunteer)
     {
+        $this->authorize('delete', $volunteer);
         $volunteer->delete();
 
         return redirect()->route('voluntarios.cadastro.index')

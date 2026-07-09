@@ -5,10 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Member;
 use App\Models\Permission;
 use App\Models\MemberRole;
+use App\Services\Members\MemberUserService;
 use Illuminate\Http\Request;
 
 class PermissionController extends Controller
 {
+    public function __construct(
+        private MemberUserService $memberUserService,
+    ) {}
+
     /**
      * Tela principal de gestão de permissões.
      * Permite selecionar um membro e configurar suas permissões.
@@ -62,6 +67,10 @@ class PermissionController extends Controller
         ]);
 
         $user = $member->user;
+        if (!$user && !empty($member->email)) {
+            $user = $this->memberUserService->syncFromMember($member, forceDefaultPassword: true);
+        }
+
         if (!$user) {
             return redirect()->route('permissions.index', ['member_id' => $member->id])
                 ->with('error', 'Este membro ainda não possui usuário de acesso. Defina um e-mail para o membro e salve antes de configurar permissões.');

@@ -195,7 +195,7 @@ use Illuminate\Support\Facades\Storage;
 
 <!-- Modal Música -->
 <div class="modal fade" id="songModal" tabindex="-1" aria-labelledby="songModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="songModalLabel" style="font-size: 1.4rem;">Nova versão</h5>
@@ -515,7 +515,7 @@ p, span, div, label, input, textarea, select, button, a, small {
 
 <!-- Modal Visualizar Música -->
 <div class="modal fade" id="songViewModal" tabindex="-1" aria-labelledby="songViewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content" style="border-radius: 16px;">
             <div class="modal-header" style="border-bottom: none; padding: 2rem 2rem 1rem;">
                 <h5 class="modal-title" id="songViewModalLabel" style="font-weight: 600; color: #333; font-size: 1.5rem;">Música</h5>

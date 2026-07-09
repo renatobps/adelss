@@ -11,6 +11,7 @@ class GrupoController extends Controller
 {
     public function index()
     {
+        $this->authorize('notificacoes.view');
         $grupos = NotificacaoGrupo::withCount('members')
             ->with(['members:id,name,phone'])
             ->orderBy('nome')
@@ -20,12 +21,14 @@ class GrupoController extends Controller
 
     public function create()
     {
+        $this->authorize('notificacoes.manage');
         $members = Member::active()->orderBy('name')->get(['id', 'name', 'phone']);
         return view('notificacoes.grupos.create', compact('members'));
     }
 
     public function store(Request $request)
     {
+        $this->authorize('notificacoes.manage');
         $data = $request->validate([
             'nome' => 'required|string|max:120',
             'descricao' => 'nullable|string',
@@ -49,6 +52,7 @@ class GrupoController extends Controller
 
     public function edit(NotificacaoGrupo $grupo)
     {
+        $this->authorize('notificacoes.manage');
         $members = Member::active()->orderBy('name')->get(['id', 'name', 'phone']);
         $selecionados = $grupo->members()->pluck('id')->toArray();
         return view('notificacoes.grupos.edit', compact('grupo', 'members', 'selecionados'));
@@ -56,6 +60,7 @@ class GrupoController extends Controller
 
     public function update(Request $request, NotificacaoGrupo $grupo)
     {
+        $this->authorize('notificacoes.manage');
         $data = $request->validate([
             'nome' => 'required|string|max:120',
             'descricao' => 'nullable|string',
@@ -77,6 +82,7 @@ class GrupoController extends Controller
 
     public function destroy(NotificacaoGrupo $grupo)
     {
+        $this->authorize('notificacoes.manage');
         $grupo->delete();
         return redirect()->route('notificacoes.grupos.index')
             ->with('success', 'Grupo excluído com sucesso.');

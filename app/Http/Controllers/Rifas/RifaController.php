@@ -23,6 +23,7 @@ class RifaController extends Controller
 
     public function index(Request $request): View
     {
+        $this->authorize('viewAny', Rifa::class);
         $query = Rifa::query()->withCount('numeros');
 
         if ($request->filled('status')) {

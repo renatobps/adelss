@@ -21,6 +21,7 @@ class ServiceScheduleController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', ServiceSchedule::class);
         $query = ServiceSchedule::with(['areas.serviceArea', 'event']);
 
         // Filtros
@@ -56,6 +57,7 @@ class ServiceScheduleController extends Controller
      */
     public function create(Request $request)
     {
+        $this->authorize('create', ServiceSchedule::class);
         $step = $request->get('step', 1);
         
         $serviceAreas = ServiceArea::active()->with('leader')->get();
@@ -82,6 +84,7 @@ class ServiceScheduleController extends Controller
      */
     public function storeStep1(Request $request)
     {
+        $this->authorize('create', ServiceSchedule::class);
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'date' => 'required|date',
@@ -110,6 +113,7 @@ class ServiceScheduleController extends Controller
      */
     public function storeStep2(Request $request)
     {
+        $this->authorize('create', ServiceSchedule::class);
         $validated = $request->validate([
             'areas' => 'required|array|min:1',
             'areas.*.service_area_id' => 'required|exists:service_areas,id',
@@ -135,6 +139,7 @@ class ServiceScheduleController extends Controller
      */
     public function storeStep3(Request $request)
     {
+        $this->authorize('create', ServiceSchedule::class);
         $wizardData = session('schedule_wizard', []);
         
         if (!isset($wizardData['step2'])) {
@@ -165,6 +170,7 @@ class ServiceScheduleController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', ServiceSchedule::class);
         $wizardData = session('schedule_wizard', []);
         
         if (!isset($wizardData['step1']) || !isset($wizardData['step2']) || !isset($wizardData['step3'])) {
@@ -233,6 +239,7 @@ class ServiceScheduleController extends Controller
      */
     public function show(ServiceSchedule $escala)
     {
+        $this->authorize('view', $escala);
         $escala->load([
             'areas.serviceArea',
             'areas.responsible',
@@ -248,6 +255,7 @@ class ServiceScheduleController extends Controller
      */
     public function edit(ServiceSchedule $escala)
     {
+        $this->authorize('update', $escala);
         if ($escala->status === 'publicada') {
             return redirect()->route('voluntarios.escalas.show', $escala)
                 ->with('error', 'Não é possível editar uma escala publicada.');
@@ -281,6 +289,7 @@ class ServiceScheduleController extends Controller
      */
     public function update(Request $request, ServiceSchedule $escala)
     {
+        $this->authorize('update', $escala);
         if ($escala->status === 'publicada') {
             return redirect()->route('voluntarios.escalas.show', $escala)
                 ->with('error', 'Não é possível editar uma escala publicada.');
@@ -396,6 +405,7 @@ class ServiceScheduleController extends Controller
      */
     public function destroy(ServiceSchedule $escala)
     {
+        $this->authorize('delete', $escala);
         if ($escala->status === 'publicada') {
             return redirect()->route('voluntarios.escalas.index')
                 ->with('error', 'Não é possível excluir uma escala publicada. Cancele-a primeiro.');
@@ -412,6 +422,7 @@ class ServiceScheduleController extends Controller
      */
     public function duplicate(ServiceSchedule $escala)
     {
+        $this->authorize('create', ServiceSchedule::class);
         DB::beginTransaction();
         try {
             $newSchedule = $escala->replicate();
@@ -448,6 +459,7 @@ class ServiceScheduleController extends Controller
      */
     public function cancel(ServiceSchedule $escala)
     {
+        $this->authorize('update', $escala);
         $escala->update(['status' => 'cancelada']);
 
         return redirect()->route('voluntarios.escalas.show', $escala)
@@ -459,6 +471,7 @@ class ServiceScheduleController extends Controller
      */
     public function publish(ServiceSchedule $escala)
     {
+        $this->authorize('update', $escala);
         $wasCanceled = $escala->status === 'cancelada';
         $escala->update(['status' => 'publicada']);
 
@@ -475,6 +488,7 @@ class ServiceScheduleController extends Controller
      */
     public function updateStatus(Request $request, ServiceSchedule $escala)
     {
+        $this->authorize('update', $escala);
         $validated = $request->validate([
             'status' => 'required|in:rascunho,publicada,cancelada,concluido',
         ]);
@@ -530,6 +544,7 @@ class ServiceScheduleController extends Controller
      */
     public function getSuggestedVolunteers(Request $request)
     {
+        $this->authorize('viewAny', ServiceSchedule::class);
         $validated = $request->validate([
             'service_area_id' => 'required|exists:service_areas,id',
             'date' => 'required|date',
@@ -564,6 +579,7 @@ class ServiceScheduleController extends Controller
      */
     public function confirmVolunteer(Request $request, ServiceScheduleVolunteer $volunteer)
     {
+        $this->authorize('update', new ServiceSchedule());
         $volunteer->update(['status' => 'confirmado']);
 
         // Se for requisição AJAX, retorna JSON
@@ -585,6 +601,7 @@ class ServiceScheduleController extends Controller
      */
     public function removeVolunteer(ServiceScheduleVolunteer $volunteer)
     {
+        $this->authorize('update', new ServiceSchedule());
         $volunteer->delete();
 
         return response()->json([
@@ -598,6 +615,7 @@ class ServiceScheduleController extends Controller
      */
     public function substituteVolunteer(Request $request, ServiceScheduleVolunteer $volunteer)
     {
+        $this->authorize('update', new ServiceSchedule());
         $validated = $request->validate([
             'new_volunteer_id' => 'required|exists:volunteers,id',
         ]);
@@ -638,6 +656,7 @@ class ServiceScheduleController extends Controller
      */
     public function generatePdf(ServiceSchedule $escala)
     {
+        $this->authorize('view', $escala);
         // Verificar se a escala está publicada
         if ($escala->status !== 'publicada') {
             return redirect()->route('voluntarios.escalas.show', $escala)

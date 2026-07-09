@@ -12,6 +12,7 @@ class MemberRoleController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', MemberRole::class);
         $roles = MemberRole::with('members')->orderBy('name')->get();
         return view('member-roles.index', compact('roles'));
     }
@@ -21,6 +22,7 @@ class MemberRoleController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', MemberRole::class);
         return redirect()->route('member-roles.index');
     }
 
@@ -29,6 +31,7 @@ class MemberRoleController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', MemberRole::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:member_roles,name',
             'description' => 'nullable|string',
@@ -53,6 +56,7 @@ class MemberRoleController extends Controller
      */
     public function show(MemberRole $memberRole)
     {
+        $this->authorize('view', $memberRole);
         $memberRole->load('members');
         return view('member-roles.show', compact('memberRole'));
     }
@@ -62,6 +66,7 @@ class MemberRoleController extends Controller
      */
     public function edit(MemberRole $memberRole)
     {
+        $this->authorize('update', $memberRole);
         return view('member-roles.edit', compact('memberRole'));
     }
 
@@ -70,6 +75,7 @@ class MemberRoleController extends Controller
      */
     public function update(Request $request, MemberRole $memberRole)
     {
+        $this->authorize('update', $memberRole);
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:member_roles,name,' . $memberRole->id,
             'description' => 'nullable|string',
@@ -93,6 +99,7 @@ class MemberRoleController extends Controller
      */
     public function destroy(MemberRole $memberRole)
     {
+        $this->authorize('delete', $memberRole);
         try {
             // Verifica se há membros com este cargo
             if ($memberRole->members()->count() > 0) {
@@ -115,6 +122,7 @@ class MemberRoleController extends Controller
      */
     public function downloadTemplate()
     {
+        $this->authorize('downloadTemplate', MemberRole::class);
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="template_cargos.csv"',
@@ -163,6 +171,7 @@ class MemberRoleController extends Controller
      */
     public function import(Request $request)
     {
+        $this->authorize('import', MemberRole::class);
         $request->validate([
             'import_file' => 'required|file|mimes:csv,txt|max:10240', // 10MB
         ], [

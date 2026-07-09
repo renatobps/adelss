@@ -14,6 +14,7 @@ class CostCenterController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', FinancialCostCenter::class);
         $costCenters = FinancialCostCenter::with('departments')->orderBy('name')->get();
         $departments = Department::orderBy('name')->get();
         $total = $costCenters->count();
@@ -34,6 +35,7 @@ class CostCenterController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', FinancialCostCenter::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -74,6 +76,7 @@ class CostCenterController extends Controller
      */
     public function edit(FinancialCostCenter $costCenter)
     {
+        $this->authorize('update', $costCenter);
         return response()->json($costCenter->load('departments'));
     }
 
@@ -82,6 +85,7 @@ class CostCenterController extends Controller
      */
     public function update(Request $request, FinancialCostCenter $costCenter)
     {
+        $this->authorize('update', $costCenter);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -114,6 +118,7 @@ class CostCenterController extends Controller
      */
     public function destroy(FinancialCostCenter $costCenter)
     {
+        $this->authorize('delete', $costCenter);
         try {
             // Remover relacionamentos
             $costCenter->departments()->detach();

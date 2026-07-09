@@ -24,8 +24,8 @@
 
 <div class="alert alert-info">
     <i class="bx bx-info-circle me-2"></i>
-    <strong>Enquetes via Z-API:</strong>
-    As enquetes são enviadas como polls interativos usando a API Z-API. Os membros recebem uma enquete com botões para escolher a resposta.
+    <strong>Enquetes via Evolution API:</strong>
+    As enquetes são enviadas com botões clicáveis (sendButtons). Ao clicar, o usuário responde e o sistema registra a opção escolhida.
 </div>
 
 <section class="card">

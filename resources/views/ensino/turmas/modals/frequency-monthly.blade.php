@@ -1,6 +1,6 @@
 <!-- Modal Frequência Mensal -->
 <div class="modal fade" id="frequencyMonthlyModal" tabindex="-1" aria-labelledby="frequencyMonthlyModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="frequencyMonthlyModalLabel">Frequência mensal</h5>

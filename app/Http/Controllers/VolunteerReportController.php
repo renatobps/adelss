@@ -7,6 +7,7 @@ use App\Models\ServiceHistory;
 use App\Models\ServiceArea;
 use App\Models\ServiceSchedule;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Carbon\Carbon;
 
 class VolunteerReportController extends Controller
@@ -16,6 +17,7 @@ class VolunteerReportController extends Controller
      */
     public function activeByArea(Request $request)
     {
+        Gate::authorize('servico.view-reports');
         $areas = ServiceArea::active()->with('leader')->get();
         
         $dateFrom = $request->input('date_from', Carbon::now()->subMonths(3)->format('Y-m-d'));
@@ -47,6 +49,7 @@ class VolunteerReportController extends Controller
      */
     public function topVolunteers(Request $request)
     {
+        Gate::authorize('servico.view-reports');
         $limit = $request->input('limit', 20);
         $dateFrom = $request->input('date_from', Carbon::now()->subMonths(3)->format('Y-m-d'));
         $dateTo = $request->input('date_to', Carbon::now()->format('Y-m-d'));
@@ -68,6 +71,7 @@ class VolunteerReportController extends Controller
      */
     public function inactiveVolunteers(Request $request)
     {
+        Gate::authorize('servico.view-reports');
         $days = $request->input('days', 30);
         $dateThreshold = Carbon::now()->subDays($days);
 
@@ -110,6 +114,7 @@ class VolunteerReportController extends Controller
      */
     public function deficitByArea(Request $request)
     {
+        Gate::authorize('servico.view-reports');
         $dateFrom = $request->input('date_from', Carbon::now()->subMonths(1)->format('Y-m-d'));
         $dateTo = $request->input('date_to', Carbon::now()->format('Y-m-d'));
 
@@ -153,6 +158,7 @@ class VolunteerReportController extends Controller
      */
     public function bySchedule(Request $request)
     {
+        Gate::authorize('servico.view-reports');
         $query = ServiceSchedule::with(['areas.serviceArea', 'areas.volunteers.volunteer.member', 'serviceHistories']);
 
         if ($request->has('schedule_id') && $request->schedule_id) {
@@ -185,6 +191,7 @@ class VolunteerReportController extends Controller
      */
     public function dashboard()
     {
+        Gate::authorize('servico.view-reports');
         // Estatísticas gerais
         $totalVolunteers = Volunteer::where('status', 'ativo')->count();
         $totalActiveAreas = ServiceArea::active()->count();

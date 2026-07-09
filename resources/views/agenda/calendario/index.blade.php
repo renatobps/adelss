@@ -84,13 +84,13 @@
 <!-- Modal Adicionar/Editar Evento -->
 @if($canCreateEvents || $canEditEvents)
 <div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="addEventModalLabel">Adicionar</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form id="eventForm">
+            <form id="eventForm" enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" id="eventId" name="event_id">
                 <div class="modal-body">
@@ -167,9 +167,10 @@
                             <select class="form-select" id="eventCategory" name="category_id">
                                 <option value="">Nenhum</option>
                                 @foreach($categories as $category)
-                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                    <option value="{{ $category->id }}" @selected(strtolower($category->name) === 'eventos')>{{ $category->name }}</option>
                                 @endforeach
                             </select>
+                            <small class="text-muted">Use <strong>Eventos</strong> para aparecer na página principal do site.</small>
                         </div>
                     </div>
                     
@@ -181,6 +182,11 @@
                     <div class="mb-3">
                         <label for="eventDescription" class="form-label">Descrição</label>
                         <textarea class="form-control" id="eventDescription" name="description" rows="5" placeholder="Insert text here..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="eventBannerImage" class="form-label">Imagem do evento</label>
+                        <input type="file" class="form-control" id="eventBannerImage" name="banner_image" accept="image/*">
+                        <small class="text-muted d-block mt-1">Opcional. Formatos: JPG, PNG, WEBP (max 5MB).</small>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -283,10 +289,16 @@
 document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
     let selectedDate = null;
-    let currentView = 'dayGridMonth';
+    let currentView = window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth';
+
+    async function parseJsonResponse(response) {
+        const text = await response.text();
+        const clean = text.replace(/^\uFEFF/, '').trim();
+        return clean ? JSON.parse(clean) : {};
+    }
     
     const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
+        initialView: currentView,
         locale: 'pt-br',
         headerToolbar: {
             left: 'prev,next today',
@@ -299,7 +311,24 @@ document.addEventListener('DOMContentLoaded', function() {
             week: 'Semana',
             day: 'Dia'
         },
-        events: '{{ route("agenda.events.index") }}',
+        events: async function(info, successCallback, failureCallback) {
+            try {
+                const url = new URL('{{ route("agenda.events.index") }}', window.location.origin);
+                url.searchParams.set('start', info.startStr);
+                url.searchParams.set('end', info.endStr);
+                const response = await fetch(url.toString(), {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await parseJsonResponse(response);
+                if (!response.ok) {
+                    throw new Error(data.message || 'Erro ao carregar eventos');
+                }
+                successCallback(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error('Erro ao carregar eventos:', error);
+                failureCallback(error);
+            }
+        },
         editable: false,
         selectable: {{ ($canCreateEvents) ? 'true' : 'false' }},
         selectMirror: {{ ($canCreateEvents) ? 'true' : 'false' }},
@@ -390,6 +419,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     calendar.render();
+
+    const mobileCalendarQuery = window.matchMedia('(max-width: 767.98px)');
+    const syncCalendarView = () => {
+        const targetView = mobileCalendarQuery.matches ? 'listWeek' : 'dayGridMonth';
+        if (calendar.view.type !== targetView) {
+            calendar.changeView(targetView);
+            currentView = targetView;
+        }
+    };
+    mobileCalendarQuery.addEventListener('change', syncCalendarView);
     
     // Botões de visualização
     document.getElementById('btnMonth').addEventListener('click', function() {
@@ -443,11 +482,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}',
+                    'Accept': 'application/json',
                 },
                 body: JSON.stringify({ name, color })
             })
-            .then(response => response.json())
+            .then(async response => {
+                const data = await parseJsonResponse(response);
+                if (!response.ok) {
+                    throw new Error(data.message || 'Erro ao adicionar categoria');
+                }
+                return data;
+            })
             .then(data => {
                 if (data.success) {
                     // Adicionar categoria à lista
@@ -482,7 +528,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Erro ao adicionar categoria');
+                alert(error.message || 'Erro ao adicionar categoria');
             });
         });
     }
@@ -549,22 +595,32 @@ document.addEventListener('DOMContentLoaded', function() {
     function saveEvent(formData, updateAll = false) {
         const eventId = document.getElementById('eventId').value;
         const url = eventId ? '{{ route("agenda.events.update", ":id") }}'.replace(':id', eventId) : '{{ route("agenda.events.store") }}';
-        const method = eventId ? 'PUT' : 'POST';
-        
-        // Adicionar parâmetro update_all se for edição de evento recorrente
+        const method = 'POST';
+        if (eventId) {
+            formData.append('_method', 'PUT');
+        }
+
+        // Adicionar parâmetro update_all se for edição de evento recorrente.
         if (eventId && updateAll) {
-            formData.update_all = true;
+            formData.append('update_all', '1');
         }
         
         fetch(url, {
             method: method,
             headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}',
+                'Accept': 'application/json',
             },
-            body: JSON.stringify(formData)
+            body: formData
         })
-        .then(response => response.json())
+        .then(async response => {
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const errors = data.errors ? Object.values(data.errors).flat().join('\n') : null;
+                throw new Error(errors || data.message || 'Erro ao salvar evento');
+            }
+            return data;
+        })
         .then(data => {
             if (data.success) {
                 calendar.refetchEvents();
@@ -576,11 +632,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.message) {
                     alert(data.message);
                 }
+            } else {
+                alert(data.message || 'Erro ao salvar evento');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Erro ao salvar evento');
+            alert(error.message || 'Erro ao salvar evento');
         });
     }
     
@@ -593,21 +651,27 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const eventId = document.getElementById('eventId').value;
             const recurrenceValue = document.getElementById('eventRecurrence').value;
-            const formData = {
-                title: document.getElementById('eventTitle').value,
-                description: document.getElementById('eventDescription').value,
-                start_date: document.getElementById('eventStartDate').value,
-                start_time: document.getElementById('eventStartTimeHour').value.padStart(2, '0') + ':' + 
-                           document.getElementById('eventStartTimeMinute').value.padStart(2, '0'),
-                end_date: document.getElementById('eventEndDate').value,
-                end_time: document.getElementById('eventEndTimeHour').value.padStart(2, '0') + ':' + 
-                         document.getElementById('eventEndTimeMinute').value.padStart(2, '0'),
-                all_day: document.getElementById('eventAllDay').checked,
-                recurrence: recurrenceValue === 'null' ? null : recurrenceValue,
-                visibility: document.getElementById('eventVisibility').value,
-                location: document.getElementById('eventLocation').value,
-                category_id: document.getElementById('eventCategory').value || null
-            };
+            const formData = new FormData();
+            formData.append('title', document.getElementById('eventTitle').value || '');
+            formData.append('description', document.getElementById('eventDescription').value || '');
+            formData.append('start_date', document.getElementById('eventStartDate').value || '');
+            formData.append('start_time', document.getElementById('eventStartTimeHour').value.padStart(2, '0') + ':' +
+                document.getElementById('eventStartTimeMinute').value.padStart(2, '0'));
+            formData.append('end_date', document.getElementById('eventEndDate').value || '');
+            formData.append('end_time', document.getElementById('eventEndTimeHour').value.padStart(2, '0') + ':' +
+                document.getElementById('eventEndTimeMinute').value.padStart(2, '0'));
+            formData.append('all_day', document.getElementById('eventAllDay').checked ? '1' : '0');
+            if (recurrenceValue !== 'null') {
+                formData.append('recurrence', recurrenceValue);
+            }
+            formData.append('visibility', document.getElementById('eventVisibility').value || 'public');
+            formData.append('location', document.getElementById('eventLocation').value || '');
+            formData.append('category_id', document.getElementById('eventCategory').value || '');
+
+            const bannerInput = document.getElementById('eventBannerImage');
+            if (bannerInput && bannerInput.files && bannerInput.files[0]) {
+                formData.append('banner_image', bannerInput.files[0]);
+            }
             
             // Se for edição de evento, verificar se é recorrente
             if (eventId) {
@@ -812,13 +876,26 @@ document.addEventListener('DOMContentLoaded', function() {
                         'Accept': 'application/json'
                     }
                 })
-                .then(response => response.json())
+                .then(async response => {
+                    const data = await parseJsonResponse(response);
+                    if (!response.ok) {
+                        throw new Error(data.message || 'Erro ao remover categoria');
+                    }
+                    return data;
+                })
                 .then(data => {
                     if (data.success) {
                         // Remover o elemento da lista
                         const categoryItem = btn.closest('.category-item');
                         categoryItem.remove();
-                        
+
+                        // Remover do select de categorias do modal
+                        const categorySelect = document.getElementById('eventCategory');
+                        if (categorySelect) {
+                            const option = categorySelect.querySelector(`option[value="${categoryId}"]`);
+                            if (option) option.remove();
+                        }
+
                         // Recarregar eventos do calendário para atualizar categorias
                         calendar.refetchEvents();
                     } else {
@@ -827,7 +904,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Erro ao remover categoria');
+                    alert(error.message || 'Erro ao remover categoria');
                 });
             }
         }

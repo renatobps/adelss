@@ -82,6 +82,7 @@ class RepertorioController extends Controller
      */
     public function storeSong(Request $request)
     {
+        $this->authorize('moriah.manage');
         $request->validate([
             'title' => 'nullable|string|max:255',
             'version_name' => 'nullable|string|max:50',
@@ -164,6 +165,7 @@ class RepertorioController extends Controller
      */
     public function updateSong(Request $request, Song $song)
     {
+        $this->authorize('moriah.manage');
         $request->validate([
             'title' => 'nullable|string|max:255',
             'version_name' => 'nullable|string|max:50',
@@ -262,6 +264,7 @@ class RepertorioController extends Controller
      */
     public function destroySong(Song $song)
     {
+        $this->authorize('moriah.manage');
         // Deletar arquivos
         if ($song->thumbnail_url) {
             Storage::disk('public')->delete($song->thumbnail_url);
@@ -286,6 +289,7 @@ class RepertorioController extends Controller
      */
     public function storeFolder(Request $request)
     {
+        $this->authorize('moriah.manage');
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -306,6 +310,7 @@ class RepertorioController extends Controller
      */
     public function updateFolder(Request $request, Folder $folder)
     {
+        $this->authorize('moriah.manage');
         $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -326,6 +331,7 @@ class RepertorioController extends Controller
      */
     public function destroyFolder(Folder $folder)
     {
+        $this->authorize('moriah.manage');
         $folder->delete();
 
         return response()->json([
@@ -339,6 +345,7 @@ class RepertorioController extends Controller
      */
     public function import()
     {
+        $this->authorize('moriah.manage');
         return view('moriah.repertorio.import');
     }
 
@@ -347,6 +354,7 @@ class RepertorioController extends Controller
      */
     public function downloadTemplate()
     {
+        $this->authorize('moriah.manage');
         $headers = [
             'nomeMusica',
             'nomeArtista',
@@ -400,6 +408,7 @@ class RepertorioController extends Controller
      */
     public function processImport(Request $request)
     {
+        $this->authorize('moriah.manage');
         // Validação customizada para aceitar CSV com diferentes tipos MIME
         $validator = \Validator::make($request->all(), [
             'file' => 'required|file|max:10240',
@@ -648,6 +657,7 @@ class RepertorioController extends Controller
      */
     public function preencherYoutube(Request $request)
     {
+        $this->authorize('moriah.manage');
         $request->validate([
             'youtube_url' => 'required|string'
         ]);

@@ -10,18 +10,26 @@ use App\Models\FinancialContact;
 use App\Models\FinancialCategory;
 use App\Models\FinancialAccount;
 use App\Models\FinancialCostCenter;
+use App\Services\FinancialNotificationService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 
 class TransactionController extends Controller
 {
+    public function __construct(
+        private FinancialNotificationService $financialNotificationService
+    ) {}
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter'])
+        $this->authorize('viewAny', FinancialTransaction::class);
+        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter', 'latestPaymentTransaction'])
             ->orderBy('transaction_date', 'desc');
 
         // Filtros
@@ -133,6 +141,7 @@ class TransactionController extends Controller
         $costCenters = FinancialCostCenter::orderBy('name')->get();
         $members = Member::orderBy('name')->get(); // Para o modal de receita
         $contacts = FinancialContact::orderBy('name')->get(); // Para o modal de despesa
+        $mercadoPagoPublicKey = (string) config('mercadopago.public_key', '');
 
         return view('financial.transactions.index', compact(
             'transactions',
@@ -144,7 +153,8 @@ class TransactionController extends Controller
             'members',
             'contacts',
             'startDate',
-            'endDate'
+            'endDate',
+            'mercadoPagoPublicKey'
         ));
     }
 
@@ -153,6 +163,7 @@ class TransactionController extends Controller
      */
     public function storeReceita(Request $request)
     {
+        $this->authorize('createReceita', FinancialTransaction::class);
         // Validação customizada para "Recebido de"
         $memberId = $request->input('member_id');
         $receivedFromOther = $request->input('received_from_other');
@@ -170,6 +181,8 @@ class TransactionController extends Controller
             'document_number' => 'nullable|string|max:50',
             'notes' => 'nullable|string',
             'competence_date' => 'nullable|date',
+            'due_date' => 'nullable|date',
+            'send_whatsapp_receipt' => 'nullable|boolean',
             'attachments' => 'nullable|array|max:5',
             'attachments.*' => 'file|max:10240', // 10MB
         ];
@@ -214,6 +227,7 @@ class TransactionController extends Controller
         }
 
         // Criar transação
+        $validated['created_by'] = Auth::id();
         $transaction = FinancialTransaction::create($validated);
 
         // Upload de anexos
@@ -230,9 +244,21 @@ class TransactionController extends Controller
             }
         }
 
+        $whatsappMessage = null;
+        if ($transaction->is_paid && $request->boolean('send_whatsapp_receipt', true)) {
+            $transaction->load(['member', 'category']);
+            $result = $this->financialNotificationService->enviarComprovanteReceita($transaction, Auth::id());
+            if ($result['success'] ?? false) {
+                $whatsappMessage = ' Comprovante enviado por WhatsApp.';
+            } elseif (($result['error'] ?? '') !== 'Comprovante já enviado para este membro.') {
+                $whatsappMessage = ' WhatsApp: ' . ($result['error'] ?? 'não foi possível enviar o comprovante.');
+            }
+        }
+
         $message = $request->input('save_action') === 'new' 
             ? 'Receita criada com sucesso! Continuar adicionando?'
             : 'Receita criada com sucesso!';
+        $message .= $whatsappMessage ?? '';
 
         return redirect()->route('financial.transactions.index')
             ->with('success', $message);
@@ -243,6 +269,7 @@ class TransactionController extends Controller
      */
     public function storeDespesa(Request $request)
     {
+        $this->authorize('createDespesa', FinancialTransaction::class);
         $validated = $request->validate([
             'transaction_date' => 'required|date',
             'description' => 'required|string|max:255',
@@ -253,9 +280,11 @@ class TransactionController extends Controller
             'account_id' => 'nullable|exists:financial_accounts,id',
             'cost_center_id' => 'nullable|exists:financial_cost_centers,id',
             'payment_type' => 'nullable|in:unico,parcelado',
+            'installments_count' => 'nullable|integer|min:2|max:60|required_if:payment_type,parcelado',
             'document_number' => 'nullable|string|max:50',
             'notes' => 'nullable|string',
             'competence_date' => 'nullable|date',
+            'due_date' => 'nullable|date',
             'attachments' => 'nullable|array|max:5',
             'attachments.*' => 'file|max:10240', // 10MB
         ], [
@@ -263,18 +292,42 @@ class TransactionController extends Controller
             'description.required' => 'A descrição é obrigatória.',
             'amount.required' => 'O valor é obrigatório.',
             'amount.min' => 'O valor deve ser maior que zero.',
+            'installments_count.required_if' => 'Informe em quantas vezes a despesa será parcelada.',
+            'installments_count.min' => 'O parcelamento deve ter no mínimo 2 parcelas.',
+            'installments_count.max' => 'O parcelamento pode ter no máximo 60 parcelas.',
             'attachments.max' => 'Máximo de 5 arquivos permitidos.',
             'attachments.*.max' => 'Cada arquivo não pode ter mais de 10MB.',
         ]);
 
-        // Determinar status
-        $validated['status'] = $validated['is_paid'] ?? false ? 'pago' : 'a_pagar';
+        $paymentType = $validated['payment_type'] ?? 'unico';
+        $installmentsCount = $paymentType === 'parcelado'
+            ? (int) ($validated['installments_count'] ?? 0)
+            : 1;
+
+        if ($paymentType === 'parcelado' && $installmentsCount < 2) {
+            return redirect()->back()
+                ->withErrors(['installments_count' => 'Informe em quantas vezes a despesa será parcelada (mínimo 2).'])
+                ->withInput();
+        }
+
         $validated['type'] = 'despesa';
+        $validated['created_by'] = Auth::id();
+        $validated['payment_type'] = $paymentType;
 
-        // Criar transação
-        $transaction = FinancialTransaction::create($validated);
+        $isPaid = $request->has('is_paid') && $request->is_paid;
+        $validated['is_paid'] = $isPaid;
+        $validated['status'] = $isPaid ? 'pago' : 'a_pagar';
 
-        // Upload de anexos
+        $transactions = DB::transaction(function () use ($validated, $installmentsCount, $request) {
+            if ($installmentsCount === 1) {
+                return [FinancialTransaction::create($validated)];
+            }
+
+            return $this->createInstallmentTransactions($validated, $installmentsCount);
+        });
+
+        $transaction = $transactions[0];
+
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
                 $path = $file->store('financial/transactions/attachments', 'public');
@@ -288,9 +341,30 @@ class TransactionController extends Controller
             }
         }
 
-        $message = $request->input('save_action') === 'new' 
+        $whatsappMessage = null;
+        if (!$transaction->is_paid) {
+            $transaction->load(['contact', 'category']);
+            $result = $this->financialNotificationService->notificarDespesaAPagar($transaction, Auth::id());
+            if ($result['success'] ?? false) {
+                $whatsappMessage = ' Tesoureiro(s) notificado(s) por WhatsApp.';
+            } elseif (($result['error'] ?? '') !== 'Tesoureiro já notificado sobre esta despesa.') {
+                $whatsappMessage = ' WhatsApp: ' . ($result['error'] ?? 'não foi possível notificar o tesoureiro.');
+            }
+        }
+
+        $message = $request->input('save_action') === 'new'
             ? 'Despesa criada com sucesso! Continuar adicionando?'
             : 'Despesa criada com sucesso!';
+
+        if ($installmentsCount > 1) {
+            $message = str_replace(
+                'Despesa criada com sucesso!',
+                "Despesa parcelada com sucesso! {$installmentsCount} parcelas criadas.",
+                $message
+            );
+        }
+
+        $message .= $whatsappMessage ?? '';
 
         return redirect()->route('financial.transactions.index')
             ->with('success', $message);
@@ -325,6 +399,7 @@ class TransactionController extends Controller
      */
     public function edit(FinancialTransaction $transaction)
     {
+        $this->authorize('update', $transaction);
         $transaction->load(['member', 'contact', 'category', 'account', 'costCenter', 'attachments']);
         
         // Formatar dados para JSON
@@ -344,6 +419,7 @@ class TransactionController extends Controller
             'payment_type' => $transaction->payment_type,
             'document_number' => $transaction->document_number,
             'competence_date' => $transaction->competence_date ? $transaction->competence_date->format('Y-m-d') : null,
+            'due_date' => $transaction->due_date ? $transaction->due_date->format('Y-m-d') : null,
             'notes' => $transaction->notes,
             'attachments' => $transaction->attachments->map(function($attachment) {
                 return [
@@ -360,6 +436,7 @@ class TransactionController extends Controller
      */
     public function update(Request $request, FinancialTransaction $transaction)
     {
+        $this->authorize('update', $transaction);
         $rules = [
             'transaction_date' => 'required|date',
             'description' => 'required|string|max:255',
@@ -372,6 +449,8 @@ class TransactionController extends Controller
             'document_number' => 'nullable|string|max:50',
             'notes' => 'nullable|string',
             'competence_date' => 'nullable|date',
+            'due_date' => 'nullable|date',
+            'send_whatsapp_receipt' => 'nullable|boolean',
             'attachments' => 'nullable|array|max:5',
             'attachments.*' => 'file|max:10240', // 10MB
             'remove_attachments' => 'nullable|array',
@@ -388,7 +467,8 @@ class TransactionController extends Controller
         $validated = $request->validate($rules);
 
         // Determinar status
-        $validated['status'] = $validated['is_paid'] ?? false 
+        $validated['is_paid'] = $request->has('is_paid') && $request->is_paid;
+        $validated['status'] = $validated['is_paid']
             ? ($transaction->type === 'receita' ? 'recebido' : 'pago')
             : ($transaction->type === 'receita' ? 'a_receber' : 'a_pagar');
 
@@ -427,12 +507,40 @@ class TransactionController extends Controller
         }
 
         // Remover campos de arquivos do validated antes de atualizar
-        unset($validated['attachments'], $validated['remove_attachments']);
+        unset($validated['attachments'], $validated['remove_attachments'], $validated['send_whatsapp_receipt']);
 
+        $wasPaid = $transaction->is_paid;
+        $previousDueDate = $transaction->due_date?->format('Y-m-d');
         $transaction->update($validated);
+        $transaction->refresh()->load(['member', 'category', 'contact']);
+
+        $whatsappMessage = null;
+        $dueDateChanged = ($transaction->due_date?->format('Y-m-d') ?? null) !== $previousDueDate;
+
+        if ($transaction->type === 'receita' && !$wasPaid && $transaction->is_paid && $request->boolean('send_whatsapp_receipt', true)) {
+            $result = $this->financialNotificationService->enviarComprovanteReceita($transaction, Auth::id());
+            if ($result['success'] ?? false) {
+                $whatsappMessage = ' Comprovante enviado por WhatsApp.';
+            } elseif (($result['error'] ?? '') !== 'Comprovante já enviado para este membro.') {
+                $whatsappMessage = ' WhatsApp: ' . ($result['error'] ?? 'não foi possível enviar o comprovante.');
+            }
+        }
+
+        if ($transaction->type === 'despesa' && !$transaction->is_paid && ($wasPaid || $dueDateChanged)) {
+            $result = $this->financialNotificationService->notificarDespesaAPagar(
+                $transaction,
+                Auth::id(),
+                $wasPaid || $dueDateChanged
+            );
+            if ($result['success'] ?? false) {
+                $whatsappMessage = ($whatsappMessage ?? '') . ' Tesoureiro(s) notificado(s) por WhatsApp.';
+            }
+        }
+
+        $message = 'Transação atualizada com sucesso!' . ($whatsappMessage ?? '');
 
         return redirect()->route('financial.transactions.index')
-            ->with('success', 'Transação atualizada com sucesso!');
+            ->with('success', $message);
     }
 
     /**
@@ -440,6 +548,7 @@ class TransactionController extends Controller
      */
     public function destroy(FinancialTransaction $transaction)
     {
+        $this->authorize('delete', $transaction);
         try {
             // Remover anexos
             foreach ($transaction->attachments as $attachment) {
@@ -462,8 +571,33 @@ class TransactionController extends Controller
      */
     public function receipt(FinancialTransaction $transaction)
     {
+        $this->authorize('receipt', $transaction);
         $transaction->load(['member', 'contact', 'category']);
         return view('financial.transactions.receipt', compact('transaction'));
+    }
+
+    /**
+     * Envia recibo por WhatsApp manualmente.
+     */
+    public function sendReceiptWhatsApp(FinancialTransaction $transaction)
+    {
+        $this->authorize('sendReceipt', $transaction);
+        $transaction->load(['member', 'category']);
+
+        if ($transaction->type !== 'receita') {
+            return response()->json([
+                'success' => false,
+                'error' => 'Somente receitas possuem comprovante para membro.',
+            ], 422);
+        }
+
+        $result = $this->financialNotificationService->enviarComprovanteReceita(
+            $transaction,
+            Auth::id(),
+            true
+        );
+
+        return response()->json($result, ($result['success'] ?? false) ? 200 : 422);
     }
 
     /**
@@ -471,6 +605,7 @@ class TransactionController extends Controller
      */
     public function duplicate(FinancialTransaction $transaction)
     {
+        $this->authorize('duplicate', $transaction);
         $newTransaction = $transaction->replicate();
         $newTransaction->transaction_date = now();
         $newTransaction->is_paid = false;
@@ -486,6 +621,7 @@ class TransactionController extends Controller
      */
     public function updateDescription(Request $request, FinancialTransaction $transaction)
     {
+        $this->authorize('update', $transaction);
         $validated = $request->validate([
             'description' => 'required|string|max:255',
         ]);
@@ -503,6 +639,7 @@ class TransactionController extends Controller
      */
     public function export(Request $request)
     {
+        $this->authorize('export', FinancialTransaction::class);
         $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter'])
             ->orderBy('transaction_date', 'desc');
 
@@ -601,6 +738,7 @@ class TransactionController extends Controller
      */
     public function import(Request $request)
     {
+        $this->authorize('import', FinancialTransaction::class);
         $request->validate([
             'import_file' => 'required|file|mimes:csv,txt|max:10240', // 10MB
         ], [
@@ -703,5 +841,58 @@ class TransactionController extends Controller
         $amount = str_replace(',', '.', $amount);
         
         return (float) $amount;
+    }
+
+    /**
+     * Cria transações parceladas nos meses subsequentes.
+     *
+     * @return array<int, FinancialTransaction>
+     */
+    private function createInstallmentTransactions(array $validated, int $installmentsCount): array
+    {
+        $baseDate = Carbon::parse($validated['transaction_date']);
+        $baseDueDate = !empty($validated['due_date']) ? Carbon::parse($validated['due_date']) : null;
+        $baseCompetenceDate = !empty($validated['competence_date']) ? Carbon::parse($validated['competence_date']) : null;
+        $totalAmount = (float) $validated['amount'];
+        $perInstallment = round($totalAmount / $installmentsCount, 2);
+        $remainder = round($totalAmount - ($perInstallment * $installmentsCount), 2);
+
+        $transactions = [];
+        $parentTransaction = null;
+        $baseDescription = $validated['description'];
+
+        for ($i = 0; $i < $installmentsCount; $i++) {
+            $installmentNumber = $i + 1;
+            $data = $validated;
+            $data['transaction_date'] = $baseDate->copy()->addMonths($i)->format('Y-m-d');
+            $data['installments_count'] = $installmentsCount;
+            $data['installment_number'] = $installmentNumber;
+            $data['payment_type'] = 'parcelado';
+            $data['description'] = "{$baseDescription} ({$installmentNumber}/{$installmentsCount})";
+            $data['amount'] = $perInstallment + ($installmentNumber === $installmentsCount ? $remainder : 0);
+
+            if ($baseDueDate) {
+                $data['due_date'] = $baseDueDate->copy()->addMonths($i)->format('Y-m-d');
+            }
+
+            if ($baseCompetenceDate) {
+                $data['competence_date'] = $baseCompetenceDate->copy()->addMonths($i)->format('Y-m-d');
+            }
+
+            if ($i > 0) {
+                $data['is_paid'] = false;
+                $data['status'] = 'a_pagar';
+                $data['parent_transaction_id'] = $parentTransaction->id;
+            }
+
+            $transaction = FinancialTransaction::create($data);
+            $transactions[] = $transaction;
+
+            if ($i === 0) {
+                $parentTransaction = $transaction;
+            }
+        }
+
+        return $transactions;
     }
 }

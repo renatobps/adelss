@@ -15,6 +15,7 @@ class DiscipleshipMeetingController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', DiscipleshipMeeting::class);
         $memberId = $request->get('discipleship_member_id');
         
         $query = DiscipleshipMeeting::with(['discipleshipMember.member', 'discipleshipMember.cycle']);
@@ -33,6 +34,7 @@ class DiscipleshipMeetingController extends Controller
      */
     public function create(Request $request)
     {
+        $this->authorize('create', DiscipleshipMeeting::class);
         $memberId = $request->get('discipleship_member_id');
         $members = DiscipleshipMember::ativos()->with('member')->get();
         $goalsByMember = DiscipleshipGoal::whereIn('discipleship_member_id', $members->pluck('id'))
@@ -48,6 +50,7 @@ class DiscipleshipMeetingController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', DiscipleshipMeeting::class);
         $validated = $request->validate([
             'discipleship_member_id' => 'required|exists:discipleship_members,id',
             'data' => 'required|date',
@@ -92,6 +95,7 @@ class DiscipleshipMeetingController extends Controller
      */
     public function show(DiscipleshipMeeting $meeting)
     {
+        $this->authorize('view', $meeting);
         $meeting->load(['discipleshipMember.member', 'discipleshipMember.cycle', 'goals']);
         
         return view('discipleship.meetings.show', compact('meeting'));
@@ -102,6 +106,7 @@ class DiscipleshipMeetingController extends Controller
      */
     public function edit(DiscipleshipMeeting $meeting)
     {
+        $this->authorize('update', $meeting);
         $members = DiscipleshipMember::ativos()->with('member')->get();
         $goalsByMember = DiscipleshipGoal::whereIn('discipleship_member_id', $members->pluck('id'))
             ->whereIn('status', ['em_andamento', 'pausado'])
@@ -116,6 +121,7 @@ class DiscipleshipMeetingController extends Controller
      */
     public function update(Request $request, DiscipleshipMeeting $meeting)
     {
+        $this->authorize('update', $meeting);
         $validated = $request->validate([
             'discipleship_member_id' => 'required|exists:discipleship_members,id',
             'data' => 'required|date',
@@ -157,6 +163,7 @@ class DiscipleshipMeetingController extends Controller
      */
     public function destroy(DiscipleshipMeeting $meeting)
     {
+        $this->authorize('delete', $meeting);
         $memberId = $meeting->discipleship_member_id;
         $meeting->delete();
 

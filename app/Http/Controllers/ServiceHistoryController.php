@@ -15,6 +15,7 @@ class ServiceHistoryController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', ServiceHistory::class);
         $query = ServiceHistory::with(['member', 'volunteer.member', 'serviceArea', 'schedule']);
 
         // Filtros
@@ -64,6 +65,7 @@ class ServiceHistoryController extends Controller
      */
     public function show(ServiceHistory $history)
     {
+        $this->authorize('view', $history);
         $history->load(['member', 'volunteer.member', 'serviceArea', 'schedule.areas']);
 
         $statusLabels = [
@@ -81,6 +83,7 @@ class ServiceHistoryController extends Controller
      */
     public function showByVolunteer(Volunteer $volunteer, Request $request)
     {
+        $this->authorize('viewAny', ServiceHistory::class);
         $volunteer->load('member');
 
         $query = ServiceHistory::with(['serviceArea', 'schedule'])

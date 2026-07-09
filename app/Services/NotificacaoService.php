@@ -230,19 +230,8 @@ class NotificacaoService
     private function detectarMidiaArquivo(UploadedFile $arquivo, ?string $tipoInformado = null): array
     {
         $fileName = $arquivo->getClientOriginalName();
-
         $mime = strtolower((string) $arquivo->getMimeType());
-        $tipo = 'document';
-        if (is_string($tipoInformado) && trim($tipoInformado) !== '') {
-            $tipo = strtolower(trim($tipoInformado));
-        } elseif (str_starts_with($mime, 'image/')) {
-            $tipo = 'image';
-        } elseif (str_starts_with($mime, 'video/')) {
-            $tipo = 'video';
-        } elseif (str_starts_with($mime, 'audio/')) {
-            $tipo = 'audio';
-        }
-
+        $tipo = $this->normalizarTipoMidia($tipoInformado, $mime);
         $isPdfDocumento = $tipo === 'document' && $mime === 'application/pdf';
 
         return [
@@ -250,6 +239,38 @@ class NotificacaoService
             'is_pdf_document' => $isPdfDocumento,
             'file_name' => $fileName,
         ];
+    }
+
+    private function normalizarTipoMidia(?string $tipoInformado, string $mime): string
+    {
+        $aliases = [
+            'imagem' => 'image',
+            'image' => 'image',
+            'video' => 'video',
+            'vídeo' => 'video',
+            'audio' => 'audio',
+            'document' => 'document',
+            'documento' => 'document',
+        ];
+
+        if (is_string($tipoInformado) && trim($tipoInformado) !== '') {
+            $informado = strtolower(trim($tipoInformado));
+            if (isset($aliases[$informado])) {
+                return $aliases[$informado];
+            }
+        }
+
+        if (str_starts_with($mime, 'image/')) {
+            return 'image';
+        }
+        if (str_starts_with($mime, 'video/')) {
+            return 'video';
+        }
+        if (str_starts_with($mime, 'audio/')) {
+            return 'audio';
+        }
+
+        return 'document';
     }
 
     private function registrarEnvio(?int $memberId, ?string $telefone, string $mensagem, array $resultado, string $tipoNotificacao = 'custom'): void

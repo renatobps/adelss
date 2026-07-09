@@ -14,6 +14,7 @@ class EscolasController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', School::class);
         $query = School::with('manager');
 
         // Busca
@@ -39,6 +40,7 @@ class EscolasController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', School::class);
         $members = Member::orderBy('name')->get();
         return view('ensino.escolas.create', compact('members'));
     }
@@ -48,6 +50,7 @@ class EscolasController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', School::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -65,6 +68,7 @@ class EscolasController extends Controller
      */
     public function show(School $escola)
     {
+        $this->authorize('view', $escola);
         $escola->load(['manager', 'turmas']);
         return view('ensino.escolas.show', compact('escola'));
     }
@@ -74,6 +78,7 @@ class EscolasController extends Controller
      */
     public function edit(School $escola)
     {
+        $this->authorize('update', $escola);
         $members = Member::orderBy('name')->get();
         return view('ensino.escolas.edit', compact('escola', 'members'));
     }
@@ -83,6 +88,7 @@ class EscolasController extends Controller
      */
     public function update(Request $request, School $escola)
     {
+        $this->authorize('update', $escola);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -100,6 +106,7 @@ class EscolasController extends Controller
      */
     public function destroy(School $escola)
     {
+        $this->authorize('delete', $escola);
         $escola->delete();
 
         return redirect()->route('ensino.escolas.index')

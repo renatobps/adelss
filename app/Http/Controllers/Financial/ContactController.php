@@ -14,6 +14,7 @@ class ContactController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', FinancialContact::class);
         $query = FinancialContact::with('category')->orderBy('name');
         
         // Filtro por categoria
@@ -41,6 +42,7 @@ class ContactController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', FinancialContact::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
@@ -79,6 +81,7 @@ class ContactController extends Controller
      */
     public function edit(FinancialContact $contact)
     {
+        $this->authorize('update', $contact);
         return response()->json($contact->load('category'));
     }
 
@@ -87,6 +90,7 @@ class ContactController extends Controller
      */
     public function update(Request $request, FinancialContact $contact)
     {
+        $this->authorize('update', $contact);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|max:255',
@@ -117,6 +121,7 @@ class ContactController extends Controller
      */
     public function destroy(FinancialContact $contact)
     {
+        $this->authorize('delete', $contact);
         try {
             $contact->delete();
             return redirect()->route('financial.contacts.index')
@@ -132,6 +137,7 @@ class ContactController extends Controller
      */
     public function storeCategory(Request $request)
     {
+        $this->authorize('create', FinancialContact::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
         ], [

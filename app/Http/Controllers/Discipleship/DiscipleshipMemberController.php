@@ -16,6 +16,7 @@ class DiscipleshipMemberController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', DiscipleshipMember::class);
         $cycleId = $request->get('cycle_id');
         $status = $request->get('status', 'ativo');
         
@@ -43,6 +44,7 @@ class DiscipleshipMemberController extends Controller
      */
     public function create(Request $request)
     {
+        $this->authorize('create', DiscipleshipMember::class);
         $cycleId = $request->get('cycle_id');
         $cycles = DiscipleshipCycle::ativos()->orderBy('nome')->get();
         $members = Member::active()->orderBy('name')->get();
@@ -56,6 +58,7 @@ class DiscipleshipMemberController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', DiscipleshipMember::class);
         $validated = $request->validate([
             'cycle_id' => 'required|exists:discipleship_cycles,id',
             'member_id' => 'required|exists:members,id',
@@ -91,6 +94,7 @@ class DiscipleshipMemberController extends Controller
      */
     public function show(DiscipleshipMember $member)
     {
+        $this->authorize('view', $member);
         $member->load([
             'member',
             'cycle',
@@ -122,6 +126,7 @@ class DiscipleshipMemberController extends Controller
      */
     public function edit(DiscipleshipMember $member)
     {
+        $this->authorize('update', $member);
         $cycles = DiscipleshipCycle::ativos()->orderBy('nome')->get();
         $members = Member::active()->orderBy('name')->get();
         $discipuladores = User::orderBy('name')->get();
@@ -134,6 +139,7 @@ class DiscipleshipMemberController extends Controller
      */
     public function update(Request $request, DiscipleshipMember $member)
     {
+        $this->authorize('update', $member);
         $validated = $request->validate([
             'cycle_id' => 'required|exists:discipleship_cycles,id',
             'member_id' => 'required|exists:members,id',
@@ -159,6 +165,7 @@ class DiscipleshipMemberController extends Controller
      */
     public function destroy(DiscipleshipMember $member)
     {
+        $this->authorize('delete', $member);
         $cycleId = $member->cycle_id;
         $member->delete();
 

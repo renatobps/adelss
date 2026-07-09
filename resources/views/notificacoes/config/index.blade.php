@@ -59,13 +59,14 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Instância</th>
+                                <th>Uso</th>
                                 <th>Dono</th>
                                 <th>Status</th>
-                                <th class="text-end" width="180">Ações</th>
+                                <th class="text-end" width="230">Ações</th>
                             </tr>
                         </thead>
                         <tbody id="instances-tbody">
-                            <tr><td colspan="4" class="text-center text-muted py-3">Carregando...</td></tr>
+                            <tr><td colspan="5" class="text-center text-muted py-3">Carregando...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -100,16 +101,25 @@
                         </p>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <p class="mb-0"><strong>Instance Name:</strong><br><code>{{ config('whatsapp.instance_name') ?: 'Não configurado' }}</code></p>
+                        <p class="mb-0">
+                            <strong>Instância em uso:</strong><br>
+                            <code id="instancia-em-uso">{{ $instanciaSelecionada ?: 'Não selecionada' }}</code>
+                        </p>
                     </div>
                     <div class="col-md-4 mb-2">
                         <p class="mb-0"><strong>API Key:</strong><br><code>{{ config('whatsapp.api_key') ? (substr(config('whatsapp.api_key'), 0, 10) . '...') : 'Não configurado' }}</code></p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <p class="mb-0"><strong>Instância padrão (.env):</strong><br><code>{{ $instanciaPadrao ?: 'Não configurada' }}</code></p>
                     </div>
                 </div>
                 <div class="alert alert-success mt-3 mb-0">
                     <strong><i class="bx bx-info-circle me-1"></i> Configuração Evolution API:</strong><br>
                     <small>
                         A Evolution API usa <strong>apikey</strong> no header e <strong>Instance Name</strong> no path.
+                        Você pode selecionar a instância ativa na tabela acima sem alterar a API Key.
                         @if(config('whatsapp.api_key'))
                             <strong>API Key:</strong> {{ substr(config('whatsapp.api_key'), 0, 10) }}...
                         @endif
@@ -125,33 +135,38 @@
     <div class="col-12 mb-4">
         <section class="card">
             <header class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="bx bx-link me-2"></i> Configuração de Webhooks</h5>
+                <h5 class="mb-0"><i class="bx bx-link me-2"></i> Configuração de Webhooks (Evolution API)</h5>
             </header>
             <div class="card-body">
                 <div class="alert alert-info">
                     <strong><i class="bx bx-info-circle me-1"></i> Sobre os Webhooks:</strong>
                     <ul class="mb-0 mt-2">
-                        <li><strong>Webhook Received:</strong> URL para receber mensagens recebidas (respostas de enquetes, mensagens de texto, etc.)</li>
-                        <li><strong>Webhook Delivery:</strong> URL para receber confirmações de envio de mensagens</li>
-                        <li>Ambos devem ser URLs públicas acessíveis pela internet</li>
+                        <li><strong>Mensagens recebidas:</strong> respostas de enquetes (botões), textos — evento <code>MESSAGES_UPSERT</code></li>
+                        <li><strong>Confirmações de envio:</strong> opcional — eventos <code>MESSAGES_UPDATE</code> / <code>SEND_MESSAGE</code></li>
+                        <li>Em desenvolvimento: <code>ultrahook webhook http://127.0.0.1:8000/webhook</code></li>
+                        <li>O Laravel recebe em <code>POST /webhook</code></li>
                     </ul>
                 </div>
                 <div class="row g-3">
                     <div class="col-md-6">
-                        <label class="form-label"><i class="bx bx-inbox me-1"></i> Webhook para Receber Mensagens</label>
+                        <label class="form-label"><i class="bx bx-inbox me-1"></i> Webhook — Mensagens Recebidas</label>
                         <div class="input-group">
-                            <input type="url" class="form-control" id="webhook_received_url" placeholder="https://seu-dominio.com/webhook/whatsapp" value="{{ config('whatsapp.webhook_url') ?: url('/notificacoes/webhook/whatsapp') }}">
+                            <input type="url" class="form-control" id="webhook_received_url"
+                                   placeholder="https://arkcoredev-webhook.ultrahook.com"
+                                   value="{{ config('whatsapp.webhook_url') ?: url('/webhook') }}">
                             <button type="button" class="btn btn-primary" onclick="configurarWebhookReceived()"><i class="bx bx-save me-1"></i> Configurar</button>
                         </div>
-                        <small class="text-muted">URL onde a Z-API enviará mensagens recebidas</small>
+                        <small class="text-muted">Evolution API → <code>POST /webhook/set/{instancia}</code></small>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label"><i class="bx bx-check-circle me-1"></i> Webhook para Confirmações de Envio</label>
+                        <label class="form-label"><i class="bx bx-check-circle me-1"></i> Webhook — Confirmações (opcional)</label>
                         <div class="input-group">
-                            <input type="url" class="form-control" id="webhook_delivery_url" placeholder="https://seu-dominio.com/webhook/whatsapp/delivery" value="{{ url('/notificacoes/webhook/whatsapp/delivery') }}">
-                            <button type="button" class="btn btn-primary" onclick="configurarWebhookDelivery()"><i class="bx bx-save me-1"></i> Configurar</button>
+                            <input type="url" class="form-control" id="webhook_delivery_url"
+                                   placeholder="https://seudominio.com/webhook/delivery"
+                                   value="{{ url('/webhook/delivery') }}">
+                            <button type="button" class="btn btn-outline-primary" onclick="configurarWebhookDelivery()"><i class="bx bx-save me-1"></i> Configurar</button>
                         </div>
-                        <small class="text-muted">URL onde a Z-API enviará confirmações de envio</small>
+                        <small class="text-muted">Opcional — só se quiser rastrear status de envio</small>
                     </div>
                 </div>
                 <div id="webhook-result" class="mt-3"></div>
@@ -233,6 +248,7 @@
 (function() {
     var base = '{{ url("notificacoes") }}';
     var csrf = document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    var instanciaAtiva = @json($instanciaSelecionada ?? '');
 
     function addLog(message, type) {
         var now = new Date().toLocaleTimeString('pt-BR');
@@ -346,32 +362,86 @@
 
     window.carregarInstancias = function() {
         var tbody = document.getElementById('instances-tbody');
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Carregando...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Carregando...</td></tr>';
         fetch(base + '/config/instances')
             .then(function(r) { return r.json(); })
             .then(function(res) {
                 if (!res.success) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">' + (res.error || 'Erro') + '</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger py-3">' + (res.error || 'Erro') + '</td></tr>';
                     return;
+                }
+                if (res.selected) {
+                    instanciaAtiva = res.selected;
+                }
+                var instanciaEl = document.getElementById('instancia-em-uso');
+                if (instanciaEl) {
+                    instanciaEl.textContent = instanciaAtiva || 'Não selecionada';
                 }
                 var data = Array.isArray(res.data) ? res.data : (res.data && res.data.instances) || [];
                 if (!data.length) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Nenhuma instância (use o .env para Z-API).</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Nenhuma instância disponível.</td></tr>';
                     return;
                 }
                 var html = '';
                 data.forEach(function(it) {
                     var inst = it.instance || it;
                     var name = inst.instanceName || '—';
+                    var safeName = String(name).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                     var owner = inst.owner || '—';
                     var status = (inst.status || 'unknown').toLowerCase();
+                    var selected = !!inst.selected || (instanciaAtiva && instanciaAtiva === name);
                     var badgeClass = (status === 'open' || status === 'connected' || status === 'conectado' || status === 'active') ? 'bg-success' : 'bg-warning';
-                    html += '<tr><td>' + name + '</td><td>' + owner + '</td><td><span class="badge ' + badgeClass + '">' + status + '</span></td><td class="text-end"><button class="btn btn-sm btn-outline-primary" onclick="reiniciarInstancia(\'' + name + '\')"><i class="bx bx-reset me-1"></i> Reiniciar</button></td></tr>';
+                    var usoHtml = selected
+                        ? '<span class="badge bg-primary">Ativa</span>'
+                        : '<span class="badge bg-light text-dark">Disponível</span>';
+                    var selectBtn = selected
+                        ? '<button class="btn btn-sm btn-primary me-1" disabled><i class="bx bx-check me-1"></i> Em uso</button>'
+                        : '<button class="btn btn-sm btn-outline-success me-1" onclick="selecionarInstancia(\'' + safeName + '\')"><i class="bx bx-target-lock me-1"></i> Usar esta</button>';
+                    html += '<tr><td>' + name + '</td><td>' + usoHtml + '</td><td>' + owner + '</td><td><span class="badge ' + badgeClass + '">' + status + '</span></td><td class="text-end">' + selectBtn + '<button class="btn btn-sm btn-outline-primary" onclick="reiniciarInstancia(\'' + safeName + '\')"><i class="bx bx-reset me-1"></i> Reiniciar</button></td></tr>';
                 });
                 tbody.innerHTML = html;
             })
             .catch(function() {
-                tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Não foi possível carregar.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">Não foi possível carregar.</td></tr>';
+            });
+    };
+
+    window.selecionarInstancia = function(instanceName) {
+        if (!instanceName) { return; }
+        var resultEl = document.getElementById('teste-result');
+        if (resultEl) {
+            resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner-border spinner-border-sm me-2"></span>Alterando instância ativa...</div>';
+        }
+        fetch(base + '/config/instances/' + encodeURIComponent(instanceName) + '/select', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        })
+            .then(function(r) { return r.json().catch(function() { return {}; }); })
+            .then(function(res) {
+                if (res.success) {
+                    instanciaAtiva = (res.data && res.data.instanceName) || instanceName;
+                    var instanciaEl = document.getElementById('instancia-em-uso');
+                    if (instanciaEl) {
+                        instanciaEl.textContent = instanciaAtiva;
+                    }
+                    if (resultEl) {
+                        resultEl.innerHTML = '<div class="alert alert-success"><i class="bx bx-check-circle me-2"></i>' + (res.message || 'Instância ativa alterada.') + '</div>';
+                    }
+                    addLog('Instância ativa alterada para ' + instanciaAtiva, 'success');
+                    verificarStatus();
+                    carregarInstancias();
+                    return;
+                }
+                if (resultEl) {
+                    resultEl.innerHTML = '<div class="alert alert-danger"><i class="bx bx-error-circle me-2"></i>' + (res.error || 'Erro ao selecionar instância') + '</div>';
+                }
+                addLog('Erro ao selecionar instância: ' + (res.error || ''), 'danger');
+            })
+            .catch(function() {
+                if (resultEl) {
+                    resultEl.innerHTML = '<div class="alert alert-danger">Erro de conexão ao selecionar instância.</div>';
+                }
+                addLog('Erro de conexão ao selecionar instância', 'danger');
             });
     };
 

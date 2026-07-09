@@ -14,6 +14,7 @@ class DiscipleshipFeedbackController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', DiscipleshipFeedback::class);
         $memberId = $request->get('discipleship_member_id');
         
         $query = DiscipleshipFeedback::with(['discipleshipMember.member', 'autor']);
@@ -32,6 +33,7 @@ class DiscipleshipFeedbackController extends Controller
      */
     public function create(Request $request)
     {
+        $this->authorize('create', DiscipleshipFeedback::class);
         $memberId = $request->get('discipleship_member_id');
         $members = DiscipleshipMember::ativos()->with('member')->get();
         
@@ -43,6 +45,7 @@ class DiscipleshipFeedbackController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', DiscipleshipFeedback::class);
         $validated = $request->validate([
             'discipleship_member_id' => 'required|exists:discipleship_members,id',
             'visibilidade' => 'required|in:discipulador,pastor,admin',
@@ -66,6 +69,7 @@ class DiscipleshipFeedbackController extends Controller
      */
     public function edit(DiscipleshipFeedback $feedback)
     {
+        $this->authorize('update', $feedback);
         $members = DiscipleshipMember::ativos()->with('member')->get();
         
         return view('discipleship.feedbacks.edit', compact('feedback', 'members'));
@@ -76,6 +80,7 @@ class DiscipleshipFeedbackController extends Controller
      */
     public function update(Request $request, DiscipleshipFeedback $feedback)
     {
+        $this->authorize('update', $feedback);
         $validated = $request->validate([
             'discipleship_member_id' => 'required|exists:discipleship_members,id',
             'visibilidade' => 'required|in:discipulador,pastor,admin',
@@ -97,6 +102,7 @@ class DiscipleshipFeedbackController extends Controller
      */
     public function destroy(DiscipleshipFeedback $feedback)
     {
+        $this->authorize('delete', $feedback);
         $memberId = $feedback->discipleship_member_id;
         $feedback->delete();
 

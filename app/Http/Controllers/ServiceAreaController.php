@@ -16,6 +16,7 @@ class ServiceAreaController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', ServiceArea::class);
         $query = ServiceArea::with('leader');
 
         // Busca
@@ -43,6 +44,7 @@ class ServiceAreaController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', ServiceArea::class);
         $members = Member::orderBy('name')->get();
         $departments = Department::active()
             ->with(['members' => function ($query) {
@@ -59,6 +61,7 @@ class ServiceAreaController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', ServiceArea::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -115,6 +118,7 @@ class ServiceAreaController extends Controller
      */
     public function show(ServiceArea $area)
     {
+        $this->authorize('view', $area);
         $area->load('leader', 'volunteers.member');
         
         return view('service-areas.show', compact('area'));
@@ -125,6 +129,7 @@ class ServiceAreaController extends Controller
      */
     public function edit(ServiceArea $area)
     {
+        $this->authorize('update', $area);
         $members = Member::orderBy('name')->get();
         $departments = Department::active()
             ->with(['members' => function ($query) {
@@ -142,6 +147,7 @@ class ServiceAreaController extends Controller
      */
     public function update(Request $request, ServiceArea $area)
     {
+        $this->authorize('update', $area);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -198,6 +204,7 @@ class ServiceAreaController extends Controller
      */
     public function destroy(ServiceArea $area)
     {
+        $this->authorize('delete', $area);
         $area->delete();
 
         return redirect()->route('voluntarios.areas.index')

@@ -64,6 +64,7 @@ class MoriahScheduleController extends Controller
      */
     public function create(Request $request)
     {
+        $this->authorize('moriah.manage');
         $month = $request->get('month', Carbon::now()->month);
         $year = $request->get('year', Carbon::now()->year);
 
@@ -106,6 +107,7 @@ class MoriahScheduleController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('moriah.manage');
         $request->validate([
             'event_id' => 'nullable|exists:events,id',
             'title' => 'required|string|max:255',
@@ -276,6 +278,7 @@ class MoriahScheduleController extends Controller
      */
     public function edit($id)
     {
+        $this->authorize('moriah.manage');
         $moriahSchedule = MoriahSchedule::with(['event', 'members.moriahFunctions', 'songs'])->findOrFail($id);
         
         $month = Carbon::parse($moriahSchedule->date)->month;
@@ -342,6 +345,7 @@ class MoriahScheduleController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $this->authorize('moriah.manage');
         $moriahSchedule = MoriahSchedule::findOrFail($id);
         
         $request->validate([
@@ -429,6 +433,7 @@ class MoriahScheduleController extends Controller
      */
     public function destroy($id)
     {
+        $this->authorize('moriah.manage');
         $moriahSchedule = MoriahSchedule::findOrFail($id);
         $moriahSchedule->delete();
         return redirect()->route('moriah.schedules.index')
@@ -440,6 +445,7 @@ class MoriahScheduleController extends Controller
      */
     public function confirmMember($pivotId)
     {
+        $this->authorize('moriah.manage');
         try {
             $scheduleMember = DB::table('moriah_schedule_members')
                 ->where('id', $pivotId)
@@ -543,6 +549,7 @@ class MoriahScheduleController extends Controller
      */
     public function rejectMember($pivotId)
     {
+        $this->authorize('moriah.manage');
         try {
             $scheduleMember = DB::table('moriah_schedule_members')
                 ->where('id', $pivotId)
@@ -630,6 +637,7 @@ class MoriahScheduleController extends Controller
      */
     public function generatePdf($id)
     {
+        $this->authorize('moriah.manage');
         $moriahSchedule = MoriahSchedule::with(['event', 'members.moriahFunctions', 'songs'])->findOrFail($id);
         
         // Verificar se a escala está publicada
@@ -729,6 +737,7 @@ class MoriahScheduleController extends Controller
 
     public function updateMemberStatus(Request $request, $pivotId)
     {
+        $this->authorize('moriah.manage');
         // Verificar se é admin
         $user = auth()->user();
         if (!$user || !$user->is_admin) {

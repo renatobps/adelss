@@ -74,7 +74,7 @@
 
 <!-- Modal Criar/Editar Função -->
 <div class="modal fade" id="funcaoModal" tabindex="-1" aria-labelledby="funcaoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="funcaoModalLabel">Nova Função</h5>

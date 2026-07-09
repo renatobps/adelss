@@ -22,6 +22,7 @@ class TurmasController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Turma::class);
         $user = Auth::user();
         $isAdmin = $user?->is_admin ?? false;
         $member = $user?->member;
@@ -86,6 +87,7 @@ class TurmasController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', Turma::class);
         $schools = School::orderBy('name')->get();
         return view('ensino.turmas.create', compact('schools'));
     }
@@ -95,6 +97,7 @@ class TurmasController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Turma::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'school_id' => 'required|exists:schools,id',
@@ -114,6 +117,7 @@ class TurmasController extends Controller
      */
     public function show(Turma $turma)
     {
+        $this->authorize('view', $turma);
         try {
             $turma->load([
                 'school',
@@ -168,6 +172,7 @@ class TurmasController extends Controller
      */
     public function edit(Turma $turma)
     {
+        $this->authorize('update', $turma);
         $schools = School::orderBy('name')->get();
         return view('ensino.turmas.edit', compact('turma', 'schools'));
     }
@@ -177,6 +182,7 @@ class TurmasController extends Controller
      */
     public function update(Request $request, Turma $turma)
     {
+        $this->authorize('update', $turma);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'school_id' => 'required|exists:schools,id',
@@ -196,6 +202,7 @@ class TurmasController extends Controller
      */
     public function destroy(Turma $turma)
     {
+        $this->authorize('delete', $turma);
         $turma->delete();
 
         return redirect()->route('ensino.turmas.index')
@@ -207,6 +214,7 @@ class TurmasController extends Controller
      */
     public function storeStudents(Request $request, Turma $turma)
     {
+        $this->authorize('update', $turma);
         $validated = $request->validate([
             'member_ids' => 'required|array',
             'member_ids.*' => 'exists:members,id',
@@ -223,6 +231,7 @@ class TurmasController extends Controller
      */
     public function removeStudent(Turma $turma, Member $member)
     {
+        $this->authorize('update', $turma);
         $turma->students()->detach($member->id);
 
         return redirect()->route('ensino.turmas.show', $turma)
@@ -234,6 +243,7 @@ class TurmasController extends Controller
      */
     public function storeDiscipline(Request $request, Turma $turma)
     {
+        $this->authorize('update', $turma);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'teacher_ids' => 'nullable|array',
@@ -258,6 +268,7 @@ class TurmasController extends Controller
      */
     public function updateDiscipline(Request $request, Turma $turma, Discipline $discipline)
     {
+        $this->authorize('update', $turma);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'teacher_ids' => 'nullable|array',
@@ -281,6 +292,7 @@ class TurmasController extends Controller
      */
     public function destroyDiscipline(Turma $turma, Discipline $discipline)
     {
+        $this->authorize('update', $turma);
         $discipline->delete();
 
         return redirect()->route('ensino.turmas.show', $turma)
@@ -292,6 +304,7 @@ class TurmasController extends Controller
      */
     public function storeLesson(Request $request, Turma $turma)
     {
+        $this->authorize('manageLesson', $turma);
         $validated = $request->validate([
             'lesson_date' => 'required|date',
             'discipline_id' => 'nullable|exists:disciplines,id',
@@ -329,6 +342,7 @@ class TurmasController extends Controller
      */
     public function showLesson(Turma $turma, Lesson $lesson)
     {
+        $this->authorize('view', $turma);
         // Implementar visualização/edição da aula
         return redirect()->route('ensino.turmas.show', $turma);
     }
@@ -338,6 +352,7 @@ class TurmasController extends Controller
      */
     public function updateLesson(Request $request, Turma $turma, Lesson $lesson)
     {
+        $this->authorize('manageLesson', $turma);
         // Implementar atualização da aula
         return redirect()->route('ensino.turmas.show', $turma);
     }
@@ -347,6 +362,7 @@ class TurmasController extends Controller
      */
     public function destroyLesson(Turma $turma, Lesson $lesson)
     {
+        $this->authorize('manageLesson', $turma);
         $lesson->delete();
 
         return redirect()->route('ensino.turmas.show', $turma)
@@ -358,6 +374,7 @@ class TurmasController extends Controller
      */
     public function storeFile(Request $request, Turma $turma)
     {
+        $this->authorize('manageFile', $turma);
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'type' => 'required|in:file,text,external_link',
@@ -395,6 +412,7 @@ class TurmasController extends Controller
      */
     public function destroyFile(Turma $turma, ClassFile $file)
     {
+        $this->authorize('manageFile', $turma);
         if ($file->file_path && Storage::disk('public')->exists($file->file_path)) {
             Storage::disk('public')->delete($file->file_path);
         }
@@ -410,6 +428,7 @@ class TurmasController extends Controller
      */
     public function frequencyMonthly(Request $request, Turma $turma)
     {
+        $this->authorize('view', $turma);
         $month = $request->input('month', now()->month);
         $year = $request->input('year', now()->year);
         $disciplineId = $request->input('discipline_id');

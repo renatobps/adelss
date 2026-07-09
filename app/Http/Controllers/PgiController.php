@@ -8,6 +8,7 @@ use App\Models\Member;
 use App\Services\EnqueteService;
 use App\Services\NotificacaoService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class PgiController extends Controller
@@ -17,6 +18,8 @@ class PgiController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Pgi::class);
+
         $user = auth()->user();
         $isAdmin = $user?->is_admin ?? false;
         $member = $user?->member;
@@ -87,6 +90,8 @@ class PgiController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', Pgi::class);
+
         $members = Member::orderBy('name')->get();
         return view('pgis.create', compact('members'));
     }
@@ -96,6 +101,8 @@ class PgiController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Pgi::class);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'opening_date' => 'nullable|date',
@@ -150,23 +157,8 @@ class PgiController extends Controller
      */
     public function show(Pgi $pgi)
     {
-        $user = auth()->user();
-        $isAdmin = $user?->is_admin ?? false;
-        $member = $user?->member;
-        
-        // Se não for admin, verificar se faz parte deste PGI ou se é líder
-        if (!$isAdmin && $member) {
-            // Verificar se tem permissão, se faz parte do PGI ou se é líder/líder em treinamento
-            $hasPermission = $user->hasPermission('pgis.index.view') || 
-                            $user->hasPermission('pgis.index.manage');
-            $isMemberOfPgi = $member->pgi_id == $pgi->id;
-            $isLeader = $pgi->isLeader($member);
-            
-            if (!$hasPermission && !$isMemberOfPgi && !$isLeader) {
-                abort(403, 'Acesso negado. Você não tem permissão para visualizar este PGI.');
-            }
-        }
-        
+        $this->authorize('view', $pgi);
+
         $pgi->load(['leader1', 'leader2', 'leaderTraining1', 'leaderTraining2', 'members']);
         
         // Carregar reuniões para o dashboard
@@ -199,6 +191,8 @@ class PgiController extends Controller
      */
     public function edit(Pgi $pgi)
     {
+        $this->authorize('update', $pgi);
+
         $members = Member::orderBy('name')->get();
         return view('pgis.edit', compact('pgi', 'members'));
     }
@@ -208,6 +202,8 @@ class PgiController extends Controller
      */
     public function update(Request $request, Pgi $pgi)
     {
+        $this->authorize('update', $pgi);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
@@ -272,22 +268,22 @@ class PgiController extends Controller
      */
     public function destroy(Pgi $pgi)
     {
+        $this->authorize('delete', $pgi);
+
         try {
-            // Verifica se há membros vinculados a este PGI
-            if ($pgi->members()->count() > 0) {
-                return redirect()->route('pgis.index')
-                    ->with('error', 'Não é possível excluir este PGI pois existem membros vinculados a ele.');
-            }
+            DB::transaction(function () use ($pgi) {
+                // Soft delete não dispara onDelete(set null) no banco; desvincula manualmente.
+                $pgi->members()->update(['pgi_id' => null]);
 
-            // Remove logo e banner se existirem
-            if ($pgi->logo_url) {
-                Storage::disk('public')->delete($pgi->logo_url);
-            }
-            if ($pgi->banner_url) {
-                Storage::disk('public')->delete($pgi->banner_url);
-            }
+                if ($pgi->logo_url) {
+                    Storage::disk('public')->delete($pgi->logo_url);
+                }
+                if ($pgi->banner_url) {
+                    Storage::disk('public')->delete($pgi->banner_url);
+                }
 
-            $pgi->delete();
+                $pgi->delete();
+            });
 
             return redirect()->route('pgis.index')
                 ->with('success', 'PGI excluído com sucesso!');
@@ -302,6 +298,8 @@ class PgiController extends Controller
      */
     public function attachMembers(Request $request, Pgi $pgi)
     {
+        $this->authorize('attachMembers', $pgi);
+
         $validated = $request->validate([
             'members' => 'required|array|min:1',
             'members.*' => 'exists:members,id',
@@ -330,6 +328,8 @@ class PgiController extends Controller
      */
     public function detachMember(Pgi $pgi, Member $member)
     {
+        $this->authorize('detachMember', $pgi);
+
         if ($member->pgi_id == $pgi->id) {
             $member->pgi_id = null;
             $member->save();
@@ -347,6 +347,8 @@ class PgiController extends Controller
      */
     public function updateLogo(Request $request, Pgi $pgi)
     {
+        $this->authorize('updateLogo', $pgi);
+
         $validated = $request->validate([
             'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ], [
@@ -374,6 +376,8 @@ class PgiController extends Controller
      */
     public function updateBanner(Request $request, Pgi $pgi)
     {
+        $this->authorize('updateBanner', $pgi);
+
         $validated = $request->validate([
             'banner' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ], [
@@ -401,20 +405,14 @@ class PgiController extends Controller
      */
     public function enviarNotificacao(Request $request, Pgi $pgi)
     {
+        $this->authorize('sendNotification', $pgi);
+
         $request->validate([
             'tipo_envio' => 'required|in:texto,imagem,video,enquete',
             'mensagem' => 'nullable|string|max:4096',
             'arquivo' => 'nullable|file|mimes:jpeg,jpg,png,webp,mp4,mov,avi|max:51200',
             'enquete_id' => 'nullable|integer|exists:notificacao_enquetes,id',
         ]);
-
-        $user = auth()->user();
-        $isAdmin = $user?->is_admin ?? false;
-        $member = $user?->member;
-        $isLeader = $member && $pgi->isLeader($member);
-        if (! $isAdmin && ! $isLeader) {
-            abort(403, 'Apenas administradores ou líderes podem enviar notificações para o PGI.');
-        }
 
         $tipo = $request->input('tipo_envio');
         $mensagem = (string) $request->input('mensagem', '');

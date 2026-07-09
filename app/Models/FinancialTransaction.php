@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FinancialTransaction extends Model
@@ -27,9 +29,13 @@ class FinancialTransaction extends Model
         'account_id',
         'cost_center_id',
         'payment_type',
+        'installments_count',
+        'installment_number',
+        'parent_transaction_id',
         'document_number',
         'notes',
         'competence_date',
+        'created_by',
     ];
 
     protected $casts = [
@@ -86,6 +92,36 @@ class FinancialTransaction extends Model
     public function attachments()
     {
         return $this->hasMany(FinancialTransactionAttachment::class, 'transaction_id');
+    }
+
+    public function paymentTransactions(): HasMany
+    {
+        return $this->hasMany(PaymentTransaction::class, 'financial_transaction_id');
+    }
+
+    public function latestPaymentTransaction(): HasOne
+    {
+        return $this->hasOne(PaymentTransaction::class, 'financial_transaction_id')->latestOfMany();
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function parentTransaction()
+    {
+        return $this->belongsTo(self::class, 'parent_transaction_id');
+    }
+
+    public function childInstallments(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_transaction_id');
+    }
+
+    public function notificationLogs(): HasMany
+    {
+        return $this->hasMany(FinancialNotificationLog::class, 'financial_transaction_id');
     }
 
     /**

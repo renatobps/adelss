@@ -14,8 +14,14 @@ class FinancialCategory extends Model
 
     protected $fillable = [
         'name',
+        'slug',
         'description',
         'type',
+        'sends_receipt',
+    ];
+
+    protected $casts = [
+        'sends_receipt' => 'boolean',
     ];
 
     /**

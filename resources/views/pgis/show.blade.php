@@ -374,6 +374,7 @@
             </header>
             <div class="card-body" style="max-height: 400px; overflow-y: auto;">
                 @if($meetings->count() > 0)
+                    <div class="table-responsive">
                     <table class="table table-sm mb-0">
                         <thead>
                             <tr>
@@ -395,6 +396,7 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 @else
                     <p class="text-muted text-center py-4">Nenhuma reunião cadastrada</p>
                 @endif
@@ -476,7 +478,7 @@
 <!-- Modal: Adicionar Membro -->
 @if($canEditPgis)
 <div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addMemberModalLabel">
@@ -545,7 +547,7 @@
 <!-- Modal: Nova Reunião -->
 @if($canCreateMeetings)
 <div class="modal fade" id="newMeetingModal" tabindex="-1" aria-labelledby="newMeetingModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="newMeetingModalLabel">
@@ -688,7 +690,7 @@
 <!-- Modal: Trocar Banner -->
 @if($canEditPgis)
 <div class="modal fade" id="updateBannerModal" tabindex="-1" aria-labelledby="updateBannerModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="updateBannerModalLabel">

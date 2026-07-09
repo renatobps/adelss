@@ -19,6 +19,8 @@
     $canEditDespesas = $isAdmin || $user->hasPermission('financial.despesas.edit') || $user->hasPermission('financial.despesas.manage');
     $canDeleteReceitas = $isAdmin || $user->hasPermission('financial.receitas.delete') || $user->hasPermission('financial.receitas.manage');
     $canDeleteDespesas = $isAdmin || $user->hasPermission('financial.despesas.delete') || $user->hasPermission('financial.despesas.manage');
+    $canViewReceitas = $isAdmin || $user->hasPermission('financial.receitas.view') || $user->hasPermission('financial.receitas.manage');
+    $whatsappReceiptEnabled = config('financial.whatsapp.dizimo_receipt_enabled', true);
 @endphp
 
 <!-- Header -->
@@ -179,12 +181,12 @@
                 </button>
                 @if($canCreateReceitas)
                 <button type="button" class="btn btn-success btn-sm me-1" data-bs-toggle="modal" data-bs-target="#createReceitaModal">
-                    <i class="bx bx-plus me-1"></i>+ Adicionar receita
+                    <i class="bx bx-plus me-1"></i> Adicionar receita
                 </button>
                 @endif
                 @if($canCreateDespesas)
                 <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#createDespesaModal">
-                    <i class="bx bx-plus me-1"></i>+ Adicionar despesa
+                    <i class="bx bx-plus me-1"></i> Adicionar despesa
                 </button>
                 @endif
             </div>
@@ -268,6 +270,20 @@
                                     @if($transaction->is_paid)
                                         <i class="bx bx-check-circle text-success ms-1"></i>
                                     @endif
+                                    @php
+                                        $latestPayment = $transaction->latestPaymentTransaction;
+                                    @endphp
+                                    @if($latestPayment)
+                                        @php
+                                            $paymentStatus = strtolower((string) $latestPayment->status);
+                                            $paymentBadge = $paymentStatus === 'approved'
+                                                ? 'bg-success'
+                                                : (in_array($paymentStatus, ['rejected', 'cancelled', 'refunded', 'charged_back'], true) ? 'bg-danger' : 'bg-warning text-dark');
+                                        @endphp
+                                        <div class="mt-1">
+                                            <span class="badge {{ $paymentBadge }}">MP: {{ $paymentStatus }}</span>
+                                        </div>
+                                    @endif
                                 </td>
                                 <td>
                                     @if($transaction->type === 'receita')
@@ -296,11 +312,28 @@
                                                 title="Imprimir">
                                             <i class="bx bx-printer"></i>
                                         </button>
+                                        @if($canViewReceitas && $transaction->type === 'receita' && $transaction->is_paid && $transaction->member_id)
+                                        <button type="button" class="btn btn-sm btn-outline-success send-receipt-whatsapp"
+                                                data-transaction-id="{{ $transaction->id }}"
+                                                title="Enviar comprovante por WhatsApp">
+                                            <i class="bx bxl-whatsapp"></i>
+                                        </button>
+                                        @endif
                                         @if($canCreateReceitas || $canCreateDespesas)
                                         <button type="button" class="btn btn-sm btn-outline-secondary duplicate-transaction" 
                                                 data-transaction-id="{{ $transaction->id }}" 
                                                 title="Duplicar">
                                             <i class="bx bx-copy"></i>
+                                        </button>
+                                        @endif
+                                        @if($transaction->type === 'receita' && !$transaction->is_paid)
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-success mp-open-checkout"
+                                                data-transaction-id="{{ $transaction->id }}"
+                                                data-transaction-description="{{ $transaction->description }}"
+                                                data-transaction-amount="{{ number_format((float) $transaction->amount, 2, '.', '') }}"
+                                                title="Receber com Mercado Pago">
+                                            <i class="bx bx-credit-card"></i>
                                         </button>
                                         @endif
                                         @if($canDelete)
@@ -389,7 +422,7 @@
 <!-- Modal: Criar Receita -->
 @if($canCreateReceitas)
 <div class="modal fade" id="createReceitaModal" tabindex="-1" aria-labelledby="createReceitaModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header" style="background-color: #007bff; color: white;">
                 <h5 class="modal-title" id="createReceitaModalLabel">
@@ -518,7 +551,23 @@
                             <input type="date" class="form-control" id="receita_competence" name="competence_date" 
                                    value="{{ old('competence_date') }}">
                         </div>
+                        <div class="col-md-4 mb-3 receita-due-date-field d-none">
+                            <label for="receita_due_date" class="form-label">Vencimento</label>
+                            <input type="date" class="form-control" id="receita_due_date" name="due_date"
+                                   value="{{ old('due_date') }}">
+                        </div>
                     </div>
+
+                    @if($whatsappReceiptEnabled)
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="receita_send_whatsapp" name="send_whatsapp_receipt" value="1" checked>
+                            <label class="form-check-label" for="receita_send_whatsapp">
+                                Enviar comprovante por WhatsApp ao membro (dízimo/oferta)
+                            </label>
+                        </div>
+                    </div>
+                    @endif
 
                     <div class="mb-3">
                         <label for="receita_notes" class="form-label">Anotações</label>
@@ -528,11 +577,18 @@
 
                     <div class="mb-3">
                         <label class="form-label">Arquivos <span id="receita_file_count">0</span>/5</label>
-                        <button type="button" class="btn btn-primary btn-sm mb-2" onclick="document.getElementById('receita_attachments').click()">
-                            <i class="bx bx-paperclip me-1"></i>Anexar arquivo (Máx. 10MB/arquivo)
-                        </button>
-                        <input type="file" class="d-none" id="receita_attachments" name="attachments[]" 
-                               multiple accept="image/*,application/pdf" capture="environment">
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('receita_attachments_upload').click()">
+                                <i class="bx bx-upload me-1"></i>Anexar arquivo
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm" onclick="document.getElementById('receita_attachments_camera').click()">
+                                <i class="bx bx-camera me-1"></i>Tirar foto
+                            </button>
+                        </div>
+                        <small class="text-muted d-block mb-2">Imagens ou PDF. Máx. 10MB por arquivo. No celular, use &quot;Tirar foto&quot; para abrir a câmera.</small>
+                        <input type="file" class="d-none" id="receita_attachments_upload" multiple accept="image/*,application/pdf">
+                        <input type="file" class="d-none" id="receita_attachments_camera" accept="image/*" capture="environment">
+                        <input type="file" class="d-none" id="receita_attachments" name="attachments[]" multiple>
                         <div id="receita_files_preview" class="mt-2"></div>
                     </div>
                 </div>
@@ -553,7 +609,7 @@
 
 <!-- Modal: Editar Transação -->
 <div class="modal fade" id="editTransactionModal" tabindex="-1" aria-labelledby="editTransactionModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header" style="background-color: #007bff; color: white;">
                 <h5 class="modal-title" id="editTransactionModalLabel">
@@ -685,7 +741,22 @@
                             <label for="edit_competence_date" class="form-label">Competência</label>
                             <input type="date" class="form-control" id="edit_competence_date" name="competence_date">
                         </div>
+                        <div class="col-md-4 mb-3" id="edit_due_date_wrapper">
+                            <label for="edit_due_date" class="form-label">Vencimento</label>
+                            <input type="date" class="form-control" id="edit_due_date" name="due_date">
+                        </div>
                     </div>
+
+                    @if($whatsappReceiptEnabled)
+                    <div class="mb-3" id="edit_whatsapp_receipt_wrapper" style="display: none;">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="edit_send_whatsapp" name="send_whatsapp_receipt" value="1" checked>
+                            <label class="form-check-label" for="edit_send_whatsapp">
+                                Enviar comprovante por WhatsApp ao marcar como recebido
+                            </label>
+                        </div>
+                    </div>
+                    @endif
 
                     <div class="mb-3">
                         <label for="edit_notes" class="form-label">Anotações</label>
@@ -695,11 +766,18 @@
 
                     <div class="mb-3">
                         <label class="form-label">Arquivos <span id="edit_file_count">0</span>/5</label>
-                        <button type="button" class="btn btn-primary btn-sm mb-2" onclick="document.getElementById('edit_attachments').click()">
-                            <i class="bx bx-paperclip me-1"></i>Anexar arquivo (Máx. 10MB/arquivo)
-                        </button>
-                        <input type="file" class="d-none" id="edit_attachments" name="attachments[]" 
-                               multiple accept="image/*,application/pdf">
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('edit_attachments_upload').click()">
+                                <i class="bx bx-upload me-1"></i>Anexar arquivo
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm" onclick="document.getElementById('edit_attachments_camera').click()">
+                                <i class="bx bx-camera me-1"></i>Tirar foto
+                            </button>
+                        </div>
+                        <small class="text-muted d-block mb-2">Imagens ou PDF. Máx. 10MB por arquivo. No celular, use &quot;Tirar foto&quot; para abrir a câmera.</small>
+                        <input type="file" class="d-none" id="edit_attachments_upload" multiple accept="image/*,application/pdf">
+                        <input type="file" class="d-none" id="edit_attachments_camera" accept="image/*" capture="environment">
+                        <input type="file" class="d-none" id="edit_attachments" name="attachments[]" multiple>
                         <div id="edit_files_preview" class="mt-2"></div>
                     </div>
                 </div>
@@ -717,7 +795,7 @@
 <!-- Modal: Criar Despesa -->
 @if($canCreateDespesas)
 <div class="modal fade" id="createDespesaModal" tabindex="-1" aria-labelledby="createDespesaModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header" style="background-color: #dc3545; color: white;">
                 <h5 class="modal-title" id="createDespesaModalLabel">
@@ -823,6 +901,20 @@
                         </div>
                     </div>
 
+                    <div class="row d-none" id="despesa_installments_wrapper">
+                        <div class="col-md-4 mb-3">
+                            <label for="despesa_installments_count" class="form-label">Em quantas vezes? <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control @error('installments_count') is-invalid @enderror"
+                                   id="despesa_installments_count" name="installments_count"
+                                   min="2" max="60" value="{{ old('installments_count', 2) }}"
+                                   placeholder="Ex: 3">
+                            @error('installments_count')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <small class="text-muted">O valor total será dividido igualmente. As parcelas serão lançadas nos meses seguintes, no mesmo dia.</small>
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label for="despesa_document" class="form-label">Doc nº</label>
@@ -834,6 +926,11 @@
                             <input type="date" class="form-control" id="despesa_competence" name="competence_date" 
                                    value="{{ old('competence_date') }}">
                         </div>
+                        <div class="col-md-4 mb-3 despesa-due-date-field d-none">
+                            <label for="despesa_due_date" class="form-label">Vencimento</label>
+                            <input type="date" class="form-control" id="despesa_due_date" name="due_date"
+                                   value="{{ old('due_date') }}">
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -844,11 +941,18 @@
 
                     <div class="mb-3">
                         <label class="form-label">Arquivos <span id="despesa_file_count">0</span>/5</label>
-                        <button type="button" class="btn btn-primary btn-sm mb-2" onclick="document.getElementById('despesa_attachments').click()">
-                            <i class="bx bx-paperclip me-1"></i>Anexar arquivo (Máx. 10MB/arquivo)
-                        </button>
-                        <input type="file" class="d-none" id="despesa_attachments" name="attachments[]" 
-                               multiple accept="image/*,application/pdf" capture="environment">
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('despesa_attachments_upload').click()">
+                                <i class="bx bx-upload me-1"></i>Anexar arquivo
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm" onclick="document.getElementById('despesa_attachments_camera').click()">
+                                <i class="bx bx-camera me-1"></i>Tirar foto
+                            </button>
+                        </div>
+                        <small class="text-muted d-block mb-2">Imagens ou PDF. Máx. 10MB por arquivo. No celular, use &quot;Tirar foto&quot; para abrir a câmera.</small>
+                        <input type="file" class="d-none" id="despesa_attachments_upload" multiple accept="image/*,application/pdf">
+                        <input type="file" class="d-none" id="despesa_attachments_camera" accept="image/*" capture="environment">
+                        <input type="file" class="d-none" id="despesa_attachments" name="attachments[]" multiple>
                         <div id="despesa_files_preview" class="mt-2"></div>
                     </div>
                 </div>
@@ -867,8 +971,133 @@
 </div>
 @endif
 
+<!-- Modal: Checkout Mercado Pago -->
+<div class="modal fade" id="mercadoPagoModal" tabindex="-1" aria-labelledby="mercadoPagoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="mercadoPagoModalLabel">
+                    <i class="bx bx-credit-card me-2"></i>Checkout transparente Mercado Pago
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <div><strong>Transação:</strong> <span id="mp_transaction_description">-</span></div>
+                    <div><strong>Valor:</strong> R$ <span id="mp_transaction_amount">0,00</span></div>
+                </div>
+
+                <div id="mp_checkout_feedback"></div>
+
+                <ul class="nav nav-tabs mb-3" id="mpCheckoutTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="mp-pix-tab" data-bs-toggle="tab" data-bs-target="#mp-pix-pane" type="button" role="tab">
+                            PIX
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="mp-card-tab" data-bs-toggle="tab" data-bs-target="#mp-card-pane" type="button" role="tab">
+                            Cartão de crédito
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="mp-pix-pane" role="tabpanel" aria-labelledby="mp-pix-tab">
+                        <form id="mpPixForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="mp_pix_email" class="form-label">E-mail do pagador</label>
+                                    <input type="email" class="form-control" id="mp_pix_email" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="mp_pix_document" class="form-label">CPF do pagador</label>
+                                    <input type="text" class="form-control" id="mp_pix_document" placeholder="Somente números" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success" id="mp_pix_submit_btn">
+                                <i class="bx bx-qr me-1"></i>Gerar PIX
+                            </button>
+                        </form>
+
+                        <div id="mp_pix_result" class="mt-3 d-none">
+                            <div class="card border-success">
+                                <div class="card-body">
+                                    <h6 class="mb-3"><i class="bx bx-qr me-1"></i>PIX gerado</h6>
+                                    <div class="text-center mb-3">
+                                        <img id="mp_pix_qr_image" alt="QR Code PIX" style="max-width: 260px; width: 100%;">
+                                    </div>
+                                    <label class="form-label">Código copia e cola</label>
+                                    <textarea id="mp_pix_qr_text" class="form-control" rows="4" readonly></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="mp-card-pane" role="tabpanel" aria-labelledby="mp-card-tab">
+                        <form id="mp-card-form">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="form-checkout__cardholderEmail" class="form-label">E-mail</label>
+                                    <input type="email" class="form-control" id="form-checkout__cardholderEmail" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="form-checkout__identificationNumber" class="form-label">CPF</label>
+                                    <input type="text" class="form-control" id="form-checkout__identificationNumber" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="form-checkout__cardholderName" class="form-label">Titular do cartão</label>
+                                    <input type="text" class="form-control" id="form-checkout__cardholderName" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="form-checkout__cardNumber" class="form-label">Número do cartão</label>
+                                    <input type="text" class="form-control" id="form-checkout__cardNumber" required>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="form-checkout__expirationDate" class="form-label">Validade (MM/AA)</label>
+                                    <input type="text" class="form-control" id="form-checkout__expirationDate" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="form-checkout__securityCode" class="form-label">CVV</label>
+                                    <input type="text" class="form-control" id="form-checkout__securityCode" required>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label for="form-checkout__installments" class="form-label">Parcelas</label>
+                                    <select class="form-select" id="form-checkout__installments" required></select>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="form-checkout__paymentMethod" class="form-label">Bandeira</label>
+                                    <select class="form-select" id="form-checkout__paymentMethod" required></select>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="form-checkout__issuer" class="form-label">Emissor</label>
+                                    <select class="form-select" id="form-checkout__issuer" required></select>
+                                </div>
+                            </div>
+
+                            <select id="form-checkout__identificationType" class="d-none"></select>
+                            <button type="submit" class="btn btn-primary" id="mp_card_submit_btn">
+                                <i class="bx bx-credit-card me-1"></i>Pagar com cartão
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+@if(!empty($mercadoPagoPublicKey))
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+@endif
 <script>
     // Gráfico Mensal
     const monthlyCtx = document.getElementById('monthlyTransactionChart');
@@ -967,6 +1196,253 @@
         });
     }
 
+    const mercadoPagoPublicKey = @json($mercadoPagoPublicKey ?? '');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+    const mercadoPagoModalEl = document.getElementById('mercadoPagoModal');
+    const mercadoPagoModal = mercadoPagoModalEl ? new bootstrap.Modal(mercadoPagoModalEl) : null;
+    const checkoutState = {
+        transactionId: null,
+        amount: 0,
+        description: '',
+    };
+    let cardFormInstance = null;
+
+    function formatMoney(value) {
+        return Number(value || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function showCheckoutFeedback(message, type = 'info') {
+        const el = document.getElementById('mp_checkout_feedback');
+        if (!el) return;
+        el.innerHTML = `<div class="alert alert-${type} mb-3">${message}</div>`;
+    }
+
+    function clearCheckoutFeedback() {
+        const el = document.getElementById('mp_checkout_feedback');
+        if (!el) return;
+        el.innerHTML = '';
+    }
+
+    function resetCheckoutModal() {
+        clearCheckoutFeedback();
+        const pixResult = document.getElementById('mp_pix_result');
+        if (pixResult) {
+            pixResult.classList.add('d-none');
+        }
+        const pixText = document.getElementById('mp_pix_qr_text');
+        if (pixText) {
+            pixText.value = '';
+        }
+        const pixImg = document.getElementById('mp_pix_qr_image');
+        if (pixImg) {
+            pixImg.removeAttribute('src');
+        }
+    }
+
+    function updateCheckoutHeader() {
+        const descriptionEl = document.getElementById('mp_transaction_description');
+        const amountEl = document.getElementById('mp_transaction_amount');
+        if (descriptionEl) {
+            descriptionEl.textContent = checkoutState.description || '-';
+        }
+        if (amountEl) {
+            amountEl.textContent = formatMoney(checkoutState.amount);
+        }
+    }
+
+    function ensureCardForm() {
+        if (!mercadoPagoPublicKey || !window.MercadoPago || cardFormInstance) {
+            return;
+        }
+
+        const mp = new window.MercadoPago(mercadoPagoPublicKey, {
+            locale: 'pt-BR',
+        });
+
+        cardFormInstance = mp.cardForm({
+            amount: String(checkoutState.amount || 0),
+            iframe: false,
+            form: {
+                id: 'mp-card-form',
+                cardNumber: {
+                    id: 'form-checkout__cardNumber',
+                    placeholder: 'Número do cartão',
+                },
+                expirationDate: {
+                    id: 'form-checkout__expirationDate',
+                    placeholder: 'MM/AA',
+                },
+                securityCode: {
+                    id: 'form-checkout__securityCode',
+                    placeholder: 'CVV',
+                },
+                cardholderName: {
+                    id: 'form-checkout__cardholderName',
+                    placeholder: 'Titular do cartão',
+                },
+                issuer: {
+                    id: 'form-checkout__issuer',
+                    placeholder: 'Banco emissor',
+                },
+                installments: {
+                    id: 'form-checkout__installments',
+                    placeholder: 'Parcelas',
+                },
+                identificationType: {
+                    id: 'form-checkout__identificationType',
+                    placeholder: 'Tipo',
+                },
+                identificationNumber: {
+                    id: 'form-checkout__identificationNumber',
+                    placeholder: 'CPF',
+                },
+                cardholderEmail: {
+                    id: 'form-checkout__cardholderEmail',
+                    placeholder: 'E-mail',
+                },
+                paymentMethod: {
+                    id: 'form-checkout__paymentMethod',
+                    placeholder: 'Bandeira',
+                },
+            },
+            callbacks: {
+                onSubmit: function(event) {
+                    event.preventDefault();
+                    submitCardPayment();
+                },
+                onError: function(error) {
+                    if (!error) return;
+                    showCheckoutFeedback('Erro no formulário do cartão: ' + (error.message || 'verifique os dados informados.'), 'danger');
+                },
+            },
+        });
+    }
+
+    function submitCardPayment() {
+        if (!checkoutState.transactionId) {
+            showCheckoutFeedback('Selecione uma transação antes de pagar.', 'danger');
+            return;
+        }
+        if (!cardFormInstance) {
+            showCheckoutFeedback('Formulário de cartão não inicializado.', 'danger');
+            return;
+        }
+
+        const btn = document.getElementById('mp_card_submit_btn');
+        if (btn) btn.disabled = true;
+        clearCheckoutFeedback();
+
+        const data = cardFormInstance.getCardFormData();
+        fetch('{{ route("financial.checkout.card", ":id") }}'.replace(':id', checkoutState.transactionId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({
+                token: data.token,
+                payer_email: data.cardholderEmail,
+                payer_document: data.identificationNumber,
+                payment_method_id: data.paymentMethodId,
+                issuer_id: data.issuerId,
+                installments: Number(data.installments || 1),
+            }),
+        })
+            .then(response => response.json().catch(() => ({})))
+            .then(res => {
+                if (res.success) {
+                    showCheckoutFeedback('Pagamento com cartão enviado para processamento. Status atual: ' + (res.data.status || 'pending') + '.', 'success');
+                    setTimeout(() => window.location.reload(), 1200);
+                    return;
+                }
+                showCheckoutFeedback(res.error || 'Não foi possível processar o cartão.', 'danger');
+            })
+            .catch(() => {
+                showCheckoutFeedback('Erro de conexão ao enviar pagamento de cartão.', 'danger');
+            })
+            .finally(() => {
+                if (btn) btn.disabled = false;
+            });
+    }
+
+    document.querySelectorAll('.mp-open-checkout').forEach(function(button) {
+        button.addEventListener('click', function() {
+            checkoutState.transactionId = this.dataset.transactionId;
+            checkoutState.description = this.dataset.transactionDescription || '';
+            checkoutState.amount = Number(this.dataset.transactionAmount || 0);
+            updateCheckoutHeader();
+            resetCheckoutModal();
+            ensureCardForm();
+            if (mercadoPagoModal) {
+                mercadoPagoModal.show();
+            }
+        });
+    });
+
+    document.getElementById('mpPixForm')?.addEventListener('submit', function(event) {
+        event.preventDefault();
+        if (!checkoutState.transactionId) {
+            showCheckoutFeedback('Selecione uma transação antes de gerar o PIX.', 'danger');
+            return;
+        }
+
+        const email = document.getElementById('mp_pix_email')?.value?.trim();
+        const documentValue = document.getElementById('mp_pix_document')?.value?.trim();
+        if (!email || !documentValue) {
+            showCheckoutFeedback('Informe e-mail e CPF para gerar o PIX.', 'warning');
+            return;
+        }
+
+        const btn = document.getElementById('mp_pix_submit_btn');
+        if (btn) btn.disabled = true;
+        clearCheckoutFeedback();
+
+        fetch('{{ route("financial.checkout.pix", ":id") }}'.replace(':id', checkoutState.transactionId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({
+                payer_email: email,
+                payer_document: documentValue,
+            }),
+        })
+            .then(response => response.json().catch(() => ({})))
+            .then(res => {
+                if (res.success) {
+                    const pixResult = document.getElementById('mp_pix_result');
+                    const qrImage = document.getElementById('mp_pix_qr_image');
+                    const qrText = document.getElementById('mp_pix_qr_text');
+                    if (pixResult) pixResult.classList.remove('d-none');
+                    if (qrImage && res.data.qr_code_base64) {
+                        qrImage.src = 'data:image/png;base64,' + res.data.qr_code_base64;
+                    }
+                    if (qrText) {
+                        qrText.value = res.data.qr_code_text || '';
+                    }
+                    showCheckoutFeedback('PIX criado com sucesso. A baixa ocorrerá automaticamente via webhook quando o pagamento for aprovado.', 'success');
+                    return;
+                }
+                showCheckoutFeedback(res.error || 'Não foi possível gerar o PIX.', 'danger');
+            })
+            .catch(() => {
+                showCheckoutFeedback('Erro de conexão ao gerar PIX.', 'danger');
+            })
+            .finally(() => {
+                if (btn) btn.disabled = false;
+            });
+    });
+
+    if (!mercadoPagoPublicKey) {
+        document.querySelectorAll('.mp-open-checkout').forEach(function(button) {
+            button.setAttribute('disabled', 'disabled');
+            button.setAttribute('title', 'Configure MP_PUBLIC_KEY no .env para habilitar checkout.');
+        });
+    }
+
     // Toggle campo "Outros" no modal de edição (receita)
     document.getElementById('edit_member_id')?.addEventListener('change', function() {
         const otherField = document.getElementById('edit_other_name');
@@ -985,51 +1461,142 @@
         }
     });
 
-    // Gerenciar anexos de arquivos - Edição
-    document.getElementById('edit_attachments')?.addEventListener('change', function(e) {
-        const files = e.target.files;
-        const preview = document.getElementById('edit_files_preview');
-        const count = document.getElementById('edit_file_count');
-        const existingCount = preview.querySelectorAll('.border.rounded').length;
-        
-        if (files.length + existingCount > 5) {
-            alert('Máximo de 5 arquivos permitidos');
-            this.value = '';
-            return;
+    function escapeAttachmentName(name) {
+        const div = document.createElement('div');
+        div.textContent = name || 'arquivo';
+        return div.innerHTML;
+    }
+
+    function normalizeCameraFileName(file) {
+        const genericNames = ['image.jpg', 'image.jpeg', 'image.png', 'blob', ''];
+        if (!genericNames.includes((file.name || '').toLowerCase())) {
+            return file;
         }
-        
-        const currentCount = parseInt(count.textContent) || 0;
-        count.textContent = currentCount + files.length;
-        
-        Array.from(files).forEach((file, index) => {
-            const div = document.createElement('div');
-            div.className = 'd-flex justify-content-between align-items-center mb-2 p-2 border rounded';
-            div.innerHTML = `
-                <span class="small">${file.name}</span>
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeEditFile(${index}, this)">
-                    <i class="bx bx-trash"></i>
-                </button>
-            `;
-            preview.appendChild(div);
+
+        const ext = file.type === 'image/png' ? 'png' : 'jpg';
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        return new File([file], `foto-${timestamp}.${ext}`, { type: file.type || 'image/jpeg' });
+    }
+
+    function createAttachmentManager(config) {
+        const mainInput = document.getElementById(config.mainInputId);
+        const uploadInput = document.getElementById(config.uploadInputId);
+        const cameraInput = document.getElementById(config.cameraInputId);
+        const preview = document.getElementById(config.previewId);
+        const countEl = document.getElementById(config.countId);
+        const maxFiles = config.maxFiles || 5;
+        let newFiles = [];
+
+        function getExistingCount() {
+            return preview ? preview.querySelectorAll('[data-existing-attachment]').length : 0;
+        }
+
+        function getTotalCount() {
+            return getExistingCount() + newFiles.length;
+        }
+
+        function updateCount() {
+            if (countEl) {
+                countEl.textContent = getTotalCount();
+            }
+        }
+
+        function syncMainInput() {
+            if (!mainInput) return;
+            const dt = new DataTransfer();
+            newFiles.forEach(file => dt.items.add(file));
+            mainInput.files = dt.files;
+        }
+
+        function renderNewFiles() {
+            if (!preview) return;
+            preview.querySelectorAll('[data-new-attachment]').forEach(el => el.remove());
+
+            newFiles.forEach((file, index) => {
+                const div = document.createElement('div');
+                div.className = 'd-flex justify-content-between align-items-center mb-2 p-2 border rounded';
+                div.dataset.newAttachment = '1';
+                div.innerHTML = `
+                    <span class="small"><i class="bx bx-image me-1"></i>${escapeAttachmentName(file.name)}</span>
+                    <button type="button" class="btn btn-sm btn-danger" title="Remover">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                `;
+                div.querySelector('button').addEventListener('click', () => removeNewFile(index));
+                preview.appendChild(div);
+            });
+
+            updateCount();
+        }
+
+        function addFiles(fileList) {
+            for (const file of Array.from(fileList || [])) {
+                if (getTotalCount() >= maxFiles) {
+                    alert(`Máximo de ${maxFiles} arquivos permitidos`);
+                    break;
+                }
+                newFiles.push(normalizeCameraFileName(file));
+            }
+
+            syncMainInput();
+            renderNewFiles();
+        }
+
+        function removeNewFile(index) {
+            newFiles.splice(index, 1);
+            syncMainInput();
+            renderNewFiles();
+        }
+
+        function resetNewFiles() {
+            newFiles = [];
+            syncMainInput();
+            if (preview) {
+                preview.querySelectorAll('[data-new-attachment]').forEach(el => el.remove());
+            }
+            updateCount();
+        }
+
+        uploadInput?.addEventListener('change', function(e) {
+            if (e.target.files?.length) {
+                addFiles(e.target.files);
+            }
+            e.target.value = '';
         });
+
+        cameraInput?.addEventListener('change', function(e) {
+            if (e.target.files?.length) {
+                addFiles(e.target.files);
+            }
+            e.target.value = '';
+        });
+
+        return { addFiles, resetNewFiles, updateCount, getTotalCount };
+    }
+
+    const receitaAttachmentManager = createAttachmentManager({
+        mainInputId: 'receita_attachments',
+        uploadInputId: 'receita_attachments_upload',
+        cameraInputId: 'receita_attachments_camera',
+        previewId: 'receita_files_preview',
+        countId: 'receita_file_count',
     });
 
-    function removeEditFile(index, button) {
-        const input = document.getElementById('edit_attachments');
-        const dt = new DataTransfer();
-        const files = Array.from(input.files);
-        files.splice(index, 1);
-        files.forEach(file => dt.items.add(file));
-        input.files = dt.files;
-        
-        button.closest('div').remove();
-        
-        const count = document.getElementById('edit_file_count');
-        const currentCount = parseInt(count.textContent) || 0;
-        count.textContent = Math.max(0, currentCount - 1);
-        
-        input.dispatchEvent(new Event('change'));
-    }
+    const despesaAttachmentManager = createAttachmentManager({
+        mainInputId: 'despesa_attachments',
+        uploadInputId: 'despesa_attachments_upload',
+        cameraInputId: 'despesa_attachments_camera',
+        previewId: 'despesa_files_preview',
+        countId: 'despesa_file_count',
+    });
+
+    const editAttachmentManager = createAttachmentManager({
+        mainInputId: 'edit_attachments',
+        uploadInputId: 'edit_attachments_upload',
+        cameraInputId: 'edit_attachments_camera',
+        previewId: 'edit_files_preview',
+        countId: 'edit_file_count',
+    });
 
     // Toggle campo "Outros" no modal de receita
     document.getElementById('receita_received_from')?.addEventListener('change', function() {
@@ -1080,72 +1647,6 @@
             }
         }
     });
-
-    // Gerenciar anexos de arquivos - Receita
-    document.getElementById('receita_attachments')?.addEventListener('change', function(e) {
-        const files = e.target.files;
-        const preview = document.getElementById('receita_files_preview');
-        const count = document.getElementById('receita_file_count');
-        
-        if (files.length > 5) {
-            alert('Máximo de 5 arquivos permitidos');
-            this.value = '';
-            return;
-        }
-        
-        count.textContent = files.length;
-        preview.innerHTML = '';
-        
-        Array.from(files).forEach((file, index) => {
-            const div = document.createElement('div');
-            div.className = 'd-flex justify-content-between align-items-center mb-2 p-2 border rounded';
-            div.innerHTML = `
-                <span class="small">${file.name}</span>
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeFile(${index}, 'receita')">
-                    <i class="bx bx-trash"></i>
-                </button>
-            `;
-            preview.appendChild(div);
-        });
-    });
-
-    // Gerenciar anexos de arquivos - Despesa
-    document.getElementById('despesa_attachments')?.addEventListener('change', function(e) {
-        const files = e.target.files;
-        const preview = document.getElementById('despesa_files_preview');
-        const count = document.getElementById('despesa_file_count');
-        
-        if (files.length > 5) {
-            alert('Máximo de 5 arquivos permitidos');
-            this.value = '';
-            return;
-        }
-        
-        count.textContent = files.length;
-        preview.innerHTML = '';
-        
-        Array.from(files).forEach((file, index) => {
-            const div = document.createElement('div');
-            div.className = 'd-flex justify-content-between align-items-center mb-2 p-2 border rounded';
-            div.innerHTML = `
-                <span class="small">${file.name}</span>
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeFile(${index}, 'despesa')">
-                    <i class="bx bx-trash"></i>
-                </button>
-            `;
-            preview.appendChild(div);
-        });
-    });
-
-    function removeFile(index, type) {
-        const input = document.getElementById(`${type}_attachments`);
-        const dt = new DataTransfer();
-        const files = Array.from(input.files);
-        files.splice(index, 1);
-        files.forEach(file => dt.items.add(file));
-        input.files = dt.files;
-        input.dispatchEvent(new Event('change'));
-    }
 
     // Selecionar todos os checkboxes
     document.getElementById('selectAll')?.addEventListener('change', function() {
@@ -1233,7 +1734,10 @@
         document.getElementById('edit_payment_type').value = transaction.payment_type || 'unico';
         document.getElementById('edit_document_number').value = transaction.document_number || '';
         document.getElementById('edit_competence_date').value = transaction.competence_date || '';
+        document.getElementById('edit_due_date').value = transaction.due_date || '';
         document.getElementById('edit_notes').value = transaction.notes || '';
+        toggleDueDateField('edit_is_paid', 'edit_due_date_wrapper');
+        toggleWhatsappReceiptField(transaction);
         
         // Atualizar título do modal
         const modalTitle = document.getElementById('editTransactionModalLabel');
@@ -1288,25 +1792,27 @@
         }
         
         // Limpar preview de arquivos
-        document.getElementById('edit_files_preview').innerHTML = '';
-        document.getElementById('edit_file_count').textContent = '0';
+        editAttachmentManager.resetNewFiles();
+        const editPreview = document.getElementById('edit_files_preview');
+        editPreview.innerHTML = '';
         
         // Mostrar anexos existentes
         if (transaction.attachments && transaction.attachments.length > 0) {
-            const preview = document.getElementById('edit_files_preview');
-            transaction.attachments.forEach((attachment, index) => {
+            transaction.attachments.forEach((attachment) => {
                 const div = document.createElement('div');
                 div.className = 'd-flex justify-content-between align-items-center mb-2 p-2 border rounded';
+                div.dataset.existingAttachment = '1';
                 div.innerHTML = `
-                    <span class="small">${attachment.file_name}</span>
+                    <span class="small"><i class="bx bx-paperclip me-1"></i>${escapeAttachmentName(attachment.file_name)}</span>
                     <button type="button" class="btn btn-sm btn-danger" onclick="removeExistingFile(${attachment.id}, this)">
                         <i class="bx bx-trash"></i>
                     </button>
                 `;
-                preview.appendChild(div);
+                editPreview.appendChild(div);
             });
-            document.getElementById('edit_file_count').textContent = transaction.attachments.length;
         }
+
+        editAttachmentManager.updateCount();
     }
 
     // Função para filtrar categorias
@@ -1339,11 +1845,7 @@
         
         // Remover do preview
         button.closest('div').remove();
-        
-        // Atualizar contador
-        const count = document.getElementById('edit_file_count');
-        const currentCount = parseInt(count.textContent) || 0;
-        count.textContent = Math.max(0, currentCount - 1);
+        editAttachmentManager.updateCount();
     }
 
     // Imprimir recibo
@@ -1353,6 +1855,101 @@
             const url = '{{ route("financial.transactions.receipt", ":id") }}'.replace(':id', transactionId);
             window.open(url, '_blank', 'width=800,height=600');
         });
+    });
+
+    // Enviar recibo por WhatsApp
+    document.querySelectorAll('.send-receipt-whatsapp').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const transactionId = this.dataset.transactionId;
+            const btn = this;
+            if (!confirm('Enviar comprovante por WhatsApp para o membro?')) {
+                return;
+            }
+
+            btn.disabled = true;
+            fetch('{{ route("financial.transactions.send-receipt", ":id") }}'.replace(':id', transactionId), {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}',
+                    'Accept': 'application/json',
+                },
+            })
+            .then(response => response.json().then(data => ({ ok: response.ok, data })))
+            .then(({ ok, data }) => {
+                if (ok && data.success) {
+                    alert('Comprovante enviado por WhatsApp com sucesso!');
+                } else {
+                    alert(data.error || 'Não foi possível enviar o comprovante.');
+                }
+            })
+            .catch(() => alert('Erro ao enviar comprovante por WhatsApp.'))
+            .finally(() => { btn.disabled = false; });
+        });
+    });
+
+    function toggleDueDateField(paidCheckboxId, wrapperId) {
+        const paidCheckbox = document.getElementById(paidCheckboxId);
+        const wrapper = document.getElementById(wrapperId);
+        if (!paidCheckbox || !wrapper) return;
+        wrapper.classList.toggle('d-none', paidCheckbox.checked);
+    }
+
+    function toggleWhatsappReceiptField(transaction) {
+        const wrapper = document.getElementById('edit_whatsapp_receipt_wrapper');
+        if (!wrapper) return;
+        const show = transaction.type === 'receita' && transaction.member_id;
+        wrapper.style.display = show ? 'block' : 'none';
+    }
+
+    ['receita_is_paid', 'despesa_is_paid', 'edit_is_paid'].forEach(function(id) {
+        const checkbox = document.getElementById(id);
+        if (!checkbox) return;
+        checkbox.addEventListener('change', function() {
+            if (id === 'receita_is_paid') {
+                document.querySelectorAll('.receita-due-date-field').forEach(el => el.classList.toggle('d-none', this.checked));
+            } else if (id === 'despesa_is_paid') {
+                document.querySelectorAll('.despesa-due-date-field').forEach(el => el.classList.toggle('d-none', this.checked));
+            } else {
+                toggleDueDateField('edit_is_paid', 'edit_due_date_wrapper');
+            }
+        });
+    });
+
+    document.getElementById('receita_is_paid')?.dispatchEvent(new Event('change'));
+    document.getElementById('despesa_is_paid')?.dispatchEvent(new Event('change'));
+
+    function toggleDespesaInstallmentsField() {
+        const paymentType = document.getElementById('despesa_payment_type');
+        const wrapper = document.getElementById('despesa_installments_wrapper');
+        const input = document.getElementById('despesa_installments_count');
+        if (!paymentType || !wrapper || !input) return;
+
+        const isParcelado = paymentType.value === 'parcelado';
+        wrapper.classList.toggle('d-none', !isParcelado);
+
+        if (isParcelado) {
+            input.setAttribute('required', 'required');
+        } else {
+            input.removeAttribute('required');
+        }
+    }
+
+    document.getElementById('despesa_payment_type')?.addEventListener('change', toggleDespesaInstallmentsField);
+    toggleDespesaInstallmentsField();
+
+    document.getElementById('despesaForm')?.addEventListener('submit', function(e) {
+        const paymentType = document.getElementById('despesa_payment_type');
+        const installmentsInput = document.getElementById('despesa_installments_count');
+
+        if (paymentType?.value === 'parcelado') {
+            const installments = parseInt(installmentsInput?.value || '0', 10);
+            if (!installments || installments < 2) {
+                e.preventDefault();
+                alert('Informe em quantas vezes a despesa será parcelada (mínimo 2).');
+                installmentsInput?.focus();
+                return false;
+            }
+        }
     });
 
     // Duplicar transação

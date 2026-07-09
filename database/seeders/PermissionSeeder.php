@@ -621,6 +621,64 @@ class PermissionSeeder extends Seeder
             ->whereNotIn('key', $servicoValidKeys)
             ->delete();
 
+        // Módulo Moriah (ministério de louvor)
+        $moriahModule = [
+            'module' => 'Moriah',
+            'name' => 'Módulo Moriah',
+            'children' => [
+                [
+                    'name' => 'Moriah',
+                    'key' => 'moriah.manage',
+                    'description' => 'Permissões para gerenciar o ministério de louvor Moriah',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'moriah.view'],
+                        ['name' => 'Gerenciar', 'key' => 'moriah.manage'],
+                    ],
+                ],
+            ],
+        ];
+
+        $moriahModulePermission = Permission::updateOrCreate(
+            ['key' => 'moriah.module'],
+            [
+                'module' => $moriahModule['module'],
+                'name' => $moriahModule['name'],
+                'description' => 'Permissões relacionadas ao módulo Moriah',
+                'parent_id' => null,
+            ]
+        );
+
+        $moriahValidKeys = ['moriah.module'];
+        foreach ($moriahModule['children'] as $group) {
+            $moriahValidKeys[] = $group['key'];
+            $groupPermission = Permission::updateOrCreate(
+                ['key' => $group['key']],
+                [
+                    'module' => $moriahModule['module'],
+                    'name' => $group['name'],
+                    'description' => $group['description'],
+                    'parent_id' => $moriahModulePermission->id,
+                ]
+            );
+            if (isset($group['actions'])) {
+                foreach ($group['actions'] as $action) {
+                    $moriahValidKeys[] = $action['key'];
+                    Permission::updateOrCreate(
+                        ['key' => $action['key']],
+                        [
+                            'module' => $moriahModule['module'],
+                            'name' => $action['name'],
+                            'description' => $group['name'] . ' - ' . $action['name'],
+                            'parent_id' => $groupPermission->id,
+                        ]
+                    );
+                }
+            }
+        }
+        Permission::where('module', 'Moriah')
+            ->whereNotIn('key', $moriahValidKeys)
+            ->delete();
+
         // Módulo Notificações (WhatsApp: grupos, enquetes, painel, configuração, templates)
         $notificacoesModule = [
             'module' => 'Notificações',
@@ -896,6 +954,62 @@ class PermissionSeeder extends Seeder
 
         Permission::where('module', 'Rifas')
             ->whereNotIn('key', $rifasValidKeys)
+            ->delete();
+
+        // Módulo Página Principal
+        $homePageModule = [
+            'module' => 'Página Principal',
+            'name' => 'Módulo Página Principal',
+            'children' => [
+                [
+                    'name' => 'Página Principal',
+                    'key' => 'pagina-principal.manage',
+                    'description' => 'Permissões para configurar a landing page pública do sistema',
+                    'actions' => [
+                        ['name' => 'Gerenciar', 'key' => 'pagina-principal.manage'],
+                    ],
+                ],
+            ],
+        ];
+
+        $homePageModulePermission = Permission::updateOrCreate(
+            ['key' => 'pagina-principal.module'],
+            [
+                'module' => $homePageModule['module'],
+                'name' => $homePageModule['name'],
+                'description' => 'Permissões relacionadas à página principal pública',
+                'parent_id' => null,
+            ]
+        );
+
+        $homePageValidKeys = ['pagina-principal.module'];
+        foreach ($homePageModule['children'] as $group) {
+            $homePageValidKeys[] = $group['key'];
+            $groupPermission = Permission::updateOrCreate(
+                ['key' => $group['key']],
+                [
+                    'module' => $homePageModule['module'],
+                    'name' => $group['name'],
+                    'description' => $group['description'],
+                    'parent_id' => $homePageModulePermission->id,
+                ]
+            );
+            foreach ($group['actions'] as $action) {
+                $homePageValidKeys[] = $action['key'];
+                Permission::updateOrCreate(
+                    ['key' => $action['key']],
+                    [
+                        'module' => $homePageModule['module'],
+                        'name' => $action['name'],
+                        'description' => $group['name'] . ' - ' . $action['name'],
+                        'parent_id' => $groupPermission->id,
+                    ]
+                );
+            }
+        }
+
+        Permission::where('module', 'Página Principal')
+            ->whereNotIn('key', $homePageValidKeys)
             ->delete();
     }
 }

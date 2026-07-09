@@ -10,6 +10,7 @@ class TemplateController extends Controller
 {
     public function index()
     {
+        $this->authorize('notificacoes.view');
         $templates = ConfiguracaoMensagem::orderBy('tipo_notificacao')->orderByDesc('id')->get();
         $variaveis = ConfiguracaoMensagem::variaveisDisponiveis();
         return view('notificacoes.templates.index', compact('templates', 'variaveis'));
@@ -17,6 +18,7 @@ class TemplateController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('notificacoes.manage');
         $request->validate([
             'tipo_notificacao' => 'required|string|max:64|unique:configuracoes_mensagens,tipo_notificacao',
             'template' => 'required|string',
@@ -39,6 +41,7 @@ class TemplateController extends Controller
 
     public function update(Request $request, ConfiguracaoMensagem $template)
     {
+        $this->authorize('notificacoes.manage');
         $request->validate([
             'tipo_notificacao' => 'required|string|max:64|unique:configuracoes_mensagens,tipo_notificacao,' . $template->id,
             'template' => 'required|string',
@@ -61,6 +64,7 @@ class TemplateController extends Controller
 
     public function destroy(ConfiguracaoMensagem $template)
     {
+        $this->authorize('notificacoes.manage');
         $template->delete();
 
         return back()->with('success', 'Template removido com sucesso.');

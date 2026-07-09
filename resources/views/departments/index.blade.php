@@ -53,9 +53,9 @@
                 </div>
 
                 <div class="d-flex justify-content-end mb-4">
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#templateModal">
+                    <a href="{{ route('departments.create') }}" class="btn btn-primary">
                         <i class="bx bx-plus me-2"></i>Adicionar
-                    </button>
+                    </a>
                 </div>
 
                 @if($departments->count() > 0)
@@ -64,7 +64,14 @@
                             <div class="col-md-4 mb-4">
                                 <section class="card">
                                     <div class="card-body text-center">
-                                        @if($department->icon)
+                                        @if($department->logo_url)
+                                            <div class="mb-3">
+                                                <img src="{{ asset('storage/' . $department->logo_url) }}"
+                                                     alt="{{ $department->name }}"
+                                                     class="rounded-circle"
+                                                     style="width: 80px; height: 80px; object-fit: cover; border: 2px solid {{ $department->color ?? '#0088cc' }};">
+                                            </div>
+                                        @elseif($department->icon)
                                             <div class="mb-3">
                                                 <i class="{{ $department->icon }}" 
                                                    style="font-size: 3rem; color: {{ $department->color ?? '#0088cc' }};"></i>
@@ -151,7 +158,7 @@
                         <i class="bx bx-info-circle me-2"></i>
                         Nenhum departamento {{ $filter === 'ativo' ? 'ativo' : 'arquivado' }} encontrado.
                         <br>
-                        <a href="#" data-bs-toggle="modal" data-bs-target="#templateModal" class="mt-2 d-inline-block">
+                        <a href="{{ route('departments.create') }}" class="mt-2 d-inline-block">
                             Cadastrar departamento
                         </a>
                     </div>
@@ -161,59 +168,5 @@
     </div>
 </div>
 
-<!-- Modal de Templates -->
-<div class="modal fade" id="templateModal" tabindex="-1" aria-labelledby="templateModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="templateModalLabel">Criar novo departamento</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p class="mb-4">Use um dos modelos prontos ou crie um novo.</p>
-                
-                <div class="row g-3">
-                    @php
-                        $templates = [
-                            'louvor' => ['name' => 'Louvor', 'icon' => 'bx-music', 'color' => '#FF6B6B'],
-                            'midia' => ['name' => 'Mídia', 'icon' => 'bx-video-recording', 'color' => '#4ECDC4'],
-                            'diaconia' => ['name' => 'Diaconia', 'icon' => 'bx-heart', 'color' => '#FFE66D'],
-                            'ensino' => ['name' => 'Ensino', 'icon' => 'bx-book-open', 'color' => '#95E1D3'],
-                            'pastoral' => ['name' => 'Pastoral', 'icon' => 'bx-fire', 'color' => '#FF8C94'],
-                            'acolhimento' => ['name' => 'Acolhimento', 'icon' => 'bx-happy-heart-eyes', 'color' => '#A8E6CF'],
-                            'tesouraria' => ['name' => 'Tesouraria', 'icon' => 'bx-money', 'color' => '#FFD93D'],
-                            'missoes' => ['name' => 'Missões', 'icon' => 'bx-globe', 'color' => '#6BCB77'],
-                            'novo' => ['name' => 'Novo', 'icon' => 'bx-plus-circle', 'color' => '#0088cc'],
-                        ];
-                    @endphp
-                    
-                    @foreach($templates as $key => $template)
-                        <div class="col-md-4">
-                            <a href="{{ route('departments.create', ['template' => $key !== 'novo' ? $key : null]) }}" 
-                               class="text-decoration-none">
-                                <div class="card card-hover text-center p-3" style="cursor: pointer; border: 2px solid {{ $template['color'] }};">
-                                    <div class="mb-2">
-                                        <i class="{{ $template['icon'] }}" style="font-size: 2.5rem; color: {{ $template['color'] }};"></i>
-                                    </div>
-                                    <h6 class="mb-0">{{ $template['name'] }}</h6>
-                                </div>
-                            </a>
-                        </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-@push('styles')
-<style>
-    .card-hover:hover {
-        transform: translateY(-5px);
-        transition: transform 0.2s;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-</style>
-@endpush
 @endsection
 

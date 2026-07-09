@@ -1,63 +1,58 @@
-# Configuração do envio de mensagens por WhatsApp (Z-API)
+# Configuração do envio de mensagens por WhatsApp (Evolution API)
 
-O módulo de Notificações usa a **Z-API** para enviar mensagens. Siga os passos abaixo para configurar.
-
----
-
-## 1. Obter credenciais na Z-API
-
-1. Acesse [https://developer.z-api.io](https://developer.z-api.io) e crie uma conta ou faça login.
-2. Crie uma **instância** (ou use uma existente).
-3. Anote:
-   - **Client Token** (token do cliente)
-   - **Instance ID** (ID da instância)
-   - **Instance Token** (token da instância)
-4. A **URL base da API** costuma ser: `https://api.z-api.io` (confirme no painel da Z-API).
+O módulo de Notificações usa a **Evolution API** para enviar mensagens e receber respostas via webhook.
 
 ---
 
-## 2. Configurar o arquivo .env
-
-No arquivo **.env** na raiz do projeto, adicione ou edite:
+## 1. Variáveis no `.env`
 
 ```env
-# WhatsApp (Z-API)
-WHATSAPP_API_URL=https://api.z-api.io
-WHATSAPP_CLIENT_TOKEN=seu_client_token_aqui
-WHATSAPP_INSTANCE_ID=seu_instance_id_aqui
-WHATSAPP_INSTANCE_TOKEN=seu_instance_token_aqui
+WHATSAPP_API_URL=https://wpp.seudominio.com
+WHATSAPP_API_KEY=sua_api_key
+WHATSAPP_INSTANCE_NAME=evolutionapi
+WHATSAPP_WEBHOOK_URL=https://seudominio.com/webhook
 ```
 
-- **WHATSAPP_API_URL**: URL base da API (ex.: `https://api.z-api.io`).
-- **WHATSAPP_CLIENT_TOKEN**: Client Token do painel Z-API.
-- **WHATSAPP_INSTANCE_ID**: ID da instância (ex.: `3B0XXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX`).
-- **WHATSAPP_INSTANCE_TOKEN**: Instance Token da instância.
+- **WHATSAPP_API_URL**: URL base da Evolution API.
+- **WHATSAPP_API_KEY**: Chave enviada no header `apikey`.
+- **WHATSAPP_INSTANCE_NAME**: Nome da instância conectada.
+- **WHATSAPP_WEBHOOK_URL**: URL pública onde o Laravel recebe eventos (`POST /webhook`).
 
-Não deixe valores em branco; use aspas se tiver caracteres especiais. Exemplo:
+---
+
+## 2. Desenvolvimento local (Ultrahook)
+
+```bash
+# Terminal 1
+php artisan serve
+
+# Terminal 2
+ultrahook webhook http://127.0.0.1:8000/webhook
+```
+
+No `.env`:
 
 ```env
-WHATSAPP_API_URL="https://api.z-api.io"
-WHATSAPP_CLIENT_TOKEN="abc123..."
-WHATSAPP_INSTANCE_ID="3B0..."
-WHATSAPP_INSTANCE_TOKEN="xyz789..."
+WHATSAPP_WEBHOOK_URL=https://seu-alias-webhook.ultrahook.com
 ```
 
----
-
-## 3. Conectar o WhatsApp na instância
-
-1. No painel da Z-API, abra sua instância.
-2. Leia o **QR Code** com o WhatsApp (celular que será usado para envio).
-3. Após conectado, o status da instância ficará “Conectado” e você poderá enviar mensagens.
+Registre o webhook em **Notificações → Configuração WPP** ou via API Evolution (`POST /webhook/set/{instance}`).
 
 ---
 
-## 4. Testar no sistema
+## 3. Conectar o WhatsApp
 
-1. Acesse **Notificações** → **Configuração WPP**.
-2. Se as variáveis estiverem corretas no .env, aparecerá: *“API WhatsApp configurada (Z-API)”*.
-3. No campo **Telefone**, informe um número com DDD (ex.: `11999999999` ou `5511999999999`).
-4. Clique em **Enviar teste**. Deve chegar a mensagem: *“Teste de conexão - ADELSS Notificações.”*
+1. Acesse **Notificações → Configuração WPP**.
+2. Verifique o status da instância e conecte via QR Code na Evolution API, se necessário.
+3. Envie uma mensagem de teste para validar o envio.
+
+---
+
+## 4. Webhook e enquetes
+
+- Respostas de enquetes (clique em botões) chegam via evento `MESSAGES_UPSERT`.
+- O Laravel processa em `POST /webhook` e grava em `enquete_respostas`.
+- Após registrar a resposta, envia mensagem de agradecimento automaticamente.
 
 ---
 
@@ -65,17 +60,9 @@ WHATSAPP_INSTANCE_TOKEN="xyz789..."
 
 | Erro | Solução |
 |------|--------|
-| *“Cannot assign null to property...”* | Todas as variáveis WHATSAPP_* devem estar definidas no .env (podem ser vazias temporariamente; o sistema avisa que não está configurado). |
-| *“API não configurada”* | Preencha WHATSAPP_API_URL, WHATSAPP_CLIENT_TOKEN, WHATSAPP_INSTANCE_ID e WHATSAPP_INSTANCE_TOKEN no .env. |
-| *“Erro ao enviar mensagem”* | Verifique se a instância está conectada (QR Code lido), se o número está com DDD (11...) e se os tokens estão corretos. |
-| Mensagem não chega | Confirme que o número está no formato internacional (55 + DDD + número, sem espaços ou traços). |
+| *"API não configurada"* | Preencha `WHATSAPP_API_URL`, `WHATSAPP_API_KEY` e `WHATSAPP_INSTANCE_NAME`. |
+| *"Not Found" ao configurar webhook* | Use a tela de config (Evolution) ou confira a instância ativa. |
+| Resposta de enquete não chega | Ultrahook rodando, webhook registrado na Evolution, rota `/webhook` ativa. |
+| Mensagem não chega | Instância conectada; número no formato `55` + DDD + número. |
 
----
-
-## 6. Uso no sistema
-
-- **Painel de Notificações**: envie mensagens para membros ou grupos (membros com telefone cadastrado).
-- **Enquetes**: envie enquetes para membros ou grupos.
-- Os **membros** usados são os do cadastro do sistema (menu Membros); o campo **Telefone** é usado para o envio.
-
-Se algo falhar, confira o arquivo `storage/logs/laravel.log` para mais detalhes do erro.
+Consulte `storage/logs/laravel.log` para detalhes.

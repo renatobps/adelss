@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\EventCategory;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class EventController extends Controller
 {
@@ -15,6 +16,7 @@ class EventController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Event::class);
         $start = $request->input('start');
         $end = $request->input('end');
 
@@ -72,6 +74,9 @@ class EventController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Event::class);
+        $this->normalizeCategoryId($request);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -84,9 +89,11 @@ class EventController extends Controller
             'visibility' => 'nullable|in:public,private',
             'location' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:event_categories,id',
+            'banner_image' => 'nullable|image|max:5120',
         ]);
 
         $allDay = $validated['all_day'] ?? false;
+        $recurrence = $validated['recurrence'] ?? null;
 
         // Combinar data e hora
         $startDateTime = $validated['start_date'];
@@ -104,8 +111,13 @@ class EventController extends Controller
             $endDateTime .= ' 23:59:59';
         }
 
+        $bannerImagePath = null;
+        if ($request->hasFile('banner_image')) {
+            $bannerImagePath = $request->file('banner_image')->store('events/banners', 'public');
+        }
+
         // Se for repetição semanal, criar múltiplas ocorrências
-        if ($validated['recurrence'] === 'weekly') {
+        if ($recurrence === 'weekly') {
             $events = [];
             $startDate = Carbon::parse($startDateTime);
             $endDate = Carbon::parse($endDateTime);
@@ -127,6 +139,7 @@ class EventController extends Controller
                     'status' => 'agendado',
                     'location' => $validated['location'] ?? null,
                     'category_id' => !empty($validated['category_id']) ? $validated['category_id'] : null,
+                    'banner_image' => $bannerImagePath,
                 ]);
                 
                 $events[] = $event->load('category');
@@ -137,7 +150,7 @@ class EventController extends Controller
                 'message' => count($events) . ' eventos criados com sucesso!',
                 'events' => $events,
             ]);
-        } elseif ($validated['recurrence'] === 'biweekly') {
+        } elseif ($recurrence === 'biweekly') {
             // Repetição quinzenal (a cada 2 semanas)
             $events = [];
             $startDate = Carbon::parse($startDateTime);
@@ -159,6 +172,7 @@ class EventController extends Controller
                     'status' => 'agendado',
                     'location' => $validated['location'] ?? null,
                     'category_id' => !empty($validated['category_id']) ? $validated['category_id'] : null,
+                    'banner_image' => $bannerImagePath,
                 ]);
                 
                 $events[] = $event->load('category');
@@ -177,11 +191,12 @@ class EventController extends Controller
                 'start_date' => $startDateTime,
                 'end_date' => $endDateTime,
                 'all_day' => $allDay,
-                'recurrence' => $validated['recurrence'] ?? null,
+                'recurrence' => $recurrence,
                 'visibility' => $validated['visibility'] ?? 'public',
                 'status' => 'agendado',
                 'location' => $validated['location'] ?? null,
                 'category_id' => !empty($validated['category_id']) ? $validated['category_id'] : null,
+                'banner_image' => $bannerImagePath,
             ]);
 
             return response()->json([
@@ -196,6 +211,7 @@ class EventController extends Controller
      */
     public function show(Event $event)
     {
+        $this->authorize('view', $event);
         $event->load('category');
         
         return response()->json([
@@ -222,6 +238,9 @@ class EventController extends Controller
      */
     public function update(Request $request, Event $event)
     {
+        $this->authorize('update', $event);
+        $this->normalizeCategoryId($request);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -234,10 +253,12 @@ class EventController extends Controller
             'visibility' => 'nullable|in:public,private',
             'location' => 'nullable|string|max:255',
             'category_id' => 'nullable|exists:event_categories,id',
+            'banner_image' => 'nullable|image|max:5120',
         ]);
 
         $updateAll = $request->input('update_all', false);
         $allDay = $validated['all_day'] ?? false;
+        $recurrence = $validated['recurrence'] ?? null;
 
         // Combinar data e hora
         $startDateTime = $validated['start_date'];
@@ -271,6 +292,10 @@ class EventController extends Controller
             }
             
             $relatedEventsList = $relatedEvents->get();
+            $bannerImagePath = null;
+            if ($request->hasFile('banner_image')) {
+                $bannerImagePath = $request->file('banner_image')->store('events/banners', 'public');
+            }
             
             // Calcular diferença de tempo para manter o intervalo entre eventos
             $originalStart = Carbon::parse($event->start_date);
@@ -279,6 +304,7 @@ class EventController extends Controller
             
             // Atualizar cada evento relacionado
             foreach ($relatedEventsList as $relatedEvent) {
+                $oldBannerPath = $relatedEvent->banner_image;
                 $relatedStart = Carbon::parse($relatedEvent->start_date);
                 $relatedEnd = Carbon::parse($relatedEvent->end_date);
                 
@@ -292,11 +318,16 @@ class EventController extends Controller
                     'start_date' => $newRelatedStart,
                     'end_date' => $newRelatedEnd,
                     'all_day' => $allDay,
-                    'recurrence' => $validated['recurrence'] ?? $relatedEvent->recurrence,
+                    'recurrence' => $recurrence ?? $relatedEvent->recurrence,
                     'visibility' => $validated['visibility'] ?? 'public',
                     'location' => $validated['location'] ?? null,
                     'category_id' => !empty($validated['category_id']) ? $validated['category_id'] : null,
+                    'banner_image' => $bannerImagePath ?? $relatedEvent->banner_image,
                 ]);
+
+                if ($bannerImagePath && $oldBannerPath && $oldBannerPath !== $bannerImagePath) {
+                    Storage::disk('public')->delete($oldBannerPath);
+                }
             }
             
             return response()->json([
@@ -306,17 +337,28 @@ class EventController extends Controller
             ]);
         } else {
             // Atualizar apenas este evento
+            $newBannerPath = null;
+            if ($request->hasFile('banner_image')) {
+                $newBannerPath = $request->file('banner_image')->store('events/banners', 'public');
+            }
+            $oldBannerPath = $event->banner_image;
+
             $event->update([
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'start_date' => $startDateTime,
                 'end_date' => $endDateTime,
                 'all_day' => $allDay,
-                'recurrence' => $validated['recurrence'] ?? null,
+                'recurrence' => $recurrence,
                 'visibility' => $validated['visibility'] ?? 'public',
                 'location' => $validated['location'] ?? null,
                 'category_id' => !empty($validated['category_id']) ? $validated['category_id'] : null,
+                'banner_image' => $newBannerPath ?? $event->banner_image,
             ]);
+
+            if ($newBannerPath && $oldBannerPath && $oldBannerPath !== $newBannerPath) {
+                Storage::disk('public')->delete($oldBannerPath);
+            }
 
             return response()->json([
                 'success' => true,
@@ -331,6 +373,7 @@ class EventController extends Controller
      */
     public function destroy(Request $request, Event $event)
     {
+        $this->authorize('delete', $event);
         $deleteAll = $request->input('delete_all', false);
         
         // Se for para remover todas as ocorrências de um evento recorrente
@@ -348,7 +391,13 @@ class EventController extends Controller
                 $relatedEvents->whereRaw("TIME(start_date) = ?", [$startTime]);
             }
             
-            $count = $relatedEvents->count();
+            $eventsToDelete = $relatedEvents->get();
+            $count = $eventsToDelete->count();
+            foreach ($eventsToDelete as $relatedEvent) {
+                if ($relatedEvent->banner_image) {
+                    Storage::disk('public')->delete($relatedEvent->banner_image);
+                }
+            }
             $relatedEvents->delete();
             
             return response()->json([
@@ -357,12 +406,22 @@ class EventController extends Controller
             ]);
         } else {
             // Remover apenas esta ocorrência
+            if ($event->banner_image) {
+                Storage::disk('public')->delete($event->banner_image);
+            }
             $event->delete();
             
             return response()->json([
                 'success' => true,
                 'message' => 'Evento removido com sucesso!',
             ]);
+        }
+    }
+
+    private function normalizeCategoryId(Request $request): void
+    {
+        if ($request->input('category_id') === '' || $request->input('category_id') === 'null') {
+            $request->merge(['category_id' => null]);
         }
     }
 }

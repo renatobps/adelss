@@ -34,6 +34,7 @@ $isAdmin = Auth::user()?->is_admin ?? false;
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <h5>Informações Gerais</h5>
+                        <div class="table-responsive">
                         <table class="table table-borderless">
                             <tr>
                                 <th width="150">Data:</th>
@@ -68,6 +69,7 @@ $isAdmin = Auth::user()?->is_admin ?? false;
                             </tr>
                             @endif
                         </table>
+                        </div>
                     </div>
                 </div>
 

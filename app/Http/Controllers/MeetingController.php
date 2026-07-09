@@ -16,17 +16,8 @@ class MeetingController extends Controller
      */
     public function create(Pgi $pgi)
     {
-        $user = auth()->user();
-        $isAdmin = $user?->is_admin ?? false;
-        $member = $user?->member;
-        
-        // Verificar se é admin ou se é líder/líder em treinamento do PGI
-        if (!$isAdmin && $member) {
-            if (!$pgi->isLeader($member)) {
-                abort(403, 'Acesso negado. Apenas líderes e líderes em treinamento podem criar reuniões.');
-            }
-        }
-        
+        $this->authorize('manageMeetings', $pgi);
+
         $members = $pgi->members()->orderBy('name')->get();
         return view('meetings.create', compact('pgi', 'members'));
     }
@@ -49,17 +40,8 @@ class MeetingController extends Controller
      */
     public function store(Request $request, Pgi $pgi)
     {
-        $user = auth()->user();
-        $isAdmin = $user?->is_admin ?? false;
-        $member = $user?->member;
-        
-        // Verificar se é admin ou se é líder/líder em treinamento do PGI
-        if (!$isAdmin && $member) {
-            if (!$pgi->isLeader($member)) {
-                abort(403, 'Acesso negado. Apenas líderes e líderes em treinamento podem criar reuniões.');
-            }
-        }
-        
+        $this->authorize('manageMeetings', $pgi);
+
         $validated = $request->validate([
             'meeting_date' => 'required|date',
             'subject' => 'nullable|string|max:255',
@@ -128,17 +110,8 @@ class MeetingController extends Controller
      */
     public function edit(Pgi $pgi, Meeting $meeting)
     {
-        $user = auth()->user();
-        $isAdmin = $user?->is_admin ?? false;
-        $member = $user?->member;
-        
-        // Verificar se é admin ou se é líder/líder em treinamento do PGI
-        if (!$isAdmin && $member) {
-            if (!$pgi->isLeader($member)) {
-                abort(403, 'Acesso negado. Apenas líderes e líderes em treinamento podem editar reuniões.');
-            }
-        }
-        
+        $this->authorize('manageMeetings', $pgi);
+
         $members = $pgi->members()->orderBy('name')->get();
         $meeting->load(['attendances.member']);
         return view('meetings.edit', compact('pgi', 'meeting', 'members'));
@@ -158,17 +131,8 @@ class MeetingController extends Controller
      */
     public function update(Request $request, Pgi $pgi, Meeting $meeting)
     {
-        $user = auth()->user();
-        $isAdmin = $user?->is_admin ?? false;
-        $member = $user?->member;
-        
-        // Verificar se é admin ou se é líder/líder em treinamento do PGI
-        if (!$isAdmin && $member) {
-            if (!$pgi->isLeader($member)) {
-                abort(403, 'Acesso negado. Apenas líderes e líderes em treinamento podem editar reuniões.');
-            }
-        }
-        
+        $this->authorize('manageMeetings', $pgi);
+
         $validated = $request->validate([
             'meeting_date' => 'required|date',
             'subject' => 'nullable|string|max:255',
@@ -239,17 +203,8 @@ class MeetingController extends Controller
      */
     public function destroy(Pgi $pgi, Meeting $meeting)
     {
-        $user = auth()->user();
-        $isAdmin = $user?->is_admin ?? false;
-        $member = $user?->member;
-        
-        // Verificar se é admin ou se é líder/líder em treinamento do PGI
-        if (!$isAdmin && $member) {
-            if (!$pgi->isLeader($member)) {
-                abort(403, 'Acesso negado. Apenas líderes e líderes em treinamento podem excluir reuniões.');
-            }
-        }
-        
+        $this->authorize('manageMeetings', $pgi);
+
         $meeting->delete();
 
         return redirect()->route('pgis.show', $pgi)

@@ -206,3 +206,17 @@
         transform: translateY(1px);
     }
 }
+
+/* Ações de tabela: dropdown compacto no mobile */
+@media (max-width: 767.98px) {
+    .table-actions-mobile .dropdown-toggle {
+        min-width: 2.5rem;
+        min-height: 2.5rem;
+    }
+
+    .table-actions-mobile .dropdown-item {
+        min-height: 2.75rem;
+        display: flex;
+        align-items: center;
+    }
+}

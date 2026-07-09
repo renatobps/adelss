@@ -14,7 +14,11 @@ class RifaPolicy
     {
         return $user->is_admin
             || $user->hasPermission('rifas.index.view')
-            || $user->hasPermission('rifas.index.manage');
+            || $user->hasPermission('rifas.index.manage')
+            || $user->hasPermission('rifas.reports.view')
+            || $user->hasPermission('rifas.reports.manage')
+            || $user->hasPermission('rifas.sales.view')
+            || $user->hasPermission('rifas.sales.manage');
     }
 
     /**

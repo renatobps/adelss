@@ -17,7 +17,7 @@
             <header class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
                 <div>
                     <h2 class="card-title mb-0">Resultados</h2>
-                    <p class="text-muted small mb-0 mt-1">Exibe apenas eventos gerais (não cultos nem PGIs).</p>
+                    <p class="text-muted small mb-0 mt-1">Eventos com página pública e inscrições. Cultos e PGIs ficam no Calendário.</p>
                 </div>
                 <a href="{{ route('agenda.eventos.create') }}" class="btn btn-primary btn-sm">
                     <i class="bx bx-plus"></i> Novo evento

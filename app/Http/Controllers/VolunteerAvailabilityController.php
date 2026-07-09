@@ -15,6 +15,7 @@ class VolunteerAvailabilityController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', VolunteerAvailability::class);
         $query = Volunteer::with(['member', 'availability']);
 
         // Busca
@@ -39,6 +40,7 @@ class VolunteerAvailabilityController extends Controller
      */
     public function create(Request $request)
     {
+        $this->authorize('create', VolunteerAvailability::class);
         $volunteerId = $request->get('volunteer_id');
         
         if (!$volunteerId) {
@@ -72,6 +74,7 @@ class VolunteerAvailabilityController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', VolunteerAvailability::class);
         $validated = $request->validate([
             'volunteer_id' => 'required|exists:volunteers,id|unique:volunteer_availability,volunteer_id',
             'days_of_week' => 'nullable|array',
@@ -132,6 +135,7 @@ class VolunteerAvailabilityController extends Controller
      */
     public function show(VolunteerAvailability $disponibilidade)
     {
+        $this->authorize('view', $disponibilidade);
         $disponibilidade->load(['volunteer.member', 'volunteer.availabilityEvents']);
         
         return view('volunteer-availability.show', compact('disponibilidade'));
@@ -142,6 +146,7 @@ class VolunteerAvailabilityController extends Controller
      */
     public function edit(VolunteerAvailability $disponibilidade)
     {
+        $this->authorize('update', $disponibilidade);
         $disponibilidade->load(['volunteer.member', 'volunteer.availabilityEvents']);
         
         // Filtrar eventos dos próximos 45 dias a partir da data atual
@@ -162,6 +167,7 @@ class VolunteerAvailabilityController extends Controller
      */
     public function update(Request $request, VolunteerAvailability $disponibilidade)
     {
+        $this->authorize('update', $disponibilidade);
         $validated = $request->validate([
             'days_of_week' => 'nullable|array',
             'days_of_week.*' => 'in:segunda,terça,quarta,quinta,sexta,sábado,domingo',
@@ -219,6 +225,7 @@ class VolunteerAvailabilityController extends Controller
      */
     public function destroy(VolunteerAvailability $disponibilidade)
     {
+        $this->authorize('delete', $disponibilidade);
         $disponibilidade->delete();
 
         return redirect()->route('voluntarios.disponibilidade.index')

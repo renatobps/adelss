@@ -84,6 +84,7 @@
         <section class="card">
             <header class="card-header"><h2 class="card-title">Ranking de vendedores</h2></header>
             <div class="card-body">
+                <div class="table-responsive">
                 <table class="table table-sm table-striped">
                     <thead><tr><th>Vendedor</th><th>Qtd</th><th>Valor</th></tr></thead>
                     <tbody>
@@ -98,6 +99,7 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
             </div>
         </section>
     </div>

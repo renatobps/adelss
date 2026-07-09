@@ -70,6 +70,7 @@ class MoriahUnavailabilityController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('moriah.manage');
         $request->validate([
             'member_id' => 'required|exists:members,id',
             'date' => 'required|date',
@@ -103,6 +104,7 @@ class MoriahUnavailabilityController extends Controller
      */
     public function destroy($id)
     {
+        $this->authorize('moriah.manage');
         $unavailability = MoriahUnavailability::findOrFail($id);
         $unavailability->delete();
         
@@ -118,6 +120,7 @@ class MoriahUnavailabilityController extends Controller
      */
     public function checkUnavailabilities(Request $request)
     {
+        $this->authorize('moriah.manage');
         $request->validate([
             'member_ids' => 'required|array',
             'member_ids.*' => 'exists:members,id',

@@ -15,6 +15,7 @@ class DiscipleshipIndicatorController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', DiscipleshipIndicator::class);
         $indicators = DiscipleshipIndicator::orderBy('order')->orderBy('nome')->get();
         
         return view('discipleship.indicators.index', compact('indicators'));
@@ -25,6 +26,7 @@ class DiscipleshipIndicatorController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', DiscipleshipIndicator::class);
         return view('discipleship.indicators.create');
     }
 
@@ -33,6 +35,7 @@ class DiscipleshipIndicatorController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', DiscipleshipIndicator::class);
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
             'tipo' => 'required|in:espiritual,material',
@@ -57,6 +60,7 @@ class DiscipleshipIndicatorController extends Controller
      */
     public function edit(DiscipleshipIndicator $indicator)
     {
+        $this->authorize('update', $indicator);
         return view('discipleship.indicators.edit', compact('indicator'));
     }
 
@@ -65,6 +69,7 @@ class DiscipleshipIndicatorController extends Controller
      */
     public function update(Request $request, DiscipleshipIndicator $indicator)
     {
+        $this->authorize('update', $indicator);
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
             'tipo' => 'required|in:espiritual,material',
@@ -89,6 +94,7 @@ class DiscipleshipIndicatorController extends Controller
      */
     public function destroy(DiscipleshipIndicator $indicator)
     {
+        $this->authorize('delete', $indicator);
         $indicator->delete();
 
         return redirect()->route('discipleship.indicators.index')
@@ -100,6 +106,7 @@ class DiscipleshipIndicatorController extends Controller
      */
     public function storeValue(Request $request)
     {
+        $this->authorize('update', new DiscipleshipIndicator());
         $validated = $request->validate([
             'indicator_id' => 'required|exists:discipleship_indicators,id',
             'discipleship_member_id' => 'required|exists:discipleship_members,id',

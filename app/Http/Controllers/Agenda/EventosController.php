@@ -9,6 +9,7 @@ use App\Models\EventRegistration;
 use App\Models\EventRegistrationField;
 use App\Models\EventScheduleItem;
 use App\Models\EventSpeaker;
+use App\Services\WhatsAppService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,7 @@ class EventosController extends Controller
 {
     public function index()
     {
+        $this->authorize('viewAny', Event::class);
         $events = Event::query()
             ->apenasEventosGerais()
             ->with('category')
@@ -32,13 +34,18 @@ class EventosController extends Controller
 
     public function create()
     {
-        $categories = EventCategory::query()->orderBy('name')->get();
+        $this->authorize('create', Event::class);
+        $categories = EventCategory::query()
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (EventCategory $category) => !preg_match('/culto|pgi/i', $category->name));
 
         return view('agenda.eventos.create', compact('categories'));
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', Event::class);
         try {
             $data = $this->validateEvent($request);
 
@@ -48,6 +55,12 @@ class EventosController extends Controller
                 $event->status = 'agendado';
                 $event->recurrence = null;
                 $event->visibility = 'public';
+
+                if (empty($event->category_id)) {
+                    $event->category_id = EventCategory::query()
+                        ->whereRaw('LOWER(name) = ?', ['eventos'])
+                        ->value('id');
+                }
 
                 if ($request->hasFile('banner_image')) {
                     $event->banner_image = $request->file('banner_image')->store('events/banners', 'public');
@@ -78,8 +91,12 @@ class EventosController extends Controller
 
     public function edit(Event $event)
     {
+        $this->authorize('update', $event);
         $event->load(['scheduleItems', 'registrationFields', 'speakers']);
-        $categories = EventCategory::query()->orderBy('name')->get();
+        $categories = EventCategory::query()
+            ->orderBy('name')
+            ->get()
+            ->filter(fn (EventCategory $category) => !preg_match('/culto|pgi/i', $category->name));
 
         return view('agenda.eventos.edit', [
             'event' => $event,
@@ -89,6 +106,7 @@ class EventosController extends Controller
 
     public function update(Request $request, Event $event)
     {
+        $this->authorize('update', $event);
         try {
             $data = $this->validateEvent($request);
 
@@ -129,6 +147,7 @@ class EventosController extends Controller
 
     public function destroy(Event $event)
     {
+        $this->authorize('delete', $event);
         DB::transaction(function () use ($event) {
             $event->load(['speakers', 'scheduleItems']);
             if ($event->banner_image) {
@@ -157,6 +176,7 @@ class EventosController extends Controller
 
     public function duplicate(Event $event)
     {
+        $this->authorize('duplicate', $event);
         $copy = DB::transaction(function () use ($event) {
             $event->load(['scheduleItems', 'registrationFields', 'speakers']);
 
@@ -198,6 +218,7 @@ class EventosController extends Controller
 
     public function registrations(Request $request, Event $event)
     {
+        $this->authorize('manageRegistrations', $event);
         $event = Event::query()
             ->apenasEventosGerais()
             ->whereKey($event->id)
@@ -205,6 +226,7 @@ class EventosController extends Controller
             ->firstOrFail();
 
         $registrations = $event->registrations()
+            ->with('payment')
             ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
@@ -219,6 +241,7 @@ class EventosController extends Controller
 
     public function updateRegistrationStatus(Request $request, Event $event, EventRegistration $registration)
     {
+        $this->authorize('manageRegistrations', $event);
         $event = Event::query()
             ->apenasEventosGerais()
             ->whereKey($event->id)
@@ -237,11 +260,84 @@ class EventosController extends Controller
         return back()->with('success', 'Status da inscrição atualizado.');
     }
 
+    public function sendPixToRegistrationWhatsapp(Event $event, EventRegistration $registration, WhatsAppService $whatsAppService)
+    {
+        $this->authorize('manageRegistrations', $event);
+        $event = Event::query()
+            ->apenasEventosGerais()
+            ->whereKey($event->id)
+            ->firstOrFail();
+
+        if ((int) $registration->event_id !== (int) $event->id) {
+            abort(404);
+        }
+
+        $registration->load('payment');
+        $payment = $registration->payment;
+
+        if (!$payment) {
+            return back()->with('error', 'Não há pagamento vinculado a esta inscrição.');
+        }
+
+        $paymentMethod = strtolower((string) ($payment->payment_method ?? ''));
+        if ($paymentMethod !== 'pix') {
+            return back()->with('error', 'Somente pagamentos PIX possuem QR Code/copia e cola para envio.');
+        }
+
+        if (empty($registration->phone)) {
+            return back()->with('error', 'Esta inscrição não possui telefone cadastrado.');
+        }
+
+        $qrCodeText = trim((string) ($payment->qr_code_text ?? ''));
+        if ($qrCodeText === '') {
+            return back()->with('error', 'Código PIX não disponível para esta inscrição.');
+        }
+        $qrCodeBase64 = trim((string) ($payment->qr_code_base64 ?? ''));
+        if ($qrCodeBase64 === '') {
+            return back()->with('error', 'Imagem do QR Code PIX não disponível para esta inscrição.');
+        }
+
+        if (!$whatsAppService->isConfigurado()) {
+            return back()->with('error', 'WhatsApp não configurado. Verifique em Notificações > Configuração WPP.');
+        }
+
+        $captionImagem = "QR Code PIX - {$event->title}\n"
+            ."Valor: R$ ".number_format((float) ($payment->amount ?? 0), 2, ',', '.');
+
+        $resultadoImagem = $whatsAppService->enviarImagemBase64(
+            (string) $registration->phone,
+            $qrCodeBase64,
+            $captionImagem
+        );
+
+        if (!($resultadoImagem['success'] ?? false)) {
+            $erroImagem = (string) ($resultadoImagem['error'] ?? 'Falha ao enviar imagem do QR Code no WhatsApp.');
+
+            return back()->with('error', 'Não foi possível enviar o QR Code PIX pelo WhatsApp. '.$erroImagem);
+        }
+
+        $mensagem = "Olá, {$registration->name}!\n"
+            ."Segue o PIX da inscrição do evento \"{$event->title}\".\n"
+            ."Valor: R$ ".number_format((float) ($payment->amount ?? 0), 2, ',', '.')."\n\n"
+            ."Copia e cola PIX:\n{$qrCodeText}";
+
+        $resultado = $whatsAppService->enviarMensagem((string) $registration->phone, $mensagem);
+
+        if (!($resultado['success'] ?? false)) {
+            $erro = (string) ($resultado['error'] ?? 'Falha ao enviar mensagem no WhatsApp.');
+
+            return back()->with('error', 'Não foi possível enviar o PIX pelo WhatsApp. '.$erro);
+        }
+
+        return back()->with('success', 'PIX enviado no WhatsApp com QR Code e código copia e cola.');
+    }
+
     /**
      * Upload de imagem para o TinyMCE (campo "Sobre o evento"). Resposta no formato esperado pelo editor.
      */
     public function uploadEditorImage(Request $request)
     {
+        $this->authorize('uploadEditorImage', Event::class);
         $request->validate([
             'file' => ['required', 'image', 'max:5120'],
         ]);

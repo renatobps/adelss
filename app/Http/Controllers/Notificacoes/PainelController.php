@@ -14,6 +14,7 @@ class PainelController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('notificacoes.view');
         $query = NotificacaoEnviada::query()->with('member:id,name,phone');
 
         if ($request->filled('status')) {
@@ -43,6 +44,7 @@ class PainelController extends Controller
 
     public function enviar(Request $request)
     {
+        $this->authorize('notificacoes.manage');
         $request->validate([
             'mensagem' => 'nullable|string|max:4096|required_without:arquivo',
             'members' => 'nullable|array',

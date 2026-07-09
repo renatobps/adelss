@@ -89,7 +89,7 @@
                 </div>
                 <div class="mt-3">
                     <strong>Tipo:</strong>
-                    <span class="badge bg-primary"><i class="bx bx-bar-chart me-1"></i> Poll (Z-API)</span>
+                    <span class="badge bg-primary"><i class="bx bx-bar-chart me-1"></i> Botões (Evolution API)</span>
                 </div>
                 @if($enquete->inicio_em)
                     <div class="mt-2">
@@ -172,7 +172,7 @@
                 <ul class="mb-0 mt-2">
                     <li>Selecione <strong>departamentos</strong> e/ou <strong>membros</strong> individuais</li>
                     <li>É necessário selecionar pelo menos um departamento ou membro</li>
-                    <li>A enquete será enviada com <strong>botões clicáveis</strong> no WhatsApp (Z-API)</li>
+                    <li>A enquete será enviada com <strong>botões clicáveis</strong> no WhatsApp (Evolution API)</li>
                 </ul>
             </div>
             <div class="d-grid gap-2 mt-3">

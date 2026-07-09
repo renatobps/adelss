@@ -282,7 +282,7 @@
 
 <!-- Modal: Notificar Todos -->
 <div class="modal fade" id="notifyAllVolunteersModal" tabindex="-1" aria-labelledby="notifyAllVolunteersModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <form method="POST" action="{{ route('voluntarios.escalas-mensais.volunteers.notify-all', $escala) }}" enctype="multipart/form-data">
                 @csrf
@@ -338,7 +338,7 @@
 
 <!-- Modal: Notificar Voluntário -->
 <div class="modal fade" id="notifyVolunteerModal" tabindex="-1" aria-labelledby="notifyVolunteerModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <form method="POST" action="{{ route('voluntarios.escalas-mensais.volunteers.notify') }}" enctype="multipart/form-data">
                 @csrf

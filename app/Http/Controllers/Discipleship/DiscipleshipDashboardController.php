@@ -19,6 +19,7 @@ class DiscipleshipDashboardController extends Controller
      */
     public function discipulador()
     {
+        $this->authorize('discipleship.view');
         $user = auth()->user();
         
         // Buscar discípulos do usuário logado
@@ -48,6 +49,7 @@ class DiscipleshipDashboardController extends Controller
      */
     public function lideranca()
     {
+        $this->authorize('discipleship.view');
         // Estatísticas gerais
         $totalEmDiscipulado = DiscipleshipMember::ativos()->count();
         $totalCiclosAtivos = DiscipleshipCycle::ativos()->count();
@@ -163,6 +165,7 @@ class DiscipleshipDashboardController extends Controller
      */
     public function help()
     {
+        $this->authorize('discipleship.view');
         return view('discipleship.help');
     }
 

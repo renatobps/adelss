@@ -5,14 +5,21 @@ namespace App\Http\Controllers\Agenda;
 use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventRegistration;
+use App\Models\EventRegistrationPayment;
+use App\Services\Payments\MercadoPagoService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class PublicEventController extends Controller
 {
+    public function __construct(
+        private MercadoPagoService $mercadoPagoService
+    ) {}
+
     public function show(string $slug)
     {
         $event = Event::query()
@@ -34,11 +41,29 @@ class PublicEventController extends Controller
             ->filter(fn ($field) => ! $this->isDefaultRegistrationFieldName((string) $field->name))
             ->values();
 
-        return view('agenda.eventos.public.show', compact('event', 'customFields'));
+        $mercadoPagoPublicKey = (string) config('mercadopago.public_key', '');
+
+        return view('agenda.eventos.public.show', compact('event', 'customFields', 'mercadoPagoPublicKey'));
     }
 
     public function register(Request $request, string $slug)
     {
+        $configuredTestPayerEmail = trim((string) config('mercadopago.test_payer_email', ''));
+        $configuredTestPayerDocument = preg_replace('/\D+/', '', (string) config('mercadopago.test_payer_document', '')) ?: '';
+
+        if (!$request->filled('email') && $configuredTestPayerEmail !== '') {
+            $request->merge(['email' => $configuredTestPayerEmail]);
+        }
+        if (!$request->filled('payer_document') && $configuredTestPayerDocument !== '') {
+            $request->merge(['payer_document' => $configuredTestPayerDocument]);
+        }
+
+        if ($request->filled('payer_document')) {
+            $request->merge([
+                'payer_document' => preg_replace('/\D+/', '', (string) $request->input('payer_document')),
+            ]);
+        }
+
         $event = Event::query()
             ->where('public_slug', $slug)
             ->where('visibility', 'public')
@@ -67,6 +92,16 @@ class PublicEventController extends Controller
             $rules['email'] = 'required|email|max:255';
         } else {
             $rules['email'] = 'nullable|email|max:255';
+        }
+
+        if ($event->is_paid) {
+            $rules['email'] = 'required|email|max:255';
+            $rules['payer_document'] = ['required', 'regex:/^\d{11}$/'];
+            $rules['payment_method'] = ['required', 'in:pix,card'];
+            $rules['card_token'] = ['nullable', 'string'];
+            $rules['card_payment_method_id'] = ['nullable', 'string', 'max:50'];
+            $rules['card_issuer_id'] = ['nullable', 'string', 'max:40'];
+            $rules['card_installments'] = ['nullable', 'integer', 'min:1', 'max:24'];
         }
 
         if ($event->phone_required) {
@@ -112,6 +147,129 @@ class PublicEventController extends Controller
             if ($val !== null && $val !== '') {
                 $customAnswers[$field->id] = $val;
             }
+        }
+
+        if ($event->is_paid) {
+            $price = (float) ($event->price ?? 0);
+            if ($price <= 0) {
+                return back()->withInput()->with('error', 'Este evento está configurado como pago, mas sem valor de ingresso.');
+            }
+
+            $payerEmail = trim((string) ($validated['email'] ?? $configuredTestPayerEmail));
+            $payerDocument = preg_replace('/\D+/', '', (string) ($validated['payer_document'] ?? $configuredTestPayerDocument)) ?: '';
+
+            if ($payerEmail === '' || $payerDocument === '') {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Configure MP_TEST_PAYER_EMAIL e MP_TEST_PAYER_DOCUMENT no .env, ou informe e-mail/CPF no formulário para testar pagamentos.');
+            }
+
+            if (($validated['payment_method'] ?? 'pix') === 'card') {
+                if (empty($validated['card_token']) || empty($validated['card_payment_method_id']) || empty($validated['card_installments'])) {
+                    return back()
+                        ->withInput()
+                        ->with('error', 'Preencha os dados do cartão para concluir o pagamento.');
+                }
+            }
+
+            try {
+                [$registration, $paymentRecord] = DB::transaction(function () use ($event, $validated, $customAnswers, $payerEmail, $payerDocument) {
+                    $registration = EventRegistration::create([
+                        'event_id' => $event->id,
+                        'name' => $validated['name'],
+                        'email' => $validated['email'] ?? null,
+                        'phone' => $validated['phone'] ?? null,
+                        'address' => $validated['address'] ?? null,
+                        'custom_answers' => $customAnswers ?: null,
+                        'status' => EventRegistration::STATUS_PENDENTE,
+                    ]);
+
+                    $idempotencyKey = (string) Str::uuid();
+                    $externalReference = sprintf('event-reg-%d-%s', $registration->id, Str::random(8));
+
+                    $isCard = ($validated['payment_method'] ?? 'pix') === 'card';
+                    if ($isCard) {
+                        $paymentResponse = $this->mercadoPagoService->createCardPayment([
+                            'amount' => (float) $event->price,
+                            'description' => 'Ingresso: '.$event->title,
+                            'token' => $validated['card_token'],
+                            'payer_email' => $payerEmail,
+                            'payer_document' => $payerDocument,
+                            'payer_document_type' => 'CPF',
+                            'payment_method_id' => $validated['card_payment_method_id'],
+                            'issuer_id' => $validated['card_issuer_id'] ?? null,
+                            'installments' => (int) $validated['card_installments'],
+                            'external_reference' => $externalReference,
+                        ], $idempotencyKey);
+                    } else {
+                        $paymentResponse = $this->mercadoPagoService->createPixPayment([
+                            'amount' => (float) $event->price,
+                            'description' => 'Ingresso: '.$event->title,
+                            'payer_email' => $payerEmail,
+                            'payer_document' => $payerDocument,
+                            'payer_document_type' => 'CPF',
+                            'external_reference' => $externalReference,
+                        ], $idempotencyKey);
+                    }
+
+                    $paymentRecord = EventRegistrationPayment::create([
+                        'event_registration_id' => $registration->id,
+                        'idempotency_key' => $idempotencyKey,
+                        'external_payment_id' => isset($paymentResponse['id']) ? (string) $paymentResponse['id'] : null,
+                        'external_reference' => $externalReference,
+                        'status' => (string) ($paymentResponse['status'] ?? 'pending'),
+                        'status_detail' => (string) ($paymentResponse['status_detail'] ?? ''),
+                        'payment_method' => (string) ($paymentResponse['payment_method_id'] ?? ($isCard ? 'card' : 'pix')),
+                        'amount' => (float) $event->price,
+                        'currency' => (string) ($paymentResponse['currency_id'] ?? 'BRL'),
+                        'payer_email' => $payerEmail,
+                        'payer_document' => $payerDocument,
+                        'qr_code_base64' => data_get($paymentResponse, 'point_of_interaction.transaction_data.qr_code_base64'),
+                        'qr_code_text' => data_get($paymentResponse, 'point_of_interaction.transaction_data.qr_code'),
+                        'raw_payload' => $paymentResponse,
+                    ]);
+
+                    return [$registration, $paymentRecord];
+                });
+            } catch (\Throwable $e) {
+                try {
+                    Log::warning('Falha ao gerar pagamento de ingresso', [
+                        'event_id' => $event->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                } catch (\Throwable) {
+                    // Evita quebrar o fluxo se o canal de log estiver com configuração inválida.
+                }
+
+                $isCard = ($validated['payment_method'] ?? 'pix') === 'card';
+                $baseMessage = $isCard
+                    ? 'Não foi possível processar o pagamento com cartão.'
+                    : 'Não foi possível gerar o PIX do ingresso.';
+                $apiMessage = trim((string) $e->getMessage());
+                $friendlyDetail = '';
+
+                if (str_contains(Str::lower($apiMessage), 'unauthorized use of live credentials')) {
+                    $friendlyDetail = ' As credenciais atuais não permitem uso nesse ambiente. Use credenciais TEST para homologação.';
+                } elseif ($apiMessage !== '') {
+                    $friendlyDetail = ' Detalhe: '.$apiMessage;
+                }
+
+                return back()
+                    ->withInput()
+                    ->with('error', $baseMessage.$friendlyDetail);
+            }
+
+            $this->sendWhatsAppNotifications($event, $registration);
+
+            return back()
+                ->with('success', 'Inscrição recebida! Conclua o pagamento do ingresso para confirmar sua vaga.')
+                ->with('pix_payment', [
+                    'qr_code_base64' => $paymentRecord->qr_code_base64,
+                    'qr_code_text' => $paymentRecord->qr_code_text,
+                    'amount' => number_format((float) $paymentRecord->amount, 2, ',', '.'),
+                    'status' => $paymentRecord->status,
+                    'payment_method' => $paymentRecord->payment_method,
+                ]);
         }
 
         $registration = EventRegistration::create([
@@ -188,19 +346,24 @@ class PublicEventController extends Controller
             );
         }
 
+        $statusLabel = $event->is_paid ? 'pendente de pagamento' : EventRegistration::STATUS_PENDENTE;
+        $paymentLine = $event->is_paid ? "Ingresso: R$ ".number_format((float) ($event->price ?? 0), 2, ',', '.')."\n" : '';
+
         return "Olá, {$registration->name}! Sua inscrição no evento \"{$event->title}\" foi recebida com sucesso.\n"
             ."Data: ".$event->start_date->format('d/m/Y H:i')."\n"
-            ."Status: ".EventRegistration::STATUS_PENDENTE."\n"
+            .$paymentLine
+            ."Status: ".$statusLabel."\n"
             ."Nos vemos lá!";
     }
 
     private function renderRegistrationSuccessMessage(string $template, Event $event, EventRegistration $registration): string
     {
+        $statusLabel = $event->is_paid ? 'pendente de pagamento' : EventRegistration::STATUS_PENDENTE;
         $replacements = [
             '{{nome}}' => (string) $registration->name,
             '{{evento}}' => (string) $event->title,
             '{{data}}' => $event->start_date ? $event->start_date->format('d/m/Y H:i') : '-',
-            '{{status}}' => EventRegistration::STATUS_PENDENTE,
+            '{{status}}' => $statusLabel,
         ];
 
         return strtr($template, $replacements);

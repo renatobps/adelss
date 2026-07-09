@@ -12,6 +12,7 @@ class EstudosController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Study::class);
         $query = Study::query();
 
         // Busca
@@ -33,12 +34,14 @@ class EstudosController extends Controller
 
     public function create()
     {
+        $this->authorize('create', Study::class);
         return view('ensino.estudos.create');
     }
     
 
     public function store(Request $request)
     {
+        $this->authorize('create', Study::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'content' => 'nullable|string',
@@ -69,16 +72,19 @@ class EstudosController extends Controller
 
     public function show(Study $estudo)
     {
+        $this->authorize('view', $estudo);
         return view('ensino.estudos.show', compact('estudo'));
     }
 
     public function edit(Study $estudo)
     {
+        $this->authorize('update', $estudo);
         return view('ensino.estudos.edit', compact('estudo'));
     }
 
     public function update(Request $request, Study $estudo)
     {
+        $this->authorize('update', $estudo);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'content' => 'nullable|string',
@@ -141,6 +147,7 @@ class EstudosController extends Controller
 
     public function destroy(Study $estudo)
     {
+        $this->authorize('delete', $estudo);
         // Remove arquivos
         if ($estudo->featured_image) {
             Storage::disk('public')->delete($estudo->featured_image);

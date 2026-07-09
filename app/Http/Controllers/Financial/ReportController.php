@@ -12,11 +12,21 @@ use Carbon\Carbon;
 
 class ReportController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware(function ($request, $next) {
+            $this->authorize('financial.view-reports');
+
+            return $next($request);
+        });
+    }
+
     /**
      * Display reports index page
      */
     public function index()
     {
+        $this->authorize('financial.view-reports');
         return view('financial.reports.index');
     }
 

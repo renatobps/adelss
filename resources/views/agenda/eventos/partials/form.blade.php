@@ -158,7 +158,13 @@
                     <select name="category_id" class="form-select">
                         <option value="">—</option>
                         @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}" @selected(old('category_id', $e->category_id ?? null) == $cat->id)>{{ $cat->name }}</option>
+                            @php
+                                $defaultCategoryId = old('category_id', $e->category_id ?? null);
+                                if ($defaultCategoryId === null && !$e && strtolower($cat->name) === 'eventos') {
+                                    $defaultCategoryId = $cat->id;
+                                }
+                            @endphp
+                            <option value="{{ $cat->id }}" @selected($defaultCategoryId == $cat->id)>{{ $cat->name }}</option>
                         @endforeach
                     </select>
                 </div>

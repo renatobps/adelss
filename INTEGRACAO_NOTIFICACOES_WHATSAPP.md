@@ -32,7 +32,7 @@ Este documento descreve a análise do sistema **NotifiADel** (`C:\Users\renat\Do
 
 ### Estrutura principal
 
-- **API WhatsApp**: Z-API (config: `config/whatsapp.php`, env: `WHATSAPP_API_URL`, `WHATSAPP_CLIENT_TOKEN`, `WHATSAPP_INSTANCE_ID`, `WHATSAPP_INSTANCE_TOKEN`).
+- **API WhatsApp**: Evolution API (config: `config/whatsapp.php`, env: `WHATSAPP_API_URL`, `WHATSAPP_API_KEY`, `WHATSAPP_INSTANCE_NAME`, `WHATSAPP_WEBHOOK_URL`).
 - **Modelos**: `Membro` (nome, sobrenome, telefone, email, categoria_id, ativo), `Grupo` (nome, descricao, ativo), `Enquete`, `EnqueteResposta`, `EnqueteEnvio`, `NotificacaoEnviada`, `ConfiguracaoMensagem`, `ConfiguracaoWhatsapp`, etc.
 - **Serviços**: `WhatsAppService` (envio de mensagem, arquivo, etc.), `NotificacaoService`, `EnqueteService`.
 - **Controllers Web**: `GrupoWebController`, `EnqueteWebController`, `NotificacaoWebController`, `TemplateWebController`, `WhatsAppWebController`, `MembroWebController`.
@@ -57,7 +57,7 @@ Na integração, **sempre usar o model `Member`** e o campo **`phone`** para env
 
 - Copiar `config/whatsapp.php` do NotifiADel para o ADELSS e ajustar se necessário.
 - Adicionar ao `.env.example` e `.env`:  
-  `WHATSAPP_API_URL`, `WHATSAPP_CLIENT_TOKEN`, `WHATSAPP_INSTANCE_ID`, `WHATSAPP_INSTANCE_TOKEN`, `WHATSAPP_WEBHOOK_URL` (se usar webhook).
+  `WHATSAPP_API_URL`, `WHATSAPP_API_KEY`, `WHATSAPP_INSTANCE_NAME`, `WHATSAPP_WEBHOOK_URL`.
 
 ### 2. Banco de dados (migrations)
 

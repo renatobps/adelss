@@ -23,6 +23,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <h5>Informações do Serviço</h5>
+                        <div class="table-responsive">
                         <table class="table table-bordered">
                             <tr>
                                 <th width="200">Data:</th>
@@ -68,6 +69,7 @@
                             </tr>
                             @endif
                         </table>
+                        </div>
                     </div>
                 </div>
 

@@ -16,6 +16,7 @@ class DiscipleshipCycleController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', DiscipleshipCycle::class);
         $status = $request->get('status', 'ativo');
         
         $query = DiscipleshipCycle::with(['creator', 'members.member']);
@@ -36,6 +37,7 @@ class DiscipleshipCycleController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', DiscipleshipCycle::class);
         return view('discipleship.cycles.create');
     }
 
@@ -44,6 +46,7 @@ class DiscipleshipCycleController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', DiscipleshipCycle::class);
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
             'descricao' => 'nullable|string',
@@ -69,6 +72,7 @@ class DiscipleshipCycleController extends Controller
      */
     public function show(DiscipleshipCycle $cycle)
     {
+        $this->authorize('view', $cycle);
         $cycle->load(['members.member', 'members.discipulador', 'members.meetings', 'creator']);
         
         return view('discipleship.cycles.show', compact('cycle'));
@@ -79,6 +83,7 @@ class DiscipleshipCycleController extends Controller
      */
     public function edit(DiscipleshipCycle $cycle)
     {
+        $this->authorize('update', $cycle);
         return view('discipleship.cycles.edit', compact('cycle'));
     }
 
@@ -87,6 +92,7 @@ class DiscipleshipCycleController extends Controller
      */
     public function update(Request $request, DiscipleshipCycle $cycle)
     {
+        $this->authorize('update', $cycle);
         $validated = $request->validate([
             'nome' => 'required|string|max:255',
             'descricao' => 'nullable|string',
@@ -110,6 +116,7 @@ class DiscipleshipCycleController extends Controller
      */
     public function destroy(DiscipleshipCycle $cycle)
     {
+        $this->authorize('delete', $cycle);
         $cycle->delete();
 
         return redirect()->route('discipleship.cycles.index')

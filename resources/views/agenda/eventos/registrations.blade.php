@@ -52,6 +52,8 @@
                                 <th style="min-width: 11rem;">Status</th>
                                 <th>E-mail</th>
                                 <th>Telefone</th>
+                                <th>Pagamento</th>
+                                <th>Valor</th>
                                 <th>Data</th>
                             </tr>
                         </thead>
@@ -91,16 +93,105 @@
                                     </td>
                                     <td>{{ $r->email ?: '—' }}</td>
                                     <td>{{ $r->phone ?: '—' }}</td>
+                                    <td>
+                                        @if($event->is_paid)
+                                            @php
+                                                $payment = $r->payment;
+                                                $payStatus = strtolower((string) ($r->payment->status ?? 'pendente'));
+                                                $payMethod = strtolower((string) ($payment->payment_method ?? ''));
+                                                $payMethodLabel = match ($payMethod) {
+                                                    'pix' => 'PIX',
+                                                    'credit_card', 'card', 'master', 'visa', 'elo', 'amex', 'hipercard' => 'Cartão',
+                                                    default => $payMethod !== '' ? strtoupper($payMethod) : '—',
+                                                };
+                                                $payClass = match ($payStatus) {
+                                                    'approved' => 'success',
+                                                    'rejected', 'cancelled', 'refunded', 'charged_back' => 'danger',
+                                                    default => 'warning',
+                                                };
+                                            @endphp
+                                            <div class="d-flex flex-column gap-1">
+                                                <span class="badge bg-{{ $payClass }} text-uppercase">{{ $payStatus }}</span>
+                                                <small class="text-muted">Método: {{ $payMethodLabel }}</small>
+                                                @if($payMethod === 'pix' && !empty($payment?->qr_code_text))
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-outline-primary btn-xs js-open-pix-modal"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#pixModal{{ $r->id }}"
+                                                    >
+                                                        Ver QR Code PIX
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($event->is_paid && $r->payment)
+                                            R$ {{ number_format((float) ($r->payment->amount ?? 0), 2, ',', '.') }}
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
                                     <td>{{ $r->created_at?->format('d/m/Y H:i:s') }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-muted">Nenhuma inscrição neste evento.</td>
+                                    <td colspan="7" class="text-muted">Nenhuma inscrição neste evento.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
+
+                @foreach($registrations as $r)
+                    @if($event->is_paid && strtolower((string) ($r->payment->payment_method ?? '')) === 'pix' && !empty($r->payment->qr_code_text))
+                        <div class="modal fade" id="pixModal{{ $r->id }}" tabindex="-1" aria-labelledby="pixModalLabel{{ $r->id }}" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="pixModalLabel{{ $r->id }}">PIX - {{ $r->name }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        @if(!empty($r->payment->qr_code_base64))
+                                            <div class="text-center mb-3">
+                                                <img
+                                                    src="data:image/png;base64,{{ $r->payment->qr_code_base64 }}"
+                                                    alt="QR Code PIX"
+                                                    style="max-width: 260px; width: 100%;"
+                                                >
+                                            </div>
+                                        @endif
+                                        <label class="form-label">Código copia e cola</label>
+                                        <textarea
+                                            id="pixCode{{ $r->id }}"
+                                            class="form-control mb-2"
+                                            rows="4"
+                                            readonly
+                                        >{{ $r->payment->qr_code_text }}</textarea>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm js-copy-pix-code" data-target="#pixCode{{ $r->id }}">
+                                            Copiar código PIX
+                                        </button>
+                                    </div>
+                                    <div class="modal-footer d-flex justify-content-between">
+                                        <small class="text-muted">
+                                            Telefone: {{ $r->phone ?: 'não informado' }}
+                                        </small>
+                                        <form method="post" action="{{ route('agenda.eventos.registrations.pix-whatsapp', [$event, $r]) }}">
+                                            @csrf
+                                            <button type="submit" class="btn btn-success btn-sm" @disabled(empty($r->phone))>
+                                                <i class="bx bxl-whatsapp"></i> Enviar PIX no WhatsApp
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                @endforeach
 
                 <div class="mt-3">
                     {{ $registrations->links() }}
@@ -110,3 +201,32 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.js-copy-pix-code').forEach(function (button) {
+        button.addEventListener('click', async function () {
+            var targetSelector = button.getAttribute('data-target');
+            var field = targetSelector ? document.querySelector(targetSelector) : null;
+            if (!field) return;
+
+            try {
+                await navigator.clipboard.writeText(field.value || '');
+                button.textContent = 'Código copiado!';
+                setTimeout(function () {
+                    button.textContent = 'Copiar código PIX';
+                }, 1500);
+            } catch (e) {
+                field.select();
+                document.execCommand('copy');
+                button.textContent = 'Código copiado!';
+                setTimeout(function () {
+                    button.textContent = 'Copiar código PIX';
+                }, 1500);
+            }
+        });
+    });
+});
+</script>
+@endpush

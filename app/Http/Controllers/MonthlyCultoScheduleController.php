@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MonthlyCultoSchedule;
+use App\Models\ServiceSchedule;
 use App\Models\ConfiguracaoMensagem;
 use App\Models\Event;
 use App\Models\Member;
@@ -23,6 +24,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', ServiceSchedule::class);
         $month = $request->get('month', Carbon::now()->month);
         $year = $request->get('year', Carbon::now()->year);
         $status = $request->get('status');
@@ -92,6 +94,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function create(Request $request)
     {
+        $this->authorize('create', ServiceSchedule::class);
         $month = $request->get('month', Carbon::now()->month);
         $year = $request->get('year', Carbon::now()->year);
 
@@ -179,6 +182,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', ServiceSchedule::class);
         $validated = $request->validate([
             'event_id' => 'required|exists:events,id',
             'month' => 'required|integer|min:1|max:12',
@@ -244,6 +248,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function edit(MonthlyCultoSchedule $escala)
     {
+        $this->authorize('update', new ServiceSchedule());
         $escala->load(['event', 'serviceAreaVolunteers']);
 
         // Buscar todas as áreas de serviço ativas
@@ -285,6 +290,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function update(Request $request, MonthlyCultoSchedule $escala)
     {
+        $this->authorize('update', new ServiceSchedule());
         $validated = $request->validate([
             'service_areas' => 'nullable|array',
             'service_areas.*' => 'nullable|array',
@@ -325,6 +331,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function destroy(MonthlyCultoSchedule $escala)
     {
+        $this->authorize('delete', new ServiceSchedule());
         $month = $escala->month;
         $year = $escala->year;
         
@@ -344,6 +351,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function show(MonthlyCultoSchedule $escala)
     {
+        $this->authorize('view', new ServiceSchedule());
         $escala->load(['event', 'serviceAreaVolunteers.member']);
         
         // Buscar todas as áreas de serviço para exibição
@@ -374,6 +382,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function updateStatus(Request $request, MonthlyCultoSchedule $escala)
     {
+        $this->authorize('update', new ServiceSchedule());
         $validated = $request->validate([
             'status' => 'required|in:rascunho,publicada,cancelada,concluido',
         ]);
@@ -399,6 +408,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function publish(MonthlyCultoSchedule $escala)
     {
+        $this->authorize('update', new ServiceSchedule());
         $wasCanceled = $escala->status === 'cancelada';
         $escala->update(['status' => 'publicada']);
 
@@ -415,6 +425,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function cancel(MonthlyCultoSchedule $escala)
     {
+        $this->authorize('update', new ServiceSchedule());
         $escala->update(['status' => 'cancelada']);
 
         return redirect()->route('voluntarios.escalas-mensais.show', $escala)
@@ -426,6 +437,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function generatePdf(MonthlyCultoSchedule $escala)
     {
+        $this->authorize('view', new ServiceSchedule());
         // Verificar se a escala está publicada
         if ($escala->status !== 'publicada') {
             return redirect()->route('voluntarios.escalas-mensais.show', $escala)
@@ -505,6 +517,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function confirmVolunteer(Request $request, $pivotId)
     {
+        $this->authorize('update', new ServiceSchedule());
         $pivot = \DB::table('monthly_culto_service_areas')->where('id', $pivotId)->first();
         
         if (!$pivot) {
@@ -529,6 +542,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function substituteVolunteer(Request $request, $pivotId)
     {
+        $this->authorize('update', new ServiceSchedule());
         $validated = $request->validate([
             'new_volunteer_id' => 'required|exists:volunteers,id',
         ]);
@@ -575,6 +589,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function removeVolunteer($pivotId)
     {
+        $this->authorize('update', new ServiceSchedule());
         $pivot = \DB::table('monthly_culto_service_areas')->where('id', $pivotId)->first();
         
         if (!$pivot) {
@@ -597,6 +612,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function getAvailableVolunteers(Request $request)
     {
+        $this->authorize('viewAny', ServiceSchedule::class);
         $serviceAreaId = $request->get('service_area_id');
         $scheduleId = $request->get('schedule_id');
         
@@ -641,6 +657,7 @@ class MonthlyCultoScheduleController extends Controller
 
     public function addVolunteer(Request $request, MonthlyCultoSchedule $escala)
     {
+        $this->authorize('update', new ServiceSchedule());
         $validated = $request->validate([
             'service_area_id' => 'required|exists:service_areas,id',
             'volunteer_id' => 'required|exists:volunteers,id',
@@ -685,6 +702,7 @@ class MonthlyCultoScheduleController extends Controller
 
     public function notifyVolunteer(Request $request, NotificacaoService $notificacaoService)
     {
+        $this->authorize('update', new ServiceSchedule());
         $validated = $request->validate([
             'pivot_id' => 'required|integer|exists:monthly_culto_service_areas,id',
             'template_id' => 'nullable|integer|exists:configuracoes_mensagens,id',
@@ -808,6 +826,7 @@ class MonthlyCultoScheduleController extends Controller
 
     public function notifyAllVolunteers(Request $request, MonthlyCultoSchedule $escala, NotificacaoService $notificacaoService)
     {
+        $this->authorize('update', new ServiceSchedule());
         $validated = $request->validate([
             'template_id' => 'nullable|integer|exists:configuracoes_mensagens,id',
             'mensagem' => 'nullable|string|max:4096',
@@ -944,6 +963,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function storeManualPreletor(Request $request)
     {
+        $this->authorize('create', ServiceSchedule::class);
         $validated = $request->validate([
             'event_id' => 'required|exists:events,id',
             'preletor_volunteer_id' => 'required|exists:volunteers,id',
@@ -1034,6 +1054,7 @@ class MonthlyCultoScheduleController extends Controller
      */
     public function generateMonthly(Request $request)
     {
+        $this->authorize('create', ServiceSchedule::class);
         $validated = $request->validate([
             'service_area_id' => 'required|exists:service_areas,id',
             'culto_tipo' => 'required|in:familia,graca',

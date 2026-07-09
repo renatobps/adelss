@@ -13,6 +13,7 @@ class EventCategoryController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', EventCategory::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'color' => 'required|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
@@ -31,6 +32,7 @@ class EventCategoryController extends Controller
      */
     public function destroy(EventCategory $category)
     {
+        $this->authorize('delete', $category);
         // Verificar se há eventos usando esta categoria
         $eventsCount = \App\Models\Event::where('category_id', $category->id)->count();
         

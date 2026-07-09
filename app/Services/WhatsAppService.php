@@ -3,39 +3,43 @@
 namespace App\Services;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class WhatsAppService
 {
+    private const ACTIVE_INSTANCE_CACHE_KEY = 'whatsapp.active_instance_name';
+
     private string $apiUrl;
     private string $apiKey;
     private string $instanceName;
-    private string $instanceId;
-    private string $instanceToken;
+    private string $configuredInstanceName;
 
     public function __construct()
     {
         $this->apiUrl = rtrim((string) (config('whatsapp.api_url') ?? ''), '/');
         $this->apiKey = (string) (config('whatsapp.api_key') ?? '');
-        $this->instanceName = (string) (config('whatsapp.instance_name') ?? '');
-        $this->instanceId = (string) (config('whatsapp.instance_id') ?? '');
-        $this->instanceToken = (string) (config('whatsapp.instance_token') ?? '');
+        $this->configuredInstanceName = (string) (config('whatsapp.instance_name') ?? '');
+        $this->instanceName = $this->resolveActiveInstanceName();
+    }
+
+    private function resolveActiveInstanceName(): string
+    {
+        $selected = Cache::get(self::ACTIVE_INSTANCE_CACHE_KEY);
+        if (is_string($selected) && trim($selected) !== '') {
+            return trim($selected);
+        }
+
+        return trim($this->configuredInstanceName);
     }
 
     private function getApiHeaders(): array
     {
-        $headers = ['Content-Type' => 'application/json'];
-        if (!empty($this->apiKey)) {
-            $headers['apikey'] = $this->apiKey;
-            return $headers;
-        }
-
-        $legacyToken = config('whatsapp.client_token');
-        if ($legacyToken) {
-            $headers['Client-Token'] = $legacyToken;
-        }
-        return $headers;
+        return [
+            'Content-Type' => 'application/json',
+            'apikey' => $this->apiKey,
+        ];
     }
 
     private function buildEvolutionUrl(string $endpoint): string
@@ -43,15 +47,41 @@ class WhatsAppService
         return "{$this->apiUrl}/message/{$endpoint}/{$this->instanceName}";
     }
 
-    private function buildUrl(string $endpoint): string
+    private function buildInstanceUrl(string $endpoint): string
     {
-        return "{$this->apiUrl}/instances/{$this->instanceId}/token/{$this->instanceToken}/{$endpoint}";
+        return "{$this->apiUrl}/" . ltrim($endpoint, '/');
     }
 
     /**
-     * Normaliza número para formato internacional (55...).
+     * Normaliza número para formato internacional (55...) com 9º dígito em celulares BR.
      */
     public static function normalizarNumero(string $numero): string
+    {
+        return self::aplicarNonoDigitoBr(self::normalizarNumeroBasico($numero));
+    }
+
+    /**
+     * Retorna variantes do número (com e sem 9º dígito) para comparação/busca.
+     *
+     * @return array<int, string>
+     */
+    public static function variantesNumero(string $numero): array
+    {
+        $base = self::normalizarNumeroBasico($numero);
+
+        return array_values(array_unique(array_filter([
+            $base,
+            self::aplicarNonoDigitoBr($base),
+            self::removerNonoDigitoBr($base),
+        ])));
+    }
+
+    public static function numerosEquivalentes(string $a, string $b): bool
+    {
+        return count(array_intersect(self::variantesNumero($a), self::variantesNumero($b))) > 0;
+    }
+
+    private static function normalizarNumeroBasico(string $numero): string
     {
         $numero = preg_replace('/[^0-9]/', '', $numero);
         if (str_starts_with($numero, '5555')) {
@@ -60,7 +90,36 @@ class WhatsAppService
         if (!str_starts_with($numero, '55') && strlen($numero) >= 10) {
             $numero = '55' . $numero;
         }
+
         return $numero;
+    }
+
+    private static function aplicarNonoDigitoBr(string $numero): string
+    {
+        if (!str_starts_with($numero, '55') || strlen($numero) !== 12) {
+            return $numero;
+        }
+
+        $local = substr($numero, 4);
+        if (strlen($local) !== 8 || !in_array($local[0], ['6', '7', '8', '9'], true)) {
+            return $numero;
+        }
+
+        return substr($numero, 0, 4) . '9' . $local;
+    }
+
+    private static function removerNonoDigitoBr(string $numero): string
+    {
+        if (!str_starts_with($numero, '55') || strlen($numero) !== 13) {
+            return $numero;
+        }
+
+        $local = substr($numero, 4);
+        if (strlen($local) !== 9 || $local[0] !== '9') {
+            return $numero;
+        }
+
+        return substr($numero, 0, 4) . substr($local, 1);
     }
 
     /**
@@ -73,7 +132,7 @@ class WhatsAppService
             Log::warning('WhatsApp Evolution: credenciais não configuradas.');
             return [
                 'success' => false,
-                'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e WHATSAPP_INSTANCE_NAME no .env',
+                'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e selecione uma instância ativa em Notificações > Configuração WPP.',
             ];
         }
 
@@ -110,45 +169,55 @@ class WhatsAppService
     }
 
     /**
-     * Envia imagem por URL.
-     *
-     * @return array{success: bool, data?: array, error?: string, status?: int}
-     */
-    public function enviarImagem(string $numero, string $imageUrl, string $caption = ''): array
-    {
-        $numero = self::normalizarNumero($numero);
-        return $this->enviarComPayload('send-image', [
-            'phone' => $numero,
-            'image' => $imageUrl,
-            'caption' => $caption,
-        ], 'Erro ao enviar imagem');
-    }
-
-    /**
-     * Envia vídeo por URL.
-     *
-     * @return array{success: bool, data?: array, error?: string, status?: int}
-     */
-    public function enviarVideo(string $numero, string $videoUrl, string $caption = ''): array
-    {
-        $numero = self::normalizarNumero($numero);
-        return $this->enviarComPayload('send-video', [
-            'phone' => $numero,
-            'video' => $videoUrl,
-            'caption' => $caption,
-        ], 'Erro ao enviar vídeo');
-    }
-
-    /**
      * Verifica se a API está configurada (não testa conexão).
      */
     public function isConfigurado(): bool
     {
-        return !empty($this->apiUrl)
-            && (
-                (!empty($this->apiKey) && !empty($this->instanceName))
-                || (!empty($this->instanceId) && !empty($this->instanceToken))
-            );
+        return !empty($this->apiUrl) && !empty($this->apiKey) && !empty($this->instanceName);
+    }
+
+    /**
+     * Registra webhook na Evolution API para a instância ativa.
+     */
+    public function configurarWebhook(?string $url = null, array $events = ['MESSAGES_UPSERT']): bool
+    {
+        $url ??= (string) config('whatsapp.webhook_url', '');
+
+        if ($url === '' || !$this->isConfigurado()) {
+            return false;
+        }
+
+        $url = rtrim($url, '/');
+        $instance = $this->instanceName;
+        $payloads = [
+            [
+                'webhook' => [
+                    'enabled' => true,
+                    'url' => $url,
+                    'webhookByEvents' => false,
+                    'webhookBase64' => false,
+                    'events' => $events,
+                ],
+            ],
+            [
+                'enabled' => true,
+                'url' => $url,
+                'webhookByEvents' => false,
+                'events' => $events,
+            ],
+        ];
+
+        foreach ($payloads as $payload) {
+            $response = Http::withHeaders($this->getApiHeaders())
+                ->timeout(20)
+                ->post($this->buildInstanceUrl("webhook/set/{$instance}"), $payload);
+
+            if ($response->successful()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -166,7 +235,7 @@ class WhatsAppService
     {
         if (empty($this->apiUrl) || empty($this->apiKey) || empty($this->instanceName)) {
             Log::warning('WhatsApp Evolution: credenciais não configuradas para enquete.');
-            return ['success' => false, 'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e WHATSAPP_INSTANCE_NAME no .env'];
+            return ['success' => false, 'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e selecione uma instância ativa em Notificações > Configuração WPP.'];
         }
 
         $numero = self::normalizarNumero($numero);
@@ -236,7 +305,7 @@ class WhatsAppService
             Log::warning('WhatsApp Evolution: credenciais não configuradas para envio de mídia.');
             return [
                 'success' => false,
-                'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e WHATSAPP_INSTANCE_NAME no .env',
+                'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e selecione uma instância ativa em Notificações > Configuração WPP.',
             ];
         }
 
@@ -294,20 +363,131 @@ class WhatsAppService
     }
 
     /**
+     * Envia imagem em base64 (ex.: QR Code PIX) usando sendMedia.
+     *
      * @return array{success: bool, data?: array, error?: string, status?: int}
      */
-    private function enviarComPayload(string $endpoint, array $payload, string $erroPadrao): array
+    public function enviarImagemBase64(string $numero, string $imagemBase64, string $legenda = ''): array
     {
-        if (empty($this->apiUrl) || empty($this->instanceId) || empty($this->instanceToken)) {
-            Log::warning('WhatsApp: credenciais não configuradas.');
+        if (empty($this->apiUrl) || empty($this->apiKey) || empty($this->instanceName)) {
+            Log::warning('WhatsApp Evolution: credenciais não configuradas para envio de imagem base64.');
             return [
                 'success' => false,
-                'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_INSTANCE_ID e WHATSAPP_INSTANCE_TOKEN no .env',
+                'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e selecione uma instância ativa em Notificações > Configuração WPP.',
             ];
         }
 
-        $url = $this->buildUrl($endpoint);
-        $res = $this->postJson($url, $payload);
+        $conteudo = trim($imagemBase64);
+        if ($conteudo === '') {
+            return [
+                'success' => false,
+                'error' => 'Imagem base64 vazia para envio.',
+            ];
+        }
+
+        if (str_starts_with($conteudo, 'data:image') && str_contains($conteudo, ',')) {
+            [, $conteudo] = explode(',', $conteudo, 2);
+        }
+
+        $binario = base64_decode($conteudo, true);
+        if ($binario === false) {
+            return [
+                'success' => false,
+                'error' => 'Imagem base64 inválida para envio.',
+            ];
+        }
+
+        $numero = self::normalizarNumero($numero);
+        $url = $this->buildEvolutionUrl('sendMedia');
+        $tempPath = tempnam(sys_get_temp_dir(), 'wa-pix-');
+
+        if ($tempPath === false) {
+            return [
+                'success' => false,
+                'error' => 'Não foi possível preparar arquivo temporário para envio.',
+            ];
+        }
+
+        file_put_contents($tempPath, $binario);
+
+        try {
+            $payload = [
+                'number' => $numero,
+                'mediatype' => 'image',
+                'mimetype' => 'image/png',
+                'fileName' => 'pix-qrcode.png',
+            ];
+
+            if (trim($legenda) !== '') {
+                $payload['caption'] = $legenda;
+            }
+
+            $res = Http::withHeaders(['apikey' => $this->apiKey])
+                ->timeout(config('whatsapp.timeout', 120))
+                ->attach('file', fopen($tempPath, 'r'), 'pix-qrcode.png')
+                ->post($url, $payload);
+
+            $body = $res->json() ?? [];
+            if ($res->successful() && empty($body['error'])) {
+                return ['success' => true, 'data' => $body];
+            }
+
+            Log::warning('WhatsApp Evolution: falha ao enviar imagem base64', [
+                'status' => $res->status(),
+                'url' => $url,
+                'numero' => $numero,
+                'response' => $body,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $this->resolverMensagemErro($body),
+                'status' => $res->status(),
+            ];
+        } finally {
+            @unlink($tempPath);
+        }
+    }
+
+    /**
+     * Envia documento PDF a partir de um caminho local.
+     *
+     * @return array{success: bool, data?: array, error?: string, status?: int}
+     */
+    public function enviarDocumentoArquivo(
+        string $numero,
+        string $filePath,
+        string $fileName = 'documento.pdf',
+        string $legenda = ''
+    ): array {
+        if (empty($this->apiUrl) || empty($this->apiKey) || empty($this->instanceName)) {
+            return [
+                'success' => false,
+                'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e selecione uma instância ativa em Notificações > Configuração WPP.',
+            ];
+        }
+
+        if (!is_file($filePath)) {
+            return ['success' => false, 'error' => 'Arquivo PDF não encontrado para envio.'];
+        }
+
+        $numero = self::normalizarNumero($numero);
+        $url = $this->buildEvolutionUrl('sendMedia');
+        $payload = [
+            'number' => $numero,
+            'mediatype' => 'document',
+            'mimetype' => 'application/pdf',
+            'fileName' => $fileName,
+        ];
+
+        if (trim($legenda) !== '') {
+            $payload['caption'] = $legenda;
+        }
+
+        $res = Http::withHeaders(['apikey' => $this->apiKey])
+            ->timeout(config('whatsapp.timeout', 120))
+            ->attach('file', fopen($filePath, 'r'), $fileName)
+            ->post($url, $payload);
 
         $body = $res->json() ?? [];
         if ($res->successful() && empty($body['error'])) {
@@ -316,7 +496,7 @@ class WhatsAppService
 
         return [
             'success' => false,
-            'error' => $body['message'] ?? $body['error'] ?? $erroPadrao,
+            'error' => $this->resolverMensagemErro($body),
             'status' => $res->status(),
         ];
     }

@@ -34,7 +34,7 @@
                 </div>
 
                 <!-- Calendário -->
-                <div id="calendar-container">
+                <div id="calendar-container" class="table-responsive">
                     <table class="table table-bordered text-center" id="calendar">
                         <thead>
                             <tr>

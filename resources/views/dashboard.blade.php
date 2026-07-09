@@ -85,7 +85,7 @@
 @endphp
 
 <div class="row mt-4">
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <section class="card card-featured-left card-featured-primary mb-3">
             <div class="card-body">
                 <div class="widget-summary">
@@ -109,7 +109,7 @@
             </div>
         </section>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <section class="card card-featured-left card-featured-success mb-3">
             <div class="card-body">
                 <div class="widget-summary">
@@ -130,7 +130,7 @@
             </div>
         </section>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <section class="card card-featured-left card-featured-info mb-3">
             <div class="card-body">
                 <div class="widget-summary">
@@ -151,7 +151,7 @@
             </div>
         </section>
     </div>
-    <div class="col-md-3">
+    <div class="col-6 col-md-3">
         <section class="card card-featured-left card-featured-warning mb-3">
             <div class="card-body">
                 <div class="widget-summary">

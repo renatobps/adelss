@@ -13,6 +13,7 @@ class AccountController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', FinancialAccount::class);
         $accounts = FinancialAccount::orderBy('name')->get();
         $total = $accounts->count();
         
@@ -24,6 +25,7 @@ class AccountController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', FinancialAccount::class);
         return view('financial.accounts.create');
     }
 
@@ -32,6 +34,7 @@ class AccountController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', FinancialAccount::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -59,6 +62,7 @@ class AccountController extends Controller
      */
     public function edit(FinancialAccount $account)
     {
+        $this->authorize('update', $account);
         return view('financial.accounts.edit', compact('account'));
     }
 
@@ -67,6 +71,7 @@ class AccountController extends Controller
      */
     public function update(Request $request, FinancialAccount $account)
     {
+        $this->authorize('update', $account);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -86,6 +91,7 @@ class AccountController extends Controller
      */
     public function destroy(FinancialAccount $account)
     {
+        $this->authorize('delete', $account);
         try {
             $account->delete();
             return redirect()->route('financial.accounts.index')

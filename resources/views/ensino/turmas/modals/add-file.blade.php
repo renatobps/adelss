@@ -1,6 +1,6 @@
 <!-- Modal Adicionar Arquivo -->
 <div class="modal fade" id="addFileModal" tabindex="-1" aria-labelledby="addFileModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addFileModalLabel">Adicionar arquivo</h5>

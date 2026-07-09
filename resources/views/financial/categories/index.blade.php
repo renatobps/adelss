@@ -69,6 +69,9 @@
                                         <td>
                                             <div>
                                                 <strong>{{ $receita->name }}</strong>
+                                                @if($receita->sends_receipt)
+                                                    <span class="badge bg-success ms-1">WhatsApp</span>
+                                                @endif
                                                 @if($receita->description)
                                                     <br><small class="text-muted">{{ $receita->description }}</small>
                                                 @endif
@@ -120,6 +123,20 @@
                                                             <label for="edit_description{{ $receita->id }}" class="form-label">Descrição</label>
                                                             <textarea class="form-control" id="edit_description{{ $receita->id }}" 
                                                                       name="description" rows="3">{{ old('description', $receita->description) }}</textarea>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label for="edit_slug{{ $receita->id }}" class="form-label">Slug (opcional)</label>
+                                                            <input type="text" class="form-control" id="edit_slug{{ $receita->id }}" name="slug"
+                                                                   value="{{ old('slug', $receita->slug) }}" placeholder="dizimo, oferta...">
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" id="edit_sends_receipt{{ $receita->id }}"
+                                                                       name="sends_receipt" value="1" {{ old('sends_receipt', $receita->sends_receipt) ? 'checked' : '' }}>
+                                                                <label class="form-check-label" for="edit_sends_receipt{{ $receita->id }}">
+                                                                    Enviar comprovante por WhatsApp
+                                                                </label>
+                                                            </div>
                                                         </div>
                                                         <div class="mb-3">
                                                             <label class="form-label">Tipo <span class="text-danger">*</span></label>
@@ -316,6 +333,22 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="slug" class="form-label">Slug (opcional)</label>
+                        <input type="text" class="form-control" id="slug" name="slug" value="{{ old('slug') }}"
+                               placeholder="dizimo, oferta...">
+                    </div>
+
+                    <div class="mb-3" id="create_sends_receipt_wrapper">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="sends_receipt" name="sends_receipt" value="1"
+                                   {{ old('sends_receipt') ? 'checked' : '' }}>
+                            <label class="form-check-label" for="sends_receipt">
+                                Enviar comprovante por WhatsApp (receitas)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label">Tipo <span class="text-danger">*</span></label>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="type" id="type_receita" 
@@ -345,4 +378,20 @@
     </div>
     @endif
 </div>
+
+@push('scripts')
+<script>
+    function toggleCreateReceiptCheckbox() {
+        const wrapper = document.getElementById('create_sends_receipt_wrapper');
+        const isReceita = document.getElementById('type_receita')?.checked;
+        if (wrapper) {
+            wrapper.style.display = isReceita ? 'block' : 'none';
+        }
+    }
+
+    document.getElementById('type_receita')?.addEventListener('change', toggleCreateReceiptCheckbox);
+    document.getElementById('type_despesa')?.addEventListener('change', toggleCreateReceiptCheckbox);
+    toggleCreateReceiptCheckbox();
+</script>
+@endpush
 @endsection

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
 class Event extends Model
@@ -164,7 +165,22 @@ class Event extends Model
 
     public function bannerImagePublicUrl(): ?string
     {
-        return self::publicStorageUrl($this->banner_image);
+        if (!$this->banner_image) {
+            return null;
+        }
+
+        $path = trim(str_replace('\\', '/', $this->banner_image));
+        if ($path === '') {
+            return null;
+        }
+
+        if (preg_match('#^https?://#i', $path)) {
+            return $path;
+        }
+
+        $path = preg_replace('#^(?:/+)?storage/+#', '', $path);
+
+        return asset('storage/' . ltrim($path, '/'));
     }
 
     /**
@@ -198,28 +214,106 @@ class Event extends Model
     }
 
     /**
-     * Apenas eventos “gerais” para o módulo /agenda/eventos:
-     * exclui cultos (escalas mensais / Moriah ou título/categoria com “culto”)
-     * e PGIs (título/categoria com “pgi”).
+     * Culto, PGI e Santa Ceia — recorrência semanal na home.
+     */
+    public function scopeAgendaSemanal($query)
+    {
+        return $query->whereHas('category', function ($cq) {
+            $cq->where(function ($c2) {
+                $c2->whereRaw('LOWER(name) = ?', ['culto'])
+                    ->orWhereRaw('LOWER(name) = ?', ['pgi'])
+                    ->orWhereRaw('LOWER(name) = ?', ['santa ceia']);
+            });
+        });
+    }
+
+    /**
+     * Categoria Eventos — exibição em "Eventos do mês" na home.
+     */
+    public function scopeEventosDoMes($query)
+    {
+        return $query->whereHas('category', fn ($c) => $c->whereRaw('LOWER(name) = ?', ['eventos']));
+    }
+
+    /**
+     * Eventos exibidos na página principal pública (legado — preferir agendaSemanal/eventosDoMes).
+     * @deprecated
+     */
+    public function scopeParaPaginaPrincipal($query)
+    {
+        $idsEscalas = collect();
+
+        if (Schema::hasTable('monthly_culto_schedules')) {
+            $idsEscalas = $idsEscalas->merge(
+                MonthlyCultoSchedule::query()->pluck('event_id')
+            );
+        }
+
+        if (Schema::hasTable('moriah_schedules')) {
+            $idsEscalas = $idsEscalas->merge(
+                MoriahSchedule::query()->whereNotNull('event_id')->pluck('event_id')
+            );
+        }
+
+        $idsEscalas = $idsEscalas->unique()->filter()->values();
+
+        return $query
+            ->when($idsEscalas->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $idsEscalas->all()))
+            ->whereRaw('LOWER(COALESCE(title, "")) NOT LIKE ?', ['%culto%'])
+            ->where(function ($q) {
+                $q->whereNull('category_id')
+                    ->orWhereHas('category', function ($cq) {
+                        $cq->whereRaw('LOWER(name) NOT LIKE ?', ['%culto%'])
+                            ->whereRaw('LOWER(name) NOT LIKE ?', ['%santa ceia%']);
+                    });
+            });
+    }
+
+    /**
+     * Eventos do módulo Agenda > Eventos (landing pública / inscrições).
+     * Inclui eventos com slug público, categoria "Eventos" ou avulsos que não são culto/PGI.
      */
     public function scopeApenasEventosGerais($query)
     {
-        $idsCulto = MonthlyCultoSchedule::query()->pluck('event_id')
-            ->merge(MoriahSchedule::query()->whereNotNull('event_id')->pluck('event_id'))
-            ->unique()
-            ->filter()
-            ->values()
-            ->all();
+        $idsEscalas = collect();
 
-        return $query
-            ->when(count($idsCulto) > 0, fn ($q) => $q->whereNotIn('id', $idsCulto))
-            ->whereRaw('LOWER(title) NOT LIKE ?', ['%culto%'])
-            ->whereRaw('LOWER(title) NOT LIKE ?', ['%pgi%'])
-            ->whereDoesntHave('category', function ($q) {
-                $q->where(function ($q2) {
-                    $q2->whereRaw('LOWER(name) LIKE ?', ['%culto%'])
-                        ->orWhereRaw('LOWER(name) LIKE ?', ['%pgi%']);
-                });
+        if (Schema::hasTable('monthly_culto_schedules')) {
+            $idsEscalas = $idsEscalas->merge(
+                MonthlyCultoSchedule::query()->pluck('event_id')
+            );
+        }
+
+        if (Schema::hasTable('moriah_schedules')) {
+            $idsEscalas = $idsEscalas->merge(
+                MoriahSchedule::query()->whereNotNull('event_id')->pluck('event_id')
+            );
+        }
+
+        $idsEscalas = $idsEscalas->unique()->filter()->values();
+
+        return $query->where(function ($q) use ($idsEscalas) {
+            $q->where(function ($q2) {
+                $q2->whereNotNull('public_slug')
+                    ->where('public_slug', '!=', '');
             });
+
+            $q->orWhereHas('category', fn ($c) => $c->whereRaw('LOWER(name) = ?', ['eventos']));
+
+            $q->orWhere(function ($q2) use ($idsEscalas) {
+                if ($idsEscalas->isNotEmpty()) {
+                    $q2->whereNotIn('id', $idsEscalas->all());
+                }
+
+                $q2->whereRaw('LOWER(COALESCE(title, "")) NOT LIKE ?', ['%culto%'])
+                    ->whereRaw('LOWER(COALESCE(title, "")) NOT LIKE ?', ['%pgi%'])
+                    ->where(function ($q3) {
+                        $q3->whereNull('category_id')
+                            ->orWhereHas('category', function ($cq) {
+                                $cq->whereRaw('LOWER(name) NOT LIKE ?', ['%culto%'])
+                                    ->whereRaw('LOWER(name) NOT LIKE ?', ['%pgi%']);
+                            });
+                    });
+            });
+        });
     }
 }

@@ -690,14 +690,20 @@
                         @php
                             $user = $member->user;
                         @endphp
-                        @if($user)
+                        @if($user || $member->email)
                         <h4 class="mb-3 mt-4 font-weight-semibold text-dark">Acesso ao Sistema</h4>
+                        @if(!$user)
+                        <div class="alert alert-info mb-3">
+                            <i class="bx bx-info-circle me-2"></i>
+                            Ao salvar, o usuário de acesso será criado automaticamente. Se não definir senha abaixo, a senha inicial será <strong>123456</strong>.
+                        </div>
+                        @endif
                         <div class="row mb-4">
                             <div class="mb-3 col-md-6">
                                 <label for="login_email" class="form-label">E-mail de Acesso</label>
                                 <input type="email" class="form-control" 
                                        id="login_email" 
-                                       value="{{ $user->email }}" 
+                                       value="{{ $user?->email ?? $member->email }}" 
                                        readonly 
                                        style="background-color: #f8f9fa;">
                                 <small class="form-text text-muted">
@@ -705,35 +711,35 @@
                                 </small>
                             </div>
                             <div class="mb-3 col-md-6">
-                                <label for="new_password" class="form-label">Nova Senha</label>
+                                <label for="new_password" class="form-label">{{ $user ? 'Nova Senha' : 'Senha de Acesso' }}</label>
                                 <input type="password" class="form-control @error('new_password') is-invalid @enderror" 
                                        id="new_password" 
                                        name="new_password" 
-                                       placeholder="Deixe em branco para manter a senha atual">
+                                       placeholder="{{ $user ? 'Deixe em branco para manter a senha atual' : 'Defina a senha de login (mín. 6 caracteres)' }}">
                                 @error('new_password')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                                 <small class="form-text text-muted">
-                                    <i class="bx bx-info-circle me-1"></i>Mínimo de 6 caracteres. Deixe em branco para manter a senha atual.
+                                    <i class="bx bx-info-circle me-1"></i>Mínimo de 6 caracteres. {{ $user ? 'Deixe em branco para manter a senha atual.' : 'Obrigatório recomendar definir agora para evitar usar a senha padrão.' }}
                                 </small>
                             </div>
                         </div>
                         <div class="row mb-4">
                             <div class="mb-3 col-md-6">
-                                <label for="new_password_confirmation" class="form-label">Confirmar Nova Senha</label>
+                                <label for="new_password_confirmation" class="form-label">Confirmar Senha</label>
                                 <input type="password" class="form-control @error('new_password_confirmation') is-invalid @enderror" 
                                        id="new_password_confirmation" 
                                        name="new_password_confirmation" 
-                                       placeholder="Confirme a nova senha">
+                                       placeholder="Confirme a senha">
                                 @error('new_password_confirmation')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
                         </div>
-                        @elseif($member->email)
-                        <div class="alert alert-info mt-4">
+                        @else
+                        <div class="alert alert-warning mt-4">
                             <i class="bx bx-info-circle me-2"></i>
-                            <strong>Usuário de acesso será criado automaticamente</strong> ao salvar este formulário com o e-mail informado.
+                            <strong>Defina um e-mail acima</strong> para habilitar o acesso ao sistema.
                         </div>
                         @endif
 
@@ -755,10 +761,16 @@
                             <div class="alert alert-warning">
                                 <i class="bx bx-info-circle me-2"></i>
                                 <strong>Este membro ainda não possui usuário de acesso.</strong><br>
-                                Para configurar permissões, é necessário que o membro tenha um e-mail cadastrado. 
-                                Vá para a aba <strong>Editar</strong> e defina um e-mail para o membro, depois salve.
+                                @if($member->email)
+                                    Ao salvar as permissões abaixo, o usuário será criado automaticamente com senha inicial <strong>123456</strong>,
+                                    a menos que você defina uma senha na aba <strong>Editar</strong> antes.
+                                @else
+                                    Para configurar permissões, defina um e-mail na aba <strong>Editar</strong> e salve o membro.
+                                @endif
                             </div>
-                        @else
+                        @endif
+
+                        @if($member->user || $member->email)
                             @if(session('success'))
                                 <div class="alert alert-success alert-dismissible fade show" role="alert">
                                     <i class="bx bx-check-circle me-2"></i>{{ session('success') }}
@@ -779,7 +791,7 @@
                                                    name="is_admin" 
                                                    id="is_admin" 
                                                    value="1"
-                                                   {{ $user->is_admin ? 'checked' : '' }}
+                                                   {{ ($user?->is_admin ?? false) ? 'checked' : '' }}
                                                    onchange="toggleAdminPermissions(this)">
                                             <label class="form-check-label fw-bold text-warning" for="is_admin">
                                                 SUPER ADMINISTRADOR
@@ -791,7 +803,7 @@
                                     </div>
                                 </div>
 
-                                <div id="permissions-section" style="{{ $user->is_admin ? 'display:none;' : '' }}">
+                                <div id="permissions-section" style="{{ ($user?->is_admin ?? false) ? 'display:none;' : '' }}">
                                 @foreach($modules as $module)
                                     <div class="card mb-4 border-primary">
                                         <div class="card-header bg-primary text-white">

@@ -13,6 +13,7 @@ class CategoryController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', FinancialCategory::class);
         $receitas = FinancialCategory::receitas()->orderBy('name')->get();
         $despesas = FinancialCategory::despesas()->orderBy('name')->get();
         $total = FinancialCategory::count();
@@ -25,6 +26,7 @@ class CategoryController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', FinancialCategory::class);
         return view('financial.categories.create');
     }
 
@@ -33,16 +35,21 @@ class CategoryController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', FinancialCategory::class);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:50',
             'description' => 'nullable|string',
             'type' => 'required|in:receita,despesa',
+            'sends_receipt' => 'nullable|boolean',
         ], [
             'name.required' => 'O campo nome da categoria é obrigatório.',
             'name.max' => 'O nome da categoria não pode ter mais de 255 caracteres.',
             'type.required' => 'O campo tipo é obrigatório.',
             'type.in' => 'O tipo deve ser Receitas ou Despesas.',
         ]);
+
+        $validated['sends_receipt'] = $request->boolean('sends_receipt') && $validated['type'] === 'receita';
 
         FinancialCategory::create($validated);
 
@@ -63,6 +70,7 @@ class CategoryController extends Controller
      */
     public function edit(FinancialCategory $category)
     {
+        $this->authorize('update', $category);
         return view('financial.categories.edit', compact('category'));
     }
 
@@ -71,16 +79,21 @@ class CategoryController extends Controller
      */
     public function update(Request $request, FinancialCategory $category)
     {
+        $this->authorize('update', $category);
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:50',
             'description' => 'nullable|string',
             'type' => 'required|in:receita,despesa',
+            'sends_receipt' => 'nullable|boolean',
         ], [
             'name.required' => 'O campo nome da categoria é obrigatório.',
             'name.max' => 'O nome da categoria não pode ter mais de 255 caracteres.',
             'type.required' => 'O campo tipo é obrigatório.',
             'type.in' => 'O tipo deve ser Receitas ou Despesas.',
         ]);
+
+        $validated['sends_receipt'] = $request->boolean('sends_receipt') && $validated['type'] === 'receita';
 
         $category->update($validated);
 
@@ -93,6 +106,7 @@ class CategoryController extends Controller
      */
     public function destroy(FinancialCategory $category)
     {
+        $this->authorize('delete', $category);
         try {
             $category->delete();
             return redirect()->route('financial.categories.index')

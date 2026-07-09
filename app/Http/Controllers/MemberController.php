@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Member;
 use App\Models\User;
+use App\Services\Members\MemberUserService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
@@ -12,11 +13,16 @@ use Carbon\Carbon;
 
 class MemberController extends Controller
 {
+    public function __construct(
+        private MemberUserService $memberUserService,
+    ) {}
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Member::class);
         $query = Member::with(['department', 'departments', 'pgi', 'role']);
 
         // Busca
@@ -68,6 +74,7 @@ class MemberController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', Member::class);
         $roles = \App\Models\MemberRole::active()->orderBy('name')->get();
         $departments = \App\Models\Department::active()->orderBy('name')->get();
         return view('members.create', compact('roles', 'departments'));
@@ -78,6 +85,11 @@ class MemberController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Member::class);
+        $request->merge([
+            'email' => $this->memberUserService->normalizeEmail($request->input('email')),
+        ]);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:members,email|unique:users,email',
@@ -116,16 +128,7 @@ class MemberController extends Controller
 
         // Criar usuário de acesso se houver e-mail
         if (!empty($member->email)) {
-            User::updateOrCreate(
-                ['member_id' => $member->id],
-                [
-                    'name' => $member->name,
-                    'email' => $member->email,
-                    // Senha padrão inicial para novos membros
-                    'password' => Hash::make('123456'),
-                    'is_admin' => false,
-                ]
-            );
+            $this->memberUserService->syncFromMember($member, forceDefaultPassword: true);
         }
 
         // Sincronizar departamentos
@@ -142,6 +145,7 @@ class MemberController extends Controller
      */
     public function show(Member $member, Request $request)
     {
+        $this->authorize('view', $member);
         $member->load(['department', 'departments', 'pgi', 'role', 'turmas.school']);
         
         // Carregar turmas onde o membro é aluno
@@ -387,6 +391,7 @@ class MemberController extends Controller
      */
     public function edit(Member $member)
     {
+        $this->authorize('update', $member);
         $roles = \App\Models\MemberRole::active()->orderBy('name')->get();
         $departments = \App\Models\Department::active()->orderBy('name')->get();
         return view('members.edit', compact('member', 'roles', 'departments'));
@@ -397,6 +402,11 @@ class MemberController extends Controller
      */
     public function update(Request $request, Member $member)
     {
+        $this->authorize('update', $member);
+        $request->merge([
+            'email' => $this->memberUserService->normalizeEmail($request->input('email')),
+        ]);
+
         $user = auth()->user();
         $isAdmin = $user?->is_admin ?? false;
         $loggedMember = $user?->member;
@@ -447,7 +457,7 @@ class MemberController extends Controller
 
         // Remover departments do validated para não tentar salvar diretamente
         $departments = $validated['departments'] ?? [];
-        unset($validated['departments']);
+        unset($validated['departments'], $validated['new_password'], $validated['new_password_confirmation']);
 
         // Converter valores vazios para null (para limpar pgi, role se necessário)
         if (empty($validated['pgi_id'])) {
@@ -462,30 +472,26 @@ class MemberController extends Controller
         // Sincronizar departamentos
         $member->departments()->sync($departments ?? []);
 
-        // Garantir que o membro tenha usuário de acesso
-        if (!empty($member->email)) {
-            $user = $member->user ?: new User();
-            $user->member_id = $member->id;
-            $user->name = $member->name;
-            $user->email = $member->email;
+        $hadUser = (bool) $member->user;
+        $accessUser = $this->memberUserService->syncFromMember(
+            $member->fresh(),
+            $request->filled('new_password') ? $request->input('new_password') : null,
+        );
 
+        $successMessage = 'Membro atualizado com sucesso!';
+        if ($accessUser && !$hadUser) {
             if ($request->filled('new_password')) {
-                $user->password = Hash::make($request->input('new_password'));
-            } elseif (!$user->exists) {
-                // Se ainda não existir usuário, define senha padrão
-                $user->password = Hash::make('123456');
+                $successMessage .= ' Usuário de acesso criado com a senha informada.';
+            } else {
+                $successMessage .= ' Usuário de acesso criado. Senha inicial: 123456';
             }
-
-            if ($user->is_admin === null) {
-                $user->is_admin = false;
-            }
-
-            $user->save();
+        } elseif ($accessUser && $request->filled('new_password')) {
+            $successMessage .= ' Senha de acesso atualizada.';
         }
 
         $tab = $request->get('tab', 'informacoes');
         return redirect()->route('members.show', ['member' => $member->id, 'tab' => $tab])
-            ->with('success', 'Membro atualizado com sucesso!');
+            ->with('success', $successMessage);
     }
 
     /**
@@ -493,6 +499,7 @@ class MemberController extends Controller
      */
     public function destroy(Member $member)
     {
+        $this->authorize('delete', $member);
         $user = auth()->user();
         $loggedMember = $user?->member;
         
@@ -517,6 +524,7 @@ class MemberController extends Controller
      */
     public function importTutorial()
     {
+        $this->authorize('importTutorial', Member::class);
         return view('members.import.tutorial');
     }
 
@@ -525,6 +533,7 @@ class MemberController extends Controller
      */
     public function downloadTemplate()
     {
+        $this->authorize('downloadTemplate', Member::class);
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="template_membros.csv"',
@@ -601,6 +610,7 @@ class MemberController extends Controller
      */
     public function import(Request $request)
     {
+        $this->authorize('import', Member::class);
         $request->validate([
             'import_file' => 'required|file|mimes:csv,txt|max:10240', // 10MB
         ], [

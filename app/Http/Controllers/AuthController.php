@@ -34,6 +34,8 @@ class AuthController extends Controller
             'password.required' => 'Informe a senha.',
         ]);
 
+        $credentials['email'] = strtolower(trim($credentials['email']));
+
         $remember = $request->boolean('remember');
 
         if (Auth::attempt($credentials, $remember)) {

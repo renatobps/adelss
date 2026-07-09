@@ -17,29 +17,20 @@
                 <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.1; background-image: url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><circle cx=%2250%22 cy=%2250%22 r=%2240%22 fill=%22none%22 stroke=%22white%22 stroke-width=%222%22/></svg>'); background-size: cover;"></div>
                 <div style="position: relative; z-index: 1; text-align: center; padding: 2rem 0;">
                     <div class="mb-3">
-                        @if($selectedTemplate && isset($templates[$selectedTemplate]))
-                            @php $template = $templates[$selectedTemplate]; @endphp
-                            <i class="{{ $template['icon'] }}" style="font-size: 4rem; color: white;"></i>
-                        @else
-                            <i class="bx bx-group" style="font-size: 4rem; color: white;"></i>
-                        @endif
+                        <i class="bx bx-group" style="font-size: 4rem; color: white;"></i>
                     </div>
                     <h2 class="mb-0" style="color: white;">Novo Departamento</h2>
                 </div>
             </header>
             <div class="card-body">
-                <form action="{{ route('departments.store') }}" method="POST" id="departmentForm">
+                <form action="{{ route('departments.store') }}" method="POST" id="departmentForm" enctype="multipart/form-data">
                     @csrf
-
-                    @if($selectedTemplate)
-                        <input type="hidden" name="template" value="{{ $selectedTemplate }}">
-                    @endif
 
                     <div class="row">
                         <div class="col-md-12 mb-3">
                             <label for="name" class="form-label">Nome do departamento <span class="text-danger">*</span></label>
                             <input type="text" class="form-control @error('name') is-invalid @enderror" 
-                                   id="name" name="name" value="{{ old('name', $selectedTemplate && isset($templates[$selectedTemplate]) ? $templates[$selectedTemplate]['name'] : '') }}" 
+                                   id="name" name="name" value="{{ old('name') }}" 
                                    placeholder="Ex: Departamento x..." required>
                             @error('name')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -56,13 +47,25 @@
                             @enderror
                         </div>
 
-                        @if(!$selectedTemplate)
+                        <div class="col-md-12 mb-3">
+                            <label for="logo" class="form-label">Logo do departamento</label>
+                            <input type="file" class="form-control @error('logo') is-invalid @enderror"
+                                   id="logo" name="logo" accept="image/*">
+                            <small class="form-text text-muted">Formatos aceitos: JPEG, PNG, JPG, GIF, SVG. Tamanho máximo: 2MB.</small>
+                            @error('logo')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div id="logoPreview" class="mt-2" style="display: none;">
+                                <img id="logoPreviewImg" src="" alt="Preview do logo" style="max-width: 150px; max-height: 150px; border-radius: 50%; border: 2px solid #ddd;">
+                            </div>
+                        </div>
+
                         <div class="col-md-6 mb-3">
                             <label for="icon" class="form-label">Ícone</label>
                             <input type="text" class="form-control @error('icon') is-invalid @enderror" 
                                    id="icon" name="icon" value="{{ old('icon') }}" 
                                    placeholder="Ex: bx-music">
-                            <small class="form-text text-muted">Use classes Box Icons (bx-*) ou Font Awesome (fas fa-*)</small>
+                            <small class="form-text text-muted">Use classes Box Icons (bx-*) ou Font Awesome (fas fa-*). Usado quando não houver logo.</small>
                             @error('icon')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -76,10 +79,6 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        @else
-                            <input type="hidden" name="icon" value="{{ $templates[$selectedTemplate]['icon'] }}">
-                            <input type="hidden" name="color" value="{{ $templates[$selectedTemplate]['color'] }}">
-                        @endif
 
                         <div class="col-md-6 mb-3">
                             <label for="leaders" class="form-label">Líderes</label>
@@ -109,6 +108,8 @@
                             @enderror
                         </div>
                     </div>
+
+                    @include('departments._homepage-fields', ['department' => new \App\Models\Department()])
 
                     <hr class="my-4">
 
@@ -167,7 +168,7 @@
 
 <!-- Modal para adicionar participantes -->
 <div class="modal fade" id="participantModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
@@ -235,6 +236,20 @@
 <script>
     let selectedMembers = [];
     let roleCounter = 0;
+
+    document.getElementById('logo')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('logoPreview').style.display = 'block';
+                document.getElementById('logoPreviewImg').src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            document.getElementById('logoPreview').style.display = 'none';
+        }
+    });
 
     // Adicionar participante
     document.getElementById('addParticipantBtn').addEventListener('click', function() {

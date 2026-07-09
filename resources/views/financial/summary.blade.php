@@ -13,7 +13,7 @@
 <!-- Cards de Resumo -->
 <div class="row mb-4">
     <!-- Recebido -->
-    <div class="col-md-4 mb-3">
+    <div class="col-6 col-md-4 mb-3">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-body">
                 <h6 class="card-subtitle mb-2 text-muted">
@@ -40,7 +40,7 @@
     </div>
 
     <!-- Pago -->
-    <div class="col-md-4 mb-3">
+    <div class="col-6 col-md-4 mb-3">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-body">
                 <h6 class="card-subtitle mb-2 text-muted">
@@ -63,7 +63,7 @@
     </div>
 
     <!-- Pesquisa e Navegação -->
-    <div class="col-md-4 mb-3">
+    <div class="col-6 col-md-4 mb-3">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-body">
                 <div class="input-group mb-3">
@@ -109,7 +109,7 @@
 <!-- Segunda Linha de Cards -->
 <div class="row mb-4">
     <!-- A receber -->
-    <div class="col-md-4 mb-3">
+    <div class="col-6 col-md-4 mb-3">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-body">
                 <h6 class="card-subtitle mb-2 text-muted">
@@ -132,7 +132,7 @@
     </div>
 
     <!-- A pagar -->
-    <div class="col-md-4 mb-3">
+    <div class="col-6 col-md-4 mb-3">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-body">
                 <h6 class="card-subtitle mb-2 text-muted">
@@ -155,13 +155,13 @@
     </div>
 
     <!-- Espaço vazio ou outro card -->
-    <div class="col-md-4 mb-3"></div>
+    <div class="col-6 col-md-4 mb-3"></div>
 </div>
 
 <!-- Terceira Linha de Cards -->
 <div class="row mb-4">
     <!-- Recebimentos em atraso -->
-    <div class="col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-3">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-body">
                 <h6 class="card-subtitle mb-2 text-muted">Recebimentos em atraso</h6>
@@ -178,7 +178,7 @@
     </div>
 
     <!-- Pagamentos em atraso -->
-    <div class="col-md-6 mb-3">
+    <div class="col-12 col-md-6 mb-3">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-body">
                 <h6 class="card-subtitle mb-2 text-muted">Pagamentos em atraso</h6>

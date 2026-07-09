@@ -10,6 +10,9 @@
         $spotsLeft = max(0, $event->max_spots - (int) ($event->registrations_em_vaga_count ?? 0));
     }
     $locationPhotoUrls = $event->locationPhotoPublicUrls();
+    $pixPayment = session('pix_payment');
+    $eventPriceJs = number_format((float) ($event->price ?? 0), 2, '.', '');
+    $useConfiguredPayer = !empty(config('mercadopago.test_payer_email')) && !empty(config('mercadopago.test_payer_document'));
 @endphp
 
 <div class="evx-theme evx-palette-{{ $event->page_palette ?: 'oceano' }}">
@@ -166,6 +169,12 @@
     <div class="container">
         <div class="event-form-card">
             <h3>Inscrição</h3>
+            @if($event->is_paid)
+                <div class="alert alert-warning">
+                    <strong>Ingresso pago:</strong> R$ {{ number_format((float) ($event->price ?? 0), 2, ',', '.') }}<br>
+                    <small>A vaga é confirmada automaticamente após aprovação do pagamento.</small>
+                </div>
+            @endif
             @if(session('success'))
                 <div class="alert alert-success">{{ session('success') }}</div>
             @endif
@@ -180,7 +189,29 @@
                 @if($spotsLeft !== null)
                     <p class="small text-muted">Vagas restantes: {{ $spotsLeft }}</p>
                 @endif
-                <form method="post" action="{{ route('events.public.register', $event->public_slug) }}">
+                @if(is_array($pixPayment) && (($pixPayment['payment_method'] ?? 'pix') === 'pix') && !empty($pixPayment['qr_code_text']))
+                    <div class="alert alert-info">
+                        <strong>Pagamento pendente</strong><br>
+                        Conclua o PIX abaixo para confirmar seu ingresso.
+                    </div>
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            @if(!empty($pixPayment['qr_code_base64']))
+                                <div class="text-center mb-2">
+                                    <img src="data:image/png;base64,{{ $pixPayment['qr_code_base64'] }}" alt="QR Code PIX" style="max-width:260px; width:100%;">
+                                </div>
+                            @endif
+                            <label class="form-label">Código copia e cola</label>
+                            <textarea class="form-control" rows="4" readonly>{{ $pixPayment['qr_code_text'] }}</textarea>
+                        </div>
+                    </div>
+                @elseif(is_array($pixPayment) && (($pixPayment['payment_method'] ?? '') !== 'pix'))
+                    <div class="alert alert-info">
+                        <strong>Pagamento em processamento</strong><br>
+                        Método: cartão. Status atual: {{ $pixPayment['status'] ?? 'pending' }}.
+                    </div>
+                @endif
+                <form method="post" action="{{ route('events.public.register', $event->public_slug) }}" id="event-registration-form">
                     @csrf
                     <div class="mb-3">
                         <label class="form-label">Nome completo *</label>
@@ -200,8 +231,70 @@
                     @endif
                     <div class="mb-3">
                         <label class="form-label">E-mail @if($event->email_required)*@endif</label>
-                        <input type="email" name="email" class="form-control" value="{{ old('email') }}" @if($event->email_required) required @endif>
+                        <input type="email" id="email" name="email" class="form-control" value="{{ old('email', $useConfiguredPayer ? config('mercadopago.test_payer_email') : '') }}" @if($event->email_required) required @endif @if($useConfiguredPayer) readonly @endif>
                     </div>
+                    @if($event->is_paid)
+                        <div class="mb-3">
+                            <label class="form-label">CPF para pagamento *</label>
+                            <input type="text" id="payer_document" name="payer_document" class="form-control js-cpf-mask" value="{{ old('payer_document', $useConfiguredPayer ? config('mercadopago.test_payer_document') : '') }}" placeholder="Somente números" maxlength="14" required @if($useConfiguredPayer) readonly @endif>
+                            @if($useConfiguredPayer)
+                                <small class="text-muted d-block mt-1">Pagador de teste configurado via `.env` (MP_TEST_PAYER_EMAIL / MP_TEST_PAYER_DOCUMENT).</small>
+                            @endif
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label d-block">Forma de pagamento *</label>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input js-payment-method" type="radio" name="payment_method" id="pay_pix" value="pix" {{ old('payment_method', 'pix') === 'pix' ? 'checked' : '' }}>
+                                <label class="form-check-label" for="pay_pix">PIX</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input js-payment-method" type="radio" name="payment_method" id="pay_card" value="card" {{ old('payment_method') === 'card' ? 'checked' : '' }}>
+                                <label class="form-check-label" for="pay_card">Cartão</label>
+                            </div>
+                        </div>
+                        <div id="card-payment-box" class="border rounded p-3 mb-3 d-none">
+                            <p class="small text-muted mb-2">Preencha os dados do cartão para pagamento imediato.</p>
+                            <div class="mb-2">
+                                <label class="form-label">Nome no cartão</label>
+                                <input type="text" class="form-control js-card-field" id="form-checkout__cardholderName" autocomplete="cc-name">
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Número do cartão</label>
+                                <input type="text" class="form-control js-card-field" id="form-checkout__cardNumber" autocomplete="cc-number">
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <label class="form-label">Validade</label>
+                                    <input type="text" class="form-control js-card-field" id="form-checkout__expirationDate" placeholder="MM/AA" autocomplete="cc-exp">
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">CVV</label>
+                                    <input type="text" class="form-control js-card-field" id="form-checkout__securityCode" autocomplete="cc-csc">
+                                </div>
+                            </div>
+                            <div class="row g-2 mt-1">
+                                <div class="col-6">
+                                    <label class="form-label">Bandeira</label>
+                                    <input type="text" class="form-control" id="card_brand_display" placeholder="Preenchido automaticamente" readonly>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label">Banco emissor</label>
+                                    <select class="form-select js-card-field" id="form-checkout__issuer"></select>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <label class="form-label">Parcelas</label>
+                                <select class="form-select js-card-field" id="form-checkout__installments"></select>
+                            </div>
+                            <select id="form-checkout__identificationType" class="d-none"></select>
+                            <input type="hidden" id="form-checkout__identificationNumber">
+                            <input type="hidden" id="form-checkout__cardholderEmail">
+                            <input type="hidden" name="card_token" id="card_token">
+                            <input type="hidden" name="card_payment_method_id" id="card_payment_method_id">
+                            <input type="hidden" name="card_issuer_id" id="card_issuer_id">
+                            <input type="hidden" name="card_installments" id="card_installments">
+                        </div>
+                    @endif
 
                     @foreach(($customFields ?? $event->registrationFields) as $field)
                         <div class="mb-3">
@@ -258,6 +351,9 @@
 @endsection
 
 @push('scripts')
+@if($event->is_paid && !empty($mercadoPagoPublicKey))
+<script src="https://sdk.mercadopago.com/js/v2"></script>
+@endif
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.js-phone-mask').forEach(function (input) {
@@ -274,6 +370,159 @@ document.addEventListener('DOMContentLoaded', function () {
             input.value = formatPhone(input.value);
         }
     });
+
+    document.querySelectorAll('.js-cpf-mask').forEach(function (input) {
+        var formatCpf = function (value) {
+            var digits = (value || '').replace(/\D/g, '').slice(0, 11);
+            if (digits.length <= 3) return digits;
+            if (digits.length <= 6) return digits.slice(0, 3) + '.' + digits.slice(3);
+            if (digits.length <= 9) return digits.slice(0, 3) + '.' + digits.slice(3, 6) + '.' + digits.slice(6);
+            return digits.slice(0, 3) + '.' + digits.slice(3, 6) + '.' + digits.slice(6, 9) + '-' + digits.slice(9);
+        };
+        input.addEventListener('input', function () {
+            input.value = formatCpf(input.value);
+        });
+        if (input.value) {
+            input.value = formatCpf(input.value);
+        }
+    });
+
+    var formEl = document.getElementById('event-registration-form');
+    var paymentRadios = document.querySelectorAll('.js-payment-method');
+    var cardBox = document.getElementById('card-payment-box');
+    var emailInput = document.getElementById('email');
+    var payerDocInput = document.getElementById('payer_document');
+    var hiddenCardEmail = document.getElementById('form-checkout__cardholderEmail');
+    var hiddenCardDoc = document.getElementById('form-checkout__identificationNumber');
+    var cardBrandDisplay = document.getElementById('card_brand_display');
+    var allowNativeSubmit = false;
+    var mpCardForm = null;
+    var mpCardFormInitialized = false;
+
+    var syncCardPayerData = function () {
+        if (hiddenCardEmail && emailInput) {
+            hiddenCardEmail.value = emailInput.value || '';
+        }
+        if (hiddenCardDoc && payerDocInput) {
+            hiddenCardDoc.value = (payerDocInput.value || '').replace(/\D/g, '');
+        }
+    };
+
+    var getSelectedPaymentMethod = function () {
+        var checked = document.querySelector('.js-payment-method:checked');
+        return checked ? checked.value : 'pix';
+    };
+
+    var toggleCardBox = function () {
+        if (!cardBox) return;
+        var isCard = getSelectedPaymentMethod() === 'card';
+        cardBox.classList.toggle('d-none', !isCard);
+        cardBox.querySelectorAll('.js-card-field').forEach(function (field) {
+            if (isCard) {
+                field.setAttribute('required', 'required');
+            } else {
+                field.removeAttribute('required');
+            }
+        });
+
+        // Em PIX, desmonta o cardForm para não interceptar submit com validações de cartão.
+        if (!isCard && mpCardForm && typeof mpCardForm.unmount === 'function') {
+            try {
+                mpCardForm.unmount();
+            } catch (e) {
+                console.warn('Não foi possível desmontar cardForm', e);
+            }
+            mpCardForm = null;
+            mpCardFormInitialized = false;
+        }
+    };
+
+    var initCardFormIfNeeded = function () {
+        if (mpCardFormInitialized || !formEl || !window.MercadoPago) {
+            return;
+        }
+
+        try {
+            var mp = new window.MercadoPago(@json($mercadoPagoPublicKey), { locale: 'pt-BR' });
+            mpCardForm = mp.cardForm({
+                amount: @json($eventPriceJs),
+                iframe: false,
+                form: {
+                    id: 'event-registration-form',
+                    cardNumber: { id: 'form-checkout__cardNumber' },
+                    expirationDate: { id: 'form-checkout__expirationDate' },
+                    securityCode: { id: 'form-checkout__securityCode' },
+                    cardholderName: { id: 'form-checkout__cardholderName' },
+                    issuer: { id: 'form-checkout__issuer' },
+                    installments: { id: 'form-checkout__installments' },
+                    identificationType: { id: 'form-checkout__identificationType' },
+                    identificationNumber: { id: 'form-checkout__identificationNumber' },
+                    cardholderEmail: { id: 'form-checkout__cardholderEmail' },
+                },
+                callbacks: {
+                    onFormMounted: function (error) {
+                        if (error) {
+                            console.error('Falha ao montar formulário Mercado Pago', error);
+                        }
+                    },
+                    onSubmit: function (event) {
+                        if (allowNativeSubmit) {
+                            return;
+                        }
+                        event.preventDefault();
+                        if (getSelectedPaymentMethod() !== 'card') {
+                            allowNativeSubmit = true;
+                            formEl.submit();
+                            return;
+                        }
+
+                        syncCardPayerData();
+                        var cardData = mpCardForm.getCardFormData();
+                        if (!cardData || !cardData.token) {
+                            alert('Não foi possível tokenizar o cartão. Verifique os dados.');
+                            return;
+                        }
+
+                        if (cardBrandDisplay) {
+                            cardBrandDisplay.value = cardData.paymentMethodId || '';
+                        }
+
+                        document.getElementById('card_token').value = cardData.token || '';
+                        document.getElementById('card_payment_method_id').value = cardData.paymentMethodId || '';
+                        document.getElementById('card_issuer_id').value =
+                            cardData.issuerId || document.getElementById('form-checkout__issuer')?.value || '';
+                        document.getElementById('card_installments').value =
+                            cardData.installments || document.getElementById('form-checkout__installments')?.value || '1';
+
+                        allowNativeSubmit = true;
+                        formEl.submit();
+                    },
+                },
+            });
+            mpCardFormInitialized = true;
+        } catch (e) {
+            console.error('Erro ao iniciar Mercado Pago cardForm', e);
+        }
+    };
+
+    paymentRadios.forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            toggleCardBox();
+            if (getSelectedPaymentMethod() === 'card') {
+                initCardFormIfNeeded();
+            }
+        });
+    });
+    toggleCardBox();
+    syncCardPayerData();
+    emailInput && emailInput.addEventListener('input', syncCardPayerData);
+    payerDocInput && payerDocInput.addEventListener('input', syncCardPayerData);
+
+    @if($event->is_paid && !empty($mercadoPagoPublicKey))
+    if (getSelectedPaymentMethod() === 'card') {
+        initCardFormIfNeeded();
+    }
+    @endif
 
     var countdown = document.querySelector('.evx-countdown');
     if (countdown) {

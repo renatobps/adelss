@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\DepartmentRole;
 use App\Models\Member;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class DepartmentController extends Controller
 {
@@ -31,6 +32,7 @@ class DepartmentController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Department::class);
         $filter = $request->get('filter', 'ativo'); // ativo ou arquivado
         
         $query = Department::with(['leader', 'leaders', 'members', 'roles']);
@@ -51,11 +53,10 @@ class DepartmentController extends Controller
      */
     public function create(Request $request)
     {
-        $templates = $this->getTemplates();
-        $selectedTemplate = $request->get('template');
+        $this->authorize('create', Department::class);
         $members = Member::orderBy('name')->get();
         
-        return view('departments.create', compact('templates', 'selectedTemplate', 'members'));
+        return view('departments.create', compact('members'));
     }
 
     /**
@@ -63,6 +64,7 @@ class DepartmentController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Department::class);
         // Prepara o campo members antes da validação
         // Se members[] foi enviado como array, já vem como array do Laravel
         $membersData = $request->input('members', []);
@@ -85,6 +87,9 @@ class DepartmentController extends Controller
             'color' => 'nullable|string',
             'status' => 'required|in:ativo,arquivado',
             'description' => 'nullable|string',
+            'show_on_homepage' => 'nullable|boolean',
+            'homepage_order' => 'nullable|integer|min:0|max:999',
+            'homepage_url' => 'nullable|string|max:500',
             'leaders' => 'nullable|array',
             'leaders.*' => 'exists:members,id',
             'members' => 'sometimes|array',
@@ -92,6 +97,7 @@ class DepartmentController extends Controller
             'roles' => 'nullable|array',
             'roles.*.name' => 'required_without:roles.*.id|string|max:255',
             'roles.*.description' => 'nullable|string',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ], [
             'name.required' => 'O campo nome do departamento é obrigatório.',
             'name.string' => 'O nome do departamento deve ser um texto.',
@@ -105,6 +111,9 @@ class DepartmentController extends Controller
             'roles.*.name.required_without' => 'O nome do cargo é obrigatório.',
             'roles.*.name.string' => 'O nome do cargo deve ser um texto.',
             'roles.*.name.max' => 'O nome do cargo não pode ter mais de 255 caracteres.',
+            'logo.image' => 'O logo deve ser uma imagem.',
+            'logo.mimes' => 'O logo deve ser nos formatos: jpeg, png, jpg, gif ou svg.',
+            'logo.max' => 'O logo não pode ter mais de 2MB.',
         ]);
 
         // Garante que members seja um array válido
@@ -134,13 +143,21 @@ class DepartmentController extends Controller
             $validated['color'] = null;
         }
 
+        if ($request->hasFile('logo')) {
+            $validated['logo_url'] = $request->file('logo')->store('departments/logos', 'public');
+        }
+
         $department = Department::create([
             'name' => $validated['name'],
             'template' => $validated['template'],
             'icon' => $validated['icon'],
             'color' => $validated['color'],
+            'logo_url' => $validated['logo_url'] ?? null,
             'status' => $validated['status'],
             'description' => $validated['description'] ?? null,
+            'show_on_homepage' => $request->boolean('show_on_homepage'),
+            'homepage_order' => $request->boolean('show_on_homepage') ? ($validated['homepage_order'] ?? null) : null,
+            'homepage_url' => $request->boolean('show_on_homepage') ? ($validated['homepage_url'] ?? null) : null,
         ]);
 
         // Sincronizar líderes
@@ -188,6 +205,7 @@ class DepartmentController extends Controller
      */
     public function show(Department $department)
     {
+        $this->authorize('view', $department);
         $department->load(['leader', 'leaders', 'members', 'roles']);
         // Carrega os roles para os membros através dos pivots
         $memberIds = $department->members->pluck('id')->toArray();
@@ -204,6 +222,7 @@ class DepartmentController extends Controller
      */
     public function edit(Department $department)
     {
+        $this->authorize('update', $department);
         $templates = $this->getTemplates();
         $members = Member::orderBy('name')->get();
         $department->load(['members', 'roles']);
@@ -216,6 +235,7 @@ class DepartmentController extends Controller
      */
     public function update(Request $request, Department $department)
     {
+        $this->authorize('update', $department);
         // Prepara o campo members antes da validação
         $membersData = $request->input('members', []);
         
@@ -268,6 +288,9 @@ class DepartmentController extends Controller
             'color' => 'nullable|string',
             'status' => 'required|in:ativo,arquivado',
             'description' => 'nullable|string',
+            'show_on_homepage' => 'nullable|boolean',
+            'homepage_order' => 'nullable|integer|min:0|max:999',
+            'homepage_url' => 'nullable|string|max:500',
             'leaders' => 'nullable|array',
             'leaders.*' => 'exists:members,id',
             'members' => 'sometimes|array',
@@ -278,6 +301,7 @@ class DepartmentController extends Controller
             'roles.*.description' => 'nullable|string',
             'roles_to_delete' => 'nullable|array',
             'roles_to_delete.*' => 'exists:department_roles,id',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         ], [
             'name.required' => 'O campo nome do departamento é obrigatório.',
             'name.string' => 'O nome do departamento deve ser um texto.',
@@ -294,6 +318,9 @@ class DepartmentController extends Controller
             'roles.*.id.exists' => 'O cargo selecionado não existe.',
             'roles_to_delete.array' => 'Os cargos para exclusão devem ser uma lista válida.',
             'roles_to_delete.*.exists' => 'Um ou mais cargos selecionados para exclusão não existem.',
+            'logo.image' => 'O logo deve ser uma imagem.',
+            'logo.mimes' => 'O logo deve ser nos formatos: jpeg, png, jpg, gif ou svg.',
+            'logo.max' => 'O logo não pode ter mais de 2MB.',
         ]);
 
         // Garante que seja arrays válidos
@@ -323,14 +350,26 @@ class DepartmentController extends Controller
             $validated['color'] = $validated['color'] ?? $department->color ?? null;
         }
 
-        $department->update([
+        $updateData = [
             'name' => $validated['name'],
             'template' => $validated['template'],
             'icon' => $validated['icon'],
             'color' => $validated['color'],
             'status' => $validated['status'],
             'description' => $validated['description'] ?? null,
-        ]);
+            'show_on_homepage' => $request->boolean('show_on_homepage'),
+            'homepage_order' => $request->boolean('show_on_homepage') ? ($validated['homepage_order'] ?? null) : null,
+            'homepage_url' => $request->boolean('show_on_homepage') ? ($validated['homepage_url'] ?? null) : null,
+        ];
+
+        if ($request->hasFile('logo')) {
+            if ($department->logo_url) {
+                Storage::disk('public')->delete($department->logo_url);
+            }
+            $updateData['logo_url'] = $request->file('logo')->store('departments/logos', 'public');
+        }
+
+        $department->update($updateData);
 
         // Sincronizar líderes
         if (isset($validated['leaders'])) {
@@ -382,6 +421,7 @@ class DepartmentController extends Controller
      */
     public function destroy(Department $department)
     {
+        $this->authorize('delete', $department);
         try {
             // Remove os relacionamentos antes de excluir
             $department->members()->detach();

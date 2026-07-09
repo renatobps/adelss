@@ -9,7 +9,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Mobile Metas -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Web Fonts  -->
     <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800|Shadows+Into+Light" rel="stylesheet" type="text/css">
@@ -222,6 +222,7 @@
                                     $canViewIndicadores = false;
                                     $canViewPropositos = false;
                                     $canViewFeedbacks = false;
+                                    $canManageHomePage = false;
                                     
                                     if ($user) {
                                         if ($isAdmin) {
@@ -258,6 +259,7 @@
                                             $canViewIndicadores = true;
                                             $canViewPropositos = true;
                                             $canViewFeedbacks = true;
+                                            $canManageHomePage = true;
                                         } else {
                                             try {
                                                 // Verificar permissões específicas do menu
@@ -352,6 +354,7 @@
                                                                      $user->hasPermission('discipleship.goals.manage');
                                                 $canViewFeedbacks = $user->hasPermission('discipleship.feedbacks.view') || 
                                                                     $user->hasPermission('discipleship.feedbacks.manage');
+                                                $canManageHomePage = $user->hasPermission('pagina-principal.manage');
                                             } catch (\Exception $e) {
                                                 // Em caso de erro, não exibir menu
                                                 $canViewMembers = false;
@@ -387,10 +390,20 @@
                                                 $canViewIndicadores = false;
                                                 $canViewPropositos = false;
                                                 $canViewFeedbacks = false;
+                                                $canManageHomePage = false;
                                             }
                                         }
                                     }
                                 @endphp
+
+                                @if($canManageHomePage)
+                                <li class="{{ request()->routeIs('pagina-principal.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ route('pagina-principal.edit') }}">
+                                        <i class="bx bx-globe" aria-hidden="true"></i>
+                                        <span>Página Principal</span>
+                                    </a>
+                                </li>
+                                @endif
 
                                 {{-- MENU MEMBROS - Verificar permissão de visualização ou cargos --}}
                                 @if($canViewMembers || $canManageRoles)
@@ -1047,6 +1060,88 @@
                 return true;
             }
         });
+    </script>
+
+    <script>
+    (function () {
+        const mobileQuery = window.matchMedia('(max-width: 767.98px)');
+
+        function getActionLabel(el) {
+            if (el.title) return el.title;
+            if (el.tagName === 'FORM') {
+                const btn = el.querySelector('button[type="submit"]');
+                return btn?.title || btn?.textContent?.trim() || 'Excluir';
+            }
+            const icon = el.querySelector('i');
+            if (icon?.classList.contains('bx-edit')) return 'Editar';
+            if (icon?.classList.contains('bx-trash')) return 'Excluir';
+            if (icon?.classList.contains('bx-printer')) return 'Imprimir';
+            if (icon?.classList.contains('bx-copy')) return 'Duplicar';
+            if (icon?.classList.contains('bx-show') || icon?.classList.contains('bx-search')) return 'Ver';
+            return el.textContent?.trim() || 'Ação';
+        }
+
+        function restoreGroup(group) {
+            const mobile = group.previousElementSibling;
+            if (mobile?.classList?.contains('table-actions-mobile')) {
+                mobile.remove();
+            }
+            group.classList.remove('d-none', 'd-md-inline-flex', 'table-actions-processed');
+        }
+
+        function convertGroup(group) {
+            if (group.classList.contains('table-actions-processed')) {
+                return;
+            }
+
+            const directActions = Array.from(group.children).filter((child) => {
+                return child.matches('button, a.btn, form');
+            });
+
+            if (directActions.length < 3) {
+                return;
+            }
+
+            const dropdown = document.createElement('div');
+            dropdown.className = 'dropdown table-actions-mobile d-md-none';
+            dropdown.innerHTML = '<button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false"><i class="bx bx-dots-vertical-rounded"></i></button><ul class="dropdown-menu dropdown-menu-end"></ul>';
+
+            const menu = dropdown.querySelector('.dropdown-menu');
+            directActions.forEach((el) => {
+                const item = document.createElement('li');
+                const action = document.createElement('button');
+                action.type = 'button';
+                action.className = 'dropdown-item';
+                action.textContent = getActionLabel(el);
+                action.addEventListener('click', () => {
+                    if (el.tagName === 'FORM') {
+                        const submit = el.querySelector('button[type="submit"]');
+                        if (submit) submit.click();
+                        return;
+                    }
+                    el.click();
+                });
+                item.appendChild(action);
+                menu.appendChild(item);
+            });
+
+            group.classList.add('d-none', 'd-md-inline-flex', 'table-actions-processed');
+            group.parentNode.insertBefore(dropdown, group);
+        }
+
+        function processTableActions() {
+            document.querySelectorAll('table tbody td .btn-group[role="group"]').forEach((group) => {
+                if (!mobileQuery.matches) {
+                    restoreGroup(group);
+                    return;
+                }
+                convertGroup(group);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', processTableActions);
+        mobileQuery.addEventListener('change', processTableActions);
+    })();
     </script>
 
     @stack('scripts')

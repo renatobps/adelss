@@ -14,6 +14,12 @@ class Kernel extends ConsoleKernel
     {
         // Verificar eventos passados a cada hora
         $schedule->command('events:check-past')->hourly();
+
+        // Lembretes de despesas financeiras com vencimento próximo
+        $schedule->command('financial:notify-due-expenses')->dailyAt('08:00');
+
+        // Purge de logs antigos de notificação (domingo 03:00)
+        $schedule->command('logs:purge-old')->weeklyOn(0, '03:00');
     }
 
     /**

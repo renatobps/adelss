@@ -18,6 +18,7 @@ class DiscipleshipGoalController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', DiscipleshipGoal::class);
         $memberId = $request->get('discipleship_member_id');
         $status = $request->get('status', 'em_andamento');
         
@@ -43,6 +44,7 @@ class DiscipleshipGoalController extends Controller
      */
     public function create(Request $request)
     {
+        $this->authorize('create', DiscipleshipGoal::class);
         $memberId = $request->get('discipleship_member_id');
         $members = DiscipleshipMember::ativos()->with('member')->get();
         
@@ -54,6 +56,7 @@ class DiscipleshipGoalController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', DiscipleshipGoal::class);
         $validated = $request->validate([
             'discipleship_member_id' => 'required|exists:discipleship_members,id',
             'tipo' => 'required|in:espiritual,material',
@@ -103,6 +106,7 @@ class DiscipleshipGoalController extends Controller
      */
     public function show(DiscipleshipGoal $goal)
     {
+        $this->authorize('view', $goal);
         $goal->load(['discipleshipMember.member', 'discipleshipMember.cycle', 'discipleshipMember.discipulador']);
         
         return view('discipleship.goals.show', compact('goal'));
@@ -113,6 +117,7 @@ class DiscipleshipGoalController extends Controller
      */
     public function edit(DiscipleshipGoal $goal)
     {
+        $this->authorize('update', $goal);
         $members = DiscipleshipMember::ativos()->with('member')->get();
         
         return view('discipleship.goals.edit', compact('goal', 'members'));
@@ -123,6 +128,7 @@ class DiscipleshipGoalController extends Controller
      */
     public function update(Request $request, DiscipleshipGoal $goal)
     {
+        $this->authorize('update', $goal);
         $validated = $request->validate([
             'discipleship_member_id' => 'required|exists:discipleship_members,id',
             'tipo' => 'required|in:espiritual,material',
@@ -172,6 +178,7 @@ class DiscipleshipGoalController extends Controller
      */
     public function destroy(DiscipleshipGoal $goal)
     {
+        $this->authorize('delete', $goal);
         $memberId = $goal->discipleship_member_id;
         $goal->delete();
 
@@ -184,6 +191,7 @@ class DiscipleshipGoalController extends Controller
      */
     public function generatePdf(DiscipleshipGoal $goal)
     {
+        $this->authorize('view', $goal);
         $goal->load(['discipleshipMember.member', 'discipleshipMember.cycle', 'discipleshipMember.discipulador']);
         
         // Buscar logo da igreja

@@ -79,6 +79,7 @@ class MoriahController extends Controller
      */
     public function updateMemberFunctions(Request $request, Member $member)
     {
+        $this->authorize('moriah.manage');
         $validated = $request->validate([
             'functions' => 'nullable|array',
             'functions.*' => 'exists:moriah_functions,id',
@@ -97,6 +98,7 @@ class MoriahController extends Controller
      */
     public function addMemberToMinistry(Request $request)
     {
+        $this->authorize('moriah.manage');
         $validated = $request->validate([
             'member_ids' => 'required|array',
             'member_ids.*' => 'exists:members,id',
@@ -147,6 +149,7 @@ class MoriahController extends Controller
      */
     public function removeMemberFromMinistry(Member $member)
     {
+        $this->authorize('moriah.manage');
         $louvorDepartment = Department::whereRaw('LOWER(name) LIKE ?', ['%louvor%'])->first();
 
         if (!$louvorDepartment) {
@@ -169,6 +172,7 @@ class MoriahController extends Controller
      */
     public function updateBanner(Request $request)
     {
+        $this->authorize('moriah.manage');
         $validated = $request->validate([
             'banner' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:5120',
         ], [
@@ -209,6 +213,7 @@ class MoriahController extends Controller
      */
     public function updateLogo(Request $request)
     {
+        $this->authorize('moriah.manage');
         $validated = $request->validate([
             'logo' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:2048',
         ], [

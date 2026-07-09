@@ -9,6 +9,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Illuminate\View\View;
 
@@ -16,6 +17,7 @@ class RelatorioController extends Controller
 {
     public function index(Request $request): View
     {
+        Gate::authorize('rifas.view-reports');
         $rifaId = $request->input('rifa_id');
         $vendedorId = $request->input('vendedor_id');
         $inicio = $request->input('inicio');
@@ -87,6 +89,7 @@ class RelatorioController extends Controller
 
     public function exportCsv(Request $request): StreamedResponse
     {
+        Gate::authorize('rifas.view-reports');
         $dados = $this->obterDadosExportacao($request);
 
         $headers = [
@@ -115,6 +118,7 @@ class RelatorioController extends Controller
 
     public function exportPdf(Request $request)
     {
+        Gate::authorize('rifas.view-reports');
         $dados = $this->obterDadosExportacao($request);
 
         $pdf = Pdf::loadView('rifas.relatorios.pdf', [

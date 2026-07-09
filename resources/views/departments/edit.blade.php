@@ -27,7 +27,7 @@
                 </div>
             </header>
             <div class="card-body">
-                <form action="{{ route('departments.update', $department) }}" method="POST" id="departmentForm">
+                <form action="{{ route('departments.update', $department) }}" method="POST" id="departmentForm" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
 
@@ -50,6 +50,26 @@
                             @error('description')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
+                        </div>
+
+                        <div class="col-md-12 mb-3">
+                            <label for="logo" class="form-label">Logo do departamento</label>
+                            @if($department->logo_url)
+                                <div class="mb-2">
+                                    <img src="{{ asset('storage/' . $department->logo_url) }}"
+                                         alt="{{ $department->name }}"
+                                         style="max-width: 150px; max-height: 150px; border-radius: 50%; border: 2px solid #ddd;">
+                                </div>
+                            @endif
+                            <input type="file" class="form-control @error('logo') is-invalid @enderror"
+                                   id="logo" name="logo" accept="image/*">
+                            <small class="form-text text-muted">Deixe em branco para manter o logo atual. Formatos aceitos: JPEG, PNG, JPG, GIF, SVG. Tamanho máximo: 2MB.</small>
+                            @error('logo')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                            <div id="logoPreview" class="mt-2" style="display: none;">
+                                <img id="logoPreviewImg" src="" alt="Preview do logo" style="max-width: 150px; max-height: 150px; border-radius: 50%; border: 2px solid #ddd;">
+                            </div>
                         </div>
 
                         <div class="col-md-6 mb-3">
@@ -100,6 +120,8 @@
                             @enderror
                         </div>
                     </div>
+
+                    @include('departments._homepage-fields', ['department' => $department ?? new \App\Models\Department()])
 
                     <hr class="my-4">
 
@@ -196,7 +218,7 @@
 
 <!-- Modal para adicionar participantes -->
 <div class="modal fade" id="participantModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
@@ -267,6 +289,20 @@
     let selectedMembers = {{ json_encode($department->members->pluck('id')->toArray()) }};
     let roleCounter = {{ $department->roles->where('is_default', false)->max('id') ?? 0 }};
     let rolesToDelete = [];
+
+    document.getElementById('logo')?.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('logoPreview').style.display = 'block';
+                document.getElementById('logoPreviewImg').src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            document.getElementById('logoPreview').style.display = 'none';
+        }
+    });
 
     // Adicionar participante
     document.getElementById('addParticipantBtn').addEventListener('click', function() {

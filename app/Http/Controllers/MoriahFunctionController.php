@@ -21,6 +21,7 @@ class MoriahFunctionController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('moriah.manage');
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'icon' => 'nullable|string|max:255',
@@ -38,6 +39,7 @@ class MoriahFunctionController extends Controller
      */
     public function update(Request $request, MoriahFunction $funcao)
     {
+        $this->authorize('moriah.manage');
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'icon' => 'nullable|string|max:255',
@@ -55,6 +57,7 @@ class MoriahFunctionController extends Controller
      */
     public function destroy(MoriahFunction $funcao)
     {
+        $this->authorize('moriah.manage');
         $funcao->delete();
 
         return redirect()->route('moriah.funcoes.index')

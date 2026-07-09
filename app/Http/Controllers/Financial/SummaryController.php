@@ -12,6 +12,7 @@ class SummaryController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('financial.view-summary');
         // Períodos padrão
         $today = Carbon::today();
         $startOfMonth = Carbon::now()->startOfMonth();

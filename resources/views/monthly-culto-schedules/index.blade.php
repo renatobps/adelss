@@ -271,7 +271,7 @@
 </div>
 
 <div class="modal fade" id="notifyAllFromListModal" tabindex="-1" aria-labelledby="notifyAllFromListModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <form method="POST" id="notifyAllFromListForm" action="#" enctype="multipart/form-data">
                 @csrf
