@@ -36,6 +36,12 @@ class EnsinoRouteAuthorizer
         $action = $request->route()?->getActionMethod() ?? '';
         $turma = $this->resolveTurma($request);
 
+        if (str_starts_with($routeName, 'ensino.estudos.formularios')) {
+            return $this->estudoPolicy->authorizeFormRouteAction($user, $action)
+                ? null
+                : $denyAccess('Acesso negado. Você não tem permissão para gerenciar formulários de estudos.');
+        }
+
         if (str_starts_with($routeName, 'ensino.estudos')) {
             return $this->estudoPolicy->authorizeRouteAction($user, $action)
                 ? null

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Ensino\EstudosController;
 use App\Http\Controllers\Ensino\EscolasController;
 use App\Http\Controllers\Ensino\TurmasController;
+use App\Http\Controllers\Ensino\StudyFormController;
 
 
 // Rotas do módulo de Ensino (admin total, outros só ver estudos)
@@ -18,6 +19,22 @@ Route::prefix('ensino')->name('ensino.')->middleware('module.access:ensino')->gr
     'update' => 'estudos.update',
     'destroy' => 'estudos.destroy',
     ]);
+
+    // Formulários de perguntas dos estudos
+    Route::prefix('estudos/{estudo}/formularios')->name('estudos.formularios.')->group(function () {
+        Route::get('/', [StudyFormController::class, 'index'])->name('index');
+        Route::get('/criar', [StudyFormController::class, 'create'])->name('create');
+        Route::post('/preview', [StudyFormController::class, 'preview'])->name('preview');
+        Route::post('/', [StudyFormController::class, 'store'])->name('store');
+        Route::get('/{formulario}', [StudyFormController::class, 'show'])->name('show');
+        Route::get('/{formulario}/editar', [StudyFormController::class, 'edit'])->name('edit');
+        Route::put('/{formulario}', [StudyFormController::class, 'update'])->name('update');
+        Route::delete('/{formulario}', [StudyFormController::class, 'destroy'])->name('destroy');
+        Route::get('/{formulario}/pdf', [StudyFormController::class, 'pdf'])->name('pdf');
+        Route::get('/{formulario}/respostas', [StudyFormController::class, 'submissions'])->name('submissions');
+        Route::get('/{formulario}/respostas/{submission}', [StudyFormController::class, 'showSubmission'])->name('submissions.show');
+    });
+
 
     // Escolas
     Route::resource('escolas', EscolasController::class)->names([

@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Agenda\PublicEventController;
+use App\Http\Controllers\Ensino\PublicStudyFormController;
 use App\Http\Controllers\Webhooks\MercadoPagoWebhookController;
 use App\Http\Controllers\Webhooks\EvolutionWebhookController;
 
@@ -16,6 +17,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/evento/{slug}', [PublicEventController::class, 'show'])->name('events.public.show');
 Route::post('/evento/{slug}/inscricao', [PublicEventController::class, 'register'])->name('events.public.register');
+
+Route::get('/estudo-formulario/{slug}', [PublicStudyFormController::class, 'show'])->name('study.forms.public.show');
+Route::post('/estudo-formulario/{slug}/responder', [PublicStudyFormController::class, 'submit'])->name('study.forms.public.submit');
 Route::post('/webhooks/mercado-pago', [MercadoPagoWebhookController::class, 'handle'])->name('webhooks.mercadopago');
 Route::post('/webhook', [EvolutionWebhookController::class, 'handle'])->name('webhooks.evolution');
 Route::post('/webhook/{event}', [EvolutionWebhookController::class, 'handle'])

@@ -122,6 +122,9 @@
                                             <a href="{{ route('ensino.estudos.show', $study) }}" class="btn btn-info btn-sm" title="Visualizar">
                                                 <i class="bx bx-show"></i>
                                             </a>
+                                            <a href="{{ route('ensino.estudos.formularios.index', $study) }}" class="btn btn-outline-success btn-sm" title="Formulários">
+                                                <i class="bx bx-list-check"></i>
+                                            </a>
                                             @if($canEditEstudos)
                                             <a href="{{ route('ensino.estudos.edit', $study) }}" class="btn btn-primary btn-sm" title="Editar">
                                                 <i class="bx bx-edit"></i>

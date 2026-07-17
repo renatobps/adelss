@@ -40,7 +40,7 @@ class EstudoPolicy
 
     public function authorizeRouteAction(User $user, string $action): bool
     {
-        if (in_array($action, ['index', 'show'], true)) {
+        if (in_array($action, ['index', 'show', 'submissions', 'showSubmission'], true)) {
             return true;
         }
 
@@ -48,7 +48,7 @@ class EstudoPolicy
             return $this->create($user);
         }
 
-        if (in_array($action, ['edit', 'update'], true)) {
+        if (in_array($action, ['edit', 'update', 'preview'], true)) {
             return $this->update($user, new Study());
         }
 
@@ -58,4 +58,15 @@ class EstudoPolicy
 
         return true;
     }
+
+    public function authorizeFormRouteAction(User $user, string $action): bool
+    {
+        if (in_array($action, ['index', 'show', 'submissions', 'showSubmission', 'pdf'], true)) {
+            return true;
+        }
+
+        return $this->update($user, new Study());
+    }
 }
+
+

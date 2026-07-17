@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Study extends Model
@@ -25,6 +26,11 @@ class Study extends Model
     protected $casts = [
         'send_notification' => 'boolean',
     ];
+
+    public function forms(): HasMany
+    {
+        return $this->hasMany(StudyForm::class);
+    }
 
     /**
      * Scope para filtrar por categoria

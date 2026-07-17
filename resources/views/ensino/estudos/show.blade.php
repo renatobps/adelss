@@ -26,6 +26,9 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Visualizar Estudo</h5>
                 <div>
+                    <a href="{{ route('ensino.estudos.formularios.index', $estudo) }}" class="btn btn-outline-success btn-sm">
+                        <i class="bx bx-list-check me-1"></i>Formulários
+                    </a>
                     @if($canEditEstudos)
                     <a href="{{ route('ensino.estudos.edit', $estudo) }}" class="btn btn-primary btn-sm">
                         <i class="bx bx-edit me-1"></i>Editar
@@ -121,6 +124,38 @@
                     <strong>Categoria:</strong> {{ $estudo->category }}
                 </div>
                 @endif
+            </div>
+        </div>
+
+        <div class="card mb-3" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Formulários</h6>
+                @if($canEditEstudos)
+                <a href="{{ route('ensino.estudos.formularios.create', $estudo) }}" class="btn btn-success btn-sm">
+                    <i class="bx bx-plus"></i>
+                </a>
+                @endif
+            </div>
+            <div class="card-body">
+                @php $forms = $estudo->forms()->withCount('submissions')->latest()->limit(5)->get(); @endphp
+                @forelse($forms as $form)
+                    <div class="d-flex justify-content-between align-items-start border-bottom py-2">
+                        <div>
+                            <a href="{{ route('ensino.estudos.formularios.show', [$estudo, $form]) }}" class="fw-semibold text-decoration-none">
+                                {{ $form->title }}
+                            </a>
+                            <div class="small text-muted">{{ $form->submissions_count }} resposta(s)</div>
+                        </div>
+                        <a href="{{ $form->publicUrl() }}" target="_blank" class="btn btn-outline-secondary btn-sm" title="Link público">
+                            <i class="bx bx-link"></i>
+                        </a>
+                    </div>
+                @empty
+                    <p class="text-muted small mb-0">Nenhum formulário ainda.</p>
+                @endforelse
+                <a href="{{ route('ensino.estudos.formularios.index', $estudo) }}" class="btn btn-outline-success btn-sm w-100 mt-3">
+                    Ver todos
+                </a>
             </div>
         </div>
     </div>
