@@ -32,6 +32,7 @@ class ScheduledPost extends Model
         'media_file_id',
         'image_path',
         'caption',
+        'event_name',
         'media_kind',
         'scheduled_for',
         'status',

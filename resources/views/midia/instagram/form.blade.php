@@ -37,8 +37,8 @@
     <div class="card-body">
         <form method="POST" action="{{ route('midia.instagram.posts.store') }}" enctype="multipart/form-data" id="scheduleForm">
             @csrf
-            <div class="row g-3">
-                <div class="col-md-6">
+            <div class="row g-3 align-items-stretch">
+                <div class="col-md-5">
                     <label class="form-label">Arquivo da Mídia (Google Drive)</label>
                     <input type="hidden" name="media_file_id" id="media_file_id" value="{{ old('media_file_id', $selectedMediaFile?->id) }}">
                     <input type="hidden" name="media_kind" id="media_kind" value="{{ old('media_kind', $initialKind) }}">
@@ -79,28 +79,50 @@
                             </button>
                         </div>
                     </div>
-                    <div class="form-text">Ou envie um arquivo abaixo (foto ou vídeo).</div>
                 </div>
-                <div class="col-md-6">
+
+                <div class="col-md-2">
+                    <div class="midia-or-sep">ou</div>
+                </div>
+
+                <div class="col-md-5">
                     <label class="form-label">Upload direto</label>
                     <input type="file" name="media" id="media_upload" class="form-control"
                            accept="image/*,video/mp4,video/quicktime">
+                    <div class="form-text">Foto ou vídeo sem passar pela Mídia/Drive.</div>
                 </div>
 
                 <div class="col-12">
                     <label class="form-label">Destinos <span class="text-danger">*</span></label>
-                    <div class="d-flex flex-wrap gap-3">
+                    @php
+                        $destIcons = [
+                            'feed' => 'bx-grid-alt',
+                            'reels' => 'bx-movie-play',
+                            'stories' => 'bx-circle',
+                        ];
+                        $oldDest = collect(old('destinations', ['feed']));
+                    @endphp
+                    <div class="midia-dest-chips">
                         @foreach(\App\Models\ScheduledPostDestination::DESTINATIONS as $key => $label)
-                            <div class="form-check">
-                                <input class="form-check-input destination-check" type="checkbox"
+                            <label class="midia-dest-chip {{ $key }} {{ $oldDest->contains($key) ? 'is-active' : '' }}" for="dest_{{ $key }}">
+                                <input class="destination-check" type="checkbox"
                                        name="destinations[]" value="{{ $key }}" id="dest_{{ $key }}"
-                                       @checked(collect(old('destinations', ['feed']))->contains($key))>
-                                <label class="form-check-label" for="dest_{{ $key }}">{{ $label }}</label>
-                            </div>
+                                       @checked($oldDest->contains($key))>
+                                <i class="bx {{ $destIcons[$key] ?? 'bx-check' }}"></i>
+                                {{ $label }}
+                            </label>
                         @endforeach
                     </div>
                     <div class="form-text" id="destHelp">Reels exige vídeo. Feed+Reels juntos usam uma única publicação otimizada.</div>
                     <div class="text-danger small d-none" id="reelsError">Reels exige vídeo — remova essa opção ou envie um vídeo.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Evento relacionado</label>
+                    <input type="text" name="event_name" class="form-control" maxlength="180"
+                           value="{{ old('event_name') }}"
+                           placeholder="Ex: Culto de Celebração de Domingo">
+                    <div class="form-text">Opcional — útil para filtrar publicações por culto/evento.</div>
                 </div>
 
                 <div class="col-12">
@@ -170,86 +192,10 @@
 @endsection
 
 @push('styles')
+@include('midia.partials.styles')
 <style>
-.midia-picker-empty {
-    border: 1px dashed #cbd5e1;
-    border-radius: .75rem;
-    padding: 1.25rem;
-    background: #f8fafc;
-}
-.midia-picker-preview-thumb {
-    width: 64px;
-    height: 64px;
-    border-radius: .5rem;
-    background: #f1f5f9;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    flex-shrink: 0;
-    font-size: 1.75rem;
-    color: #64748b;
-}
-.midia-picker-preview-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.midia-card {
-    display: block;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: .75rem;
-    padding: .75rem;
-    height: 100%;
-    cursor: pointer;
-    transition: border-color .15s, box-shadow .15s;
-}
-.midia-card:hover { border-color: #93c5fd; }
-.midia-card.is-selected {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37, 99, 235, .25);
-    position: relative;
-}
-.midia-card.is-selected::after {
-    content: '\2713';
-    position: absolute;
-    top: .4rem;
-    right: .4rem;
-    width: 1.4rem;
-    height: 1.4rem;
-    border-radius: 999px;
-    background: #2563eb;
-    color: #fff;
-    font-size: .75rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.midia-card.is-folder { cursor: pointer; text-decoration: none; }
-.midia-thumb {
-    height: 120px;
-    border-radius: .5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    background: #f1f5f9;
-    margin-bottom: .5rem;
-    width: 100%;
-}
-.midia-thumb.folder { color: #f59e0b; font-size: 2.5rem; }
-.midia-thumb.doc { color: #64748b; font-size: 2.5rem; }
-.midia-thumb.video { color: #6366f1; font-size: 2.5rem; }
-.midia-thumb.photo img { width: 100%; height: 100%; object-fit: cover; }
-.midia-name {
-    font-size: .85rem;
-    font-weight: 600;
-    color: #1f2937;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+#mediaPickerModal .midia-card { padding: .75rem; cursor: pointer; }
+#mediaPickerModal .midia-thumb { height: 120px; margin-bottom: .5rem; }
 </style>
 @endpush
 
@@ -506,7 +452,15 @@
         }
         validateDestinations();
     });
-    reels?.addEventListener('change', validateDestinations);
+
+    document.querySelectorAll('.midia-dest-chip input').forEach((input) => {
+        const sync = () => {
+            input.closest('.midia-dest-chip')?.classList.toggle('is-active', input.checked);
+            validateDestinations();
+        };
+        input.addEventListener('change', sync);
+        sync();
+    });
 
     form?.addEventListener('submit', (e) => {
         if (!validateDestinations()) {

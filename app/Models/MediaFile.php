@@ -82,4 +82,50 @@ class MediaFile extends Model
 
         return round($bytes / 1048576, 1) . ' MB';
     }
+
+    /** Classe CSS do ícone colorido por tipo (pdf/docx/planilha/vídeo/genérico). */
+    public function fileTypeIconClass(): string
+    {
+        $mime = strtolower((string) $this->mime_type);
+        $ext = strtolower(pathinfo((string) $this->original_filename, PATHINFO_EXTENSION));
+
+        if ($this->isVideo() || str_starts_with($mime, 'video/')) {
+            return 'midia-ftype-video';
+        }
+        if (str_contains($mime, 'pdf') || $ext === 'pdf') {
+            return 'midia-ftype-pdf';
+        }
+        if (
+            str_contains($mime, 'word') || str_contains($mime, 'msword')
+            || in_array($ext, ['doc', 'docx', 'odt', 'rtf'], true)
+        ) {
+            return 'midia-ftype-doc';
+        }
+        if (
+            str_contains($mime, 'sheet') || str_contains($mime, 'excel') || str_contains($mime, 'csv')
+            || in_array($ext, ['xls', 'xlsx', 'ods', 'csv'], true)
+        ) {
+            return 'midia-ftype-sheet';
+        }
+        if (
+            str_contains($mime, 'presentation') || str_contains($mime, 'powerpoint')
+            || in_array($ext, ['ppt', 'pptx'], true)
+        ) {
+            return 'midia-ftype-ppt';
+        }
+
+        return 'midia-ftype-generic';
+    }
+
+    public function fileTypeIcon(): string
+    {
+        return match ($this->fileTypeIconClass()) {
+            'midia-ftype-video' => 'bx-video',
+            'midia-ftype-pdf' => 'bxs-file-pdf',
+            'midia-ftype-doc' => 'bxs-file-doc',
+            'midia-ftype-sheet' => 'bxs-file',
+            'midia-ftype-ppt' => 'bxs-file',
+            default => 'bx-file',
+        };
+    }
 }

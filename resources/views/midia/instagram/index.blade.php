@@ -47,11 +47,13 @@
 
 <div class="card border-0 shadow-sm">
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
+        <table class="table midia-posts-table align-middle mb-0">
             <thead>
                 <tr>
+                    <th style="width:64px;"></th>
                     <th>Quando</th>
                     <th>Legenda</th>
+                    <th>Evento</th>
                     <th>Tipo</th>
                     <th>Status</th>
                     <th>Destinos</th>
@@ -61,27 +63,54 @@
             <tbody>
                 @forelse($posts as $post)
                     @php
-                        $badge = match($post->status) {
-                            'concluido' => 'bg-success',
-                            'erro' => 'bg-danger',
-                            'erro_parcial' => 'bg-warning text-dark',
-                            'publicando' => 'bg-warning text-dark',
-                            default => 'bg-info-subtle text-info-emphasis',
+                        $statusClass = match($post->status) {
+                            'concluido' => 'ok',
+                            'erro' => 'err',
+                            'erro_parcial', 'publicando' => 'warn',
+                            default => 'info',
                         };
                         $collapseId = 'post-dest-' . $post->id;
+                        $media = $post->mediaFile;
                     @endphp
-                    <tr>
-                        <td>{{ $post->scheduled_for->format('d/m/Y H:i') }}</td>
+                    <tr class="midia-post-row">
                         <td>
-                            <div class="text-truncate" style="max-width:280px;">{{ \Illuminate\Support\Str::limit($post->caption, 80) }}</div>
+                            <div class="midia-post-thumb">
+                                @if($media && $media->isPhoto())
+                                    <img src="{{ route('midia.thumbnail', $media) }}" alt="" loading="lazy">
+                                @elseif($post->image_path && $post->media_kind !== 'video')
+                                    <img src="{{ asset('storage/' . $post->image_path) }}" alt="" loading="lazy">
+                                @elseif(($media && $media->isVideo()) || $post->media_kind === 'video')
+                                    <i class="bx bx-video"></i>
+                                @else
+                                    <i class="bx bx-image"></i>
+                                @endif
+                            </div>
+                        </td>
+                        <td class="text-nowrap">{{ $post->scheduled_for->format('d/m/Y H:i') }}</td>
+                        <td>
+                            <div class="text-truncate" style="max-width:240px;" title="{{ $post->caption }}">
+                                {{ \Illuminate\Support\Str::limit($post->caption, 80) ?: '—' }}
+                            </div>
+                        </td>
+                        <td>
+                            @if(filled($post->event_name))
+                                <span class="fw-semibold" style="color:var(--midia-text,#2E353E)">{{ $post->event_name }}</span>
+                            @else
+                                <span class="text-muted">—</span>
+                            @endif
                         </td>
                         <td>{{ $post->media_kind === 'video' ? 'Vídeo' : 'Foto' }}</td>
-                        <td><span class="badge {{ $badge }}">{{ $post->status_label }}</span></td>
+                        <td><span class="midia-status-pill {{ $statusClass }}">{{ $post->status_label }}</span></td>
                         <td>
-                            <button class="btn btn-sm btn-outline-secondary" type="button"
-                                    data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}">
-                                {{ $post->destinations->count() }} destino(s)
-                            </button>
+                            <div class="d-flex flex-wrap gap-1">
+                                @foreach($post->destinations as $destination)
+                                    <button type="button" class="border-0 bg-transparent p-0"
+                                            data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}"
+                                            aria-expanded="false">
+                                        @include('midia.partials.destination-badge', ['destination' => $destination])
+                                    </button>
+                                @endforeach
+                            </div>
                         </td>
                         <td class="text-end">
                             @if($post->canCancel())
@@ -96,23 +125,22 @@
                         </td>
                     </tr>
                     <tr class="collapse-row">
-                        <td colspan="6" class="p-0 border-0">
+                        <td colspan="8" class="p-0 border-0">
                             <div class="collapse" id="{{ $collapseId }}">
                                 <div class="bg-light px-3 py-2 border-bottom">
                                     @forelse($post->destinations as $destination)
                                         @php
-                                            $dBadge = match($destination->status) {
-                                                'publicado' => 'bg-success',
-                                                'erro' => 'bg-danger',
-                                                'publicando' => 'bg-warning text-dark',
-                                                default => 'bg-secondary',
+                                            $dClass = match($destination->status) {
+                                                'publicado' => 'ok',
+                                                'erro' => 'err',
+                                                'publicando' => 'warn',
+                                                default => 'info',
                                             };
-                                            $icon = $destination->status === 'publicado' ? '✓' : ($destination->status === 'erro' ? '✗' : '…');
                                         @endphp
                                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
                                             <div>
-                                                <strong>{{ $destination->destination_label }}</strong>
-                                                <span class="badge {{ $dBadge }} ms-1">{{ $icon }} {{ $destination->status_label }}</span>
+                                                @include('midia.partials.destination-badge', ['destination' => $destination])
+                                                <span class="midia-status-pill {{ $dClass }} ms-2">{{ $destination->status_label }}</span>
                                                 @if($destination->published_at)
                                                     <span class="small text-muted ms-2">{{ $destination->published_at->format('d/m/Y H:i') }}</span>
                                                 @endif
@@ -137,7 +165,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center text-muted py-4">Nenhuma publicação agendada.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted py-4">Nenhuma publicação agendada.</td></tr>
                 @endforelse
             </tbody>
         </table>
@@ -147,3 +175,15 @@
     @endif
 </div>
 @endsection
+
+@push('styles')
+@include('midia.partials.styles')
+@endpush
+
+@push('scripts')
+<script>
+document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach((el) => {
+    bootstrap.Tooltip.getOrCreateInstance(el);
+});
+</script>
+@endpush

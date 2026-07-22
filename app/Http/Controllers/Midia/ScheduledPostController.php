@@ -61,6 +61,7 @@ class ScheduledPostController extends Controller
             'media_file_id' => 'nullable|exists:media_files,id',
             'media' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,mp4,mov,m4v|max:102400',
             'caption' => 'nullable|string|max:2200',
+            'event_name' => 'nullable|string|max:180',
             'scheduled_for' => 'required|date|after:now',
             'destinations' => 'required|array|min:1',
             'destinations.*' => Rule::in(array_keys(ScheduledPostDestination::DESTINATIONS)),
@@ -93,6 +94,9 @@ class ScheduledPostController extends Controller
                 'media_file_id' => $validated['media_file_id'] ?? null,
                 'image_path' => $imagePath,
                 'caption' => $validated['caption'] ?? '',
+                'event_name' => filled($validated['event_name'] ?? null)
+                    ? trim((string) $validated['event_name'])
+                    : null,
                 'media_kind' => $mediaKind,
                 'scheduled_for' => $validated['scheduled_for'],
                 'status' => ScheduledPost::STATUS_SCHEDULED,

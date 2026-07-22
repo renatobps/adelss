@@ -54,7 +54,7 @@ class MediaController extends Controller
         return view('midia.arquivos.index', [
             'driveConnected' => GoogleDriveSetting::current()->isConnected(),
             'currentFolder' => $currentFolder,
-            'folders' => $foldersQuery->get(),
+            'folders' => $foldersQuery->withCount(['files', 'children'])->get(),
             'files' => $filesQuery->paginate(36)->withQueryString(),
             'filters' => [
                 'q' => $search,

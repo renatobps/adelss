@@ -107,7 +107,8 @@
                             <tr>
                                 <td>
                                     <a href="{{ route('midia.index', ['pasta' => $folder->id]) }}" class="text-decoration-none">
-                                        <i class="bx bx-folder text-warning"></i> {{ $folder->name }}
+                                        <i class="bx bx-folder text-primary"></i> {{ $folder->name }}
+                                        <span class="small text-muted ms-1">({{ $folder->itemsCountLabel() }})</span>
                                     </a>
                                 </td>
                                 <td>Pasta</td>
@@ -140,32 +141,39 @@
             <div class="row g-3">
                 @foreach($folders as $folder)
                     <div class="col-6 col-md-3 col-xl-2">
-                        <a href="{{ route('midia.index', ['pasta' => $folder->id]) }}" class="midia-card text-decoration-none">
-                            <div class="midia-thumb folder"><i class="bx bx-folder"></i></div>
-                            <div class="midia-name">{{ $folder->name }}</div>
+                        <a href="{{ route('midia.index', ['pasta' => $folder->id]) }}"
+                           class="midia-card {{ $folder->accentClass() }} text-decoration-none">
+                            <div class="midia-folder-strip"></div>
+                            <div class="midia-card-body">
+                                <div class="midia-thumb folder"><i class="bx bxs-folder"></i></div>
+                                <div class="midia-name">{{ $folder->name }}</div>
+                                <div class="midia-meta">{{ $folder->itemsCountLabel() }}</div>
+                            </div>
                         </a>
                     </div>
                 @endforeach
                 @foreach($files as $file)
                     <div class="col-6 col-md-3 col-xl-2">
                         <div class="midia-card">
-                            @if($file->isPhoto())
-                                <button type="button" class="midia-thumb photo border-0 p-0"
-                                        data-bs-toggle="modal" data-bs-target="#previewModal"
-                                        data-preview="{{ route('midia.preview', $file) }}"
-                                        data-name="{{ $file->original_filename }}">
-                                    <img src="{{ route('midia.thumbnail', $file) }}" alt="{{ $file->name }}" loading="lazy">
-                                </button>
-                            @elseif($file->isVideo())
-                                <div class="midia-thumb doc"><i class="bx bx-video"></i></div>
-                            @else
-                                <div class="midia-thumb doc"><i class="bx bx-file"></i></div>
-                            @endif
-                            <div class="midia-name" title="{{ $file->original_filename }}">{{ $file->name }}</div>
-                            @if($file->module_reference)
-                                <span class="badge bg-info-subtle text-info-emphasis">{{ $file->module_reference }}</span>
-                            @endif
-                            <div class="mt-1">@include('midia.partials.file-actions', ['file' => $file])</div>
+                            <div class="midia-card-body">
+                                @if($file->isPhoto())
+                                    <button type="button" class="midia-thumb photo border-0 p-0"
+                                            data-bs-toggle="modal" data-bs-target="#previewModal"
+                                            data-preview="{{ route('midia.preview', $file) }}"
+                                            data-name="{{ $file->original_filename }}">
+                                        <img src="{{ route('midia.thumbnail', $file) }}" alt="{{ $file->name }}" loading="lazy">
+                                    </button>
+                                @else
+                                    <div class="midia-thumb doc {{ $file->fileTypeIconClass() }}">
+                                        <i class="bx {{ $file->fileTypeIcon() }}"></i>
+                                    </div>
+                                @endif
+                                <div class="midia-name" title="{{ $file->original_filename }}">{{ $file->name }}</div>
+                                @if($file->module_reference)
+                                    <span class="badge bg-info-subtle text-info-emphasis">{{ $file->module_reference }}</span>
+                                @endif
+                                <div class="mt-1">@include('midia.partials.file-actions', ['file' => $file])</div>
+                            </div>
                         </div>
                     </div>
                 @endforeach
@@ -245,16 +253,7 @@
 @endsection
 
 @push('styles')
-<style>
-.midia-dropzone { background:#f8fafc; cursor:pointer; transition:.15s; }
-.midia-dropzone.is-dragover { background:#eff6ff; border-color:#3b82f6 !important; }
-.midia-card { display:block; background:#fff; border:1px solid #e5e7eb; border-radius:.75rem; padding:.75rem; height:100%; }
-.midia-thumb { height:120px; border-radius:.5rem; display:flex; align-items:center; justify-content:center; overflow:hidden; background:#f1f5f9; margin-bottom:.5rem; width:100%; }
-.midia-thumb.folder { color:#f59e0b; font-size:2.5rem; }
-.midia-thumb.doc { color:#64748b; font-size:2.5rem; }
-.midia-thumb.photo img { width:100%; height:100%; object-fit:cover; }
-.midia-name { font-size:.85rem; font-weight:600; color:#1f2937; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-</style>
+@include('midia.partials.styles')
 @endpush
 
 @push('scripts')

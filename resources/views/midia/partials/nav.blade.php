@@ -12,8 +12,17 @@
         </a>
     @endif
     @if($canIg)
-        <a href="{{ route('midia.instagram.posts.index') }}" class="btn btn-sm {{ ($active ?? '') === 'instagram' ? 'btn-primary' : 'btn-outline-secondary' }}">
-            <i class="bx bxl-instagram"></i> Instagram
+        <a href="{{ route('midia.instagram.posts.index') }}"
+           class="btn btn-sm d-inline-flex align-items-center gap-1 {{ ($active ?? '') === 'instagram' ? 'btn-primary' : 'btn-outline-secondary' }}">
+            @if(($active ?? '') === 'instagram')
+                <i class="bx bxl-instagram"></i>
+            @else
+                <span class="d-inline-flex align-items-center justify-content-center rounded"
+                      style="width:18px;height:18px;background:linear-gradient(45deg,#F77737,#FD1D1D,#E4405F,#833AB4);color:#fff;">
+                    <i class="bx bxl-instagram" style="font-size:12px;"></i>
+                </span>
+            @endif
+            Instagram
         </a>
     @endif
     @if($canSettings)
