@@ -52,42 +52,38 @@
                 <tr>
                     <th>Quando</th>
                     <th>Legenda</th>
+                    <th>Tipo</th>
                     <th>Status</th>
-                    <th>Publicado em</th>
+                    <th>Destinos</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($posts as $post)
+                    @php
+                        $badge = match($post->status) {
+                            'concluido' => 'bg-success',
+                            'erro' => 'bg-danger',
+                            'erro_parcial' => 'bg-warning text-dark',
+                            'publicando' => 'bg-warning text-dark',
+                            default => 'bg-info-subtle text-info-emphasis',
+                        };
+                        $collapseId = 'post-dest-' . $post->id;
+                    @endphp
                     <tr>
                         <td>{{ $post->scheduled_for->format('d/m/Y H:i') }}</td>
                         <td>
-                            <div class="text-truncate" style="max-width:320px;">{{ Str::limit($post->caption, 80) }}</div>
-                            @if($post->error_message)
-                                <div class="small text-danger">{{ Str::limit($post->error_message, 120) }}</div>
-                            @endif
+                            <div class="text-truncate" style="max-width:280px;">{{ \Illuminate\Support\Str::limit($post->caption, 80) }}</div>
                         </td>
+                        <td>{{ $post->media_kind === 'video' ? 'Vídeo' : 'Foto' }}</td>
+                        <td><span class="badge {{ $badge }}">{{ $post->status_label }}</span></td>
                         <td>
-                            @php
-                                $badge = match($post->status) {
-                                    'publicado' => 'bg-success',
-                                    'erro' => 'bg-danger',
-                                    'publicando' => 'bg-warning text-dark',
-                                    default => 'bg-info-subtle text-info-emphasis',
-                                };
-                            @endphp
-                            <span class="badge {{ $badge }}">{{ $post->status_label }}</span>
+                            <button class="btn btn-sm btn-outline-secondary" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}">
+                                {{ $post->destinations->count() }} destino(s)
+                            </button>
                         </td>
-                        <td>{{ optional($post->published_at)->format('d/m/Y H:i') ?: '—' }}</td>
                         <td class="text-end">
-                            @if($post->canRetry())
-                                @can('midia.instagram.schedule')
-                                    <form method="POST" action="{{ route('midia.instagram.posts.retry', $post) }}" class="d-inline">
-                                        @csrf
-                                        <button class="btn btn-sm btn-outline-warning" type="submit">Tentar novamente</button>
-                                    </form>
-                                @endcan
-                            @endif
                             @if($post->canCancel())
                                 @can('midia.instagram.schedule')
                                     <form method="POST" action="{{ route('midia.instagram.posts.destroy', $post) }}" class="d-inline" onsubmit="return confirm('Cancelar esta publicação?')">
@@ -99,8 +95,49 @@
                             @endif
                         </td>
                     </tr>
+                    <tr class="collapse-row">
+                        <td colspan="6" class="p-0 border-0">
+                            <div class="collapse" id="{{ $collapseId }}">
+                                <div class="bg-light px-3 py-2 border-bottom">
+                                    @forelse($post->destinations as $destination)
+                                        @php
+                                            $dBadge = match($destination->status) {
+                                                'publicado' => 'bg-success',
+                                                'erro' => 'bg-danger',
+                                                'publicando' => 'bg-warning text-dark',
+                                                default => 'bg-secondary',
+                                            };
+                                            $icon = $destination->status === 'publicado' ? '✓' : ($destination->status === 'erro' ? '✗' : '…');
+                                        @endphp
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                                            <div>
+                                                <strong>{{ $destination->destination_label }}</strong>
+                                                <span class="badge {{ $dBadge }} ms-1">{{ $icon }} {{ $destination->status_label }}</span>
+                                                @if($destination->published_at)
+                                                    <span class="small text-muted ms-2">{{ $destination->published_at->format('d/m/Y H:i') }}</span>
+                                                @endif
+                                                @if($destination->error_message)
+                                                    <div class="small text-danger mt-1">{{ $destination->error_message }}</div>
+                                                @endif
+                                            </div>
+                                            @if($destination->canRetry())
+                                                @can('midia.instagram.schedule')
+                                                    <form method="POST" action="{{ route('midia.instagram.posts.destinations.retry', $destination) }}">
+                                                        @csrf
+                                                        <button class="btn btn-sm btn-outline-warning" type="submit">Tentar novamente</button>
+                                                    </form>
+                                                @endcan
+                                            @endif
+                                        </div>
+                                    @empty
+                                        <div class="text-muted small">Sem destinos.</div>
+                                    @endforelse
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
                 @empty
-                    <tr><td colspan="5" class="text-center text-muted py-4">Nenhuma publicação agendada.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-4">Nenhuma publicação agendada.</td></tr>
                 @endforelse
             </tbody>
         </table>

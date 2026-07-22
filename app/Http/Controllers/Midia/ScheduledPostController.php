@@ -6,16 +6,20 @@ use App\Http\Controllers\Controller;
 use App\Models\InstagramSetting;
 use App\Models\MediaFile;
 use App\Models\ScheduledPost;
+use App\Models\ScheduledPostDestination;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ScheduledPostController extends Controller
 {
     public function index(Request $request)
     {
         $query = ScheduledPost::query()
-            ->with(['mediaFile', 'creator:id,name'])
+            ->with(['mediaFile', 'creator:id,name', 'destinations'])
             ->latest('scheduled_for');
 
         if ($status = $request->input('status')) {
@@ -36,10 +40,13 @@ class ScheduledPostController extends Controller
     {
         return view('midia.instagram.form', [
             'post' => null,
-            'photos' => MediaFile::query()
-                ->where('category', MediaFile::CATEGORY_PHOTO)
+            'mediaFiles' => MediaFile::query()
+                ->where(function ($q) {
+                    $q->where('mime_type', 'like', 'image/%')
+                        ->orWhere('mime_type', 'like', 'video/%');
+                })
                 ->latest()
-                ->limit(100)
+                ->limit(150)
                 ->get(),
             'instagramConnected' => InstagramSetting::current()->isConnected(),
         ]);
@@ -53,28 +60,54 @@ class ScheduledPostController extends Controller
 
         $validated = $request->validate([
             'media_file_id' => 'nullable|exists:media_files,id',
-            'image' => 'nullable|image|max:10240',
+            'media' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,mp4,mov,m4v|max:102400',
             'caption' => 'nullable|string|max:2200',
             'scheduled_for' => 'required|date|after:now',
+            'destinations' => 'required|array|min:1',
+            'destinations.*' => Rule::in(array_keys(ScheduledPostDestination::DESTINATIONS)),
+        ], [
+            'destinations.required' => 'Selecione pelo menos um destino (Feed, Reels ou Stories).',
+            'destinations.min' => 'Selecione pelo menos um destino (Feed, Reels ou Stories).',
         ]);
 
-        if (empty($validated['media_file_id']) && !$request->hasFile('image')) {
-            return back()->with('error', 'Selecione uma foto da Mídia ou faça upload.')->withInput();
+        if (empty($validated['media_file_id']) && !$request->hasFile('media')) {
+            return back()->with('error', 'Selecione um arquivo da Mídia ou faça upload.')->withInput();
+        }
+
+        $mediaKind = $this->resolveMediaKind($request, $validated['media_file_id'] ?? null);
+        $destinations = array_values(array_unique($validated['destinations']));
+
+        if (in_array(ScheduledPostDestination::DEST_REELS, $destinations, true)
+            && $mediaKind !== ScheduledPost::KIND_VIDEO) {
+            throw ValidationException::withMessages([
+                'destinations' => 'Reels exige vídeo — remova essa opção ou envie um vídeo.',
+            ]);
         }
 
         $imagePath = null;
-        if ($request->hasFile('image')) {
-            $imagePath = $request->file('image')->store('instagram-uploads', 'public');
+        if ($request->hasFile('media')) {
+            $imagePath = $request->file('media')->store('instagram-uploads', 'public');
         }
 
-        ScheduledPost::create([
-            'media_file_id' => $validated['media_file_id'] ?? null,
-            'image_path' => $imagePath,
-            'caption' => $validated['caption'] ?? '',
-            'scheduled_for' => $validated['scheduled_for'],
-            'status' => ScheduledPost::STATUS_SCHEDULED,
-            'created_by' => Auth::id(),
-        ]);
+        DB::transaction(function () use ($validated, $destinations, $mediaKind, $imagePath) {
+            $post = ScheduledPost::create([
+                'media_file_id' => $validated['media_file_id'] ?? null,
+                'image_path' => $imagePath,
+                'caption' => $validated['caption'] ?? '',
+                'media_kind' => $mediaKind,
+                'scheduled_for' => $validated['scheduled_for'],
+                'status' => ScheduledPost::STATUS_SCHEDULED,
+                'created_by' => Auth::id(),
+            ]);
+
+            foreach ($destinations as $destination) {
+                ScheduledPostDestination::create([
+                    'scheduled_post_id' => $post->id,
+                    'destination' => $destination,
+                    'status' => ScheduledPostDestination::STATUS_PENDING,
+                ]);
+            }
+        });
 
         return redirect()
             ->route('midia.instagram.posts.index')
@@ -96,18 +129,45 @@ class ScheduledPostController extends Controller
         return back()->with('success', 'Publicação cancelada.');
     }
 
-    public function retry(ScheduledPost $scheduledPost)
+    public function retryDestination(ScheduledPostDestination $destination)
     {
-        if (!$scheduledPost->canRetry()) {
-            return back()->with('error', 'Somente posts com erro podem ser reenviados.');
+        if (!$destination->canRetry()) {
+            return back()->with('error', 'Somente destinos com erro podem ser reenviados.');
         }
 
-        $scheduledPost->update([
-            'status' => ScheduledPost::STATUS_SCHEDULED,
+        $destination->update([
+            'status' => ScheduledPostDestination::STATUS_PENDING,
             'error_message' => null,
-            'scheduled_for' => now()->addMinute(),
+            'instagram_media_id' => null,
+            'published_at' => null,
         ]);
 
-        return back()->with('success', 'Publicação recolocada na fila.');
+        $post = $destination->post;
+        $post->update([
+            'status' => ScheduledPost::STATUS_SCHEDULED,
+            'scheduled_for' => now()->subMinute(),
+        ]);
+
+        return back()->with('success', 'Destino ' . $destination->destination_label . ' recolocado na fila.');
+    }
+
+    private function resolveMediaKind(Request $request, ?int $mediaFileId): string
+    {
+        if ($request->hasFile('media')) {
+            $mime = (string) $request->file('media')->getMimeType();
+
+            return str_starts_with($mime, 'video/')
+                ? ScheduledPost::KIND_VIDEO
+                : ScheduledPost::KIND_PHOTO;
+        }
+
+        if ($mediaFileId) {
+            $file = MediaFile::find($mediaFileId);
+            if ($file && str_starts_with((string) $file->mime_type, 'video/')) {
+                return ScheduledPost::KIND_VIDEO;
+            }
+        }
+
+        return ScheduledPost::KIND_PHOTO;
     }
 }

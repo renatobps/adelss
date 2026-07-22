@@ -45,7 +45,7 @@ class InstagramService
         ]);
 
         $short = $shortResponse->json() ?? [];
-        Log::info('Instagram OAuth short-lived token response', [
+        $this->safeLog('info', 'Instagram OAuth short-lived token response', [
             'status' => $shortResponse->status(),
             'payload' => $short,
         ]);
@@ -77,7 +77,7 @@ class InstagramService
         ]);
 
         $long = $longResponse->json() ?? [];
-        Log::info('Instagram OAuth long-lived token response', [
+        $this->safeLog('info', 'Instagram OAuth long-lived token response', [
             'status' => $longResponse->status(),
             'payload' => $long,
             'short_user_id' => $userId,
@@ -93,7 +93,7 @@ class InstagramService
                 'access_token' => $accessToken,
             ])->json() ?? [];
 
-            Log::info('Instagram /me after OAuth', ['payload' => $me]);
+            $this->safeLog('info', 'Instagram /me after OAuth', ['payload' => $me]);
             $userId = (string) ($me['user_id'] ?? $me['id'] ?? '');
         }
 
@@ -138,7 +138,7 @@ class InstagramService
 
         $expiringSoon = $settings->isTokenExpiringSoon(7);
         if ($expiringSoon) {
-            Log::warning('Token do Instagram próximo da expiração.', [
+            $this->safeLog('warning', 'Token do Instagram próximo da expiração.', [
                 'expires_at' => optional($settings->token_expires_at)->toDateTimeString(),
             ]);
 
@@ -148,7 +148,7 @@ class InstagramService
                 $settings->refresh();
                 $expiringSoon = $settings->isTokenExpiringSoon(7);
             } catch (\Throwable $e) {
-                Log::warning('Falha ao renovar token Instagram: ' . $e->getMessage());
+                $this->safeLog('warning', 'Falha ao renovar token Instagram: ' . $e->getMessage());
             }
         }
 
@@ -162,16 +162,44 @@ class InstagramService
         ];
     }
 
-    public function createMediaContainer(string $imageUrl, string $caption): string
-    {
+    /**
+     * @param  string  $mediaType  IMAGE|VIDEO|REELS|STORIES
+     */
+    public function createMediaContainer(
+        string $mediaUrl,
+        string $caption,
+        string $mediaType = 'IMAGE',
+        bool $shareToFeed = false
+    ): string {
         $settings = InstagramSetting::current();
         $token = $this->getValidAccessToken()['token'];
 
-        $response = Http::asForm()->post(self::GRAPH_BASE . '/' . $settings->instagram_business_account_id . '/media', [
-            'image_url' => $imageUrl,
-            'caption' => $caption,
+        $payload = [
+            'media_type' => $mediaType,
             'access_token' => $token,
-        ])->json();
+        ];
+
+        $isVideo = in_array($mediaType, ['VIDEO', 'REELS'], true)
+            || ($mediaType === 'STORIES' && $this->urlLooksLikeVideo($mediaUrl));
+
+        if ($isVideo && $mediaType !== 'IMAGE') {
+            $payload['video_url'] = $mediaUrl;
+        } else {
+            $payload['image_url'] = $mediaUrl;
+        }
+
+        // Legenda: Stories geralmente não usa caption da mesma forma; Feed/Reels sim
+        if ($caption !== '' && $mediaType !== 'STORIES') {
+            $payload['caption'] = $caption;
+        }
+
+        if ($shareToFeed && $mediaType === 'REELS') {
+            $payload['share_to_feed'] = 'true';
+        }
+
+        $response = Http::asForm()
+            ->post(self::GRAPH_BASE . '/' . $settings->instagram_business_account_id . '/media', $payload)
+            ->json();
 
         if (empty($response['id'])) {
             throw new RuntimeException($response['error']['message'] ?? 'Falha ao criar container de mídia no Instagram.');
@@ -184,7 +212,7 @@ class InstagramService
     {
         $token = $this->getValidAccessToken()['token'];
         $response = Http::get(self::GRAPH_BASE . '/' . $containerId, [
-            'fields' => 'status_code',
+            'fields' => 'status_code,status',
             'access_token' => $token,
         ])->json();
 
@@ -216,6 +244,11 @@ class InstagramService
      */
     public function resolvePublicImageUrl(ScheduledPost $post, GoogleDriveService $drive): string
     {
+        return $this->resolvePublicMediaUrl($post, $drive);
+    }
+
+    public function resolvePublicMediaUrl(ScheduledPost $post, GoogleDriveService $drive): string
+    {
         if ($post->image_path) {
             $relative = ltrim(str_replace('\\', '/', $post->image_path), '/');
             if (str_starts_with($relative, 'storage/')) {
@@ -226,7 +259,7 @@ class InstagramService
         }
 
         if (!$post->media_file_id) {
-            throw new RuntimeException('Post sem imagem associada.');
+            throw new RuntimeException('Post sem mídia associada.');
         }
 
         /** @var MediaFile $media */
@@ -236,7 +269,7 @@ class InstagramService
         }
 
         $contents = $drive->downloadContents($media->google_drive_file_id);
-        $ext = pathinfo($media->original_filename, PATHINFO_EXTENSION) ?: 'jpg';
+        $ext = pathinfo($media->original_filename, PATHINFO_EXTENSION) ?: ($post->isVideo() ? 'mp4' : 'jpg');
         $tempName = 'instagram-temp/' . Str::uuid() . '.' . strtolower($ext);
         Storage::disk('public')->put($tempName, $contents);
 
@@ -257,7 +290,7 @@ class InstagramService
         }
     }
 
-    public function waitUntilContainerReady(string $containerId, int $maxAttempts = 10, int $sleepSeconds = 3): void
+    public function waitUntilContainerReady(string $containerId, int $maxAttempts = 20, int $sleepSeconds = 5): void
     {
         for ($i = 0; $i < $maxAttempts; $i++) {
             $status = $this->checkContainerStatus($containerId);
@@ -273,6 +306,11 @@ class InstagramService
         throw new RuntimeException('Timeout aguardando container do Instagram ficar pronto.');
     }
 
+    private function urlLooksLikeVideo(string $url): bool
+    {
+        return (bool) preg_match('/\.(mp4|mov|m4v)(\?|$)/i', $url);
+    }
+
     private function refreshLongLivedToken(InstagramSetting $settings): void
     {
         $response = Http::get(self::GRAPH_BASE . '/refresh_access_token', [
@@ -281,7 +319,7 @@ class InstagramService
         ]);
 
         $payload = $response->json() ?? [];
-        Log::info('Instagram refresh long-lived token response', [
+        $this->safeLog('info', 'Instagram refresh long-lived token response', [
             'status' => $response->status(),
             'payload' => $payload,
         ]);
@@ -294,5 +332,15 @@ class InstagramService
             'access_token' => $payload['access_token'],
             'token_expires_at' => now()->addSeconds((int) ($payload['expires_in'] ?? 5184000)),
         ]);
+    }
+
+    /** Não deixa falha de permissão em storage/logs quebrar o OAuth. */
+    private function safeLog(string $level, string $message, array $context = []): void
+    {
+        try {
+            Log::log($level, $message, $context);
+        } catch (\Throwable) {
+            // ignore
+        }
     }
 }

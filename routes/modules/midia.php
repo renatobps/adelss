@@ -21,7 +21,8 @@ Route::prefix('midia')->name('midia.')->middleware('module.access:midia')->group
     Route::get('instagram/publicacoes/criar', [ScheduledPostController::class, 'create'])->name('instagram.posts.create');
     Route::post('instagram/publicacoes', [ScheduledPostController::class, 'store'])->name('instagram.posts.store');
     Route::delete('instagram/publicacoes/{scheduledPost}', [ScheduledPostController::class, 'destroy'])->name('instagram.posts.destroy');
-    Route::post('instagram/publicacoes/{scheduledPost}/retry', [ScheduledPostController::class, 'retry'])->name('instagram.posts.retry');
+    Route::post('instagram/publicacoes/destinos/{destination}/retry', [ScheduledPostController::class, 'retryDestination'])
+        ->name('instagram.posts.destinations.retry');
 
     Route::get('/', [MediaController::class, 'index'])->name('index');
     Route::post('/upload', [MediaController::class, 'store'])->name('upload');
