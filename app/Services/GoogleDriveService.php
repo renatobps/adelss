@@ -157,8 +157,12 @@ class GoogleDriveService
         }
 
         $name = config('services.google_drive.root_folder_name', 'ADELSS');
+        // Com escopo drive.file, listFiles PRECISA restringir a um parent.
+        // Na criação da raiz do app, o parent é "root" do Drive.
+        $folderId = 'root';
         $query = sprintf(
-            "mimeType = 'application/vnd.google-apps.folder' and name = '%s' and trashed = false",
+            "'%s' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder' and name = '%s'",
+            $folderId,
             addslashes($name)
         );
 
@@ -176,11 +180,35 @@ class GoogleDriveService
         $folder = new DriveFile([
             'name' => $name,
             'mimeType' => 'application/vnd.google-apps.folder',
+            'parents' => [$folderId],
         ]);
 
         $created = $drive->files->create($folder, ['fields' => 'id']);
 
         return $created->getId();
+    }
+
+    /**
+     * Lista arquivos/pastas dentro de uma pasta específica do Drive.
+     * Sempre filtra por parent — obrigatório com escopo drive.file.
+     *
+     * @return list<DriveFile>
+     */
+    public function listFilesInFolder(string $folderId, ?string $extraQuery = null): array
+    {
+        $q = "'{$folderId}' in parents and trashed = false";
+        if ($extraQuery) {
+            $q .= ' and (' . $extraQuery . ')';
+        }
+
+        $result = $this->drive()->files->listFiles([
+            'q' => $q,
+            'spaces' => 'drive',
+            'fields' => 'files(id, name, mimeType, size, modifiedTime)',
+            'pageSize' => 100,
+        ]);
+
+        return $result->getFiles() ?? [];
     }
 
     public function createFolder(string $name, ?string $parentDriveId = null): string
