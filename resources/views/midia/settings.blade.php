@@ -76,9 +76,9 @@
                 @else
                     <p class="text-muted">Conecte a conta comercial do Instagram (vinculada a uma Página do Facebook) para publicar automaticamente.</p>
                     <ol class="small text-muted">
-                        <li>No Meta for Developers, adicione Instagram Graph API ao app.</li>
-                        <li>Redirect: <code>{{ url('/midia/instagram/callback') }}</code>.</li>
-                        <li>Configure <code>INSTAGRAM_APP_ID</code> e <code>INSTAGRAM_APP_SECRET</code> (ou META_*) no .env.</li>
+                        <li>No Meta for Developers, use <strong>API Setup with Instagram Login</strong> (não Facebook Login).</li>
+                        <li>Redirect OAuth: <code>{{ url('/midia/instagram/callback') }}</code>.</li>
+                        <li>Configure <code>INSTAGRAM_APP_ID</code> e <code>INSTAGRAM_APP_SECRET</code> (Instagram App ID/Secret) no .env.</li>
                     </ol>
                     <a href="{{ route('midia.instagram.redirect') }}" class="btn btn-primary">
                         <i class="bx bxl-instagram"></i> Conectar Instagram

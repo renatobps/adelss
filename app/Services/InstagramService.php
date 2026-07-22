@@ -13,60 +13,100 @@ use RuntimeException;
 
 class InstagramService
 {
-    private const GRAPH_BASE = 'https://graph.facebook.com/v21.0';
+    /** OAuth / API do fluxo "Instagram Login" (não Facebook Login). */
+    private const AUTHORIZE_URL = 'https://www.instagram.com/oauth/authorize';
+    private const TOKEN_URL = 'https://api.instagram.com/oauth/access_token';
+    private const GRAPH_BASE = 'https://graph.instagram.com';
 
     public function getAuthUrl(): string
     {
-        $params = http_build_query([
+        $params = [
             'client_id' => config('services.instagram.app_id'),
             'redirect_uri' => route('midia.instagram.callback'),
-            'scope' => 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement,business_management',
             'response_type' => 'code',
+            'scope' => 'instagram_business_basic,instagram_business_content_publish',
             'state' => csrf_token(),
-        ]);
+        ];
 
-        return 'https://www.facebook.com/v21.0/dialog/oauth?' . $params;
+        return self::AUTHORIZE_URL . '?' . http_build_query($params);
     }
 
     public function handleCallback(string $code): InstagramSetting
     {
-        $short = Http::asForm()->post(self::GRAPH_BASE . '/oauth/access_token', [
+        // A Meta às vezes anexa "#_" ao code no redirect
+        $code = trim(str_replace('#_', '', $code));
+
+        $shortResponse = Http::asForm()->post(self::TOKEN_URL, [
             'client_id' => config('services.instagram.app_id'),
             'client_secret' => config('services.instagram.app_secret'),
+            'grant_type' => 'authorization_code',
             'redirect_uri' => route('midia.instagram.callback'),
             'code' => $code,
-        ])->json();
+        ]);
 
-        if (empty($short['access_token'])) {
-            throw new RuntimeException($short['error']['message'] ?? 'Falha ao obter token do Instagram/Facebook.');
+        $short = $shortResponse->json() ?? [];
+        Log::info('Instagram OAuth short-lived token response', [
+            'status' => $shortResponse->status(),
+            'payload' => $short,
+        ]);
+
+        // Formato comum: { access_token, user_id, permissions }
+        // Em alguns casos: { data: [ { access_token, user_id, ... } ] }
+        if (isset($short['data'][0]) && is_array($short['data'][0])) {
+            $short = $short['data'][0];
         }
 
-        $long = Http::get(self::GRAPH_BASE . '/oauth/access_token', [
-            'grant_type' => 'fb_exchange_token',
-            'client_id' => config('services.instagram.app_id'),
+        if (empty($short['access_token'])) {
+            $message = $short['error_message']
+                ?? $short['error']['message']
+                ?? $short['error_type']
+                ?? 'Falha ao obter access_token do Instagram.';
+            throw new RuntimeException($message);
+        }
+
+        $shortToken = (string) $short['access_token'];
+        $userId = (string) ($short['user_id'] ?? '');
+        $permissions = $short['permissions'] ?? null;
+
+        // Token do /oauth/access_token é de curta duração (~1h).
+        // Troca por long-lived (~60 dias) em graph.instagram.com.
+        $longResponse = Http::get(self::GRAPH_BASE . '/access_token', [
+            'grant_type' => 'ig_exchange_token',
             'client_secret' => config('services.instagram.app_secret'),
-            'fb_exchange_token' => $short['access_token'],
-        ])->json();
+            'access_token' => $shortToken,
+        ]);
 
-        $userToken = $long['access_token'] ?? $short['access_token'];
-        $expiresIn = (int) ($long['expires_in'] ?? 5184000);
+        $long = $longResponse->json() ?? [];
+        Log::info('Instagram OAuth long-lived token response', [
+            'status' => $longResponse->status(),
+            'payload' => $long,
+            'short_user_id' => $userId,
+            'short_permissions' => $permissions,
+        ]);
 
-        $pages = Http::get(self::GRAPH_BASE . '/me/accounts', [
-            'access_token' => $userToken,
-            'fields' => 'id,name,access_token,instagram_business_account',
-        ])->json();
+        $accessToken = (string) ($long['access_token'] ?? $shortToken);
+        $expiresIn = (int) ($long['expires_in'] ?? 3600);
 
-        $page = collect($pages['data'] ?? [])->first(fn ($p) => !empty($p['instagram_business_account']['id']));
-        if (!$page) {
-            throw new RuntimeException('Nenhuma Página do Facebook com conta Instagram Business/Creator foi encontrada.');
+        if (!$userId) {
+            $me = Http::get(self::GRAPH_BASE . '/me', [
+                'fields' => 'user_id,username,id',
+                'access_token' => $accessToken,
+            ])->json() ?? [];
+
+            Log::info('Instagram /me after OAuth', ['payload' => $me]);
+            $userId = (string) ($me['user_id'] ?? $me['id'] ?? '');
+        }
+
+        if ($userId === '') {
+            throw new RuntimeException('Não foi possível obter o Instagram user_id após o OAuth.');
         }
 
         $settings = InstagramSetting::current();
         $settings->fill([
-            'facebook_page_id' => $page['id'],
-            'instagram_business_account_id' => $page['instagram_business_account']['id'],
-            'access_token' => $page['access_token'] ?? $userToken,
-            'token_expires_at' => now()->addSeconds($expiresIn),
+            'facebook_page_id' => null, // fluxo Instagram Login não usa Página do Facebook
+            'instagram_business_account_id' => $userId,
+            'access_token' => $accessToken,
+            'token_expires_at' => now()->addSeconds(max(60, $expiresIn)),
             'connected_by' => auth()->id(),
             'connected_at' => now(),
         ])->save();
@@ -101,6 +141,15 @@ class InstagramService
             Log::warning('Token do Instagram próximo da expiração.', [
                 'expires_at' => optional($settings->token_expires_at)->toDateTimeString(),
             ]);
+
+            // Tenta refresh do long-lived (válido se ainda não expirou)
+            try {
+                $this->refreshLongLivedToken($settings);
+                $settings->refresh();
+                $expiringSoon = $settings->isTokenExpiringSoon(7);
+            } catch (\Throwable $e) {
+                Log::warning('Falha ao renovar token Instagram: ' . $e->getMessage());
+            }
         }
 
         if ($settings->token_expires_at && $settings->token_expires_at->isPast()) {
@@ -222,5 +271,28 @@ class InstagramService
         }
 
         throw new RuntimeException('Timeout aguardando container do Instagram ficar pronto.');
+    }
+
+    private function refreshLongLivedToken(InstagramSetting $settings): void
+    {
+        $response = Http::get(self::GRAPH_BASE . '/refresh_access_token', [
+            'grant_type' => 'ig_refresh_token',
+            'access_token' => $settings->access_token,
+        ]);
+
+        $payload = $response->json() ?? [];
+        Log::info('Instagram refresh long-lived token response', [
+            'status' => $response->status(),
+            'payload' => $payload,
+        ]);
+
+        if (empty($payload['access_token'])) {
+            throw new RuntimeException($payload['error']['message'] ?? 'Falha ao renovar token do Instagram.');
+        }
+
+        $settings->update([
+            'access_token' => $payload['access_token'],
+            'token_expires_at' => now()->addSeconds((int) ($payload['expires_in'] ?? 5184000)),
+        ]);
     }
 }

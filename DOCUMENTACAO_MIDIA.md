@@ -14,15 +14,20 @@
    GOOGLE_DRIVE_ROOT_FOLDER=ADELSS
    ```
 
-### Instagram (Graph API)
-1. Conta Instagram **Business ou Creator** vinculada a uma Página do Facebook.
-2. No app Meta (pode reutilizar o do WhatsApp), adicione **Instagram Graph API**.
+### Instagram (API Setup with Instagram Login)
+1. Conta Instagram **Business ou Creator**.
+2. No Meta for Developers, configure **API Setup with Instagram Login** (OAuth do Instagram, não Facebook Login).
 3. Redirect: `https://{seu-dominio}/midia/instagram/callback`.
-4. No `.env`:
+4. No `.env` use o **Instagram App ID / Secret** (não o App ID genérico do Facebook, se forem diferentes):
    ```
-   INSTAGRAM_APP_ID=...   # ou META_APP_ID
-   INSTAGRAM_APP_SECRET=... # ou META_APP_SECRET
+   INSTAGRAM_APP_ID=...
+   INSTAGRAM_APP_SECRET=...
    ```
+5. Fluxo usado pelo ADELSS:
+   - Authorize: `https://www.instagram.com/oauth/authorize`
+   - Code → short-lived token: `POST https://api.instagram.com/oauth/access_token`
+   - Short → long-lived (~60 dias): `GET https://graph.instagram.com/access_token?grant_type=ig_exchange_token`
+   - Publicação: `https://graph.instagram.com/{ig-user-id}/media` e `/media_publish`
 
 ## Instalação no ADELSS
 ```bash
