@@ -154,8 +154,10 @@
                                         data-bs-toggle="modal" data-bs-target="#previewModal"
                                         data-preview="{{ route('midia.preview', $file) }}"
                                         data-name="{{ $file->original_filename }}">
-                                    <img src="{{ route('midia.preview', $file) }}" alt="{{ $file->name }}" loading="lazy">
+                                    <img src="{{ route('midia.thumbnail', $file) }}" alt="{{ $file->name }}" loading="lazy">
                                 </button>
+                            @elseif($file->isVideo())
+                                <div class="midia-thumb doc"><i class="bx bx-video"></i></div>
                             @else
                                 <div class="midia-thumb doc"><i class="bx bx-file"></i></div>
                             @endif

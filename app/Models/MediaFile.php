@@ -52,6 +52,24 @@ class MediaFile extends Model
             || str_starts_with((string) $this->mime_type, 'image/');
     }
 
+    public function isVideo(): bool
+    {
+        return str_starts_with((string) $this->mime_type, 'video/');
+    }
+
+    /** foto|video|documento — útil para o seletor do Instagram. */
+    public function mediaKind(): string
+    {
+        if ($this->isVideo()) {
+            return 'video';
+        }
+        if ($this->isPhoto()) {
+            return 'foto';
+        }
+
+        return self::CATEGORY_DOCUMENT;
+    }
+
     public function formattedSize(): string
     {
         $bytes = (int) $this->size;

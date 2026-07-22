@@ -204,11 +204,109 @@ class GoogleDriveService
         $result = $this->drive()->files->listFiles([
             'q' => $q,
             'spaces' => 'drive',
-            'fields' => 'files(id, name, mimeType, size, modifiedTime)',
+            'fields' => 'files(id, name, mimeType, size, modifiedTime, thumbnailLink, iconLink)',
             'pageSize' => 100,
         ]);
 
         return $result->getFiles() ?? [];
+    }
+
+    /**
+     * Metadados de miniatura/ícone de um arquivo no Drive.
+     *
+     * @return array{thumbnailLink: ?string, iconLink: ?string, mimeType: ?string}
+     */
+    public function getFilePreviewLinks(string $fileId): array
+    {
+        $file = $this->drive()->files->get($fileId, [
+            'fields' => 'id, mimeType, thumbnailLink, iconLink',
+        ]);
+
+        return [
+            'thumbnailLink' => $file->getThumbnailLink(),
+            'iconLink' => $file->getIconLink(),
+            'mimeType' => $file->getMimeType(),
+        ];
+    }
+
+    /**
+     * Baixa bytes da miniatura (ou ícone) autenticado — thumbnailLink do Drive
+     * costuma exigir o token e não funciona como <img src> público.
+     *
+     * @return array{contents: string, contentType: string}|null
+     */
+    public function downloadThumbnailContents(string $fileId): ?array
+    {
+        $meta = $this->getFilePreviewLinks($fileId);
+        $token = $this->getValidAccessToken();
+
+        foreach (array_filter([$meta['thumbnailLink'], $meta['iconLink']]) as $url) {
+            $fetched = $this->httpGetBinary($url, $token);
+            if ($fetched !== null) {
+                return $fetched;
+            }
+        }
+
+        // Fallback: arquivo de imagem completo (mesmo custo do preview).
+        if (str_starts_with((string) $meta['mimeType'], 'image/')) {
+            return [
+                'contents' => $this->downloadContents($fileId),
+                'contentType' => (string) $meta['mimeType'],
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @return array{contents: string, contentType: string}|null
+     */
+    private function httpGetBinary(string $url, string $accessToken): ?array
+    {
+        try {
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT => 20,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer ' . $accessToken,
+                ],
+            ]);
+            $body = curl_exec($ch);
+            $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            curl_close($ch);
+
+            if ($body === false || $status < 200 || $status >= 300 || $body === '') {
+                // Tenta sem Authorization (alguns iconLink/googleusercontent são públicos).
+                $ch = curl_init($url);
+                curl_setopt_array($ch, [
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_FOLLOWLOCATION => true,
+                    CURLOPT_TIMEOUT => 20,
+                ]);
+                $body = curl_exec($ch);
+                $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+                curl_close($ch);
+            }
+
+            if ($body === false || $status < 200 || $status >= 300 || $body === '') {
+                return null;
+            }
+
+            $contentType = explode(';', $contentType)[0] ?: 'image/jpeg';
+
+            return [
+                'contents' => $body,
+                'contentType' => $contentType,
+            ];
+        } catch (\Throwable $e) {
+            Log::warning('Falha ao baixar miniatura Drive: ' . $e->getMessage());
+
+            return null;
+        }
     }
 
     public function createFolder(string $name, ?string $parentDriveId = null): string

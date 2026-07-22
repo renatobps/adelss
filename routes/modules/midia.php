@@ -25,10 +25,12 @@ Route::prefix('midia')->name('midia.')->middleware('module.access:midia')->group
         ->name('instagram.posts.destinations.retry');
 
     Route::get('/', [MediaController::class, 'index'])->name('index');
+    Route::get('/arquivos/browse', [MediaController::class, 'browse'])->name('files.browse');
     Route::post('/upload', [MediaController::class, 'store'])->name('upload');
     Route::post('/pastas', [MediaController::class, 'createFolder'])->name('folders.store');
     Route::get('/{mediaFile}/download', [MediaController::class, 'download'])->name('download');
     Route::get('/{mediaFile}/preview', [MediaController::class, 'preview'])->name('preview');
+    Route::get('/{mediaFile}/thumbnail', [MediaController::class, 'thumbnail'])->name('thumbnail');
     Route::delete('/{mediaFile}', [MediaController::class, 'destroy'])->name('destroy');
     Route::put('/{mediaFile}/mover', [MediaController::class, 'move'])->name('move');
 });

@@ -38,17 +38,16 @@ class ScheduledPostController extends Controller
 
     public function create()
     {
+        $selectedId = old('media_file_id');
+        $selectedMediaFile = $selectedId
+            ? MediaFile::query()->find($selectedId)
+            : null;
+
         return view('midia.instagram.form', [
             'post' => null,
-            'mediaFiles' => MediaFile::query()
-                ->where(function ($q) {
-                    $q->where('mime_type', 'like', 'image/%')
-                        ->orWhere('mime_type', 'like', 'video/%');
-                })
-                ->latest()
-                ->limit(150)
-                ->get(),
+            'selectedMediaFile' => $selectedMediaFile,
             'instagramConnected' => InstagramSetting::current()->isConnected(),
+            'browseUrl' => route('midia.files.browse'),
         ]);
     }
 

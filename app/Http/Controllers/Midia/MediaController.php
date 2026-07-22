@@ -218,6 +218,124 @@ class MediaController extends Controller
         ]);
     }
 
+    /**
+     * Miniatura autenticada (proxy do thumbnailLink/iconLink do Drive).
+     * Usar no HTML em vez de thumbnailLink direto — a URL do Google exige token.
+     */
+    public function thumbnail(MediaFile $mediaFile)
+    {
+        try {
+            $thumb = $this->drive->downloadThumbnailContents($mediaFile->google_drive_file_id);
+        } catch (\Throwable $e) {
+            abort(404);
+        }
+
+        if ($thumb === null) {
+            abort(404);
+        }
+
+        return response($thumb['contents'], 200, [
+            'Content-Type' => $thumb['contentType'],
+            'Cache-Control' => 'private, max-age=600',
+            'Content-Disposition' => 'inline; filename="thumb-' . Str::ascii($mediaFile->original_filename) . '"',
+        ]);
+    }
+
+    /**
+     * Listagem JSON para o modal de seleção (navegação de pastas + filtros).
+     */
+    public function browse(Request $request)
+    {
+        $folderId = $request->integer('pasta') ?: null;
+        $currentFolder = $folderId
+            ? MediaFolder::with('parent')->findOrFail($folderId)
+            : null;
+
+        $foldersQuery = MediaFolder::query()
+            ->where('parent_folder_id', $folderId)
+            ->orderBy('name');
+
+        $filesQuery = MediaFile::query()
+            ->where('media_folder_id', $folderId)
+            ->latest();
+
+        // Instagram / seletor de mídia: só imagem e vídeo.
+        if ($request->boolean('only_media', false)) {
+            $filesQuery->where(function ($q) {
+                $q->where('mime_type', 'like', 'image/%')
+                    ->orWhere('mime_type', 'like', 'video/%');
+            });
+        }
+
+        if ($category = $request->input('categoria')) {
+            if (in_array($category, [MediaFile::CATEGORY_PHOTO, MediaFile::CATEGORY_DOCUMENT], true)) {
+                $filesQuery->where('category', $category);
+            }
+        }
+
+        if ($search = trim((string) $request->input('q', ''))) {
+            $foldersQuery->where('name', 'like', "%{$search}%");
+            $filesQuery->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('original_filename', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $breadcrumb = [];
+        if ($currentFolder) {
+            foreach ($currentFolder->breadcrumb() as $crumb) {
+                $breadcrumb[] = [
+                    'id' => $crumb->id,
+                    'name' => $crumb->name,
+                ];
+            }
+        }
+
+        $folders = $foldersQuery->get(['id', 'name', 'parent_folder_id'])->map(fn (MediaFolder $f) => [
+            'id' => $f->id,
+            'name' => $f->name,
+            'parent_folder_id' => $f->parent_folder_id,
+        ]);
+
+        $files = $filesQuery->limit(100)->get()->map(function (MediaFile $file) {
+            $kind = $file->mediaKind();
+            $hasThumb = $file->isPhoto() || $file->isVideo();
+
+            return [
+                'id' => $file->id,
+                'name' => $file->name,
+                'original_filename' => $file->original_filename,
+                'mime_type' => $file->mime_type,
+                'size' => $file->size,
+                'formatted_size' => $file->formattedSize(),
+                'category' => $file->category,
+                'media_kind' => $kind,
+                'is_photo' => $file->isPhoto(),
+                'is_video' => $file->isVideo(),
+                'selectable' => $file->isPhoto() || $file->isVideo(),
+                'thumbnail_url' => $hasThumb
+                    ? route('midia.thumbnail', $file)
+                    : null,
+                'preview_url' => $file->isPhoto()
+                    ? route('midia.preview', $file)
+                    : null,
+            ];
+        });
+
+        return response()->json([
+            'current_folder_id' => $folderId,
+            'breadcrumb' => $breadcrumb,
+            'folders' => $folders,
+            'files' => $files,
+            'filters' => [
+                'q' => $search,
+                'categoria' => $request->input('categoria', ''),
+                'pasta' => $folderId,
+            ],
+        ]);
+    }
+
     public function settings()
     {
         return view('midia.settings', [
