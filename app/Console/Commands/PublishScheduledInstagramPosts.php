@@ -20,79 +20,124 @@ class PublishScheduledInstagramPosts extends Command
 
     public function handle(InstagramService $instagram, GoogleDriveService $drive, WhatsAppService $whatsapp): int
     {
-        $posts = ScheduledPost::query()
-            ->with(['mediaFile', 'destinations'])
-            ->where('status', ScheduledPost::STATUS_SCHEDULED)
-            ->where('scheduled_for', '<=', now())
-            ->whereHas('destinations', fn ($q) => $q->where('status', ScheduledPostDestination::STATUS_PENDING))
-            ->orderBy('scheduled_for')
-            ->limit(10)
-            ->get();
+        try {
+            $posts = ScheduledPost::query()
+                ->with(['mediaFile', 'destinations'])
+                ->whereIn('status', [
+                    ScheduledPost::STATUS_SCHEDULED,
+                    ScheduledPost::STATUS_PUBLISHING, // retoma posts travados por falha anterior
+                ])
+                ->where('scheduled_for', '<=', now())
+                ->whereHas('destinations', fn ($q) => $q->whereIn('status', [
+                    ScheduledPostDestination::STATUS_PENDING,
+                    ScheduledPostDestination::STATUS_PUBLISHING,
+                ]))
+                ->orderBy('scheduled_for')
+                ->limit(10)
+                ->get();
 
-        if ($posts->isEmpty()) {
-            $this->info('Nenhum post agendado para publicar.');
+            if ($posts->isEmpty()) {
+                $this->info('Nenhum post agendado para publicar.');
+
+                return self::SUCCESS;
+            }
+
+            foreach ($posts as $post) {
+                try {
+                    $this->line("Publicando #{$post->id}...");
+                    $post->update(['status' => ScheduledPost::STATUS_PUBLISHING]);
+
+                    try {
+                        $mediaUrl = $instagram->resolvePublicMediaUrl($post, $drive);
+                    } catch (\Throwable $e) {
+                        $this->failAllPending($post, $e->getMessage());
+                        $post->recalculateStatus();
+                        $this->notifyAdmins($whatsapp, $post->fresh(['destinations']));
+                        $this->error("Post #{$post->id}: " . $e->getMessage());
+                        continue;
+                    }
+
+                    $pending = $post->destinations
+                        ->whereIn('status', [
+                            ScheduledPostDestination::STATUS_PENDING,
+                            ScheduledPostDestination::STATUS_PUBLISHING,
+                        ])
+                        ->values();
+
+                    $pendingKeys = $pending->pluck('destination')->values()->all();
+                    $handledIds = [];
+
+                    $isExactlyFeedAndReels = count($pendingKeys) === 2
+                        && in_array(ScheduledPostDestination::DEST_FEED, $pendingKeys, true)
+                        && in_array(ScheduledPostDestination::DEST_REELS, $pendingKeys, true);
+
+                    if ($isExactlyFeedAndReels) {
+                        $feed = $pending->firstWhere('destination', ScheduledPostDestination::DEST_FEED);
+                        $reels = $pending->firstWhere('destination', ScheduledPostDestination::DEST_REELS);
+                        $this->publishCombinedFeedReels($instagram, $post, $feed, $reels, $mediaUrl);
+                        $handledIds = [$feed->id, $reels->id];
+                    }
+
+                    foreach ($pending as $destination) {
+                        if (in_array($destination->id, $handledIds, true)) {
+                            continue;
+                        }
+                        $this->publishDestination($instagram, $post, $destination, $mediaUrl);
+                    }
+
+                    $status = $post->recalculateStatus();
+                    $fresh = $post->fresh(['destinations']);
+
+                    if (in_array($status, [ScheduledPost::STATUS_DONE, ScheduledPost::STATUS_PARTIAL], true)
+                        || $status === ScheduledPost::STATUS_ERROR) {
+                        if ($fresh->destinations->whereIn('status', [
+                            ScheduledPostDestination::STATUS_PENDING,
+                            ScheduledPostDestination::STATUS_PUBLISHING,
+                        ])->isEmpty()) {
+                            $instagram->cleanupTempImage($fresh);
+                        }
+                    }
+
+                    if (in_array($status, [ScheduledPost::STATUS_ERROR, ScheduledPost::STATUS_PARTIAL], true)) {
+                        $this->notifyAdmins($whatsapp, $fresh);
+                    }
+
+                    $this->info("Post #{$post->id} finalizado com status: {$status}");
+                } catch (\Throwable $e) {
+                    Log::error('Falha não tratada ao publicar post Instagram', [
+                        'post_id' => $post->id,
+                        'destination' => null,
+                        'error' => $e->getMessage(),
+                        'exception' => $e::class,
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                    $this->error("Post #{$post->id}: " . $e->getMessage());
+
+                    try {
+                        $this->failAllPending($post, $e->getMessage());
+                        $post->recalculateStatus();
+                    } catch (\Throwable $inner) {
+                        Log::error('Falha ao marcar post Instagram após erro', [
+                            'post_id' => $post->id,
+                            'error' => $inner->getMessage(),
+                        ]);
+                    }
+                }
+            }
 
             return self::SUCCESS;
+        } catch (\Throwable $e) {
+            Log::error('Falha fatal no comando midia:publish-instagram-posts', [
+                'post_id' => null,
+                'destination' => null,
+                'error' => $e->getMessage(),
+                'exception' => $e::class,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
         }
-
-        foreach ($posts as $post) {
-            $this->line("Publicando #{$post->id}...");
-            $post->update(['status' => ScheduledPost::STATUS_PUBLISHING]);
-
-            try {
-                $mediaUrl = $instagram->resolvePublicMediaUrl($post, $drive);
-            } catch (\Throwable $e) {
-                $this->failAllPending($post, $e->getMessage());
-                $post->recalculateStatus();
-                $this->notifyAdmins($whatsapp, $post->fresh(['destinations']));
-                $this->error("Post #{$post->id}: " . $e->getMessage());
-                continue;
-            }
-
-            $pending = $post->destinations
-                ->where('status', ScheduledPostDestination::STATUS_PENDING)
-                ->values();
-
-            $handledIds = [];
-
-            // sort alphabetically: feed, reels
-            $isExactlyFeedAndReels = count($pendingKeys) === 2
-                && in_array(ScheduledPostDestination::DEST_FEED, $pendingKeys, true)
-                && in_array(ScheduledPostDestination::DEST_REELS, $pendingKeys, true);
-
-            if ($isExactlyFeedAndReels) {
-                $feed = $pending->firstWhere('destination', ScheduledPostDestination::DEST_FEED);
-                $reels = $pending->firstWhere('destination', ScheduledPostDestination::DEST_REELS);
-                $this->publishCombinedFeedReels($instagram, $post, $feed, $reels, $mediaUrl);
-                $handledIds = [$feed->id, $reels->id];
-            }
-
-            foreach ($pending as $destination) {
-                if (in_array($destination->id, $handledIds, true)) {
-                    continue;
-                }
-                $this->publishDestination($instagram, $post, $destination, $mediaUrl);
-            }
-
-            $status = $post->recalculateStatus();
-            $fresh = $post->fresh(['destinations']);
-
-            if (in_array($status, [ScheduledPost::STATUS_DONE, ScheduledPost::STATUS_PARTIAL], true)
-                || $status === ScheduledPost::STATUS_ERROR) {
-                // Limpa temp só quando não há mais pendentes
-                if ($fresh->destinations->where('status', ScheduledPostDestination::STATUS_PENDING)->isEmpty()) {
-                    $instagram->cleanupTempImage($fresh);
-                }
-            }
-
-            if (in_array($status, [ScheduledPost::STATUS_ERROR, ScheduledPost::STATUS_PARTIAL], true)) {
-                $this->notifyAdmins($whatsapp, $fresh);
-            }
-
-            $this->info("Post #{$post->id} finalizado com status: {$status}");
-        }
-
-        return self::SUCCESS;
     }
 
     private function publishCombinedFeedReels(
@@ -191,7 +236,10 @@ class PublishScheduledInstagramPosts extends Command
     private function failAllPending(ScheduledPost $post, string $message): void
     {
         $post->destinations()
-            ->where('status', ScheduledPostDestination::STATUS_PENDING)
+            ->whereIn('status', [
+                ScheduledPostDestination::STATUS_PENDING,
+                ScheduledPostDestination::STATUS_PUBLISHING,
+            ])
             ->update([
                 'status' => ScheduledPostDestination::STATUS_ERROR,
                 'error_message' => $message,
