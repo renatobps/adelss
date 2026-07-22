@@ -128,26 +128,48 @@ class EnqueteService
     private function processarItemMensagem(array $payload, array $item): bool
     {
         $evento = Str::lower((string) ($payload['event'] ?? ''));
-        if ($evento !== '' && !in_array($evento, ['messages.upsert', 'messages_upsert'], true)) {
+        $evento = str_replace(['.', '-'], '_', $evento);
+        // Evolution GO: Message | Evolution API (legado): messages_upsert
+        $eventosAceitos = ['message', 'messages_upsert', 'messagesupsert', 'poll'];
+        if ($evento !== '' && !in_array($evento, $eventosAceitos, true)) {
+            Log::info('Enquete webhook: evento ignorado.', ['event' => $payload['event'] ?? null]);
+
             return false;
         }
 
+        // Evolution GO usa data.Info / data.Message; Evolution API usa key / message.
+        $info = is_array($item['Info'] ?? null) ? $item['Info'] : [];
         $key = is_array($item['key'] ?? null) ? $item['key'] : [];
-        if (($key['fromMe'] ?? false) === true) {
+
+        $fromMe = (bool) ($info['IsFromMe'] ?? $key['fromMe'] ?? false);
+        if ($fromMe) {
             return false;
         }
 
-        $telefone = $this->extrairTelefone($key);
+        $telefone = $this->extrairTelefone($key, $payload, $item, $info);
         if ($telefone === '') {
+            Log::info('Enquete webhook: telefone não identificado.', [
+                'remoteJid' => $key['remoteJid'] ?? null,
+                'remoteJidAlt' => $key['remoteJidAlt'] ?? null,
+                'sender' => $info['Sender'] ?? $payload['sender'] ?? null,
+                'chat' => $info['Chat'] ?? null,
+            ]);
+
             return false;
         }
 
         $variantesTelefone = WhatsAppService::variantesNumero($telefone);
 
-        $message = is_array($item['message'] ?? null) ? $item['message'] : [];
+        $messageRaw = $item['Message'] ?? $item['message'] ?? [];
+        $message = $this->desembrulharMensagem(is_array($messageRaw) ? $messageRaw : []);
         [$buttonId, $textoResposta] = $this->extrairRespostaBotao($message);
 
         if ($buttonId === null && $textoResposta === '') {
+            Log::info('Enquete webhook: sem resposta de botão/texto reconhecível.', [
+                'telefone' => $telefone,
+                'message_keys' => array_keys($message),
+            ]);
+
             return false;
         }
 
@@ -160,6 +182,8 @@ class EnqueteService
             Log::info('Enquete webhook: nenhum envio pendente.', [
                 'telefone' => $telefone,
                 'variantes' => $variantesTelefone,
+                'button_id' => $buttonId,
+                'texto' => $textoResposta,
             ]);
 
             return false;
@@ -172,15 +196,22 @@ class EnqueteService
             return false;
         }
 
-        $respostaTexto = $this->resolverTextoOpcao($enquete->opcoes ?? [], $buttonId, $textoResposta);
+        $opcoes = $enquete->opcoes ?? [];
+        $respostaTexto = $this->resolverTextoOpcao($opcoes, $buttonId, $textoResposta);
         if ($respostaTexto === null) {
             Log::info('Enquete webhook: opção não identificada.', [
                 'telefone' => $telefoneCanonico,
                 'button_id' => $buttonId,
                 'texto' => $textoResposta,
+                'opcoes' => $opcoes,
             ]);
 
-            return false;
+            $this->whatsappService->enviarMensagem(
+                $telefoneCanonico,
+                $this->mensagemRespostaIncorreta($opcoes)
+            );
+
+            return true;
         }
 
         $respostaExistente = $enquete->respostas()
@@ -245,14 +276,66 @@ class EnqueteService
 
     /**
      * @param  array<string, mixed>  $key
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $item
+     * @param  array<string, mixed>  $info
      */
-    private function extrairTelefone(array $key): string
+    private function extrairTelefone(array $key, array $payload = [], array $item = [], array $info = []): string
     {
-        $jid = (string) ($key['remoteJidAlt'] ?? $key['remoteJid'] ?? '');
-        $jid = explode('@', $jid)[0] ?? '';
-        $jid = preg_replace('/[^0-9]/', '', $jid) ?? '';
+        $candidatos = [
+            $info['Sender'] ?? null,
+            $info['Chat'] ?? null,
+            $info['SenderAlt'] ?? null,
+            $key['remoteJidAlt'] ?? null,
+            $key['participantAlt'] ?? null,
+            $key['participant'] ?? null,
+            $key['remoteJid'] ?? null,
+            $item['sender'] ?? null,
+            $payload['sender'] ?? null,
+        ];
 
-        return $jid !== '' ? WhatsAppService::normalizarNumero($jid) : '';
+        foreach ($candidatos as $candidato) {
+            $jid = (string) ($candidato ?? '');
+            if ($jid === '' || str_contains($jid, '@lid')) {
+                continue;
+            }
+
+            // Remove device suffix: 5511...:38@s.whatsapp.net
+            $jid = explode('@', $jid)[0] ?? '';
+            $jid = explode(':', $jid)[0] ?? '';
+            $jid = preg_replace('/[^0-9]/', '', $jid) ?? '';
+
+            if ($jid !== '') {
+                return WhatsAppService::normalizarNumero($jid);
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $message
+     * @return array<string, mixed>
+     */
+    private function desembrulharMensagem(array $message): array
+    {
+        $wrappers = [
+            'ephemeralMessage',
+            'viewOnceMessage',
+            'viewOnceMessageV2',
+            'viewOnceMessageV2Extension',
+            'documentWithCaptionMessage',
+            'editedMessage',
+        ];
+
+        foreach ($wrappers as $wrapper) {
+            $inner = $message[$wrapper]['message'] ?? null;
+            if (is_array($inner)) {
+                return $this->desembrulharMensagem($inner);
+            }
+        }
+
+        return $message;
     }
 
     /**
@@ -277,6 +360,65 @@ class EnqueteService
             ];
         }
 
+        $list = $message['listResponseMessage'] ?? null;
+        if (is_array($list)) {
+            $selectedId = $list['singleSelectReply']['selectedRowId'] ?? null;
+
+            return [
+                $selectedId !== null ? (string) $selectedId : null,
+                trim((string) ($list['title'] ?? $list['description'] ?? '')),
+            ];
+        }
+
+        $interactive = $message['interactiveResponseMessage'] ?? null;
+        if (is_array($interactive)) {
+            $paramsJson = $interactive['nativeFlowResponseMessage']['paramsJson'] ?? null;
+            if (is_string($paramsJson) && $paramsJson !== '') {
+                $params = json_decode($paramsJson, true);
+                if (is_array($params)) {
+                    $id = $params['id'] ?? $params['selectedId'] ?? $params['button_id'] ?? null;
+                    $texto = $params['display_text']
+                        ?? $params['selectedDisplayText']
+                        ?? $params['title']
+                        ?? ($interactive['body']['text'] ?? '');
+
+                    return [
+                        $id !== null ? (string) $id : null,
+                        trim((string) $texto),
+                    ];
+                }
+            }
+
+            $bodyText = trim((string) ($interactive['body']['text'] ?? ''));
+            if ($bodyText !== '') {
+                return [null, $bodyText];
+            }
+        }
+
+        // Voto de enquete nativa (Evolution GO / WhatsApp poll)
+        $pollUpdate = $message['pollUpdateMessage'] ?? null;
+        if (is_array($pollUpdate)) {
+            $voteName = null;
+            $selectedOptions = $pollUpdate['vote']['selectedOptions'] ?? $pollUpdate['selectedOptions'] ?? null;
+            if (is_array($selectedOptions)) {
+                foreach ($selectedOptions as $opt) {
+                    if (is_array($opt) && !empty($opt['optionName'])) {
+                        $voteName = $opt['optionName'];
+                        break;
+                    }
+                    if (is_string($opt) && $opt !== '') {
+                        $voteName = $opt;
+                        break;
+                    }
+                }
+            }
+            if ($voteName === null) {
+                $voteName = $pollUpdate['name'] ?? null;
+            }
+
+            return [null, trim((string) ($voteName ?? ''))];
+        }
+
         $texto = trim((string) (
             $message['conversation']
             ?? ($message['extendedTextMessage']['text'] ?? '')
@@ -296,6 +438,17 @@ class EnqueteService
                 return is_string($opcoes[$index])
                     ? $opcoes[$index]
                     : (string) ($opcoes[$index]['name'] ?? $opcoes[$index]['label'] ?? $opcoes[$index]['text'] ?? '');
+            }
+
+            // Alguns clientes devolvem o próprio texto/id da opção.
+            foreach ($opcoes as $opcao) {
+                $label = is_string($opcao)
+                    ? $opcao
+                    : (string) ($opcao['name'] ?? $opcao['label'] ?? $opcao['text'] ?? '');
+
+                if ($this->textosEquivalentes($label, $buttonId)) {
+                    return $label;
+                }
             }
         }
 
@@ -326,5 +479,35 @@ class EnqueteService
         };
 
         return $normalizar($a) === $normalizar($b);
+    }
+
+    /**
+     * @param  array<int, mixed>  $opcoes
+     */
+    private function mensagemRespostaIncorreta(array $opcoes): string
+    {
+        $labels = [];
+        foreach ($opcoes as $opcao) {
+            $label = is_string($opcao)
+                ? $opcao
+                : (string) ($opcao['name'] ?? $opcao['label'] ?? $opcao['text'] ?? '');
+            $label = trim($label);
+            if ($label !== '') {
+                $labels[] = $label;
+            }
+        }
+
+        // WhatsApp envia no máximo 3 botões reply.
+        $labels = array_slice($labels, 0, 3);
+        $qtd = count($labels);
+
+        if ($qtd === 0) {
+            return 'Resposta incorreta. Clique em uma das respostas disponíveis.';
+        }
+
+        $lista = implode(' ou ', $labels);
+        $quantificador = $qtd === 1 ? 'resposta disponível' : "{$qtd} respostas disponíveis";
+
+        return "Resposta incorreta. Clique em uma das {$quantificador}: {$lista}.";
     }
 }

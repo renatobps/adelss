@@ -44,6 +44,14 @@ return [
             'throw' => false,
         ],
 
+        'google' => [
+            'driver' => 'google',
+            'clientId' => env('GOOGLE_DRIVE_CLIENT_ID'),
+            'clientSecret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
+            // Tokens vêm de google_drive_settings (criptografados) via GoogleDriveServiceProvider
+            'throw' => false,
+        ],
+
     ],
 
     /*

@@ -223,6 +223,12 @@
                                     $canViewPropositos = false;
                                     $canViewFeedbacks = false;
                                     $canManageHomePage = false;
+                                    $canViewCultosRelatorios = false;
+                                    $canManageCultosConfig = false;
+                                    $canViewMidiaArquivos = false;
+                                    $canViewMidiaInstagram = false;
+                                    $canManageMidiaConfig = false;
+                                    $canManageMidiaInstagramConfig = false;
                                     
                                     if ($user) {
                                         if ($isAdmin) {
@@ -260,6 +266,12 @@
                                             $canViewPropositos = true;
                                             $canViewFeedbacks = true;
                                             $canManageHomePage = true;
+                                            $canViewCultosRelatorios = true;
+                                            $canManageCultosConfig = true;
+                                            $canViewMidiaArquivos = true;
+                                            $canViewMidiaInstagram = true;
+                                            $canManageMidiaConfig = true;
+                                            $canManageMidiaInstagramConfig = true;
                                         } else {
                                             try {
                                                 // Verificar permissões específicas do menu
@@ -355,6 +367,12 @@
                                                 $canViewFeedbacks = $user->hasPermission('discipleship.feedbacks.view') || 
                                                                     $user->hasPermission('discipleship.feedbacks.manage');
                                                 $canManageHomePage = $user->hasPermission('pagina-principal.manage');
+                                                $canViewCultosRelatorios = $user->hasPermission('cultos.relatorios.view');
+                                                $canManageCultosConfig = $user->hasPermission('cultos.configuracoes.manage');
+                                                $canViewMidiaArquivos = $user->hasPermission('midia.arquivos.view');
+                                                $canViewMidiaInstagram = $user->hasPermission('midia.instagram.view');
+                                                $canManageMidiaConfig = $user->hasPermission('midia.configuracoes.manage');
+                                                $canManageMidiaInstagramConfig = $user->hasPermission('midia.instagram.configuracoes.manage');
                                             } catch (\Exception $e) {
                                                 // Em caso de erro, não exibir menu
                                                 $canViewMembers = false;
@@ -391,6 +409,12 @@
                                                 $canViewPropositos = false;
                                                 $canViewFeedbacks = false;
                                                 $canManageHomePage = false;
+                                                $canViewCultosRelatorios = false;
+                                                $canManageCultosConfig = false;
+                                                $canViewMidiaArquivos = false;
+                                                $canViewMidiaInstagram = false;
+                                                $canManageMidiaConfig = false;
+                                                $canManageMidiaInstagramConfig = false;
                                             }
                                         }
                                     }
@@ -485,60 +509,67 @@
                                     </ul>
                                 </li>
 
-                                {{-- MENU FINANCEIRO - Verificar permissões --}}
+                                {{-- MENU FINANCEIRO — submenus ficam no grid da página principal --}}
                                 @if($isAdmin || $canViewReceitas || $canViewDespesas || $canViewCategories || $canViewAccounts || $canViewContacts || $canViewCostCenters || $canViewReports)
-                                <li class="nav-parent {{ request()->routeIs('financial.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                @php
+                                    if ($isAdmin || $canViewReceitas || $canViewDespesas) {
+                                        $financialHomeRoute = route('financial.summary');
+                                    } elseif ($canViewReports) {
+                                        $financialHomeRoute = route('financial.reports.index');
+                                    } elseif ($canViewAccounts) {
+                                        $financialHomeRoute = route('financial.accounts.index');
+                                    } elseif ($canViewCategories) {
+                                        $financialHomeRoute = route('financial.categories.index');
+                                    } elseif ($canViewContacts) {
+                                        $financialHomeRoute = route('financial.contacts.index');
+                                    } else {
+                                        $financialHomeRoute = route('financial.cost-centers.index');
+                                    }
+                                @endphp
+                                <li class="{{ request()->routeIs('financial.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ $financialHomeRoute }}">
                                         <i class="bx bx-dollar" aria-hidden="true"></i>
                                         <span>Financeiro</span>
                                     </a>
+                                </li>
+                                @endif
+
+                                {{-- MENU RELATÓRIOS DE CULTO --}}
+                                @if($isAdmin || $canViewCultosRelatorios || $canManageCultosConfig)
+                                <li class="{{ request()->routeIs('cultos.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ ($isAdmin || $canViewCultosRelatorios) ? route('cultos.index') : route('cultos.settings.edit') }}">
+                                        <i class="bx bx-church" aria-hidden="true"></i>
+                                        <span>Relatórios de Culto</span>
+                                    </a>
+                                </li>
+                                @endif
+
+                                {{-- MENU MÍDIA --}}
+                                @if($isAdmin || $canViewMidiaArquivos || $canViewMidiaInstagram || $canManageMidiaConfig || $canManageMidiaInstagramConfig)
+                                <li class="nav-parent {{ request()->routeIs('midia.*') ? 'nav-expanded nav-active' : '' }}">
+                                    <a class="nav-link" href="#">
+                                        <i class="bx bx-images" aria-hidden="true"></i>
+                                        <span>Mídia</span>
+                                    </a>
                                     <ul class="nav nav-children">
-                                        @if($isAdmin || $canViewReceitas || $canViewDespesas)
-                                        <li class="{{ request()->routeIs('financial.summary') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('financial.summary') }}">
-                                                <i class="bx bx-right-arrow-alt"></i>Resumo
+                                        @if($isAdmin || $canViewMidiaArquivos)
+                                        <li class="{{ request()->routeIs('midia.index') || request()->routeIs('midia.upload') || request()->routeIs('midia.folders.*') || request()->routeIs('midia.download') || request()->routeIs('midia.preview') || request()->routeIs('midia.destroy') || request()->routeIs('midia.move') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('midia.index') }}">
+                                                <i class="bx bx-folder"></i> Arquivos
                                             </a>
                                         </li>
                                         @endif
-                                        @if($isAdmin || $canViewReceitas || $canViewDespesas)
-                                        <li class="{{ request()->routeIs('financial.transactions.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('financial.transactions.index') }}">
-                                                <i class="bx bx-refresh"></i>Transações
+                                        @if($isAdmin || $canViewMidiaInstagram)
+                                        <li class="{{ request()->routeIs('midia.instagram.posts.*') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('midia.instagram.posts.index') }}">
+                                                <i class="bx bxl-instagram"></i> Publicações Instagram
                                             </a>
                                         </li>
                                         @endif
-                                        @if($isAdmin || $canViewReports)
-                                        <li class="{{ request()->routeIs('financial.reports.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('financial.reports.index') }}">
-                                                <i class="bx bx-line-chart"></i>Relatórios
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewCategories)
-                                        <li class="{{ request()->routeIs('financial.categories.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('financial.categories.index') }}">
-                                                <i class="bx bx-purchase-tag"></i>Categorias
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewAccounts)
-                                        <li class="{{ request()->routeIs('financial.accounts.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('financial.accounts.index') }}">
-                                                <i class="bx bx-file"></i>Contas
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewContacts)
-                                        <li class="{{ request()->routeIs('financial.contacts.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('financial.contacts.index') }}">
-                                                <i class="bx bx-user"></i>Contatos
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewCostCenters)
-                                        <li class="{{ request()->routeIs('financial.cost-centers.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('financial.cost-centers.index') }}">
-                                                <i class="bx bx-folder"></i>Centros de custos
+                                        @if($isAdmin || $canManageMidiaConfig || $canManageMidiaInstagramConfig)
+                                        <li class="{{ request()->routeIs('midia.settings') || request()->routeIs('midia.google.*') || request()->routeIs('midia.instagram.redirect') || request()->routeIs('midia.instagram.callback') || request()->routeIs('midia.instagram.disconnect') ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ route('midia.settings') }}">
+                                                <i class="bx bx-cog"></i> Configurações
                                             </a>
                                         </li>
                                         @endif
@@ -821,6 +852,11 @@
             <!-- end: sidebar -->
 
             <section role="main" class="content-body">
+                @php
+                    $isFinancialModule = request()->routeIs('financial.*')
+                        && !request()->routeIs('financial.transactions.receipt*')
+                        && !request()->routeIs('financial.checkout.*');
+                @endphp
                 <header class="page-header">
                     <h2>@yield('page-title', 'Página')</h2>
 
@@ -924,6 +960,10 @@
                             </ul>
                         </div>
                     @endif
+                @endif
+
+                @if($isFinancialModule)
+                    @include('financial.partials.module-nav')
                 @endif
 
                 @yield('content')

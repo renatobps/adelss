@@ -46,6 +46,35 @@ class FinancialRouteAuthorizer
                 : $denyAccess('Acesso negado. Você não tem permissão para visualizar o resumo financeiro.');
         }
 
+        if (str_starts_with($routeName ?? '', 'financial.automations')) {
+            if (in_array($routeName, [
+                'financial.automations.toggle',
+                'financial.automations.update',
+                'financial.automations.test-treasurer',
+                'financial.automations.send-smart-summary',
+            ], true)) {
+                return $this->modulePolicy->manageAutomations($user)
+                    ? null
+                    : $denyAccess('Acesso negado. Você não tem permissão para gerenciar automações.');
+            }
+
+            return $this->modulePolicy->viewAutomations($user)
+                ? null
+                : $denyAccess('Acesso negado. Você não tem permissão para visualizar automações.');
+        }
+
+        if (str_starts_with($routeName ?? '', 'financial.fixed-expenses')) {
+            if ($routeName === 'financial.fixed-expenses.index') {
+                return $this->modulePolicy->viewFixedExpenses($user)
+                    ? null
+                    : $denyAccess('Acesso negado. Você não tem permissão para visualizar despesas fixas.');
+            }
+
+            return $this->modulePolicy->manageFixedExpenses($user)
+                ? null
+                : $denyAccess('Acesso negado. Você não tem permissão para gerenciar despesas fixas.');
+        }
+
         if (str_starts_with($routeName ?? '', 'financial.transactions')) {
             return $this->authorizeTransactionRoute($request, $user, $routeName, $action, $denyAccess);
         }

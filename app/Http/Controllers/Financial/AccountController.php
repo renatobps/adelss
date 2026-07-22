@@ -5,100 +5,153 @@ namespace App\Http\Controllers\Financial;
 use App\Http\Controllers\Controller;
 use App\Models\FinancialAccount;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    public function index(Request $request)
     {
         $this->authorize('viewAny', FinancialAccount::class);
-        $accounts = FinancialAccount::orderBy('name')->get();
-        $total = $accounts->count();
-        
-        return view('financial.accounts.index', compact('accounts', 'total'));
+
+        $status = $request->input('status', 'ativas');
+        if (!in_array($status, ['ativas', 'inativas', 'todas'], true)) {
+            $status = 'ativas';
+        }
+
+        $query = FinancialAccount::query()->orderBy('name');
+
+        if ($status === 'ativas') {
+            $query->where('is_active', true);
+        } elseif ($status === 'inativas') {
+            $query->where('is_active', false);
+        }
+
+        $accounts = $query->get()->map(function (FinancialAccount $account) {
+            $account->current_balance = $account->currentBalance();
+
+            return $account;
+        });
+
+        $counts = [
+            'ativas' => FinancialAccount::where('is_active', true)->count(),
+            'inativas' => FinancialAccount::where('is_active', false)->count(),
+            'todas' => FinancialAccount::count(),
+        ];
+
+        $saldoAtivas = FinancialAccount::where('is_active', true)
+            ->get()
+            ->sum(fn (FinancialAccount $account) => $account->currentBalance());
+
+        $types = FinancialAccount::TYPES;
+        $colors = FinancialAccount::COLORS;
+
+        return view('financial.accounts.index', compact(
+            'accounts',
+            'status',
+            'counts',
+            'saldoAtivas',
+            'types',
+            'colors'
+        ));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $this->authorize('create', FinancialAccount::class);
-        return view('financial.accounts.create');
+
+        return redirect()->route('financial.accounts.index');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $this->authorize('create', FinancialAccount::class);
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-        ], [
-            'name.required' => 'O campo nome da conta é obrigatório.',
-            'name.max' => 'O nome da conta não pode ter mais de 255 caracteres.',
-        ]);
+
+        $validated = $this->validateAccount($request);
+        $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['bank_name'] = $validated['bank_name'] ?? null;
+        $validated['description'] = $validated['description'] ?? null;
 
         FinancialAccount::create($validated);
 
-        return redirect()->route('financial.accounts.index')
+        return redirect()->route('financial.accounts.index', ['status' => 'ativas'])
             ->with('success', 'Conta criada com sucesso!');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(string $id)
     {
-        //
+        return redirect()->route('financial.accounts.index');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(FinancialAccount $account)
     {
         $this->authorize('update', $account);
-        return view('financial.accounts.edit', compact('account'));
+
+        return redirect()->route('financial.accounts.index');
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, FinancialAccount $account)
     {
         $this->authorize('update', $account);
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-        ], [
-            'name.required' => 'O campo nome da conta é obrigatório.',
-            'name.max' => 'O nome da conta não pode ter mais de 255 caracteres.',
-        ]);
+
+        $validated = $this->validateAccount($request);
+        $validated['is_active'] = $request->boolean('is_active', true);
+        $validated['bank_name'] = $validated['bank_name'] ?? null;
+        $validated['description'] = $validated['description'] ?? null;
 
         $account->update($validated);
 
-        return redirect()->route('financial.accounts.index')
-            ->with('success', 'Conta atualizada com sucesso!');
+        return redirect()->route('financial.accounts.index', [
+            'status' => $request->input('redirect_status', $account->is_active ? 'ativas' : 'inativas'),
+        ])->with('success', 'Conta atualizada com sucesso!');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
+    public function toggleActive(FinancialAccount $account)
+    {
+        $this->authorize('update', $account);
+
+        $account->update(['is_active' => !$account->is_active]);
+
+        $status = $account->is_active ? 'ativas' : 'inativas';
+        $msg = $account->is_active
+            ? 'Conta reativada com sucesso!'
+            : 'Conta desativada. O histórico foi preservado.';
+
+        return redirect()->route('financial.accounts.index', ['status' => request('status', $status)])
+            ->with('success', $msg);
+    }
+
     public function destroy(FinancialAccount $account)
     {
         $this->authorize('delete', $account);
+
         try {
             $account->delete();
-            return redirect()->route('financial.accounts.index')
+
+            return redirect()->route('financial.accounts.index', ['status' => request('status', 'ativas')])
                 ->with('success', 'Conta removida com sucesso!');
         } catch (\Exception $e) {
             return redirect()->route('financial.accounts.index')
                 ->with('error', 'Erro ao remover conta. Por favor, tente novamente.');
         }
+    }
+
+    private function validateAccount(Request $request): array
+    {
+        return $request->validate([
+            'name' => 'required|string|max:255',
+            'type' => ['required', Rule::in(array_keys(FinancialAccount::TYPES))],
+            'bank_name' => 'nullable|string|max:255',
+            'initial_balance' => 'required|numeric',
+            'color' => ['required', 'string', Rule::in(FinancialAccount::COLORS)],
+            'description' => 'nullable|string',
+            'is_active' => 'nullable|boolean',
+        ], [
+            'name.required' => 'O campo nome da conta é obrigatório.',
+            'type.required' => 'Selecione o tipo da conta.',
+            'type.in' => 'Tipo de conta inválido.',
+            'initial_balance.required' => 'Informe o saldo inicial.',
+            'color.required' => 'Selecione uma cor de identificação.',
+            'color.in' => 'Cor de identificação inválida.',
+        ]);
     }
 }

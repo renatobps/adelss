@@ -24,8 +24,8 @@
 
 <div class="alert alert-info">
     <i class="bx bx-info-circle me-2"></i>
-    <strong>Enquetes via Evolution API:</strong>
-    As enquetes são enviadas com botões clicáveis (sendButtons). Ao clicar, o usuário responde e o sistema registra a opção escolhida.
+    <strong>Enquetes via Evolution GO:</strong>
+    São perguntas com botões clicáveis (<code>POST /send/button</code>). Ao clicar, o sistema registra o texto da opção e envia uma mensagem de agradecimento.
 </div>
 
 <section class="card">

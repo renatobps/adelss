@@ -7,13 +7,15 @@ use Illuminate\Console\Command;
 
 class NotifyDueFinancialExpenses extends Command
 {
-    protected $signature = 'financial:notify-due-expenses';
+    protected $signature = 'financial:notify-due-expenses {--force : Ignora horário configurado}';
 
     protected $description = 'Notifica tesoureiros sobre despesas com vencimento próximo';
 
     public function handle(FinancialNotificationService $notificationService): int
     {
-        $resultado = $notificationService->notificarDespesasVencendo();
+        $resultado = $notificationService->notificarDespesasVencendo(
+            (bool) $this->option('force')
+        );
 
         if (!($resultado['success'] ?? false)) {
             $this->error($resultado['error'] ?? 'Falha ao enviar lembretes.');

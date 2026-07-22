@@ -32,6 +32,7 @@ class FinancialTransaction extends Model
         'installments_count',
         'installment_number',
         'parent_transaction_id',
+        'fixed_expense_id',
         'document_number',
         'notes',
         'competence_date',
@@ -112,6 +113,11 @@ class FinancialTransaction extends Model
     public function parentTransaction()
     {
         return $this->belongsTo(self::class, 'parent_transaction_id');
+    }
+
+    public function fixedExpense()
+    {
+        return $this->belongsTo(FinancialFixedExpense::class, 'fixed_expense_id');
     }
 
     public function childInstallments(): HasMany

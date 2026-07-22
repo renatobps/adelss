@@ -39,4 +39,6 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/modules/discipleship.php';
     require __DIR__.'/modules/ensino.php';
     require __DIR__.'/modules/agenda.php';
+    require __DIR__.'/modules/cultos.php';
+    require __DIR__.'/modules/midia.php';
 });

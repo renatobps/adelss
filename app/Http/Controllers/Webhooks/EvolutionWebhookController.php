@@ -32,8 +32,21 @@ class EvolutionWebhookController extends Controller
 
             Log::info('Evolution webhook recebido.', [
                 'event' => $payload['event'] ?? $event,
-                'instance' => $payload['instance'] ?? null,
+                'instance' => $payload['instance'] ?? $payload['instanceId'] ?? null,
                 'path' => $request->path(),
+                // Evolution GO: data.Message / data.Info | Evolution API: data.message / data.key
+                'message_keys' => array_keys(
+                    data_get($payload, 'data.Message', [])
+                        ?: data_get($payload, 'data.message', [])
+                        ?: []
+                ),
+                'remote_jid' => data_get($payload, 'data.Info.Sender')
+                    ?? data_get($payload, 'data.Info.Chat')
+                    ?? data_get($payload, 'data.key.remoteJid'),
+                'remote_jid_alt' => data_get($payload, 'data.Info.SenderAlt')
+                    ?? data_get($payload, 'data.key.remoteJidAlt'),
+                'from_me' => data_get($payload, 'data.Info.IsFromMe')
+                    ?? data_get($payload, 'data.key.fromMe'),
             ]);
 
             $processed = $this->enqueteService->processarWebhookPayload($payload);

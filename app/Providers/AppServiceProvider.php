@@ -48,6 +48,8 @@ use App\Policies\Financial\FinancialModulePolicy;
 use App\Policies\Financial\FinancialTransactionPolicy;
 use App\Policies\Members\MemberPolicy;
 use App\Policies\Members\MemberRolePolicy;
+use App\Models\ServiceReport;
+use App\Policies\Cultos\ServiceReportPolicy;
 use App\Policies\Moriah\MoriahPolicy;
 use App\Policies\Notificacoes\NotificacaoPolicy;
 use App\Policies\Pgis\PgiPolicy;
@@ -98,6 +100,7 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::policy(Event::class, EventPolicy::class);
         Gate::policy(EventCategory::class, EventCategoryPolicy::class);
+        Gate::policy(ServiceReport::class, ServiceReportPolicy::class);
 
         Gate::policy(DiscipleshipCycle::class, DiscipleshipCyclePolicy::class);
         Gate::policy(DiscipleshipMember::class, DiscipleshipMemberPolicy::class);
@@ -109,6 +112,10 @@ class AppServiceProvider extends ServiceProvider
         $financialModule = FinancialModulePolicy::class;
         Gate::define('financial.view-summary', [$financialModule, 'viewSummary']);
         Gate::define('financial.view-reports', [$financialModule, 'viewReports']);
+        Gate::define('financial.view-automations', [$financialModule, 'viewAutomations']);
+        Gate::define('financial.manage-automations', [$financialModule, 'manageAutomations']);
+        Gate::define('financial.view-fixed-expenses', [$financialModule, 'viewFixedExpenses']);
+        Gate::define('financial.manage-fixed-expenses', [$financialModule, 'manageFixedExpenses']);
 
         $notificacaoPolicy = NotificacaoPolicy::class;
         Gate::define('notificacoes.view', [$notificacaoPolicy, 'viewAny']);
@@ -125,5 +132,20 @@ class AppServiceProvider extends ServiceProvider
         $rifaReportPolicy = RifaReportPolicy::class;
         Gate::define('rifas.view-reports', [$rifaReportPolicy, 'viewAny']);
         Gate::define('servico.view-reports', [VolunteerReportPolicy::class, 'viewAny']);
+
+        foreach ([
+            'midia.arquivos.view',
+            'midia.arquivos.upload',
+            'midia.arquivos.delete',
+            'midia.pastas.manage',
+            'midia.configuracoes.manage',
+            'midia.instagram.view',
+            'midia.instagram.schedule',
+            'midia.instagram.configuracoes.manage',
+        ] as $ability) {
+            Gate::define($ability, function ($user) use ($ability) {
+                return $user->is_admin || $user->hasPermission($ability);
+            });
+        }
     }
 }

@@ -66,7 +66,7 @@ trait ChecksFinancialResourcePermissions
             return $this->canCreate($user);
         }
 
-        if (in_array($action, ['edit', 'update'], true)) {
+        if (in_array($action, ['edit', 'update', 'toggleActive'], true)) {
             return $this->canUpdate($user);
         }
 

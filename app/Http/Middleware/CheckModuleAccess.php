@@ -87,6 +87,16 @@ class CheckModuleAccess
                     ->authorize($request, $user, $denyAccess);
                 break;
 
+            case 'cultos':
+                $denied = app(\App\Services\Authorization\CultosRouteAuthorizer::class)
+                    ->authorize($request, $user, $denyAccess);
+                break;
+
+            case 'midia':
+                $denied = app(\App\Services\Authorization\MidiaRouteAuthorizer::class)
+                    ->authorize($request, $user, $denyAccess);
+                break;
+
             case 'pagina-principal':
                 if (!$user->hasPermission('pagina-principal.manage')) {
                     return $denyAccess('Você não tem permissão para gerenciar a página principal.');

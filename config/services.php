@@ -18,4 +18,15 @@ return [
         'key' => env('YOUTUBE_API_KEY'),
     ],
 
+    'google_drive' => [
+        'client_id' => env('GOOGLE_DRIVE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_DRIVE_CLIENT_SECRET'),
+        'root_folder_name' => env('GOOGLE_DRIVE_ROOT_FOLDER', 'ADELSS'),
+    ],
+
+    'instagram' => [
+        'app_id' => env('INSTAGRAM_APP_ID', env('META_APP_ID')),
+        'app_secret' => env('INSTAGRAM_APP_SECRET', env('META_APP_SECRET')),
+    ],
+
 ];

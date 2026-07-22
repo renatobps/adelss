@@ -22,6 +22,34 @@ class FinancialModulePolicy
             || $user->hasPermission('financial.reports.manage');
     }
 
+    public function viewAutomations(User $user): bool
+    {
+        return $this->viewSummary($user) || $this->manageAutomations($user);
+    }
+
+    public function manageAutomations(User $user): bool
+    {
+        return $user->is_admin
+            || $user->hasPermission('financial.receitas.manage')
+            || $user->hasPermission('financial.despesas.manage');
+    }
+
+    public function viewFixedExpenses(User $user): bool
+    {
+        return $user->is_admin
+            || $user->hasPermission('financial.despesas.view')
+            || $user->hasPermission('financial.despesas.manage')
+            || $user->hasPermission('financial.despesas.create');
+    }
+
+    public function manageFixedExpenses(User $user): bool
+    {
+        return $user->is_admin
+            || $user->hasPermission('financial.despesas.manage')
+            || $user->hasPermission('financial.despesas.create')
+            || $user->hasPermission('financial.despesas.edit');
+    }
+
     public function accessModule(User $user): bool
     {
         return $user->is_admin

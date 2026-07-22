@@ -15,8 +15,11 @@ class Kernel extends ConsoleKernel
         // Verificar eventos passados a cada hora
         $schedule->command('events:check-past')->hourly();
 
-        // Lembretes de despesas financeiras com vencimento próximo
-        $schedule->command('financial:notify-due-expenses')->dailyAt('08:00');
+        // Lembretes / resumos financeiros (horário vem da configuração da automação)
+        $schedule->command('financial:notify-due-expenses')->hourly();
+        $schedule->command('financial:send-smart-summary')->hourly();
+        $schedule->command('cultos:check-pastoral-alerts')->dailyAt('09:00');
+        $schedule->command('midia:publish-instagram-posts')->everyFiveMinutes();
 
         // Purge de logs antigos de notificação (domingo 03:00)
         $schedule->command('logs:purge-old')->weeklyOn(0, '03:00');

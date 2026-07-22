@@ -3,137 +3,58 @@
 namespace App\Http\Controllers\Financial;
 
 use App\Http\Controllers\Controller;
-use App\Models\FinancialTransaction;
 use App\Models\FinancialAccount;
-use Illuminate\Http\Request;
+use App\Models\FinancialTransaction;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class SummaryController extends Controller
 {
     public function index(Request $request)
     {
         $this->authorize('financial.view-summary');
-        // Períodos padrão
+
         $today = Carbon::today();
-        $startOfMonth = Carbon::now()->startOfMonth();
-        $endOfMonth = Carbon::now()->endOfMonth();
-        
-        // Filtros de período (para os cards)
-        $periodFilter = $request->input('period', 'today'); // today, 7days, 1month, 3months
-        
-        // Calcular datas baseado no período
-        $periodStart = $today;
-        $periodEnd = $today;
-        
-        switch ($periodFilter) {
-            case '7days':
-                $periodStart = $today->copy()->subDays(7);
-                $periodEnd = $today;
-                break;
-            case '1month':
-                $periodStart = $startOfMonth;
-                $periodEnd = $endOfMonth;
-                break;
-            case '3months':
-                $periodStart = $today->copy()->subMonths(3)->startOfMonth();
-                $periodEnd = $endOfMonth;
-                break;
-            default: // today
-                $periodStart = $today;
-                $periodEnd = $today;
-                break;
-        }
-        
-        // Recebido hoje/período (receitas pagas)
-        $recebidoPeriodo = FinancialTransaction::receitas()
+        $periodFilter = $request->input('period', '1month');
+
+        [$periodStart, $periodEnd, $periodLabel] = $this->resolvePeriod($periodFilter, $today);
+
+        $entradas = (float) FinancialTransaction::receitas()
             ->where('is_paid', true)
             ->whereBetween('transaction_date', [$periodStart, $periodEnd])
             ->sum('amount');
-        
-        $recebidoMes = FinancialTransaction::receitas()
+
+        $entradasCount = (int) FinancialTransaction::receitas()
             ->where('is_paid', true)
-            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
-            ->sum('amount');
-        
-        // Pago hoje/período (despesas pagas)
-        $pagoPeriodo = FinancialTransaction::despesas()
+            ->whereBetween('transaction_date', [$periodStart, $periodEnd])
+            ->count();
+
+        $saidas = (float) FinancialTransaction::despesas()
             ->where('is_paid', true)
             ->whereBetween('transaction_date', [$periodStart, $periodEnd])
             ->sum('amount');
-        
-        $pagoMes = FinancialTransaction::despesas()
-            ->where('is_paid', true)
-            ->whereBetween('transaction_date', [$startOfMonth, $endOfMonth])
-            ->sum('amount');
-        
-        // A receber hoje/período (receitas não pagas)
-        $aReceberPeriodo = FinancialTransaction::receitas()
-            ->where('is_paid', false)
-            ->whereBetween('due_date', [$periodStart, $periodEnd])
-            ->sum('amount');
-        
-        $aReceberMes = FinancialTransaction::receitas()
-            ->where('is_paid', false)
-            ->whereBetween('due_date', [$startOfMonth, $endOfMonth])
-            ->sum('amount');
-        
-        // A pagar hoje/período (despesas não pagas)
-        $aPagarPeriodo = FinancialTransaction::despesas()
-            ->where('is_paid', false)
-            ->whereBetween('due_date', [$periodStart, $periodEnd])
-            ->sum('amount');
-        
-        $aPagarMes = FinancialTransaction::despesas()
-            ->where('is_paid', false)
-            ->whereBetween('due_date', [$startOfMonth, $endOfMonth])
-            ->sum('amount');
-        
-        // Recebimentos em atraso (receitas não pagas com due_date passado)
-        // Mês atual: recebimentos que vencem no mês atual e já estão atrasados (até ontem)
-        $yesterday = $today->copy()->subDay();
-        $recebimentosAtrasoMes = FinancialTransaction::receitas()
-            ->where('is_paid', false)
-            ->where('due_date', '>=', $startOfMonth)
-            ->where('due_date', '<=', $yesterday)
-            ->sum('amount');
-        
-        // Todo o período: todas as receitas não pagas com due_date passado
-        $recebimentosAtrasoTodoPeriodo = FinancialTransaction::receitas()
-            ->where('is_paid', false)
-            ->where('due_date', '<', $today)
-            ->sum('amount');
-        
-        // Pagamentos em atraso (despesas não pagas com due_date passado)
-        // Mês atual: pagamentos que vencem no mês atual e já estão atrasados (até ontem)
-        $pagamentosAtrasoMes = FinancialTransaction::despesas()
-            ->where('is_paid', false)
-            ->where('due_date', '>=', $startOfMonth)
-            ->where('due_date', '<=', $yesterday)
-            ->sum('amount');
-        
-        // Todo o período: todas as despesas não pagas com due_date passado
-        $pagamentosAtrasoTodoPeriodo = FinancialTransaction::despesas()
-            ->where('is_paid', false)
-            ->where('due_date', '<', $today)
-            ->sum('amount');
-        
-        // Saldo atual por conta
+
+        $resultado = $entradas - $saidas;
+        $saldoTotal = $resultado;
+        $resultadoLabel = $resultado >= 0 ? 'Superávit' : 'Déficit';
+
+        $periodRangeLabel = $periodStart->format('d/m/Y') . ' - ' . $periodEnd->format('d/m/Y');
+
         $accounts = FinancialAccount::all();
-        
         $accountsBalance = [];
-        $totalBalance = 0;
-        
+        $totalBalance = 0.0;
+
         foreach ($accounts as $account) {
-            $receitas = FinancialTransaction::receitas()
+            $receitas = (float) FinancialTransaction::receitas()
                 ->where('is_paid', true)
                 ->where('account_id', $account->id)
                 ->sum('amount');
-            
-            $despesas = FinancialTransaction::despesas()
+
+            $despesas = (float) FinancialTransaction::despesas()
                 ->where('is_paid', true)
                 ->where('account_id', $account->id)
                 ->sum('amount');
-            
+
             $saldo = $receitas - $despesas;
             if ($saldo != 0 || $receitas > 0 || $despesas > 0) {
                 $accountsBalance[] = [
@@ -143,18 +64,17 @@ class SummaryController extends Controller
                 $totalBalance += $saldo;
             }
         }
-        
-        // Adicionar "Sem conta" (transações sem account_id)
-        $receitasSemConta = FinancialTransaction::receitas()
+
+        $receitasSemConta = (float) FinancialTransaction::receitas()
             ->where('is_paid', true)
             ->whereNull('account_id')
             ->sum('amount');
-        
-        $despesasSemConta = FinancialTransaction::despesas()
+
+        $despesasSemConta = (float) FinancialTransaction::despesas()
             ->where('is_paid', true)
             ->whereNull('account_id')
             ->sum('amount');
-        
+
         $saldoSemConta = $receitasSemConta - $despesasSemConta;
         if ($saldoSemConta != 0 || $receitasSemConta > 0 || $despesasSemConta > 0) {
             $accountsBalance[] = [
@@ -163,27 +83,21 @@ class SummaryController extends Controller
             ];
             $totalBalance += $saldoSemConta;
         }
-        
-        // Se não houver contas com saldo, criar um item vazio
+
         if (empty($accountsBalance)) {
             $accountsBalance[] = [
                 'name' => 'Nenhuma conta',
                 'balance' => 0,
             ];
         }
-        
-        // Dados para gráfico anual (ano selecionado)
-        $selectedYear = $request->input('year', now()->year);
+
+        $selectedYear = (int) $request->input('year', now()->year);
         $annualData = $this->getAnnualData($selectedYear);
-        
-        // Dados para gráfico mensal (mês selecionado)
+
         $selectedMonth = $request->input('month', now()->format('Y-m'));
         $monthlyData = $this->getMonthlyData($selectedMonth);
-        
-        // Anos disponíveis para filtro
+
         $availableYears = range(now()->year - 2, now()->year + 1);
-        
-        // Meses disponíveis para filtro (últimos 12 meses)
         $availableMonths = [];
         for ($i = 11; $i >= 0; $i--) {
             $month = now()->copy()->subMonths($i);
@@ -192,20 +106,26 @@ class SummaryController extends Controller
                 'label' => $month->translatedFormat('F') . ' - ' . $month->format('Y'),
             ];
         }
-        
+
+        $periodOptions = [
+            'today' => 'Hoje',
+            '7days' => 'Últimos 7 dias',
+            '1month' => 'Mês Atual',
+            'last_month' => 'Mês Anterior',
+            '3months' => 'Últimos 3 meses',
+        ];
+
         return view('financial.summary', compact(
-            'recebidoPeriodo',
-            'recebidoMes',
-            'pagoPeriodo',
-            'pagoMes',
-            'aReceberPeriodo',
-            'aReceberMes',
-            'aPagarPeriodo',
-            'aPagarMes',
-            'recebimentosAtrasoMes',
-            'recebimentosAtrasoTodoPeriodo',
-            'pagamentosAtrasoMes',
-            'pagamentosAtrasoTodoPeriodo',
+            'entradas',
+            'entradasCount',
+            'saidas',
+            'resultado',
+            'resultadoLabel',
+            'saldoTotal',
+            'periodFilter',
+            'periodLabel',
+            'periodRangeLabel',
+            'periodOptions',
             'accountsBalance',
             'totalBalance',
             'annualData',
@@ -213,15 +133,37 @@ class SummaryController extends Controller
             'selectedYear',
             'selectedMonth',
             'availableYears',
-            'availableMonths',
-            'periodFilter'
+            'availableMonths'
         ));
     }
-    
+
     /**
-     * Retorna dados para o gráfico anual
+     * @return array{0: Carbon, 1: Carbon, 2: string}
      */
-    private function getAnnualData($year)
+    private function resolvePeriod(string $periodFilter, Carbon $today): array
+    {
+        return match ($periodFilter) {
+            'today' => [$today->copy(), $today->copy(), 'Hoje'],
+            '7days' => [$today->copy()->subDays(6), $today->copy(), 'Últimos 7 dias'],
+            'last_month' => [
+                $today->copy()->subMonthNoOverflow()->startOfMonth(),
+                $today->copy()->subMonthNoOverflow()->endOfMonth(),
+                'Mês Anterior',
+            ],
+            '3months' => [
+                $today->copy()->subMonths(2)->startOfMonth(),
+                $today->copy()->endOfMonth(),
+                'Últimos 3 meses',
+            ],
+            default => [
+                $today->copy()->startOfMonth(),
+                $today->copy()->endOfMonth(),
+                'Mês Atual',
+            ],
+        };
+    }
+
+    private function getAnnualData(int $year): array
     {
         $data = [
             'labels' => ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'],
@@ -230,59 +172,46 @@ class SummaryController extends Controller
             'aReceber' => [],
             'aPagar' => [],
         ];
-        
+
         for ($month = 1; $month <= 12; $month++) {
             $monthStart = Carbon::create($year, $month, 1)->startOfMonth();
             $monthEnd = Carbon::create($year, $month, 1)->endOfMonth();
-            
-            // Receitas pagas do mês
-            $receitas = FinancialTransaction::receitas()
+
+            $data['receitas'][] = (float) FinancialTransaction::receitas()
                 ->where('is_paid', true)
                 ->whereBetween('transaction_date', [$monthStart, $monthEnd])
                 ->sum('amount');
-            
-            // Despesas pagas do mês
-            $despesas = FinancialTransaction::despesas()
+
+            $data['despesas'][] = (float) FinancialTransaction::despesas()
                 ->where('is_paid', true)
                 ->whereBetween('transaction_date', [$monthStart, $monthEnd])
                 ->sum('amount');
-            
-            // A receber do mês (receitas não pagas)
-            $aReceber = FinancialTransaction::receitas()
+
+            $data['aReceber'][] = (float) FinancialTransaction::receitas()
                 ->where('is_paid', false)
                 ->whereBetween('due_date', [$monthStart, $monthEnd])
                 ->sum('amount');
-            
-            // A pagar do mês (despesas não pagas)
-            $aPagar = FinancialTransaction::despesas()
+
+            $data['aPagar'][] = (float) FinancialTransaction::despesas()
                 ->where('is_paid', false)
                 ->whereBetween('due_date', [$monthStart, $monthEnd])
                 ->sum('amount');
-            
-            $data['receitas'][] = (float) $receitas;
-            $data['despesas'][] = (float) $despesas;
-            $data['aReceber'][] = (float) $aReceber;
-            $data['aPagar'][] = (float) $aPagar;
         }
-        
-        // Calcular máximo para escala do gráfico
+
         $allValues = array_merge($data['receitas'], $data['despesas'], $data['aReceber'], $data['aPagar']);
         $maxValue = count($allValues) > 0 ? max($allValues) : 0;
         $data['maxValue'] = $maxValue > 0 ? ceil($maxValue / 500) * 500 : 1000;
-        
+
         return $data;
     }
-    
-    /**
-     * Retorna dados para o gráfico mensal
-     */
-    private function getMonthlyData($yearMonth)
+
+    private function getMonthlyData(string $yearMonth): array
     {
-        list($year, $month) = explode('-', $yearMonth);
-        $monthStart = Carbon::create($year, $month, 1)->startOfMonth();
-        $monthEnd = Carbon::create($year, $month, 1)->endOfMonth();
+        [$year, $month] = explode('-', $yearMonth);
+        $monthStart = Carbon::create((int) $year, (int) $month, 1)->startOfMonth();
+        $monthEnd = Carbon::create((int) $year, (int) $month, 1)->endOfMonth();
         $daysInMonth = $monthEnd->day;
-        
+
         $data = [
             'labels' => range(1, $daysInMonth),
             'receitas' => array_fill(0, $daysInMonth, 0),
@@ -290,65 +219,59 @@ class SummaryController extends Controller
             'aReceber' => array_fill(0, $daysInMonth, 0),
             'aPagar' => array_fill(0, $daysInMonth, 0),
         ];
-        
-        // Buscar receitas pagas do mês
-        $receitas = FinancialTransaction::receitas()
-            ->where('is_paid', true)
-            ->whereBetween('transaction_date', [$monthStart, $monthEnd])
-            ->get();
-        
-        foreach ($receitas as $transacao) {
-            $day = $transacao->transaction_date->day - 1; // Índice baseado em 0
+
+        foreach (
+            FinancialTransaction::receitas()
+                ->where('is_paid', true)
+                ->whereBetween('transaction_date', [$monthStart, $monthEnd])
+                ->get() as $transacao
+        ) {
+            $day = $transacao->transaction_date->day - 1;
             if ($day >= 0 && $day < $daysInMonth) {
                 $data['receitas'][$day] += (float) $transacao->amount;
             }
         }
-        
-        // Buscar despesas pagas do mês
-        $despesas = FinancialTransaction::despesas()
-            ->where('is_paid', true)
-            ->whereBetween('transaction_date', [$monthStart, $monthEnd])
-            ->get();
-        
-        foreach ($despesas as $transacao) {
+
+        foreach (
+            FinancialTransaction::despesas()
+                ->where('is_paid', true)
+                ->whereBetween('transaction_date', [$monthStart, $monthEnd])
+                ->get() as $transacao
+        ) {
             $day = $transacao->transaction_date->day - 1;
             if ($day >= 0 && $day < $daysInMonth) {
                 $data['despesas'][$day] += (float) $transacao->amount;
             }
         }
-        
-        // Buscar a receber do mês
-        $aReceber = FinancialTransaction::receitas()
-            ->where('is_paid', false)
-            ->whereBetween('due_date', [$monthStart, $monthEnd])
-            ->get();
-        
-        foreach ($aReceber as $transacao) {
+
+        foreach (
+            FinancialTransaction::receitas()
+                ->where('is_paid', false)
+                ->whereBetween('due_date', [$monthStart, $monthEnd])
+                ->get() as $transacao
+        ) {
             $day = $transacao->due_date->day - 1;
             if ($day >= 0 && $day < $daysInMonth) {
                 $data['aReceber'][$day] += (float) $transacao->amount;
             }
         }
-        
-        // Buscar a pagar do mês
-        $aPagar = FinancialTransaction::despesas()
-            ->where('is_paid', false)
-            ->whereBetween('due_date', [$monthStart, $monthEnd])
-            ->get();
-        
-        foreach ($aPagar as $transacao) {
+
+        foreach (
+            FinancialTransaction::despesas()
+                ->where('is_paid', false)
+                ->whereBetween('due_date', [$monthStart, $monthEnd])
+                ->get() as $transacao
+        ) {
             $day = $transacao->due_date->day - 1;
             if ($day >= 0 && $day < $daysInMonth) {
                 $data['aPagar'][$day] += (float) $transacao->amount;
             }
         }
-        
-        // Calcular máximo para escala do gráfico
+
         $allValues = array_merge($data['receitas'], $data['despesas'], $data['aReceber'], $data['aPagar']);
         $maxValue = count($allValues) > 0 ? max($allValues) : 0;
         $data['maxValue'] = $maxValue > 0 ? ceil($maxValue / 200) * 200 : 1000;
-        
+
         return $data;
     }
 }
-

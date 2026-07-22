@@ -88,16 +88,16 @@
                         <p class="mb-0"><strong>URL da API:</strong><br><code>{{ config('whatsapp.api_url') ?: '—' }}</code></p>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <p class="mb-0"><strong>Tipo de Autenticação:</strong><br><span class="badge bg-success">Evolution API (apikey)</span></p>
+                        <p class="mb-0"><strong>Tipo de Autenticação:</strong><br><span class="badge bg-success">Evolution GO (apikey + instanceId)</span></p>
                     </div>
                     <div class="col-md-4 mb-2">
-                        <p class="mb-0"><strong>Endpoint de Envio:</strong><br><code>/message/sendText/{instanceName}</code></p>
+                        <p class="mb-0"><strong>Endpoint de Envio:</strong><br><code>POST /send/text</code></p>
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-md-4 mb-2">
                         <p class="mb-0"><strong>API Docs:</strong><br>
-                            <a href="https://docs.evolutionfoundation.com.br/evolution-api/send-text-message" target="_blank" rel="noopener"><i class="bx bx-link-external me-1"></i> Ver Documentação Evolution API</a>
+                            <a href="{{ rtrim(config('whatsapp.api_url'), '/') }}/swagger/index.html" target="_blank" rel="noopener"><i class="bx bx-link-external me-1"></i> Swagger Evolution GO</a>
                         </p>
                     </div>
                     <div class="col-md-4 mb-2">
@@ -114,12 +114,15 @@
                     <div class="col-md-4 mb-2">
                         <p class="mb-0"><strong>Instância padrão (.env):</strong><br><code>{{ $instanciaPadrao ?: 'Não configurada' }}</code></p>
                     </div>
+                    <div class="col-md-4 mb-2">
+                        <p class="mb-0"><strong>Instance ID:</strong><br><code id="instancia-id">{{ $instanciaId ?: '—' }}</code></p>
+                    </div>
                 </div>
                 <div class="alert alert-success mt-3 mb-0">
-                    <strong><i class="bx bx-info-circle me-1"></i> Configuração Evolution API:</strong><br>
+                    <strong><i class="bx bx-info-circle me-1"></i> Configuração Evolution GO:</strong><br>
                     <small>
-                        A Evolution API usa <strong>apikey</strong> no header e <strong>Instance Name</strong> no path.
-                        Você pode selecionar a instância ativa na tabela acima sem alterar a API Key.
+                        A Evolution GO usa <strong>apikey</strong> e <strong>instanceId</strong> (UUID) nos headers — sem nome da instância no path.
+                        Selecione a instância ativa na tabela acima; o sistema resolve o UUID via <code>GET /instance/all</code>.
                         @if(config('whatsapp.api_key'))
                             <strong>API Key:</strong> {{ substr(config('whatsapp.api_key'), 0, 10) }}...
                         @endif
@@ -135,15 +138,16 @@
     <div class="col-12 mb-4">
         <section class="card">
             <header class="card-header bg-info text-white">
-                <h5 class="mb-0"><i class="bx bx-link me-2"></i> Configuração de Webhooks (Evolution API)</h5>
+                <h5 class="mb-0"><i class="bx bx-link me-2"></i> Configuração de Webhooks (Evolution GO)</h5>
             </header>
             <div class="card-body">
                 <div class="alert alert-info">
                     <strong><i class="bx bx-info-circle me-1"></i> Sobre os Webhooks:</strong>
                     <ul class="mb-0 mt-2">
-                        <li><strong>Mensagens recebidas:</strong> respostas de enquetes (botões), textos — evento <code>MESSAGES_UPSERT</code></li>
-                        <li><strong>Confirmações de envio:</strong> opcional — eventos <code>MESSAGES_UPDATE</code> / <code>SEND_MESSAGE</code></li>
-                        <li>Em desenvolvimento: <code>ultrahook webhook http://127.0.0.1:8000/webhook</code></li>
+                        <li><strong>Mensagens recebidas:</strong> respostas de enquetes (clique em botão) e textos — evento <code>Message</code></li>
+                        <li><strong>Confirmações de envio:</strong> opcional — evento <code>SendMessage</code> (<code>SEND_MESSAGE</code>)</li>
+                        <li><strong>Local (Ultrahook):</strong> <code>ultrahook webhook http://127.0.0.1:8000/webhook</code> e use a URL do Ultrahook no campo abaixo</li>
+                        <li><strong>Produção:</strong> use a URL pública do sistema, ex.: <code>{{ url('/webhook') }}</code> (sem Ultrahook)</li>
                         <li>O Laravel recebe em <code>POST /webhook</code></li>
                     </ul>
                 </div>
@@ -152,11 +156,11 @@
                         <label class="form-label"><i class="bx bx-inbox me-1"></i> Webhook — Mensagens Recebidas</label>
                         <div class="input-group">
                             <input type="url" class="form-control" id="webhook_received_url"
-                                   placeholder="https://arkcoredev-webhook.ultrahook.com"
+                                   placeholder="{{ config('app.env') === 'local' ? 'https://seu-alias-webhook.ultrahook.com' : url('/webhook') }}"
                                    value="{{ config('whatsapp.webhook_url') ?: url('/webhook') }}">
                             <button type="button" class="btn btn-primary" onclick="configurarWebhookReceived()"><i class="bx bx-save me-1"></i> Configurar</button>
                         </div>
-                        <small class="text-muted">Evolution API → <code>POST /webhook/set/{instancia}</code></small>
+                        <small class="text-muted">Evolution GO → <code>POST /instance/connect</code> (header <code>instanceId</code>)</small>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label"><i class="bx bx-check-circle me-1"></i> Webhook — Confirmações (opcional)</label>
@@ -271,7 +275,7 @@
                 var open = state === 'open' || state === 'connected' || state === 'conectado';
                 document.getElementById('connection-status').innerHTML =
                     open ? '<div class="alert alert-success mb-0"><i class="bx bx-check-circle me-2"></i><strong>Conectado!</strong><br>WhatsApp está online e pronto para enviar mensagens.</div>'
-                        : '<div class="alert alert-warning mb-0"><i class="bx bx-error-circle me-2"></i><strong>Desconectado</strong><br>Verifique a conexão da instância na Evolution API.</div>';
+                        : '<div class="alert alert-warning mb-0"><i class="bx bx-error-circle me-2"></i><strong>Desconectado</strong><br>Verifique a conexão da instância na Evolution GO.</div>';
                 addLog('Status verificado', 'success');
             })
             .catch(function() {
@@ -423,6 +427,10 @@
                     var instanciaEl = document.getElementById('instancia-em-uso');
                     if (instanciaEl) {
                         instanciaEl.textContent = instanciaAtiva;
+                    }
+                    var instanciaIdEl = document.getElementById('instancia-id');
+                    if (instanciaIdEl && res.data && res.data.instanceId) {
+                        instanciaIdEl.textContent = res.data.instanceId;
                     }
                     if (resultEl) {
                         resultEl.innerHTML = '<div class="alert alert-success"><i class="bx bx-check-circle me-2"></i>' + (res.message || 'Instância ativa alterada.') + '</div>';

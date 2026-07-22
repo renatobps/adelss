@@ -1011,6 +1011,157 @@ class PermissionSeeder extends Seeder
         Permission::where('module', 'Página Principal')
             ->whereNotIn('key', $homePageValidKeys)
             ->delete();
+
+        // Módulo Cultos (Relatórios de Culto)
+        $cultosModule = [
+            'module' => 'Cultos',
+            'name' => 'Módulo Cultos',
+            'children' => [
+                [
+                    'name' => 'Relatórios de Culto',
+                    'key' => 'cultos.relatorios',
+                    'description' => 'Permissões para relatórios pós-culto',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'cultos.relatorios.view'],
+                        ['name' => 'Criar', 'key' => 'cultos.relatorios.create'],
+                        ['name' => 'Editar', 'key' => 'cultos.relatorios.edit'],
+                        ['name' => 'Excluir', 'key' => 'cultos.relatorios.delete'],
+                    ],
+                ],
+                [
+                    'name' => 'Configurações de Culto',
+                    'key' => 'cultos.configuracoes',
+                    'description' => 'Permissões para configurar o módulo de cultos',
+                    'actions' => [
+                        ['name' => 'Gerenciar', 'key' => 'cultos.configuracoes.manage'],
+                    ],
+                ],
+            ],
+        ];
+
+        $cultosModulePermission = Permission::updateOrCreate(
+            ['key' => 'cultos.module'],
+            [
+                'module' => $cultosModule['module'],
+                'name' => $cultosModule['name'],
+                'description' => 'Permissões relacionadas ao módulo Cultos',
+                'parent_id' => null,
+            ]
+        );
+
+        $cultosValidKeys = ['cultos.module'];
+        foreach ($cultosModule['children'] as $group) {
+            $cultosValidKeys[] = $group['key'];
+            $groupPermission = Permission::updateOrCreate(
+                ['key' => $group['key']],
+                [
+                    'module' => $cultosModule['module'],
+                    'name' => $group['name'],
+                    'description' => $group['description'],
+                    'parent_id' => $cultosModulePermission->id,
+                ]
+            );
+            foreach ($group['actions'] as $action) {
+                $cultosValidKeys[] = $action['key'];
+                Permission::updateOrCreate(
+                    ['key' => $action['key']],
+                    [
+                        'module' => $cultosModule['module'],
+                        'name' => $action['name'],
+                        'description' => $group['name'] . ' - ' . $action['name'],
+                        'parent_id' => $groupPermission->id,
+                    ]
+                );
+            }
+        }
+
+        Permission::where('module', 'Cultos')
+            ->whereNotIn('key', $cultosValidKeys)
+            ->delete();
+
+        // Módulo Mídia (Google Drive + Instagram)
+        $midiaModule = [
+            'module' => 'Mídia',
+            'name' => 'Módulo Mídia',
+            'children' => [
+                [
+                    'name' => 'Arquivos',
+                    'key' => 'midia.arquivos',
+                    'description' => 'Permissões para arquivos no Google Drive',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'midia.arquivos.view'],
+                        ['name' => 'Upload', 'key' => 'midia.arquivos.upload'],
+                        ['name' => 'Excluir', 'key' => 'midia.arquivos.delete'],
+                    ],
+                ],
+                [
+                    'name' => 'Pastas',
+                    'key' => 'midia.pastas',
+                    'description' => 'Permissões para pastas de mídia',
+                    'actions' => [
+                        ['name' => 'Gerenciar', 'key' => 'midia.pastas.manage'],
+                    ],
+                ],
+                [
+                    'name' => 'Configurações Drive',
+                    'key' => 'midia.configuracoes',
+                    'description' => 'Conectar/desconectar Google Drive',
+                    'actions' => [
+                        ['name' => 'Gerenciar', 'key' => 'midia.configuracoes.manage'],
+                    ],
+                ],
+                [
+                    'name' => 'Instagram',
+                    'key' => 'midia.instagram',
+                    'description' => 'Publicações agendadas no Instagram',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'midia.instagram.view'],
+                        ['name' => 'Agendar', 'key' => 'midia.instagram.schedule'],
+                        ['name' => 'Configurações', 'key' => 'midia.instagram.configuracoes.manage'],
+                    ],
+                ],
+            ],
+        ];
+
+        $midiaModulePermission = Permission::updateOrCreate(
+            ['key' => 'midia.module'],
+            [
+                'module' => $midiaModule['module'],
+                'name' => $midiaModule['name'],
+                'description' => 'Permissões relacionadas ao módulo Mídia',
+                'parent_id' => null,
+            ]
+        );
+
+        $midiaValidKeys = ['midia.module'];
+        foreach ($midiaModule['children'] as $group) {
+            $midiaValidKeys[] = $group['key'];
+            $groupPermission = Permission::updateOrCreate(
+                ['key' => $group['key']],
+                [
+                    'module' => $midiaModule['module'],
+                    'name' => $group['name'],
+                    'description' => $group['description'],
+                    'parent_id' => $midiaModulePermission->id,
+                ]
+            );
+            foreach ($group['actions'] as $action) {
+                $midiaValidKeys[] = $action['key'];
+                Permission::updateOrCreate(
+                    ['key' => $action['key']],
+                    [
+                        'module' => $midiaModule['module'],
+                        'name' => $action['name'],
+                        'description' => $group['name'] . ' - ' . $action['name'],
+                        'parent_id' => $groupPermission->id,
+                    ]
+                );
+            }
+        }
+
+        Permission::where('module', 'Mídia')
+            ->whereNotIn('key', $midiaValidKeys)
+            ->delete();
     }
 }
 

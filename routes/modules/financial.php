@@ -9,12 +9,31 @@ use App\Http\Controllers\Financial\CostCenterController;
 use App\Http\Controllers\Financial\TransactionController;
 use App\Http\Controllers\Financial\ReportController;
 use App\Http\Controllers\Financial\SummaryController;
+use App\Http\Controllers\Financial\AutomationController;
+use App\Http\Controllers\Financial\FixedExpenseController;
 
 
 // Rotas do módulo Financeiro (somente admin)
 Route::prefix('financial')->name('financial.')->middleware('module.access:financial')->group(function () {
     // Resumo/Dashboard
     Route::get('summary', [SummaryController::class, 'index'])->name('summary');
+
+    // Despesas Fixas
+    Route::get('fixed-expenses', [FixedExpenseController::class, 'index'])->name('fixed-expenses.index');
+    Route::post('fixed-expenses', [FixedExpenseController::class, 'store'])->name('fixed-expenses.store');
+    Route::post('fixed-expenses/generate', [FixedExpenseController::class, 'generate'])->name('fixed-expenses.generate');
+    Route::post('fixed-expenses/transactions/{transaction}/pay', [FixedExpenseController::class, 'pay'])->name('fixed-expenses.pay');
+    Route::put('fixed-expenses/{fixedExpense}', [FixedExpenseController::class, 'update'])->name('fixed-expenses.update');
+    Route::delete('fixed-expenses/{fixedExpense}', [FixedExpenseController::class, 'destroy'])->name('fixed-expenses.destroy');
+    Route::post('fixed-expenses/{fixedExpense}/toggle', [FixedExpenseController::class, 'toggle'])->name('fixed-expenses.toggle');
+
+    // Automações
+    Route::get('automations', [AutomationController::class, 'index'])->name('automations.index');
+    Route::get('automations/members/search', [AutomationController::class, 'searchMembers'])->name('automations.members.search');
+    Route::post('automations/{automation}/toggle', [AutomationController::class, 'toggle'])->name('automations.toggle');
+    Route::post('automations/{automation}/test-treasurer', [AutomationController::class, 'sendTreasurerTest'])->name('automations.test-treasurer');
+    Route::post('automations/{automation}/send-smart-summary', [AutomationController::class, 'sendSmartSummaryNow'])->name('automations.send-smart-summary');
+    Route::put('automations/{automation}', [AutomationController::class, 'update'])->name('automations.update');
 
     // Transações
     Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
@@ -59,6 +78,8 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
     ]);
 
     // Contas
+    Route::post('accounts/{account}/toggle-active', [AccountController::class, 'toggleActive'])
+        ->name('accounts.toggle-active');
     Route::resource('accounts', AccountController::class)->names([
     'index' => 'accounts.index',
     'create' => 'accounts.create',

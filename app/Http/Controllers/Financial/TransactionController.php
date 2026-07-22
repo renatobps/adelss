@@ -138,6 +138,7 @@ class TransactionController extends Controller
         // Dados para filtros
         $categories = FinancialCategory::orderBy('name')->get();
         $accounts = FinancialAccount::orderBy('name')->get();
+        $accountsActive = $accounts->where('is_active', true)->values();
         $costCenters = FinancialCostCenter::orderBy('name')->get();
         $members = Member::orderBy('name')->get(); // Para o modal de receita
         $contacts = FinancialContact::orderBy('name')->get(); // Para o modal de despesa
@@ -149,6 +150,7 @@ class TransactionController extends Controller
             'summary',
             'categories',
             'accounts',
+            'accountsActive',
             'costCenters',
             'members',
             'contacts',
@@ -387,11 +389,43 @@ class TransactionController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display the specified resource (JSON para modal de detalhes).
      */
-    public function show(string $id)
+    public function show(FinancialTransaction $transaction)
     {
-        //
+        $this->authorize('view', $transaction);
+        $transaction->load(['member', 'contact', 'category', 'account', 'costCenter', 'attachments', 'createdBy']);
+
+        $contato = $transaction->type === 'receita'
+            ? ($transaction->member?->name ?: ($transaction->received_from_other ?: 'Outros'))
+            : ($transaction->contact?->name ?: '—');
+
+        return response()->json([
+            'id' => $transaction->id,
+            'type' => $transaction->type,
+            'type_label' => $transaction->type === 'receita' ? 'Receita' : 'Despesa',
+            'transaction_date' => $transaction->transaction_date?->format('d/m/Y'),
+            'created_at' => $transaction->created_at?->format('d/m/Y H:i'),
+            'description' => $transaction->description,
+            'amount' => (float) $transaction->amount,
+            'amount_formatted' => 'R$ ' . number_format((float) $transaction->amount, 2, ',', '.'),
+            'is_paid' => (bool) $transaction->is_paid,
+            'status_label' => $transaction->is_paid ? 'Pago' : ($transaction->type === 'receita' ? 'A receber' : 'A pagar'),
+            'contato' => $contato,
+            'category' => $transaction->category?->name ?: '—',
+            'account' => $transaction->account?->name ?: '—',
+            'cost_center' => $transaction->costCenter?->name ?: '—',
+            'payment_type' => $transaction->payment_type ?: '—',
+            'document_number' => $transaction->document_number ?: '—',
+            'competence_date' => $transaction->competence_date?->format('d/m/Y') ?: '—',
+            'due_date' => $transaction->due_date?->format('d/m/Y') ?: '—',
+            'notes' => $transaction->notes ?: '—',
+            'created_by' => $transaction->createdBy?->name ?: '—',
+            'attachments' => $transaction->attachments->map(fn ($a) => [
+                'id' => $a->id,
+                'file_name' => $a->file_name,
+            ])->values(),
+        ]);
     }
 
     /**
