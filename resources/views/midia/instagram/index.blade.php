@@ -102,23 +102,34 @@
                         <td>{{ $post->media_kind === 'video' ? 'Vídeo' : 'Foto' }}</td>
                         <td><span class="midia-status-pill {{ $statusClass }}">{{ $post->status_label }}</span></td>
                         <td>
-                            <div class="d-flex flex-wrap gap-1">
+                            <div class="d-flex flex-column gap-1">
                                 @foreach($post->destinations as $destination)
-                                    <button type="button" class="border-0 bg-transparent p-0"
-                                            data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}"
-                                            aria-expanded="false">
-                                        @include('midia.partials.destination-badge', ['destination' => $destination])
-                                    </button>
+                                    <div>
+                                        <button type="button" class="border-0 bg-transparent p-0"
+                                                data-bs-toggle="collapse" data-bs-target="#{{ $collapseId }}"
+                                                aria-expanded="false">
+                                            @include('midia.partials.destination-badge', ['destination' => $destination])
+                                        </button>
+                                        @php $removalLabel = $destination->removalSummaryLabel(); @endphp
+                                        @if($removalLabel !== '')
+                                            <div class="small {{ $destination->removal_status === 'erro_remocao' ? 'text-danger' : 'text-muted' }}">
+                                                {{ $removalLabel }}
+                                            </div>
+                                        @endif
+                                    </div>
                                 @endforeach
                             </div>
                         </td>
                         <td class="text-end">
-                            @if($post->canCancel())
+                            @if($post->canDeleteLocally())
                                 @can('midia.instagram.schedule')
-                                    <form method="POST" action="{{ route('midia.instagram.posts.destroy', $post) }}" class="d-inline" onsubmit="return confirm('Cancelar esta publicação?')">
+                                    <form method="POST" action="{{ route('midia.instagram.posts.destroy', $post) }}" class="d-inline"
+                                          onsubmit="return confirm(@json($post->status === 'agendado' || $post->status === 'erro' ? 'Excluir este registro?' : 'Remover só o registro do ADELSS? A publicação no Instagram (se existir) NÃO será apagada.'))">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-sm btn-outline-danger" type="submit">Cancelar</button>
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">
+                                            {{ in_array($post->status, ['agendado', 'erro'], true) ? 'Excluir' : 'Remover registro' }}
+                                        </button>
                                     </form>
                                 @endcan
                             @endif
@@ -138,11 +149,24 @@
                                             };
                                         @endphp
                                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 py-2 {{ !$loop->last ? 'border-bottom' : '' }}">
-                                            <div>
+                                            <div class="flex-grow-1">
                                                 @include('midia.partials.destination-badge', ['destination' => $destination])
                                                 <span class="midia-status-pill {{ $dClass }} ms-2">{{ $destination->status_label }}</span>
                                                 @if($destination->published_at)
                                                     <span class="small text-muted ms-2">{{ $destination->published_at->format('d/m/Y H:i') }}</span>
+                                                @endif
+                                                @php $removalLabel = $destination->removalSummaryLabel(); @endphp
+                                                @if($removalLabel !== '')
+                                                    <div class="small mt-1 {{ $destination->removal_status === 'erro_remocao' ? 'text-danger' : 'text-muted' }}">
+                                                        {{ $destination->destination_label }} — {{ $removalLabel }}
+                                                        @if($destination->removal_status === 'erro_remocao')
+                                                            <span class="midia-status-pill err ms-1">erro_remocao</span>
+                                                            <div class="mt-1">
+                                                                {{ $destination->removal_error ?: 'Não foi possível remover via API.' }}
+                                                                Remova manualmente pelo app do Instagram.
+                                                            </div>
+                                                        @endif
+                                                    </div>
                                                 @endif
                                                 @if($destination->error_message)
                                                     <div class="small text-danger mt-1">{{ $destination->error_message }}</div>

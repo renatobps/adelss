@@ -164,13 +164,14 @@ class PublishScheduledInstagramPosts extends Command
             $instagram->waitUntilContainerReady($containerId);
             $mediaId = $instagram->publishContainer($containerId);
 
+            $publishedAt = now();
             foreach ([$feed, $reels] as $dest) {
-                $dest->update([
+                $dest->update(array_merge([
                     'status' => ScheduledPostDestination::STATUS_PUBLISHED,
                     'instagram_media_id' => $mediaId,
-                    'published_at' => now(),
+                    'published_at' => $publishedAt,
                     'error_message' => null,
-                ]);
+                ], $dest->removalPayloadForPublished($publishedAt)));
             }
         } catch (\Throwable $e) {
             Log::error('Falha Instagram Feed+Reels', ['post_id' => $post->id, 'error' => $e->getMessage()]);
@@ -205,12 +206,13 @@ class PublishScheduledInstagramPosts extends Command
             $instagram->waitUntilContainerReady($containerId);
             $mediaId = $instagram->publishContainer($containerId);
 
-            $destination->update([
+            $publishedAt = now();
+            $destination->update(array_merge([
                 'status' => ScheduledPostDestination::STATUS_PUBLISHED,
                 'instagram_media_id' => $mediaId,
-                'published_at' => now(),
+                'published_at' => $publishedAt,
                 'error_message' => null,
-            ]);
+            ], $destination->removalPayloadForPublished($publishedAt)));
         } catch (\Throwable $e) {
             Log::error('Falha Instagram destino', [
                 'post_id' => $post->id,

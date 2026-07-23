@@ -20,6 +20,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('financial:send-smart-summary')->hourly();
         $schedule->command('cultos:check-pastoral-alerts')->dailyAt('09:00');
         $schedule->command('midia:publish-instagram-posts')->everyFiveMinutes();
+        $schedule->command('midia:remove-expired-instagram-posts')
+            ->everyFifteenMinutes()
+            ->withoutOverlapping();
 
         // Purge de logs antigos de notificação (domingo 03:00)
         $schedule->command('logs:purge-old')->weeklyOn(0, '03:00');

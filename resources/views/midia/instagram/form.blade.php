@@ -117,6 +117,21 @@
                     <div class="text-danger small d-none" id="reelsError">Reels exige vídeo — remova essa opção ou envie um vídeo.</div>
                 </div>
 
+                <div class="col-md-6" id="removeAfterWrap">
+                    <label class="form-label">Remover automaticamente após (dias)</label>
+                    <input type="number" name="remove_after_days" id="remove_after_days" class="form-control"
+                           min="1" max="365" step="1"
+                           value="{{ old('remove_after_days') }}"
+                           placeholder="Deixe em branco para nunca remover automaticamente">
+                    <div class="form-text">Válido para Feed e Reels. A remoção no Instagram é tentada pela rotina automática (pode falhar no fluxo Instagram Login).</div>
+                </div>
+                <div class="col-md-6 d-none" id="storiesOnlyHint">
+                    <label class="form-label">Remoção automática</label>
+                    <div class="alert alert-info mb-0 py-2 small">
+                        Stories somem automaticamente do Instagram após 24h — nenhuma ação adicional necessária.
+                    </div>
+                </div>
+
                 <div class="col-md-6">
                     <label class="form-label">Evento relacionado</label>
                     <input type="text" name="event_name" class="form-control" maxlength="180"
@@ -453,10 +468,28 @@
         validateDestinations();
     });
 
+    const removeWrap = document.getElementById('removeAfterWrap');
+    const storiesHint = document.getElementById('storiesOnlyHint');
+    const removeInput = document.getElementById('remove_after_days');
+    const feedCheck = document.getElementById('dest_feed');
+    const storiesCheck = document.getElementById('dest_stories');
+
+    function syncRemovalField() {
+        const hasFeedOrReels = !!(feedCheck?.checked || reels?.checked);
+        const onlyStories = !hasFeedOrReels && !!storiesCheck?.checked;
+
+        if (removeWrap) removeWrap.classList.toggle('d-none', !hasFeedOrReels);
+        if (storiesHint) storiesHint.classList.toggle('d-none', !onlyStories);
+        if (!hasFeedOrReels && removeInput) {
+            removeInput.value = '';
+        }
+    }
+
     document.querySelectorAll('.midia-dest-chip input').forEach((input) => {
         const sync = () => {
             input.closest('.midia-dest-chip')?.classList.toggle('is-active', input.checked);
             validateDestinations();
+            syncRemovalField();
         };
         input.addEventListener('change', sync);
         sync();

@@ -240,6 +240,38 @@ class InstagramService
     }
 
     /**
+     * Tenta excluir mídia já publicada no Instagram.
+     * Observação: a Meta documenta DELETE principalmente no fluxo Facebook Login;
+     * com Instagram Login isso pode falhar — o chamador deve tratar o erro.
+     */
+    public function deleteMedia(string $instagramMediaId): void
+    {
+        $mediaId = trim($instagramMediaId);
+        if ($mediaId === '') {
+            throw new RuntimeException('instagram_media_id vazio — não é possível excluir.');
+        }
+
+        $token = $this->getValidAccessToken()['token'];
+        $response = Http::delete(self::GRAPH_BASE . '/' . $mediaId, [
+            'access_token' => $token,
+        ]);
+
+        $payload = $response->json() ?? [];
+        $this->safeLog('info', 'Instagram deleteMedia response', [
+            'media_id' => $mediaId,
+            'status' => $response->status(),
+            'payload' => $payload,
+        ]);
+
+        if (!$response->successful() || isset($payload['error'])) {
+            throw new RuntimeException(
+                $payload['error']['message']
+                    ?? ('Falha ao excluir mídia no Instagram (HTTP ' . $response->status() . ').')
+            );
+        }
+    }
+
+    /**
      * Gera URL pública temporária a partir do Drive ou do upload local.
      */
     public function resolvePublicImageUrl(ScheduledPost $post, GoogleDriveService $drive): string

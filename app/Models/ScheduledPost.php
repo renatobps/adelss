@@ -68,13 +68,19 @@ class ScheduledPost extends Model
         return $this->media_kind === self::KIND_VIDEO;
     }
 
+    /**
+     * Exclusão manual no ADELSS (nunca chama API do Instagram).
+     * Bloqueada apenas enquanto status = publicando.
+     */
     public function canCancel(): bool
     {
-        return in_array($this->status, [
-            self::STATUS_SCHEDULED,
-            self::STATUS_ERROR,
-            self::STATUS_PARTIAL,
-        ], true);
+        return $this->status !== self::STATUS_PUBLISHING;
+    }
+
+    /** Alias semântico para exclusão local. */
+    public function canDeleteLocally(): bool
+    {
+        return $this->canCancel();
     }
 
     public function recalculateStatus(): string

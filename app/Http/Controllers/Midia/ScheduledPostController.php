@@ -62,6 +62,7 @@ class ScheduledPostController extends Controller
             'media' => 'nullable|file|mimes:jpg,jpeg,png,webp,gif,mp4,mov,m4v|max:102400',
             'caption' => 'nullable|string|max:2200',
             'event_name' => 'nullable|string|max:180',
+            'remove_after_days' => 'nullable|integer|min:1|max:365',
             'scheduled_for' => 'required|date|after:now',
             'destinations' => 'required|array|min:1',
             'destinations.*' => Rule::in(array_keys(ScheduledPostDestination::DESTINATIONS)),
@@ -84,12 +85,20 @@ class ScheduledPostController extends Controller
             ]);
         }
 
+        $hasPermanent = (bool) array_intersect($destinations, [
+            ScheduledPostDestination::DEST_FEED,
+            ScheduledPostDestination::DEST_REELS,
+        ]);
+        $removeAfterDays = $hasPermanent && filled($validated['remove_after_days'] ?? null)
+            ? (int) $validated['remove_after_days']
+            : null;
+
         $imagePath = null;
         if ($request->hasFile('media')) {
             $imagePath = $request->file('media')->store('instagram-uploads', 'public');
         }
 
-        DB::transaction(function () use ($validated, $destinations, $mediaKind, $imagePath) {
+        DB::transaction(function () use ($validated, $destinations, $mediaKind, $imagePath, $removeAfterDays) {
             $post = ScheduledPost::create([
                 'media_file_id' => $validated['media_file_id'] ?? null,
                 'image_path' => $imagePath,
@@ -104,10 +113,17 @@ class ScheduledPostController extends Controller
             ]);
 
             foreach ($destinations as $destination) {
+                $isPermanent = in_array($destination, [
+                    ScheduledPostDestination::DEST_FEED,
+                    ScheduledPostDestination::DEST_REELS,
+                ], true);
+
                 ScheduledPostDestination::create([
                     'scheduled_post_id' => $post->id,
                     'destination' => $destination,
                     'status' => ScheduledPostDestination::STATUS_PENDING,
+                    'remove_after_days' => $isPermanent ? $removeAfterDays : null,
+                    'removal_status' => ScheduledPostDestination::REMOVAL_NONE,
                 ]);
             }
         });
@@ -119,17 +135,18 @@ class ScheduledPostController extends Controller
 
     public function destroy(ScheduledPost $scheduledPost)
     {
-        if (!$scheduledPost->canCancel()) {
-            return back()->with('error', 'Só é possível cancelar posts agendados ou com erro.');
+        if (!$scheduledPost->canDeleteLocally()) {
+            return back()->with('error', 'Não é possível excluir enquanto a publicação está em andamento.');
         }
 
+        // Exclusão manual: apenas registro local. Remoção no Instagram só via comando agendado.
         if ($scheduledPost->image_path && !$scheduledPost->media_file_id) {
             Storage::disk('public')->delete($scheduledPost->image_path);
         }
 
         $scheduledPost->delete();
 
-        return back()->with('success', 'Publicação cancelada.');
+        return back()->with('success', 'Registro removido do ADELSS (a publicação no Instagram, se existir, permanece intacta).');
     }
 
     public function retryDestination(ScheduledPostDestination $destination)
@@ -143,6 +160,10 @@ class ScheduledPostController extends Controller
             'error_message' => null,
             'instagram_media_id' => null,
             'published_at' => null,
+            'remove_at' => null,
+            'removed_at' => null,
+            'removal_status' => ScheduledPostDestination::REMOVAL_NONE,
+            'removal_error' => null,
         ]);
 
         $post = $destination->post;
