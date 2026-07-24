@@ -17,7 +17,7 @@ class PainelController extends Controller
         $this->authorize('notificacoes.view');
         $query = NotificacaoEnviada::query()->with('member:id,name,phone');
 
-        if ($request->filled('status')) {
+        if ($request->filled('status') && array_key_exists($request->status, NotificacaoEnviada::STATUSES)) {
             $query->where('status', $request->status);
         }
         if ($request->filled('data_inicio')) {
@@ -74,6 +74,7 @@ class PainelController extends Controller
         $service = app(NotificacaoService::class);
         $enviadas = 0;
         $erros = 0;
+        $detalhesErros = [];
 
         if (!empty($memberIds)) {
             $members = Member::whereIn('id', $memberIds)->get();
@@ -82,6 +83,7 @@ class PainelController extends Controller
                 : $service->enviarParaMembros($members, $mensagem);
             $enviadas += $r['enviadas'];
             $erros += $r['erros'];
+            $detalhesErros = array_merge($detalhesErros, $r['detalhes_erros'] ?? []);
         }
         if (!empty($departmentIds)) {
             foreach (Department::whereIn('id', $departmentIds)->get() as $department) {
@@ -90,6 +92,7 @@ class PainelController extends Controller
                     : $service->enviarParaDepartamento($department, $mensagem);
                 $enviadas += $r['enviadas'];
                 $erros += $r['erros'];
+                $detalhesErros = array_merge($detalhesErros, $r['detalhes_erros'] ?? []);
             }
         }
         if (! empty($telefonesManuais)) {
@@ -98,9 +101,24 @@ class PainelController extends Controller
                 : $service->enviarParaTelefonesManuais($telefonesManuais, $mensagem);
             $enviadas += $r['enviadas'];
             $erros += $r['erros'];
+            $detalhesErros = array_merge($detalhesErros, $r['detalhes_erros'] ?? []);
         }
 
-        return back()->with('success', "Envio concluído: {$enviadas} enviadas, {$erros} erros.");
+        $detalhesErros = array_values(array_unique(array_slice($detalhesErros, 0, 10)));
+
+        if ($erros > 0 && $enviadas === 0) {
+            return back()
+                ->with('error', "Falha no envio: {$erros} erro(s).")
+                ->with('envio_erros', $detalhesErros);
+        }
+
+        if ($erros > 0) {
+            return back()
+                ->with('warning', "Envio parcial: {$enviadas} enviada(s), {$erros} erro(s).")
+                ->with('envio_erros', $detalhesErros);
+        }
+
+        return back()->with('success', "Envio concluído: {$enviadas} enviada(s).");
     }
 
     /**

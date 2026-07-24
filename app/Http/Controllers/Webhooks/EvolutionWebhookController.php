@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Webhooks;
 
 use App\Http\Controllers\Controller;
 use App\Services\EnqueteService;
+use App\Services\NotificacaoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -13,6 +14,7 @@ class EvolutionWebhookController extends Controller
 {
     public function __construct(
         private readonly EnqueteService $enqueteService,
+        private readonly NotificacaoService $notificacaoService,
     ) {}
 
     public function handle(Request $request, ?string $event = null): JsonResponse
@@ -32,6 +34,7 @@ class EvolutionWebhookController extends Controller
 
             Log::info('Evolution webhook recebido.', [
                 'event' => $payload['event'] ?? $event,
+                'state' => $payload['state'] ?? data_get($payload, 'data.state'),
                 'instance' => $payload['instance'] ?? $payload['instanceId'] ?? null,
                 'path' => $request->path(),
                 // Evolution GO: data.Message / data.Info | Evolution API: data.message / data.key
@@ -40,8 +43,10 @@ class EvolutionWebhookController extends Controller
                         ?: data_get($payload, 'data.message', [])
                         ?: []
                 ),
+                'message_ids' => data_get($payload, 'data.MessageIDs'),
                 'remote_jid' => data_get($payload, 'data.Info.Sender')
                     ?? data_get($payload, 'data.Info.Chat')
+                    ?? data_get($payload, 'data.Chat')
                     ?? data_get($payload, 'data.key.remoteJid'),
                 'remote_jid_alt' => data_get($payload, 'data.Info.SenderAlt')
                     ?? data_get($payload, 'data.key.remoteJidAlt'),
@@ -49,9 +54,15 @@ class EvolutionWebhookController extends Controller
                     ?? data_get($payload, 'data.key.fromMe'),
             ]);
 
-            $processed = $this->enqueteService->processarWebhookPayload($payload);
+            $processedReceipt = $this->notificacaoService->processarConfirmacaoEntrega($payload);
+            $processedEnquete = $this->enqueteService->processarWebhookPayload($payload);
 
-            return response()->json(['ok' => true, 'processed' => $processed]);
+            return response()->json([
+                'ok' => true,
+                'processed' => $processedReceipt || $processedEnquete,
+                'receipt' => $processedReceipt,
+                'enquete' => $processedEnquete,
+            ]);
         } catch (\Throwable $e) {
             Log::error('Evolution webhook erro.', [
                 'error' => $e->getMessage(),

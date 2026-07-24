@@ -81,7 +81,13 @@ class ConfigController extends Controller
 
             // Garante webhook + conexão; QR pode vir do endpoint dedicado.
             $webhookUrl = (string) (config('whatsapp.webhook_url') ?: url('/webhook'));
-            $this->whatsapp->configurarWebhook($webhookUrl, ['MESSAGE', 'SEND_MESSAGE', 'CONNECTION', 'QRCODE']);
+            $this->whatsapp->configurarWebhook($webhookUrl, [
+                'MESSAGE',
+                'SEND_MESSAGE',
+                'CONNECTION',
+                'READ_RECEIPT',
+                'QRCODE',
+            ]);
 
             $qr = $this->whatsapp->getQrCode();
             if ($qr['success'] ?? false) {
@@ -115,18 +121,22 @@ class ConfigController extends Controller
         $this->authorize('notificacoes.manage');
         try {
             $instanceSelecionada = $this->whatsapp->getActiveInstanceName();
+            $instanceIdSelecionada = $this->whatsapp->getActiveInstanceId();
             $instancesRaw = $this->whatsapp->listInstances(true);
 
             $instances = [];
             foreach ($instancesRaw as $item) {
                 $name = (string) ($item['name'] ?? '');
+                $id = (string) ($item['id'] ?? '');
+                $selected = ($id !== '' && $id === $instanceIdSelecionada)
+                    || ($name !== '' && strcasecmp($name, $instanceSelecionada) === 0);
                 $instances[] = [
                     'instance' => [
                         'instanceName' => $name,
-                        'instanceId' => (string) ($item['id'] ?? ''),
+                        'instanceId' => $id,
                         'status' => (string) ($item['status'] ?? 'unknown'),
                         'owner' => (string) ($item['owner'] ?? '—'),
-                        'selected' => $name !== '' && strcasecmp($name, $instanceSelecionada) === 0,
+                        'selected' => $selected,
                     ],
                 ];
             }
@@ -147,6 +157,7 @@ class ConfigController extends Controller
             return response()->json([
                 'success' => true,
                 'selected' => $instanceSelecionada,
+                'selectedId' => $instanceIdSelecionada,
                 'data' => $instances,
             ]);
         } catch (\Throwable $e) {
@@ -157,7 +168,7 @@ class ConfigController extends Controller
     public function selecionarInstancia(Request $request, string $instanceName)
     {
         $this->authorize('notificacoes.manage');
-        $instanceName = trim($instanceName);
+        $instanceName = trim(urldecode($instanceName));
         if ($instanceName === '') {
             return response()->json(['success' => false, 'error' => 'Instância inválida.'], 422);
         }
@@ -166,12 +177,15 @@ class ConfigController extends Controller
             return response()->json(['success' => false, 'error' => 'Instância não encontrada na Evolution GO.'], 404);
         }
 
+        $activeName = $this->whatsapp->getActiveInstanceName();
+        $activeId = $this->whatsapp->getActiveInstanceId();
+
         return response()->json([
             'success' => true,
-            'message' => "Instância ativa alterada para {$instanceName}.",
+            'message' => "Instância ativa alterada para {$activeName}. Próximos envios usarão esta conta.",
             'data' => [
-                'instanceName' => $this->whatsapp->getActiveInstanceName(),
-                'instanceId' => $this->whatsapp->getActiveInstanceId(),
+                'instanceName' => $activeName,
+                'instanceId' => $activeId,
             ],
         ]);
     }
@@ -292,12 +306,14 @@ class ConfigController extends Controller
                 'MESSAGE',
                 'SEND_MESSAGE',
                 'CONNECTION',
+                'READ_RECEIPT',
+                'QRCODE',
             ]);
 
             if ($ok) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Webhook configurado na Evolution GO (eventos: MESSAGE, SEND_MESSAGE, CONNECTION).',
+                    'message' => 'Webhook configurado na Evolution GO (inclui READ_RECEIPT para status Recebido/Lida).',
                 ]);
             }
 
@@ -320,12 +336,14 @@ class ConfigController extends Controller
                 'MESSAGE',
                 'SEND_MESSAGE',
                 'CONNECTION',
+                'READ_RECEIPT',
+                'QRCODE',
             ]);
 
             if ($ok) {
                 return response()->json([
                     'success' => true,
-                    'message' => 'Webhook de confirmações de envio configurado.',
+                    'message' => 'Webhook de confirmações (entrega/leitura) configurado.',
                 ]);
             }
 

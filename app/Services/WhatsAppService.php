@@ -2,16 +2,22 @@
 
 namespace App\Services;
 
+use App\Models\ConfiguracaoWhatsapp;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class WhatsAppService
 {
     private const ACTIVE_INSTANCE_CACHE_KEY = 'whatsapp.active_instance_name';
     private const ACTIVE_INSTANCE_ID_CACHE_KEY = 'whatsapp.active_instance_id';
+    private const ACTIVE_INSTANCE_TOKEN_CACHE_KEY = 'whatsapp.active_instance_token';
     private const INSTANCES_CACHE_KEY = 'whatsapp.instances_snapshot';
+    private const DB_KEY_INSTANCE_NAME = 'active_instance_name';
+    private const DB_KEY_INSTANCE_ID = 'active_instance_id';
+    private const DB_KEY_INSTANCE_TOKEN = 'active_instance_token';
 
     private string $apiUrl;
     private string $apiKey;
@@ -27,20 +33,35 @@ class WhatsAppService
     }
 
     /**
-     * Headers padrão Evolution GO: apikey + instanceId.
+     * Headers Evolution GO.
+     * Importante: em muitos deploys o WHATSAPP_API_KEY do .env é o token de UMA instância
+     * (ex.: aDelss). Se usarmos só esse token + outro instanceId, a API ignora o instanceId
+     * e continua enviando pela conta dona do token. Por isso, em operações da instância ativa
+     * usamos o token da própria instância selecionada.
      *
      * @return array<string, string>
      */
-    private function getApiHeaders(?string $instanceId = null): array
+    private function getApiHeaders(?string $instanceId = null, bool $useActiveInstanceToken = true): array
     {
+        $resolved = trim((string) ($instanceId ?? ''));
+        if ($resolved === '') {
+            $resolved = $this->resolveInstanceId();
+        }
+
+        $apikey = $this->apiKey;
+        if ($useActiveInstanceToken) {
+            $instanceToken = $this->resolveInstanceToken($resolved);
+            if ($instanceToken !== '') {
+                $apikey = $instanceToken;
+            }
+        }
+
         $headers = [
             'Content-Type' => 'application/json',
-            'apikey' => $this->apiKey,
+            'apikey' => $apikey,
         ];
-
-        $instanceId = trim((string) ($instanceId ?? $this->resolveInstanceId()));
-        if ($instanceId !== '') {
-            $headers['instanceId'] = $instanceId;
+        if ($resolved !== '') {
+            $headers['instanceId'] = $resolved;
         }
 
         return $headers;
@@ -58,6 +79,13 @@ class WhatsAppService
             return trim($selected);
         }
 
+        $fromDb = $this->getPersistedSetting(self::DB_KEY_INSTANCE_NAME);
+        if ($fromDb !== '') {
+            Cache::forever(self::ACTIVE_INSTANCE_CACHE_KEY, $fromDb);
+
+            return $fromDb;
+        }
+
         return $this->configuredInstanceName;
     }
 
@@ -66,6 +94,13 @@ class WhatsAppService
         return $this->resolveInstanceId();
     }
 
+    /**
+     * Prioridade da instância ativa:
+     * 1) Cache (troca recente na UI)
+     * 2) Banco configuracoes_whatsapp (sobrevive a cache:clear)
+     * 3) Resolve pelo nome ativo na API
+     * 4) Fallback .env (só se o usuário nunca escolheu na UI)
+     */
     private function resolveInstanceId(): string
     {
         $cachedId = Cache::get(self::ACTIVE_INSTANCE_ID_CACHE_KEY);
@@ -73,17 +108,72 @@ class WhatsAppService
             return trim($cachedId);
         }
 
+        $fromDb = $this->getPersistedSetting(self::DB_KEY_INSTANCE_ID);
+        if ($fromDb !== '') {
+            Cache::forever(self::ACTIVE_INSTANCE_ID_CACHE_KEY, $fromDb);
+
+            return $fromDb;
+        }
+
+        $activeName = $this->getActiveInstanceName();
+        if ($activeName !== '') {
+            $instance = $this->findInstanceByName($activeName);
+            $id = trim((string) ($instance['id'] ?? ''));
+            if ($id !== '') {
+                $this->rememberActiveInstance(
+                    $activeName,
+                    $id,
+                    (string) ($instance['token'] ?? '')
+                );
+
+                return $id;
+            }
+        }
+
+        // Fallback .env — só quando não há seleção salva.
         if ($this->configuredInstanceId !== '') {
             return $this->configuredInstanceId;
         }
 
-        $instance = $this->findInstanceByName($this->getActiveInstanceName());
-        $id = trim((string) ($instance['id'] ?? ''));
-        if ($id !== '') {
-            Cache::forever(self::ACTIVE_INSTANCE_ID_CACHE_KEY, $id);
+        return '';
+    }
+
+    /**
+     * Token da instância ativa (ou da informada). Sem isso o envio pode cair na conta do token do .env.
+     */
+    private function resolveInstanceToken(?string $instanceId = null): string
+    {
+        $instanceId = trim((string) ($instanceId ?: $this->resolveInstanceId()));
+
+        $cached = Cache::get(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY);
+        $cachedId = Cache::get(self::ACTIVE_INSTANCE_ID_CACHE_KEY);
+        if (is_string($cached) && trim($cached) !== ''
+            && ($instanceId === '' || (string) $cachedId === $instanceId)) {
+            return trim($cached);
         }
 
-        return $id;
+        $fromDb = $this->getPersistedSetting(self::DB_KEY_INSTANCE_TOKEN);
+        $dbId = $this->getPersistedSetting(self::DB_KEY_INSTANCE_ID);
+        if ($fromDb !== '' && ($instanceId === '' || $dbId === $instanceId)) {
+            Cache::forever(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY, $fromDb);
+
+            return $fromDb;
+        }
+
+        if ($instanceId !== '') {
+            $instance = $this->findInstanceById($instanceId);
+            $token = trim((string) ($instance['token'] ?? ''));
+            if ($token !== '') {
+                if ($instanceId === $this->resolveInstanceId()) {
+                    Cache::forever(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY, $token);
+                    $this->persistSetting(self::DB_KEY_INSTANCE_TOKEN, $token, 'Token da instância WhatsApp ativa');
+                }
+
+                return $token;
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -141,6 +231,7 @@ class WhatsAppService
         }
 
         try {
+            // Listagem usa a chave do .env (global ou admin), não o token da instância ativa.
             $res = Http::withHeaders([
                 'Content-Type' => 'application/json',
                 'apikey' => $this->apiKey,
@@ -198,16 +289,84 @@ class WhatsAppService
             return false;
         }
 
+        // Lista fresca da API para não pegar ID desatualizado do cache.
+        $this->listInstances(true);
         $instance = $this->findInstanceById($key) ?? $this->findInstanceByName($key);
-        if (!$instance) {
+        if (!$instance || trim((string) ($instance['id'] ?? '')) === '') {
             return false;
         }
 
-        Cache::forever(self::ACTIVE_INSTANCE_CACHE_KEY, (string) $instance['name']);
-        Cache::forever(self::ACTIVE_INSTANCE_ID_CACHE_KEY, (string) $instance['id']);
+        $this->rememberActiveInstance(
+            (string) $instance['name'],
+            (string) $instance['id'],
+            (string) ($instance['token'] ?? '')
+        );
         Cache::forget(self::INSTANCES_CACHE_KEY);
 
+        Log::info('WhatsApp: instância ativa alterada', [
+            'name' => $instance['name'],
+            'id' => $instance['id'],
+            'owner' => $instance['owner'] ?? null,
+            'has_token' => trim((string) ($instance['token'] ?? '')) !== '',
+        ]);
+
         return true;
+    }
+
+    private function rememberActiveInstance(string $name, string $id, string $token = ''): void
+    {
+        $name = trim($name);
+        $id = trim($id);
+        $token = trim($token);
+        if ($id === '') {
+            return;
+        }
+
+        Cache::forever(self::ACTIVE_INSTANCE_ID_CACHE_KEY, $id);
+        if ($name !== '') {
+            Cache::forever(self::ACTIVE_INSTANCE_CACHE_KEY, $name);
+        }
+        if ($token !== '') {
+            Cache::forever(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY, $token);
+        } else {
+            Cache::forget(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY);
+        }
+
+        $this->persistSetting(self::DB_KEY_INSTANCE_ID, $id, 'UUID da instância WhatsApp ativa (selecionada na UI)');
+        if ($name !== '') {
+            $this->persistSetting(self::DB_KEY_INSTANCE_NAME, $name, 'Nome da instância WhatsApp ativa (selecionada na UI)');
+        }
+        if ($token !== '') {
+            $this->persistSetting(self::DB_KEY_INSTANCE_TOKEN, $token, 'Token da instância WhatsApp ativa (selecionada na UI)');
+        }
+    }
+
+    private function getPersistedSetting(string $chave): string
+    {
+        try {
+            if (!Schema::hasTable('configuracoes_whatsapp')) {
+                return '';
+            }
+
+            return trim((string) ConfiguracaoWhatsapp::getValor($chave, ''));
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    private function persistSetting(string $chave, string $valor, ?string $descricao = null): void
+    {
+        try {
+            if (!Schema::hasTable('configuracoes_whatsapp')) {
+                return;
+            }
+            ConfiguracaoWhatsapp::setValor($chave, $valor, $descricao);
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp: falha ao persistir instância ativa no banco', [
+                'chave' => $chave,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -301,7 +460,23 @@ class WhatsAppService
             $payload['delay'] = max(1, $delayMs);
         }
 
-        $res = $this->postJson('send/text', $payload);
+        $instanceId = $this->resolveInstanceId();
+        if ($instanceId === '') {
+            return [
+                'success' => false,
+                'error' => 'Nenhuma instância WhatsApp ativa. Selecione uma em Notificações > Configuração WPP.',
+            ];
+        }
+
+        $instanceToken = $this->resolveInstanceToken($instanceId);
+        Log::info('WhatsApp: enviando texto', [
+            'numero' => $numero,
+            'instance_id' => $instanceId,
+            'instance_name' => $this->getActiveInstanceName(),
+            'using_instance_token' => $instanceToken !== '' && $instanceToken !== $this->apiKey,
+        ]);
+
+        $res = $this->postJson('send/text', $payload, $instanceId);
         $body = $res->json() ?? [];
 
         if ($this->isSuccessfulResponse($res, $body)) {
@@ -327,14 +502,16 @@ class WhatsAppService
      *
      * @param  array<int, string>  $events
      */
-    public function configurarWebhook(?string $url = null, array $events = ['MESSAGE', 'SEND_MESSAGE', 'CONNECTION']): bool
-    {
+    public function configurarWebhook(
+        ?string $url = null,
+        array $events = ['MESSAGE', 'SEND_MESSAGE', 'CONNECTION', 'READ_RECEIPT', 'QRCODE']
+    ): bool {
         $url ??= (string) config('whatsapp.webhook_url', '');
         if ($url === '' || !$this->isConfigurado()) {
             return false;
         }
 
-        $events = array_values(array_unique(array_merge(['MESSAGE'], $events)));
+        $events = array_values(array_unique(array_merge(['MESSAGE', 'READ_RECEIPT'], $events)));
         $payload = [
             'webhookUrl' => rtrim($url, '/'),
             'subscribe' => $events,
@@ -526,7 +703,11 @@ class WhatsAppService
     }
 
     /**
-     * Evolution GO /send/media espera JSON com url (http(s) ou data URI).
+     * Evolution GO /send/media:
+     * - url http(s): baixada pelo servidor
+     * - url sem http(s): tratada como base64 PURO (sem prefixo data:)
+     *   Enviar "data:image/...;base64,XXX" causa "invalid base64 encoding"
+     *   porque a API tenta decodificar a string inteira.
      *
      * @return array{success: bool, data?: array, error?: string, status?: int}
      */
@@ -546,9 +727,11 @@ class WhatsAppService
         }
 
         $base64 = trim($base64);
-        if (str_contains($base64, ',')) {
+        if (str_starts_with($base64, 'data:') && str_contains($base64, ',')) {
             $base64 = explode(',', $base64, 2)[1];
         }
+        // Remove quebras/espaços que quebram o decode no Evolution GO.
+        $base64 = preg_replace('/\s+/', '', $base64) ?? '';
 
         if ($base64 === '' || base64_decode($base64, true) === false) {
             return ['success' => false, 'error' => 'Conteúdo base64 inválido para envio de mídia.'];
@@ -557,11 +740,16 @@ class WhatsAppService
         $payload = [
             'number' => self::normalizarNumero($numero),
             'type' => $tipo,
-            'url' => 'data:' . $mime . ';base64,' . $base64,
-            'filename' => $fileName,
+            // Base64 puro — NÃO usar data URI (v0.7+ do Evolution GO).
+            'url' => $base64,
+            'filename' => $fileName !== '' ? $fileName : 'arquivo',
         ];
         if (trim($legenda) !== '') {
             $payload['caption'] = $legenda;
+        }
+        // Alguns builds aceitam mimetype auxiliar; não atrapalha se ignorado.
+        if ($mime !== '') {
+            $payload['mimetype'] = $mime;
         }
 
         $res = $this->postJson('send/media', $payload);
@@ -569,6 +757,36 @@ class WhatsAppService
 
         if ($this->isSuccessfulResponse($res, $body)) {
             return ['success' => true, 'data' => $body];
+        }
+
+        // Fallback: multipart com arquivo binário (quando JSON base64 falhar).
+        $decoded = base64_decode($base64, true);
+        if ($decoded !== false && $decoded !== '') {
+            $fallback = $this->enviarMidiaMultipart(
+                $numero,
+                $decoded,
+                $tipo,
+                $mime,
+                $fileName,
+                $legenda
+            );
+            if ($fallback['success'] ?? false) {
+                return $fallback;
+            }
+
+            Log::warning('WhatsApp Evolution GO: falha ao enviar mídia (JSON e multipart)', [
+                'status' => $res->status(),
+                'tipo' => $tipo,
+                'numero' => self::normalizarNumero($numero),
+                'json_response' => $body,
+                'multipart_error' => $fallback['error'] ?? null,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $this->resolverMensagemErro($body) ?: ($fallback['error'] ?? 'Falha ao enviar mídia'),
+                'status' => $res->status(),
+            ];
         }
 
         Log::warning('WhatsApp Evolution GO: falha ao enviar mídia', [
@@ -583,6 +801,63 @@ class WhatsAppService
             'error' => $this->resolverMensagemErro($body),
             'status' => $res->status(),
         ];
+    }
+
+    /**
+     * Fallback multipart/form-data para /send/media (upload binário).
+     *
+     * @return array{success: bool, data?: array, error?: string, status?: int}
+     */
+    private function enviarMidiaMultipart(
+        string $numero,
+        string $binary,
+        string $tipo,
+        string $mime,
+        string $fileName,
+        string $legenda = ''
+    ): array {
+        $fileName = $fileName !== '' ? $fileName : 'arquivo';
+
+        try {
+            $fields = [
+                'number' => self::normalizarNumero($numero),
+                'type' => $tipo,
+                'filename' => $fileName,
+            ];
+            if (trim($legenda) !== '') {
+                $fields['caption'] = $legenda;
+            }
+            if ($mime !== '') {
+                $fields['mimetype'] = $mime;
+            }
+
+            $res = Http::withHeaders([
+                'apikey' => $this->apiKey,
+                'instanceId' => $this->resolveInstanceId(),
+            ])
+                ->timeout(config('whatsapp.timeout', 120))
+                ->attach(
+                    'file',
+                    $binary,
+                    $fileName,
+                    $mime !== '' ? ['Content-Type' => $mime] : []
+                )
+                ->post($this->buildUrl('send/media'), $fields);
+
+            $body = $res->json() ?? [];
+
+            if ($this->isSuccessfulResponse($res, $body)) {
+                return ['success' => true, 'data' => $body];
+            }
+
+            return [
+                'success' => false,
+                'error' => $this->resolverMensagemErro($body),
+                'status' => $res->status(),
+            ];
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => 'Falha no upload multipart: ' . $e->getMessage()];
+        }
     }
 
     public function getConnectionStatus(?string $instanceId = null): array
@@ -741,9 +1016,13 @@ class WhatsAppService
         ];
     }
 
-    private function postJson(string $endpoint, array $payload = [], ?string $instanceId = null): \Illuminate\Http\Client\Response
-    {
-        return Http::withHeaders($this->getApiHeaders($instanceId))
+    private function postJson(
+        string $endpoint,
+        array $payload = [],
+        ?string $instanceId = null,
+        bool $useActiveInstanceToken = true
+    ): \Illuminate\Http\Client\Response {
+        return Http::withHeaders($this->getApiHeaders($instanceId, $useActiveInstanceToken))
             ->asJson()
             ->timeout(config('whatsapp.timeout', 120))
             ->post($this->buildUrl($endpoint), $payload);
@@ -770,9 +1049,13 @@ class WhatsAppService
     {
         $error = $body['error'] ?? null;
         if (is_array($error)) {
-            return (string) ($error['message'] ?? $error['code'] ?? json_encode($error));
+            $error = (string) ($error['message'] ?? $error['code'] ?? json_encode($error));
         }
         if (is_string($error) && $error !== '') {
+            if (stripos($error, 'not registered on WhatsApp') !== false) {
+                return 'Número não está registrado no WhatsApp (verifique DDD + número).';
+            }
+
             return $error;
         }
 

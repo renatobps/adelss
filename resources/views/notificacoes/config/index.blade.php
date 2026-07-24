@@ -390,7 +390,9 @@
                 data.forEach(function(it) {
                     var inst = it.instance || it;
                     var name = inst.instanceName || '—';
+                    var id = inst.instanceId || '';
                     var safeName = String(name).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    var safeId = String(id).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
                     var owner = inst.owner || '—';
                     var status = (inst.status || 'unknown').toLowerCase();
                     var selected = !!inst.selected || (instanciaAtiva && instanciaAtiva === name);
@@ -398,10 +400,11 @@
                     var usoHtml = selected
                         ? '<span class="badge bg-primary">Ativa</span>'
                         : '<span class="badge bg-light text-dark">Disponível</span>';
+                    var selectKey = safeId || safeName;
                     var selectBtn = selected
                         ? '<button class="btn btn-sm btn-primary me-1" disabled><i class="bx bx-check me-1"></i> Em uso</button>'
-                        : '<button class="btn btn-sm btn-outline-success me-1" onclick="selecionarInstancia(\'' + safeName + '\')"><i class="bx bx-target-lock me-1"></i> Usar esta</button>';
-                    html += '<tr><td>' + name + '</td><td>' + usoHtml + '</td><td>' + owner + '</td><td><span class="badge ' + badgeClass + '">' + status + '</span></td><td class="text-end">' + selectBtn + '<button class="btn btn-sm btn-outline-primary" onclick="reiniciarInstancia(\'' + safeName + '\')"><i class="bx bx-reset me-1"></i> Reiniciar</button></td></tr>';
+                        : '<button class="btn btn-sm btn-outline-success me-1" onclick="selecionarInstancia(\'' + selectKey + '\')"><i class="bx bx-target-lock me-1"></i> Usar esta</button>';
+                    html += '<tr><td>' + name + (id ? '<br><small class="text-muted">' + id + '</small>' : '') + '</td><td>' + usoHtml + '</td><td>' + owner + '</td><td><span class="badge ' + badgeClass + '">' + status + '</span></td><td class="text-end">' + selectBtn + '<button class="btn btn-sm btn-outline-primary" onclick="reiniciarInstancia(\'' + safeName + '\')"><i class="bx bx-reset me-1"></i> Reiniciar</button></td></tr>';
                 });
                 tbody.innerHTML = html;
             })

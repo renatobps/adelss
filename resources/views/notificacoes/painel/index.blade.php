@@ -14,9 +14,29 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 @endif
+@if(session('warning'))
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+        <i class="bx bx-error me-2"></i>{{ session('warning') }}
+        @if(session('envio_erros') && count(session('envio_erros')))
+            <ul class="mb-0 mt-2">
+                @foreach(session('envio_erros') as $motivo)
+                    <li>{{ $motivo }}</li>
+                @endforeach
+            </ul>
+        @endif
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
 @if(session('error'))
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         <i class="bx bx-error-circle me-2"></i>{{ session('error') }}
+        @if(session('envio_erros') && count(session('envio_erros')))
+            <ul class="mb-0 mt-2">
+                @foreach(session('envio_erros') as $motivo)
+                    <li>{{ $motivo }}</li>
+                @endforeach
+            </ul>
+        @endif
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
 @endif
@@ -71,7 +91,8 @@
                     @csrf
                     <div class="mb-3">
                         <label class="form-label">Mensagem / Legenda</label>
-                        <textarea name="mensagem" class="form-control @error('mensagem') is-invalid @enderror" rows="4" maxlength="4096" placeholder="Digite a mensagem (ou legenda da mídia)...">{{ old('mensagem') }}</textarea>
+                        <textarea name="mensagem" class="form-control @error('mensagem') is-invalid @enderror" rows="4" maxlength="4096" placeholder="Ex.: Olá {nome}!&#10;&#10;Hoje daremos continuidade...">{{ old('mensagem') }}</textarea>
+                        <small class="text-muted">Use <code>{nome}</code> para inserir o primeiro nome do destinatário (ex.: Renato).</small>
                         @error('mensagem')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="row">
@@ -119,8 +140,9 @@
                 <form method="GET" class="d-flex gap-2 flex-wrap">
                     <select name="status" class="form-select form-select-sm" style="width:auto;">
                         <option value="">Todos os status</option>
-                        <option value="enviada" {{ request('status') === 'enviada' ? 'selected' : '' }}>Enviada</option>
-                        <option value="erro" {{ request('status') === 'erro' ? 'selected' : '' }}>Erro</option>
+                        @foreach(\App\Models\NotificacaoEnviada::STATUSES as $key => $label)
+                            <option value="{{ $key }}" @selected(request('status') === $key)>{{ $label }}</option>
+                        @endforeach
                     </select>
                     <input type="date" name="data_inicio" class="form-control form-control-sm" style="width:auto;" value="{{ request('data_inicio') }}" placeholder="Início">
                     <input type="date" name="data_fim" class="form-control form-control-sm" style="width:auto;" value="{{ request('data_fim') }}" placeholder="Fim">
@@ -135,29 +157,58 @@
                                 <th>Destinatário</th>
                                 <th>Mensagem</th>
                                 <th>Status</th>
+                                <th>Motivo</th>
                                 <th>Data</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($notificacoes as $n)
+                                @php
+                                    $statusBadge = match($n->status) {
+                                        'enviada' => 'bg-primary',
+                                        'entregue' => 'bg-info text-dark',
+                                        'lida' => 'bg-success',
+                                        'erro' => 'bg-danger',
+                                        default => 'bg-secondary',
+                                    };
+                                    $destinatario = $n->member?->name ?? $n->telefone ?? '—';
+                                @endphp
                                 <tr>
+                                    <td>{{ $destinatario }}</td>
                                     <td>
-                                        {{ $n->member?->name ?? $n->telefone ?? '—' }}
+                                        <button type="button"
+                                                class="btn btn-link btn-sm text-start p-0 text-decoration-none notificacao-msg-btn"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#mensagemModal"
+                                                data-destinatario="{{ e($destinatario) }}"
+                                                data-status="{{ e($n->status_label) }}"
+                                                data-data="{{ $n->data_envio?->format('d/m/Y H:i') }}"
+                                                data-recebido="{{ $n->recebido_em?->format('d/m/Y H:i') }}"
+                                                data-lido="{{ $n->lido_em?->format('d/m/Y H:i') }}"
+                                                data-mensagem="{{ e($n->mensagem) }}"
+                                                title="Clique para ver a mensagem completa">
+                                            <small>{{ Str::limit($n->mensagem, 40) }}</small>
+                                        </button>
                                     </td>
-                                    <td><small>{{ Str::limit($n->mensagem, 40) }}</small></td>
                                     <td>
-                                        @if($n->status === 'enviada')
-                                            <span class="badge bg-success">Enviada</span>
-                                        @elseif($n->status === 'erro')
-                                            <span class="badge bg-danger">Erro</span>
+                                        <span class="badge {{ $statusBadge }}">{{ $n->status_label }}</span>
+                                        @if($n->status === 'entregue' && $n->recebido_em)
+                                            <div class="small text-muted">{{ $n->recebido_em->format('d/m H:i') }}</div>
+                                        @elseif($n->status === 'lida' && $n->lido_em)
+                                            <div class="small text-muted">{{ $n->lido_em->format('d/m H:i') }}</div>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($n->status === 'erro' && $n->erro_detalhes)
+                                            <small class="text-danger" title="{{ $n->erro_detalhes }}">{{ Str::limit($n->erro_detalhes, 80) }}</small>
                                         @else
-                                            <span class="badge bg-secondary">{{ $n->status }}</span>
+                                            <span class="text-muted">—</span>
                                         @endif
                                     </td>
                                     <td>{{ $n->data_envio?->format('d/m/Y H:i') }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="text-center py-3">Nenhum registro.</td></tr>
+                                <tr><td colspan="5" class="text-center py-3">Nenhum registro.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -169,4 +220,58 @@
         </section>
     </div>
 </div>
+
+{{-- Modal mensagem completa --}}
+<div class="modal fade" id="mensagemModal" tabindex="-1" aria-labelledby="mensagemModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mensagemModalLabel">Mensagem enviada</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3 small text-muted">
+                    <div><strong>Destinatário:</strong> <span id="msgModalDestinatario">—</span></div>
+                    <div><strong>Status:</strong> <span id="msgModalStatus">—</span></div>
+                    <div><strong>Enviada em:</strong> <span id="msgModalData">—</span></div>
+                    <div id="msgModalRecebidoWrap" class="d-none"><strong>Recebido em:</strong> <span id="msgModalRecebido">—</span></div>
+                    <div id="msgModalLidoWrap" class="d-none"><strong>Lida em:</strong> <span id="msgModalLido">—</span></div>
+                </div>
+                <div class="border rounded p-3 bg-light" style="white-space: pre-wrap; word-break: break-word;" id="msgModalTexto"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
+@push('scripts')
+<script>
+document.getElementById('mensagemModal')?.addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    if (!btn) return;
+
+    const decode = (value) => {
+        const el = document.createElement('textarea');
+        el.innerHTML = value || '';
+        return el.value;
+    };
+
+    document.getElementById('msgModalDestinatario').textContent = decode(btn.getAttribute('data-destinatario')) || '—';
+    document.getElementById('msgModalStatus').textContent = decode(btn.getAttribute('data-status')) || '—';
+    document.getElementById('msgModalData').textContent = btn.getAttribute('data-data') || '—';
+    document.getElementById('msgModalTexto').textContent = decode(btn.getAttribute('data-mensagem')) || '';
+
+    const recebido = btn.getAttribute('data-recebido') || '';
+    const lido = btn.getAttribute('data-lido') || '';
+    const wrapR = document.getElementById('msgModalRecebidoWrap');
+    const wrapL = document.getElementById('msgModalLidoWrap');
+    wrapR.classList.toggle('d-none', !recebido);
+    wrapL.classList.toggle('d-none', !lido);
+    document.getElementById('msgModalRecebido').textContent = recebido || '—';
+    document.getElementById('msgModalLido').textContent = lido || '—';
+});
+</script>
+@endpush
