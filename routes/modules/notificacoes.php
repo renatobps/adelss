@@ -27,6 +27,7 @@ Route::prefix('notificacoes')->name('notificacoes.')->middleware('module.access:
     Route::post('enquetes/{enquete}/enviar', [EnqueteController::class, 'enviar'])->name('enquetes.enviar');
     Route::get('painel', [PainelController::class, 'index'])->name('painel.index');
     Route::post('painel/enviar', [PainelController::class, 'enviar'])->name('painel.enviar');
+    Route::post('painel/historico/limpar', [PainelController::class, 'limparHistorico'])->name('painel.historico.limpar');
     Route::get('config', [ConfigController::class, 'index'])->name('config.index');
     Route::get('config/status', [ConfigController::class, 'status'])->name('config.status');
     Route::get('config/conectar', [ConfigController::class, 'conectar'])->name('config.conectar');

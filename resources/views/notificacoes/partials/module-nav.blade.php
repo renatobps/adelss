@@ -28,6 +28,7 @@
             'icon' => 'bx bxl-whatsapp',
             'route' => 'notificacoes.config.index',
             'active' => request()->routeIs('notificacoes.config.*'),
+            'brand' => 'whatsapp',
         ] : null,
         $canView ? [
             'label' => 'Templates',
@@ -48,7 +49,7 @@
     <div class="notificacoes-module-nav__grid">
         @foreach($items as $item)
             <a href="{{ route($item['route']) }}"
-               class="notificacoes-module-nav__item {{ !empty($item['active']) ? 'is-active' : '' }}">
+               class="notificacoes-module-nav__item {{ !empty($item['active']) ? 'is-active' : '' }} {{ !empty($item['brand']) ? 'is-brand-'.$item['brand'] : '' }}">
                 <i class="{{ $item['icon'] }}" aria-hidden="true"></i>
                 <span>{{ $item['label'] }}</span>
             </a>

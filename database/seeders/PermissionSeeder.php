@@ -693,6 +693,14 @@ class PermissionSeeder extends Seeder
                         ['name' => 'Gerenciar', 'key' => 'notificacoes.manage'],
                     ],
                 ],
+                [
+                    'name' => 'Histórico',
+                    'key' => 'notificacoes.historico',
+                    'description' => 'Permissões para limpar o histórico de notificações enviadas',
+                    'actions' => [
+                        ['name' => 'Gerenciar histórico', 'key' => 'notificacoes.historico.manage'],
+                    ],
+                ],
             ],
         ];
 

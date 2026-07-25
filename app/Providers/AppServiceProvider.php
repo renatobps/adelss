@@ -120,6 +120,7 @@ class AppServiceProvider extends ServiceProvider
         $notificacaoPolicy = NotificacaoPolicy::class;
         Gate::define('notificacoes.view', [$notificacaoPolicy, 'viewAny']);
         Gate::define('notificacoes.manage', [$notificacaoPolicy, 'manage']);
+        Gate::define('notificacoes.historico.manage', [$notificacaoPolicy, 'manageHistorico']);
 
         $moriahPolicy = MoriahPolicy::class;
         Gate::define('moriah.view', [$moriahPolicy, 'viewAny']);

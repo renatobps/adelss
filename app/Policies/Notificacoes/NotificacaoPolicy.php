@@ -17,4 +17,9 @@ class NotificacaoPolicy
     {
         return $user->is_admin || $user->hasPermission('notificacoes.manage');
     }
+
+    public function manageHistorico(User $user): bool
+    {
+        return $user->is_admin || $user->hasPermission('notificacoes.historico.manage');
+    }
 }

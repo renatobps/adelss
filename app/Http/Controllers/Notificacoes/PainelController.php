@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Department;
 use App\Models\Member;
 use App\Models\NotificacaoEnviada;
+use App\Services\AuditLogger;
 use App\Services\NotificacaoService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PainelController extends Controller
 {
@@ -27,7 +29,14 @@ class PainelController extends Controller
             $query->whereDate('data_envio', '<=', $request->data_fim);
         }
 
-        $notificacoes = $query->orderByDesc('data_envio')->paginate(15);
+        $perPage = (int) $request->input('per_page', 10);
+        if (! in_array($perPage, [10, 50, 100], true)) {
+            $perPage = 10;
+        }
+
+        $notificacoes = $query->orderByDesc('data_envio')
+            ->paginate($perPage)
+            ->withQueryString();
 
         $ultimoMes = now()->subDays(30);
         $stats = [
@@ -38,8 +47,75 @@ class PainelController extends Controller
 
         $members = Member::active()->whereNotNull('phone')->where('phone', '!=', '')->orderBy('name')->get(['id', 'name', 'phone']);
         $departments = Department::active()->orderBy('name')->get(['id', 'name']);
+        $canManageHistorico = $request->user()?->can('notificacoes.historico.manage') ?? false;
 
-        return view('notificacoes.painel.index', compact('notificacoes', 'stats', 'members', 'departments'));
+        return view('notificacoes.painel.index', compact(
+            'notificacoes',
+            'stats',
+            'members',
+            'departments',
+            'perPage',
+            'canManageHistorico'
+        ));
+    }
+
+    public function limparHistorico(Request $request)
+    {
+        $this->authorize('notificacoes.historico.manage');
+
+        $data = $request->validate([
+            'modo' => ['required', Rule::in(['tudo', 'antes_hoje', 'antes_data'])],
+            'data_limite' => ['nullable', 'date', 'required_if:modo,antes_data'],
+            'confirmacao' => ['required', 'string', 'in:EXCLUIR'],
+        ], [
+            'confirmacao.in' => 'Digite EXCLUIR para confirmar a exclusão.',
+            'data_limite.required_if' => 'Informe a data limite para exclusão.',
+        ]);
+
+        $query = NotificacaoEnviada::query();
+        $descricao = '';
+
+        if ($data['modo'] === 'tudo') {
+            $descricao = 'Excluir todo o histórico';
+        } elseif ($data['modo'] === 'antes_hoje') {
+            $query->whereDate('data_envio', '<', now()->toDateString());
+            $descricao = 'Excluir histórico anterior a hoje';
+        } else {
+            $query->whereDate('data_envio', '<', $data['data_limite']);
+            $descricao = 'Excluir histórico anterior a '.$data['data_limite'];
+        }
+
+        $apagados = (clone $query)->count();
+        $query->delete();
+
+        AuditLogger::log('notificacoes', 'historico.limpar', $descricao, [
+            'modo' => $data['modo'],
+            'data_limite' => $data['data_limite'] ?? null,
+            'registros_apagados' => $apagados,
+        ]);
+
+        if ($request->wantsJson() || $request->ajax()) {
+            $ultimoMes = now()->subDays(30);
+
+            return response()->json([
+                'success' => true,
+                'message' => $apagados === 1
+                    ? '1 registro removido do histórico.'
+                    : "{$apagados} registros removidos do histórico.",
+                'apagados' => $apagados,
+                'stats' => [
+                    'enviadas' => NotificacaoEnviada::where('status', 'enviada')->where('data_envio', '>=', $ultimoMes)->count(),
+                    'erros' => NotificacaoEnviada::where('status', 'erro')->where('data_envio', '>=', $ultimoMes)->count(),
+                    'total' => NotificacaoEnviada::where('data_envio', '>=', $ultimoMes)->count(),
+                ],
+            ]);
+        }
+
+        return redirect()
+            ->route('notificacoes.painel.index')
+            ->with('success', $apagados === 1
+                ? '1 registro removido do histórico.'
+                : "{$apagados} registros removidos do histórico.");
     }
 
     public function enviar(Request $request)
@@ -76,7 +152,7 @@ class PainelController extends Controller
         $erros = 0;
         $detalhesErros = [];
 
-        if (!empty($memberIds)) {
+        if (! empty($memberIds)) {
             $members = Member::whereIn('id', $memberIds)->get();
             $r = $isEnvioMidia
                 ? $service->enviarMidiaParaMembros($members, $arquivo, null, $mensagem)
@@ -85,7 +161,7 @@ class PainelController extends Controller
             $erros += $r['erros'];
             $detalhesErros = array_merge($detalhesErros, $r['detalhes_erros'] ?? []);
         }
-        if (!empty($departmentIds)) {
+        if (! empty($departmentIds)) {
             foreach (Department::whereIn('id', $departmentIds)->get() as $department) {
                 $r = $isEnvioMidia
                     ? $service->enviarMidiaParaDepartamento($department, $arquivo, null, $mensagem)
@@ -122,9 +198,6 @@ class PainelController extends Controller
     }
 
     /**
-     * Extrai números únicos a partir de texto (linhas, vírgulas ou ponto e vírgula).
-     * Só retorna entradas que, após normalização, tenham tamanho mínimo para BR (55 + DDD + número).
-     *
      * @return list<string>
      */
     private function parseTelefonesManuais(?string $raw): array
