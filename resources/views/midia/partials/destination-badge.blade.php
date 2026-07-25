@@ -7,16 +7,19 @@
         'publicando' => 'wait',
         default => 'pending',
     };
-    $icon = match ($dest) {
-        'reels' => 'bx-movie-play',
-        'stories' => 'bx-circle',
+    $isWhatsApp = $destination->isWhatsAppGroup();
+    $icon = match (true) {
+        $isWhatsApp => 'bxl-whatsapp',
+        $dest === 'reels' => 'bx-movie-play',
+        $dest === 'stories' => 'bx-circle',
         default => 'bx-grid-alt',
     };
-    $tip = $destination->destination_label . ': ' . $destination->status_label
+    $label = $destination->destination_label;
+    $tip = ($isWhatsApp ? 'WhatsApp · ' : '') . $label . ': ' . $destination->status_label
         . ($destination->error_message ? ' — ' . $destination->error_message : '');
 @endphp
-<span class="midia-dest-badge {{ $dest }}" title="{{ $tip }}" data-bs-toggle="tooltip" data-bs-placement="top">
+<span class="midia-dest-badge {{ $isWhatsApp ? 'whatsapp' : $dest }}" title="{{ $tip }}" data-bs-toggle="tooltip" data-bs-placement="top">
     <i class="bx {{ $icon }}"></i>
-    {{ $destination->destination_label }}
+    {{ $label }}
     <span class="status-dot {{ $dot }}"></span>
 </span>

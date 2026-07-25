@@ -16,7 +16,7 @@ class PublishScheduledInstagramPosts extends Command
 {
     protected $signature = 'midia:publish-instagram-posts';
 
-    protected $description = 'Publica posts do Instagram agendados (por destino: Feed/Reels/Stories)';
+    protected $description = 'Publica posts agendados (Instagram Feed/Reels/Stories e Grupo WhatsApp)';
 
     public function handle(InstagramService $instagram, GoogleDriveService $drive, WhatsAppService $whatsapp): int
     {
@@ -64,7 +64,10 @@ class PublishScheduledInstagramPosts extends Command
                         ])
                         ->values();
 
-                    $pendingKeys = $pending->pluck('destination')->values()->all();
+                    $instagramPending = $pending->filter(fn (ScheduledPostDestination $d) => $d->isInstagram())->values();
+                    $whatsappPending = $pending->filter(fn (ScheduledPostDestination $d) => $d->isWhatsApp())->values();
+
+                    $pendingKeys = $instagramPending->pluck('destination')->values()->all();
                     $handledIds = [];
 
                     $isExactlyFeedAndReels = count($pendingKeys) === 2
@@ -72,17 +75,21 @@ class PublishScheduledInstagramPosts extends Command
                         && in_array(ScheduledPostDestination::DEST_REELS, $pendingKeys, true);
 
                     if ($isExactlyFeedAndReels) {
-                        $feed = $pending->firstWhere('destination', ScheduledPostDestination::DEST_FEED);
-                        $reels = $pending->firstWhere('destination', ScheduledPostDestination::DEST_REELS);
+                        $feed = $instagramPending->firstWhere('destination', ScheduledPostDestination::DEST_FEED);
+                        $reels = $instagramPending->firstWhere('destination', ScheduledPostDestination::DEST_REELS);
                         $this->publishCombinedFeedReels($instagram, $post, $feed, $reels, $mediaUrl);
                         $handledIds = [$feed->id, $reels->id];
                     }
 
-                    foreach ($pending as $destination) {
+                    foreach ($instagramPending as $destination) {
                         if (in_array($destination->id, $handledIds, true)) {
                             continue;
                         }
                         $this->publishDestination($instagram, $post, $destination, $mediaUrl);
+                    }
+
+                    foreach ($whatsappPending as $destination) {
+                        $this->publishWhatsAppGroup($whatsapp, $post, $destination, $mediaUrl);
                     }
 
                     $status = $post->recalculateStatus();
@@ -104,7 +111,7 @@ class PublishScheduledInstagramPosts extends Command
 
                     $this->info("Post #{$post->id} finalizado com status: {$status}");
                 } catch (\Throwable $e) {
-                    Log::error('Falha não tratada ao publicar post Instagram', [
+                    Log::error('Falha não tratada ao publicar post agendado', [
                         'post_id' => $post->id,
                         'destination' => null,
                         'error' => $e->getMessage(),
@@ -117,7 +124,7 @@ class PublishScheduledInstagramPosts extends Command
                         $this->failAllPending($post, $e->getMessage());
                         $post->recalculateStatus();
                     } catch (\Throwable $inner) {
-                        Log::error('Falha ao marcar post Instagram após erro', [
+                        Log::error('Falha ao marcar post agendado após erro', [
                             'post_id' => $post->id,
                             'error' => $inner->getMessage(),
                         ]);
@@ -137,6 +144,57 @@ class PublishScheduledInstagramPosts extends Command
             $this->error($e->getMessage());
 
             return self::FAILURE;
+        }
+    }
+
+    private function publishWhatsAppGroup(
+        WhatsAppService $whatsapp,
+        ScheduledPost $post,
+        ScheduledPostDestination $destination,
+        string $mediaUrl
+    ): void {
+        $destination->update([
+            'status' => ScheduledPostDestination::STATUS_PUBLISHING,
+            'error_message' => null,
+        ]);
+
+        try {
+            if (!$destination->isWhatsAppGroup()) {
+                throw new \RuntimeException('Destino WhatsApp inválido.');
+            }
+            if (!filled($destination->target_id)) {
+                throw new \RuntimeException('Grupo do WhatsApp não informado (target_id).');
+            }
+
+            $mediaType = $post->isVideo() ? 'video' : 'image';
+            $result = $whatsapp->sendMediaToGroup(
+                (string) $destination->target_id,
+                $mediaUrl,
+                (string) $post->caption,
+                $mediaType
+            );
+
+            if (!($result['success'] ?? false)) {
+                throw new \RuntimeException($result['error'] ?? 'Falha ao enviar mídia ao grupo do WhatsApp.');
+            }
+
+            $publishedAt = now();
+            $destination->update(array_merge([
+                'status' => ScheduledPostDestination::STATUS_PUBLISHED,
+                'published_at' => $publishedAt,
+                'error_message' => null,
+            ], $destination->removalPayloadForPublished($publishedAt)));
+        } catch (\Throwable $e) {
+            Log::error('Falha WhatsApp grupo', [
+                'post_id' => $post->id,
+                'destination' => $destination->destination,
+                'target_id' => $destination->target_id,
+                'error' => $e->getMessage(),
+            ]);
+            $destination->update([
+                'status' => ScheduledPostDestination::STATUS_ERROR,
+                'error_message' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -260,7 +318,7 @@ class PublishScheduledInstagramPosts extends Command
             return '• ' . $d->destination_label . ': ' . ($d->error_message ?: 'erro desconhecido');
         })->implode("\n");
 
-        $message = "⚠️ *ADELSS — Instagram*\n"
+        $message = "⚠️ *ADELSS — Mídia*\n"
             . "Falha ao publicar post #{$post->id}.\n"
             . 'Horário: ' . optional($post->scheduled_for)->format('d/m/Y H:i') . "\n"
             . "Destinos com erro:\n{$lines}";

@@ -47,11 +47,11 @@
                 <i class="bx bx-list-ul"></i>
             </button>
         </div>
-        @can('midia.instagram.schedule')
+        @if(auth()->user()->can('midia.instagram.schedule') || auth()->user()->can('midia.whatsapp.schedule'))
             <a href="{{ route('midia.instagram.posts.create') }}" class="btn btn-primary btn-sm">
                 <i class="bx bx-plus"></i> Agendar publicação
             </a>
-        @endcan
+        @endif
     </div>
 </div>
 
@@ -60,11 +60,11 @@
         <div class="card-body midia-ig-empty text-center py-5">
             <div class="midia-ig-empty-icon mb-3"><i class="bx bx-calendar-event"></i></div>
             <p class="text-muted mb-3">Nenhuma publicação agendada.</p>
-            @can('midia.instagram.schedule')
+            @if(auth()->user()->can('midia.instagram.schedule') || auth()->user()->can('midia.whatsapp.schedule'))
                 <a href="{{ route('midia.instagram.posts.create') }}" class="btn btn-primary btn-sm">
                     <i class="bx bx-plus"></i> Agendar publicação
                 </a>
-            @endcan
+            @endif
         </div>
     </div>
 @else

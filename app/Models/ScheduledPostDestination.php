@@ -8,11 +8,23 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ScheduledPostDestination extends Model
 {
+    public const CHANNEL_INSTAGRAM = 'instagram';
+    public const CHANNEL_WHATSAPP = 'whatsapp';
+
     public const DEST_FEED = 'feed';
     public const DEST_REELS = 'reels';
     public const DEST_STORIES = 'stories';
+    public const DEST_GRUPO = 'grupo';
 
     public const DESTINATIONS = [
+        self::DEST_FEED => 'Feed',
+        self::DEST_REELS => 'Reels',
+        self::DEST_STORIES => 'Stories',
+        self::DEST_GRUPO => 'Grupo do WhatsApp',
+    ];
+
+    /** Destinos Instagram (chips + validação de tipo). */
+    public const INSTAGRAM_DESTINATIONS = [
         self::DEST_FEED => 'Feed',
         self::DEST_REELS => 'Reels',
         self::DEST_STORIES => 'Stories',
@@ -44,7 +56,10 @@ class ScheduledPostDestination extends Model
 
     protected $fillable = [
         'scheduled_post_id',
+        'channel',
         'destination',
+        'target_id',
+        'target_name',
         'status',
         'instagram_media_id',
         'error_message',
@@ -70,12 +85,33 @@ class ScheduledPostDestination extends Model
 
     public function getDestinationLabelAttribute(): string
     {
+        if ($this->isWhatsAppGroup()) {
+            return filled($this->target_name)
+                ? (string) $this->target_name
+                : 'Grupo do WhatsApp';
+        }
+
         return self::DESTINATIONS[$this->destination] ?? $this->destination;
     }
 
     public function getStatusLabelAttribute(): string
     {
         return self::STATUSES[$this->status] ?? $this->status;
+    }
+
+    public function isWhatsApp(): bool
+    {
+        return ($this->channel ?: self::CHANNEL_INSTAGRAM) === self::CHANNEL_WHATSAPP;
+    }
+
+    public function isWhatsAppGroup(): bool
+    {
+        return $this->isWhatsApp() && $this->destination === self::DEST_GRUPO;
+    }
+
+    public function isInstagram(): bool
+    {
+        return !$this->isWhatsApp();
     }
 
     public function canRetry(): bool
@@ -85,12 +121,13 @@ class ScheduledPostDestination extends Model
 
     public function isStories(): bool
     {
-        return $this->destination === self::DEST_STORIES;
+        return $this->isInstagram() && $this->destination === self::DEST_STORIES;
     }
 
     public function isPermanentDestination(): bool
     {
-        return in_array($this->destination, [self::DEST_FEED, self::DEST_REELS], true);
+        return $this->isInstagram()
+            && in_array($this->destination, [self::DEST_FEED, self::DEST_REELS], true);
     }
 
     /**
@@ -100,6 +137,14 @@ class ScheduledPostDestination extends Model
      */
     public function removalPayloadForPublished(CarbonInterface $publishedAt): array
     {
+        if ($this->isWhatsApp()) {
+            return [
+                'remove_at' => null,
+                'removal_status' => self::REMOVAL_NONE,
+                'removal_error' => null,
+            ];
+        }
+
         if ($this->isStories()) {
             return [
                 'remove_at' => $publishedAt->copy()->addHours(24),
@@ -128,6 +173,10 @@ class ScheduledPostDestination extends Model
     /** Texto curto para a listagem (por destino). */
     public function removalSummaryLabel(): string
     {
+        if ($this->isWhatsApp()) {
+            return '';
+        }
+
         if ($this->removal_status === self::REMOVAL_DONE && $this->removed_at) {
             return 'Removido em ' . $this->removed_at->format('d/m/Y');
         }

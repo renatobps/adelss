@@ -12,9 +12,15 @@
 @section('content')
 @include('midia.partials.nav', ['active' => 'instagram'])
 
-@unless($instagramConnected)
-    <div class="alert alert-warning">Conecte o Instagram antes de agendar. <a href="{{ route('midia.settings') }}">Configurações</a></div>
-@endunless
+@if($canScheduleInstagram && !$instagramConnected)
+    <div class="alert alert-warning">
+        Conecte o Instagram antes de agendar para Feed/Reels/Stories.
+        <a href="{{ route('midia.settings') }}">Configurações</a>
+        @if($canScheduleWhatsApp)
+            — você ainda pode agendar só para Grupo do WhatsApp.
+        @endif
+    </div>
+@endif
 
 @if($errors->any())
     <div class="alert alert-danger">
@@ -99,11 +105,16 @@
                             'feed' => 'bx-grid-alt',
                             'reels' => 'bx-movie-play',
                             'stories' => 'bx-circle',
+                            'grupo' => 'bxl-whatsapp',
                         ];
-                        $oldDest = collect(old('destinations', ['feed']));
+                        $defaultDest = $canScheduleInstagram ? ['feed'] : ($canScheduleWhatsApp ? ['grupo'] : []);
+                        $oldDest = collect(old('destinations', $defaultDest));
+                        $availableDestinations = collect(\App\Models\ScheduledPostDestination::DESTINATIONS)
+                            ->when(!$canScheduleInstagram, fn ($c) => $c->except(['feed', 'reels', 'stories']))
+                            ->when(!$canScheduleWhatsApp, fn ($c) => $c->except(['grupo']));
                     @endphp
                     <div class="midia-dest-chips">
-                        @foreach(\App\Models\ScheduledPostDestination::DESTINATIONS as $key => $label)
+                        @foreach($availableDestinations as $key => $label)
                             <label class="midia-dest-chip {{ $key }} {{ $oldDest->contains($key) ? 'is-active' : '' }}" for="dest_{{ $key }}">
                                 <input class="destination-check" type="checkbox"
                                        name="destinations[]" value="{{ $key }}" id="dest_{{ $key }}"
@@ -113,9 +124,26 @@
                             </label>
                         @endforeach
                     </div>
-                    <div class="form-text" id="destHelp">Reels exige vídeo. Feed+Reels juntos usam uma única publicação otimizada.</div>
+                    <div class="form-text" id="destHelp">Reels exige vídeo. Feed+Reels juntos usam uma única publicação otimizada. Grupo do WhatsApp aceita foto ou vídeo.</div>
                     <div class="text-danger small d-none" id="reelsError">Reels exige vídeo — remova essa opção ou envie um vídeo.</div>
                 </div>
+
+                @if($canScheduleWhatsApp)
+                    <div class="col-md-6 {{ $oldDest->contains('grupo') ? '' : 'd-none' }}" id="whatsappGroupWrap">
+                        <label class="form-label">Selecione o grupo <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <select name="whatsapp_group_jid" id="whatsapp_group_jid" class="form-select">
+                                <option value="">Carregando grupos...</option>
+                            </select>
+                            <button type="button" class="btn btn-outline-secondary" id="whatsappGroupsRefresh" title="Atualizar lista">
+                                <i class="bx bx-refresh"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" name="whatsapp_group_name" id="whatsapp_group_name" value="{{ old('whatsapp_group_name') }}">
+                        <div class="form-text">Grupos da mesma instância WhatsApp usada em Notificações. A legenda acima será enviada ao grupo.</div>
+                        <div class="text-danger small d-none" id="whatsappGroupError">Selecione o grupo do WhatsApp.</div>
+                    </div>
+                @endif
 
                 <div class="col-md-6" id="removeAfterWrap">
                     <label class="form-label">Remover automaticamente após (dias)</label>
@@ -152,7 +180,8 @@
             </div>
             <div class="d-flex justify-content-end gap-2 mt-4">
                 <a href="{{ route('midia.instagram.posts.index') }}" class="btn btn-link">Cancelar</a>
-                <button class="btn btn-primary" type="submit" id="submitBtn" @disabled(!$instagramConnected)>Agendar</button>
+                <button class="btn btn-primary" type="submit" id="submitBtn"
+                        @disabled(!$canScheduleInstagram && !$canScheduleWhatsApp)>Agendar</button>
             </div>
         </form>
     </div>
@@ -218,12 +247,20 @@
 <script>
 (function () {
     const browseUrl = @json($browseUrl);
+    const whatsappGroupsUrl = @json($whatsappGroupsUrl ?? null);
+    const oldWhatsappGroupJid = @json(old('whatsapp_group_jid', ''));
     const form = document.getElementById('scheduleForm');
     const mediaFileId = document.getElementById('media_file_id');
     const mediaKind = document.getElementById('media_kind');
     const upload = document.getElementById('media_upload');
     const reels = document.getElementById('dest_reels');
     const reelsError = document.getElementById('reelsError');
+    const grupoCheck = document.getElementById('dest_grupo');
+    const whatsappGroupWrap = document.getElementById('whatsappGroupWrap');
+    const whatsappGroupSelect = document.getElementById('whatsapp_group_jid');
+    const whatsappGroupName = document.getElementById('whatsapp_group_name');
+    const whatsappGroupError = document.getElementById('whatsappGroupError');
+    const whatsappGroupsRefresh = document.getElementById('whatsappGroupsRefresh');
     const emptyBox = document.getElementById('mediaPickerEmpty');
     const selectedBox = document.getElementById('mediaPickerSelected');
     const selectedName = document.getElementById('mediaSelectedName');
@@ -252,18 +289,78 @@
         return mediaKind.value || '';
     }
 
+    function syncWhatsAppGroupField() {
+        const show = !!(grupoCheck && grupoCheck.checked);
+        if (whatsappGroupWrap) {
+            whatsappGroupWrap.classList.toggle('d-none', !show);
+        }
+        if (!show && whatsappGroupError) {
+            whatsappGroupError.classList.add('d-none');
+        }
+        if (show && whatsappGroupSelect && whatsappGroupSelect.options.length <= 1) {
+            loadWhatsAppGroups();
+        }
+    }
+
+    function syncWhatsAppGroupName() {
+        if (!whatsappGroupSelect || !whatsappGroupName) return;
+        const opt = whatsappGroupSelect.options[whatsappGroupSelect.selectedIndex];
+        whatsappGroupName.value = opt && opt.value ? (opt.textContent || '').trim() : '';
+    }
+
+    async function loadWhatsAppGroups() {
+        if (!whatsappGroupsUrl || !whatsappGroupSelect) return;
+        const previous = whatsappGroupSelect.value || oldWhatsappGroupJid || '';
+        whatsappGroupSelect.innerHTML = '<option value="">Carregando grupos...</option>';
+        whatsappGroupSelect.disabled = true;
+        try {
+            const res = await fetch(whatsappGroupsUrl, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await res.json();
+            whatsappGroupSelect.innerHTML = '<option value="">Selecione o grupo...</option>';
+            (data.groups || []).forEach((g) => {
+                const opt = document.createElement('option');
+                opt.value = g.jid;
+                opt.textContent = g.name || g.jid;
+                if (previous && previous === g.jid) opt.selected = true;
+                whatsappGroupSelect.appendChild(opt);
+            });
+            if (!(data.success) && (data.message || data.error)) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = data.message || data.error;
+                whatsappGroupSelect.appendChild(opt);
+            }
+            syncWhatsAppGroupName();
+        } catch (e) {
+            whatsappGroupSelect.innerHTML = '<option value="">Falha ao carregar grupos</option>';
+        } finally {
+            whatsappGroupSelect.disabled = false;
+        }
+    }
+
     function validateDestinations() {
         const checks = [...document.querySelectorAll('.destination-check:checked')];
         if (!checks.length) {
-            alert('Selecione pelo menos um destino (Feed, Reels ou Stories).');
+            alert('Selecione pelo menos um destino.');
             return false;
         }
         const kind = selectedKind();
-        if (reels.checked && kind !== 'video') {
+        if (reels && reels.checked && kind !== 'video') {
             reelsError.classList.remove('d-none');
             return false;
         }
-        reelsError.classList.add('d-none');
+        if (reelsError) reelsError.classList.add('d-none');
+
+        if (grupoCheck && grupoCheck.checked) {
+            if (!whatsappGroupSelect || !whatsappGroupSelect.value) {
+                if (whatsappGroupError) whatsappGroupError.classList.remove('d-none');
+                return false;
+            }
+            syncWhatsAppGroupName();
+        }
+        if (whatsappGroupError) whatsappGroupError.classList.add('d-none');
         return true;
     }
 
@@ -490,10 +587,18 @@
             input.closest('.midia-dest-chip')?.classList.toggle('is-active', input.checked);
             validateDestinations();
             syncRemovalField();
+            syncWhatsAppGroupField();
         };
         input.addEventListener('change', sync);
         sync();
     });
+
+    whatsappGroupSelect?.addEventListener('change', syncWhatsAppGroupName);
+    whatsappGroupsRefresh?.addEventListener('click', () => loadWhatsAppGroups());
+
+    if (grupoCheck?.checked) {
+        loadWhatsAppGroups();
+    }
 
     form?.addEventListener('submit', (e) => {
         if (!validateDestinations()) {

@@ -7,6 +7,7 @@ use App\Models\InstagramSetting;
 use App\Models\MediaFile;
 use App\Models\ScheduledPost;
 use App\Models\ScheduledPostDestination;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -38,6 +39,7 @@ class ScheduledPostController extends Controller
 
     public function create()
     {
+        $user = Auth::user();
         $selectedId = old('media_file_id');
         $selectedMediaFile = $selectedId
             ? MediaFile::query()->find($selectedId)
@@ -48,14 +50,17 @@ class ScheduledPostController extends Controller
             'selectedMediaFile' => $selectedMediaFile,
             'instagramConnected' => InstagramSetting::current()->isConnected(),
             'browseUrl' => route('midia.files.browse'),
+            'canScheduleInstagram' => $user?->is_admin || $user?->hasPermission('midia.instagram.schedule'),
+            'canScheduleWhatsApp' => $user?->is_admin || $user?->hasPermission('midia.whatsapp.schedule'),
+            'whatsappGroupsUrl' => route('midia.whatsapp.grupos'),
         ]);
     }
 
     public function store(Request $request)
     {
-        if (!InstagramSetting::current()->isConnected()) {
-            return back()->with('error', 'Conecte o Instagram nas configurações de Mídia.')->withInput();
-        }
+        $user = Auth::user();
+        $canIg = $user?->is_admin || $user?->hasPermission('midia.instagram.schedule');
+        $canWa = $user?->is_admin || $user?->hasPermission('midia.whatsapp.schedule');
 
         $validated = $request->validate([
             'media_file_id' => 'nullable|exists:media_files,id',
@@ -66,9 +71,11 @@ class ScheduledPostController extends Controller
             'scheduled_for' => 'required|date|after:now',
             'destinations' => 'required|array|min:1',
             'destinations.*' => Rule::in(array_keys(ScheduledPostDestination::DESTINATIONS)),
+            'whatsapp_group_jid' => 'nullable|string|max:80',
+            'whatsapp_group_name' => 'nullable|string|max:180',
         ], [
-            'destinations.required' => 'Selecione pelo menos um destino (Feed, Reels ou Stories).',
-            'destinations.min' => 'Selecione pelo menos um destino (Feed, Reels ou Stories).',
+            'destinations.required' => 'Selecione pelo menos um destino.',
+            'destinations.min' => 'Selecione pelo menos um destino.',
         ]);
 
         if (empty($validated['media_file_id']) && !$request->hasFile('media')) {
@@ -78,14 +85,45 @@ class ScheduledPostController extends Controller
         $mediaKind = $this->resolveMediaKind($request, $validated['media_file_id'] ?? null);
         $destinations = array_values(array_unique($validated['destinations']));
 
-        if (in_array(ScheduledPostDestination::DEST_REELS, $destinations, true)
+        $instagramDests = array_values(array_intersect(
+            $destinations,
+            array_keys(ScheduledPostDestination::INSTAGRAM_DESTINATIONS)
+        ));
+        $hasWhatsApp = in_array(ScheduledPostDestination::DEST_GRUPO, $destinations, true);
+
+        if ($instagramDests !== [] && !$canIg) {
+            throw ValidationException::withMessages([
+                'destinations' => 'Sem permissão para agendar no Instagram.',
+            ]);
+        }
+        if ($hasWhatsApp && !$canWa) {
+            throw ValidationException::withMessages([
+                'destinations' => 'Sem permissão para agendar no Grupo do WhatsApp.',
+            ]);
+        }
+
+        if ($instagramDests !== [] && !InstagramSetting::current()->isConnected()) {
+            return back()->with('error', 'Conecte o Instagram nas configurações de Mídia.')->withInput();
+        }
+
+        if (in_array(ScheduledPostDestination::DEST_REELS, $instagramDests, true)
             && $mediaKind !== ScheduledPost::KIND_VIDEO) {
             throw ValidationException::withMessages([
                 'destinations' => 'Reels exige vídeo — remova essa opção ou envie um vídeo.',
             ]);
         }
 
-        $hasPermanent = (bool) array_intersect($destinations, [
+        $whatsappGroupJid = trim((string) ($validated['whatsapp_group_jid'] ?? ''));
+        $whatsappGroupName = trim((string) ($validated['whatsapp_group_name'] ?? ''));
+        if ($hasWhatsApp) {
+            if ($whatsappGroupJid === '' || !str_contains($whatsappGroupJid, '@g.us')) {
+                throw ValidationException::withMessages([
+                    'whatsapp_group_jid' => 'Selecione o grupo do WhatsApp.',
+                ]);
+            }
+        }
+
+        $hasPermanent = (bool) array_intersect($instagramDests, [
             ScheduledPostDestination::DEST_FEED,
             ScheduledPostDestination::DEST_REELS,
         ]);
@@ -98,7 +136,17 @@ class ScheduledPostController extends Controller
             $imagePath = $request->file('media')->store('instagram-uploads', 'public');
         }
 
-        DB::transaction(function () use ($validated, $destinations, $mediaKind, $imagePath, $removeAfterDays) {
+        DB::transaction(function () use (
+            $validated,
+            $destinations,
+            $instagramDests,
+            $hasWhatsApp,
+            $whatsappGroupJid,
+            $whatsappGroupName,
+            $mediaKind,
+            $imagePath,
+            $removeAfterDays
+        ) {
             $post = ScheduledPost::create([
                 'media_file_id' => $validated['media_file_id'] ?? null,
                 'image_path' => $imagePath,
@@ -112,7 +160,7 @@ class ScheduledPostController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            foreach ($destinations as $destination) {
+            foreach ($instagramDests as $destination) {
                 $isPermanent = in_array($destination, [
                     ScheduledPostDestination::DEST_FEED,
                     ScheduledPostDestination::DEST_REELS,
@@ -120,9 +168,23 @@ class ScheduledPostController extends Controller
 
                 ScheduledPostDestination::create([
                     'scheduled_post_id' => $post->id,
+                    'channel' => ScheduledPostDestination::CHANNEL_INSTAGRAM,
                     'destination' => $destination,
                     'status' => ScheduledPostDestination::STATUS_PENDING,
                     'remove_after_days' => $isPermanent ? $removeAfterDays : null,
+                    'removal_status' => ScheduledPostDestination::REMOVAL_NONE,
+                ]);
+            }
+
+            if ($hasWhatsApp) {
+                ScheduledPostDestination::create([
+                    'scheduled_post_id' => $post->id,
+                    'channel' => ScheduledPostDestination::CHANNEL_WHATSAPP,
+                    'destination' => ScheduledPostDestination::DEST_GRUPO,
+                    'target_id' => $whatsappGroupJid,
+                    'target_name' => $whatsappGroupName !== '' ? $whatsappGroupName : null,
+                    'status' => ScheduledPostDestination::STATUS_PENDING,
+                    'remove_after_days' => null,
                     'removal_status' => ScheduledPostDestination::REMOVAL_NONE,
                 ]);
             }
@@ -131,6 +193,28 @@ class ScheduledPostController extends Controller
         return redirect()
             ->route('midia.instagram.posts.index')
             ->with('success', 'Publicação agendada com sucesso.');
+    }
+
+    public function listWhatsAppGroups(WhatsAppService $whatsapp)
+    {
+        $user = Auth::user();
+        if (!$user?->is_admin && !$user?->hasPermission('midia.whatsapp.schedule')) {
+            abort(403, 'Sem permissão para listar grupos do WhatsApp.');
+        }
+
+        $result = $whatsapp->listGroups();
+        if (!($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['error'] ?? 'Falha ao listar grupos.',
+                'groups' => [],
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'groups' => $result['groups'] ?? [],
+        ]);
     }
 
     public function destroy(ScheduledPost $scheduledPost)
@@ -153,6 +237,15 @@ class ScheduledPostController extends Controller
     {
         if (!$destination->canRetry()) {
             return back()->with('error', 'Somente destinos com erro podem ser reenviados.');
+        }
+
+        $user = Auth::user();
+        if ($destination->isWhatsApp()) {
+            if (!$user?->is_admin && !$user?->hasPermission('midia.whatsapp.schedule')) {
+                return back()->with('error', 'Sem permissão para reenviar ao WhatsApp.');
+            }
+        } elseif (!$user?->is_admin && !$user?->hasPermission('midia.instagram.schedule')) {
+            return back()->with('error', 'Sem permissão para reenviar ao Instagram.');
         }
 
         $destination->update([

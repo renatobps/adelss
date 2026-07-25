@@ -24,6 +24,8 @@ Route::prefix('midia')->name('midia.')->middleware('module.access:midia')->group
     Route::post('instagram/publicacoes/destinos/{destination}/retry', [ScheduledPostController::class, 'retryDestination'])
         ->name('instagram.posts.destinations.retry');
 
+    Route::get('whatsapp/grupos', [ScheduledPostController::class, 'listWhatsAppGroups'])->name('whatsapp.grupos');
+
     Route::get('/', [MediaController::class, 'index'])->name('index');
     Route::get('/arquivos/browse', [MediaController::class, 'browse'])->name('files.browse');
     Route::post('/upload', [MediaController::class, 'store'])->name('upload');

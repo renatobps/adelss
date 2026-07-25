@@ -73,13 +73,12 @@
                     <div class="small text-danger mt-1">{{ $destination->error_message }}</div>
                 @endif
             </div>
-            @if($destination->canRetry())
-                @can('midia.instagram.schedule')
-                    <form method="POST" action="{{ route('midia.instagram.posts.destinations.retry', $destination) }}">
-                        @csrf
-                        <button class="btn btn-sm btn-outline-warning" type="submit">Tentar novamente</button>
-                    </form>
-                @endcan
+            @if($destination->canRetry()
+                && (auth()->user()->can('midia.instagram.schedule') || auth()->user()->can('midia.whatsapp.schedule')))
+                <form method="POST" action="{{ route('midia.instagram.posts.destinations.retry', $destination) }}">
+                    @csrf
+                    <button class="btn btn-sm btn-outline-warning" type="submit">Tentar novamente</button>
+                </form>
             @endif
         </div>
     @empty

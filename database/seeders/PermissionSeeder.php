@@ -1128,6 +1128,14 @@ class PermissionSeeder extends Seeder
                         ['name' => 'Configurações', 'key' => 'midia.instagram.configuracoes.manage'],
                     ],
                 ],
+                [
+                    'name' => 'WhatsApp (Mídia)',
+                    'key' => 'midia.whatsapp',
+                    'description' => 'Publicações agendadas para grupos do WhatsApp',
+                    'actions' => [
+                        ['name' => 'Agendar', 'key' => 'midia.whatsapp.schedule'],
+                    ],
+                ],
             ],
         ];
 

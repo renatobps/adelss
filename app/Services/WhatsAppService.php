@@ -498,6 +498,144 @@ class WhatsAppService
     }
 
     /**
+     * Lista grupos WhatsApp da instância ativa (Evolution GO GET /group/list).
+     *
+     * @return array{success: bool, groups?: array<int, array{jid: string, name: string}>, error?: string}
+     */
+    public function listGroups(): array
+    {
+        if (!$this->isConfigurado()) {
+            return [
+                'success' => false,
+                'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e selecione uma instância ativa em Notificações > Configuração WPP.',
+            ];
+        }
+
+        try {
+            $res = Http::withHeaders($this->getApiHeaders())
+                ->timeout(config('whatsapp.timeout', 120))
+                ->get($this->buildUrl('group/list'));
+            $body = $res->json() ?? [];
+
+            if (!$this->isSuccessfulResponse($res, $body)) {
+                return [
+                    'success' => false,
+                    'error' => $this->resolverMensagemErro($body) ?: 'Falha ao listar grupos do WhatsApp.',
+                    'status' => $res->status(),
+                ];
+            }
+
+            $raw = $body['groups']
+                ?? $body['data']
+                ?? $body['result']
+                ?? (is_array($body) && array_is_list($body) ? $body : []);
+
+            if (!is_array($raw)) {
+                $raw = [];
+            }
+
+            $groups = [];
+            foreach ($raw as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $jid = (string) ($item['JID'] ?? $item['jid'] ?? $item['id'] ?? $item['groupJid'] ?? '');
+                $name = trim((string) ($item['Name'] ?? $item['name'] ?? $item['subject'] ?? ''));
+                if ($jid === '' || !str_contains($jid, '@g.us')) {
+                    continue;
+                }
+                $groups[] = [
+                    'jid' => $jid,
+                    'name' => $name !== '' ? $name : $jid,
+                ];
+            }
+
+            usort($groups, fn ($a, $b) => strcasecmp($a['name'], $b['name']));
+
+            return ['success' => true, 'groups' => $groups];
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp Evolution GO: falha ao listar grupos', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'error' => 'Falha ao listar grupos: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
+     * Envia mídia para um grupo WhatsApp (JID @g.us) via POST /send/media com URL pública.
+     * Não normaliza o JID como telefone — preserva o sufixo @g.us.
+     *
+     * @return array{success: bool, data?: array, error?: string, status?: int}
+     */
+    public function sendMediaToGroup(string $groupJid, string $mediaUrl, string $caption, string $type): array
+    {
+        if (!$this->isConfigurado()) {
+            return [
+                'success' => false,
+                'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e selecione uma instância ativa em Notificações > Configuração WPP.',
+            ];
+        }
+
+        $groupJid = trim($groupJid);
+        if ($groupJid === '' || !str_contains($groupJid, '@g.us')) {
+            return ['success' => false, 'error' => 'JID do grupo WhatsApp inválido.'];
+        }
+
+        $type = strtolower(trim($type));
+        if (!in_array($type, ['image', 'video', 'document'], true)) {
+            return ['success' => false, 'error' => 'Tipo de mídia inválido. Use: image, video ou document.'];
+        }
+
+        $mediaUrl = trim($mediaUrl);
+        if ($mediaUrl === '' || !preg_match('#^https?://#i', $mediaUrl)) {
+            return ['success' => false, 'error' => 'URL pública da mídia inválida para envio ao WhatsApp.'];
+        }
+
+        $payload = [
+            'number' => $groupJid,
+            'url' => $mediaUrl,
+            'type' => $type,
+        ];
+        if (trim($caption) !== '') {
+            $payload['caption'] = $caption;
+        }
+
+        $filename = basename(parse_url($mediaUrl, PHP_URL_PATH) ?: '');
+        if ($filename !== '') {
+            $payload['filename'] = $filename;
+        }
+
+        Log::info('WhatsApp: enviando mídia para grupo', [
+            'group_jid' => $groupJid,
+            'type' => $type,
+            'instance_id' => $this->resolveInstanceId(),
+        ]);
+
+        $res = $this->postJson('send/media', $payload);
+        $body = $res->json() ?? [];
+
+        if ($this->isSuccessfulResponse($res, $body)) {
+            return ['success' => true, 'data' => $body];
+        }
+
+        Log::warning('WhatsApp Evolution GO: falha ao enviar mídia para grupo', [
+            'group_jid' => $groupJid,
+            'status' => $res->status(),
+            'response' => $body,
+        ]);
+
+        return [
+            'success' => false,
+            'error' => $this->resolverMensagemErro($body),
+            'status' => $res->status(),
+        ];
+    }
+
+    /**
      * Configura webhook na Evolution GO via POST /instance/connect.
      *
      * @param  array<int, string>  $events

@@ -103,6 +103,12 @@
     color: #833AB4;
     border-color: rgba(131,58,180,.18);
 }
+.midia-dest-badge.whatsapp {
+    background: rgba(37,211,102,.12);
+    color: #128C7E;
+    border-color: rgba(37,211,102,.28);
+}
+.midia-dest-badge.whatsapp i { color: #25D366; }
 .midia-dest-badge .status-dot {
     width: .45rem;
     height: .45rem;
@@ -380,6 +386,14 @@
     color: #833AB4;
     box-shadow: 0 0 0 2px rgba(131,58,180,.12);
 }
+.midia-dest-chip.grupo:has(input:checked),
+.midia-dest-chip.grupo.is-active {
+    background: rgba(37,211,102,.1);
+    border-color: #25D366;
+    color: #128C7E;
+    box-shadow: 0 0 0 2px rgba(37,211,102,.18);
+}
+.midia-dest-chip.grupo i { color: #25D366; }
 .midia-dest-chip i { font-size: 1.25rem; }
 
 .midia-or-sep {

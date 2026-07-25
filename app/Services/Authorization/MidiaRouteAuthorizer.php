@@ -40,6 +40,12 @@ class MidiaRouteAuthorizer
                 : $denyAccess('Acesso negado. Sem permissão para configurações do Instagram.');
         }
 
+        if ($route === 'midia.whatsapp.grupos') {
+            return $user->hasPermission('midia.whatsapp.schedule')
+                ? null
+                : $denyAccess('Acesso negado. Sem permissão para listar grupos do WhatsApp.');
+        }
+
         if (str_starts_with($route, 'midia.instagram.posts')) {
             if (in_array($route, ['midia.instagram.posts.index', 'midia.instagram.posts.show'], true)
                 || str_ends_with($route, '.index') || str_ends_with($route, '.show')) {
@@ -48,7 +54,15 @@ class MidiaRouteAuthorizer
                     : $denyAccess('Acesso negado. Sem permissão para ver publicações do Instagram.');
             }
 
-            return $user->hasPermission('midia.instagram.schedule')
+            if (in_array($route, ['midia.instagram.posts.create', 'midia.instagram.posts.store'], true)) {
+                return ($user->hasPermission('midia.instagram.schedule')
+                    || $user->hasPermission('midia.whatsapp.schedule'))
+                    ? null
+                    : $denyAccess('Acesso negado. Sem permissão para agendar publicações.');
+            }
+
+            return ($user->hasPermission('midia.instagram.schedule')
+                || $user->hasPermission('midia.whatsapp.schedule'))
                 ? null
                 : $denyAccess('Acesso negado. Sem permissão para agendar publicações.');
         }
@@ -79,6 +93,7 @@ class MidiaRouteAuthorizer
 
         return ($user->hasPermission('midia.arquivos.view')
             || $user->hasPermission('midia.instagram.view')
+            || $user->hasPermission('midia.whatsapp.schedule')
             || $user->hasPermission('midia.configuracoes.manage')
             || $user->hasPermission('midia.instagram.configuracoes.manage'))
             ? null
