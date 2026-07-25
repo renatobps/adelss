@@ -717,40 +717,13 @@
                                     </ul>
                                 </li>
 
-                                {{-- MENU NOTIFICAÇÕES (WhatsApp: grupos, enquetes, notificações, configuração, templates) --}}
+                                {{-- MENU NOTIFICAÇÕES — submenus ficam no grid da página principal --}}
                                 @if($isAdmin || ($canViewNotificacoes ?? false))
-                                <li class="nav-parent {{ request()->routeIs('notificacoes.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                <li class="{{ request()->routeIs('notificacoes.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ route('notificacoes.painel.index') }}">
                                         <i class="bx bx-bell" aria-hidden="true"></i>
                                         <span>Notificações</span>
                                     </a>
-                                    <ul class="nav nav-children">
-                                        <li class="{{ request()->routeIs('notificacoes.grupos.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('notificacoes.grupos.index') }}">
-                                                <i class="bx bx-group"></i>Grupos
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('notificacoes.enquetes.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('notificacoes.enquetes.index') }}">
-                                                <i class="bx bx-bar-chart-alt-2"></i>Enquetes
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('notificacoes.painel.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('notificacoes.painel.index') }}">
-                                                <i class="bx bx-send"></i>Notificações
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('notificacoes.config.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('notificacoes.config.index') }}">
-                                                <i class="bx bxl-whatsapp"></i>Configuração WPP
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('notificacoes.templates.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('notificacoes.templates.index') }}">
-                                                <i class="bx bx-file-blank"></i>Templates
-                                            </a>
-                                        </li>
-                                    </ul>
                                 </li>
                                 @endif
 
@@ -856,6 +829,7 @@
                     $isFinancialModule = request()->routeIs('financial.*')
                         && !request()->routeIs('financial.transactions.receipt*')
                         && !request()->routeIs('financial.checkout.*');
+                    $isNotificacoesModule = request()->routeIs('notificacoes.*');
                 @endphp
                 <header class="page-header">
                     <h2>@yield('page-title', 'Página')</h2>
@@ -964,6 +938,10 @@
 
                 @if($isFinancialModule)
                     @include('financial.partials.module-nav')
+                @endif
+
+                @if($isNotificacoesModule)
+                    @include('notificacoes.partials.module-nav')
                 @endif
 
                 @yield('content')

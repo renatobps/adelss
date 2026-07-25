@@ -221,7 +221,23 @@
     }
 }
 
-/* Hub de navegação do módulo Financeiro (grid no conteúdo) */
+/* Hub de navegação dos módulos (Financeiro / Notificações) */
+.notificacoes-module-nav .financial-module-nav__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (min-width: 576px) {
+    .notificacoes-module-nav .financial-module-nav__grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 992px) {
+    .notificacoes-module-nav .financial-module-nav__grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
 .financial-module-nav__title {
     margin: 0;
     font-size: 1.75rem;
