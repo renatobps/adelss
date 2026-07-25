@@ -127,7 +127,16 @@
 .midia-status-pill.warn { background: rgba(251,188,5,.22); color: #8a6d00; }
 .midia-status-pill.info { background: rgba(0,136,204,.12); color: #006999; }
 
-.midia-posts-table tbody tr.midia-post-row:nth-child(4n+1) { background: #fafbfc; }
+.midia-posts-table thead th {
+    text-transform: uppercase;
+    font-size: .78rem;
+    letter-spacing: .05em;
+    color: var(--midia-text-secondary);
+    font-weight: 600;
+    border-bottom-color: var(--midia-border);
+    white-space: nowrap;
+}
+.midia-posts-table tbody tr.midia-post-row:nth-child(even) { background: #fafbfc; }
 .midia-posts-table tbody tr.midia-post-row:hover { background: rgba(0,136,204,.05) !important; }
 .midia-post-thumb {
     width: 48px;
@@ -143,6 +152,151 @@
     font-size: 1.35rem;
 }
 .midia-post-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+.midia-event-tag {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: .2rem .55rem;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 600;
+    background: var(--midia-border);
+    color: var(--midia-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.midia-post-actions-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .5rem;
+    border: 1px solid var(--midia-border);
+    background: rgba(255,255,255,.92);
+    color: var(--midia-text);
+}
+.midia-post-actions-btn:hover,
+.midia-post-actions-btn:focus {
+    background: #fff;
+    color: var(--midia-primary);
+    border-color: #cfe8f6;
+}
+.midia-post-actions .dropdown-item {
+    font-size: .875rem;
+}
+
+/* —— Cards de publicações Instagram —— */
+.midia-ig-card.midia-card {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+}
+.midia-ig-card-media {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    width: 100%;
+    background: #f1f5f9;
+    overflow: hidden;
+    border-radius: .85rem .85rem 0 0;
+}
+.midia-ig-card-media img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.midia-ig-card-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--midia-text-secondary);
+    font-size: 2.5rem;
+    background: #f4f7fa;
+}
+.midia-ig-status-overlay {
+    position: absolute;
+    top: .55rem;
+    left: .55rem;
+    z-index: 2;
+    background: rgba(255,255,255,.92) !important;
+    box-shadow: 0 1px 4px rgba(46,53,62,.12);
+}
+.midia-ig-card-menu {
+    position: absolute;
+    top: .45rem;
+    right: .45rem;
+    z-index: 3;
+}
+.midia-ig-card-body {
+    padding: .85rem;
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    flex: 1;
+}
+.midia-ig-card-when {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--midia-text);
+}
+.midia-ig-card-dests {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem .55rem;
+    align-items: flex-start;
+}
+.midia-ig-dest-item {
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+}
+.midia-ig-dest-expiry {
+    font-size: .68rem;
+    color: var(--midia-text-secondary);
+    padding-left: .15rem;
+}
+.midia-ig-card-caption {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: .85rem;
+    color: var(--midia-text-secondary);
+    text-align: left;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    line-height: 1.35;
+    cursor: pointer;
+    width: 100%;
+}
+.midia-ig-card-caption:hover { color: var(--midia-primary); }
+.midia-ig-empty-icon {
+    width: 3.5rem;
+    height: 3.5rem;
+    margin: 0 auto;
+    border-radius: 999px;
+    background: rgba(0,136,204,.08);
+    color: var(--midia-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75rem;
+}
+
+@media (max-width: 767.98px) {
+    #igPostsTable { display: none !important; }
+    #igPostsCards { display: flex !important; }
+}
 
 /* —— Configurações / marca —— */
 .midia-brand-icon {
