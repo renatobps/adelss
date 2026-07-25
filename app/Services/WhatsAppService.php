@@ -370,6 +370,19 @@ class WhatsAppService
     }
 
     /**
+     * Destinatário para a Evolution GO: telefone normalizado OU JID de grupo (@g.us) intacto.
+     */
+    public static function resolverDestinatario(string $destino): string
+    {
+        $destino = trim($destino);
+        if ($destino !== '' && str_contains($destino, '@g.us')) {
+            return $destino;
+        }
+
+        return self::normalizarNumero($destino);
+    }
+
+    /**
      * Normaliza número para formato internacional (55...) com 9º dígito em celulares BR.
      */
     public static function normalizarNumero(string $numero): string
@@ -566,7 +579,8 @@ class WhatsAppService
     }
 
     /**
-     * Envia mídia para um grupo WhatsApp (JID @g.us) via POST /send/media com URL pública.
+     * Envia mídia para um grupo WhatsApp (JID @g.us) via POST /send/media.
+     * 1) tenta URL pública; 2) se falhar, envia base64 (Evolution não precisa baixar a URL).
      * Não normaliza o JID como telefone — preserva o sufixo @g.us.
      *
      * @return array{success: bool, data?: array, error?: string, status?: int}
@@ -595,23 +609,21 @@ class WhatsAppService
             return ['success' => false, 'error' => 'URL pública da mídia inválida para envio ao WhatsApp.'];
         }
 
+        $filename = basename(parse_url($mediaUrl, PHP_URL_PATH) ?: '') ?: ($type === 'video' ? 'video.mp4' : 'imagem.jpg');
         $payload = [
             'number' => $groupJid,
             'url' => $mediaUrl,
             'type' => $type,
+            'filename' => $filename,
         ];
         if (trim($caption) !== '') {
             $payload['caption'] = $caption;
         }
 
-        $filename = basename(parse_url($mediaUrl, PHP_URL_PATH) ?: '');
-        if ($filename !== '') {
-            $payload['filename'] = $filename;
-        }
-
-        Log::info('WhatsApp: enviando mídia para grupo', [
+        Log::info('WhatsApp: enviando mídia para grupo (URL)', [
             'group_jid' => $groupJid,
             'type' => $type,
+            'media_url' => $mediaUrl,
             'instance_id' => $this->resolveInstanceId(),
         ]);
 
@@ -622,17 +634,73 @@ class WhatsAppService
             return ['success' => true, 'data' => $body];
         }
 
-        Log::warning('WhatsApp Evolution GO: falha ao enviar mídia para grupo', [
+        $urlError = $this->resolverMensagemErro($body);
+        Log::warning('WhatsApp Evolution GO: falha URL no grupo — tentando base64', [
             'group_jid' => $groupJid,
             'status' => $res->status(),
             'response' => $body,
         ]);
 
+        $binary = $this->carregarBytesDaMidiaPublica($mediaUrl);
+        if ($binary === null) {
+            return [
+                'success' => false,
+                'error' => $urlError,
+                'status' => $res->status(),
+            ];
+        }
+
+        $mime = $type === 'video' ? 'video/mp4' : ($type === 'document' ? 'application/octet-stream' : 'image/jpeg');
+        $fallback = $this->enviarMidiaBase64(
+            $groupJid,
+            base64_encode($binary),
+            $type,
+            $mime,
+            $filename,
+            $caption
+        );
+
+        if ($fallback['success'] ?? false) {
+            return $fallback;
+        }
+
         return [
             'success' => false,
-            'error' => $this->resolverMensagemErro($body),
-            'status' => $res->status(),
+            'error' => $fallback['error'] ?? $urlError,
+            'status' => $fallback['status'] ?? $res->status(),
         ];
+    }
+
+    /**
+     * Lê bytes da mídia a partir do disco local (storage/app/public) ou via HTTP.
+     */
+    private function carregarBytesDaMidiaPublica(string $mediaUrl): ?string
+    {
+        $path = parse_url($mediaUrl, PHP_URL_PATH) ?: '';
+        if (preg_match('#/storage/(.+)$#', $path, $m)) {
+            $relative = urldecode($m[1]);
+            $full = storage_path('app/public/' . ltrim(str_replace('\\', '/', $relative), '/'));
+            if (is_file($full)) {
+                $contents = @file_get_contents($full);
+                if ($contents !== false && $contents !== '') {
+                    return $contents;
+                }
+            }
+        }
+
+        try {
+            $res = Http::timeout(config('whatsapp.timeout', 120))->get($mediaUrl);
+            if ($res->successful() && $res->body() !== '') {
+                return $res->body();
+            }
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp: não foi possível baixar mídia pública para fallback', [
+                'url' => $mediaUrl,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return null;
     }
 
     /**
@@ -875,8 +943,9 @@ class WhatsAppService
             return ['success' => false, 'error' => 'Conteúdo base64 inválido para envio de mídia.'];
         }
 
+        $destinatario = self::resolverDestinatario($numero);
         $payload = [
-            'number' => self::normalizarNumero($numero),
+            'number' => $destinatario,
             'type' => $tipo,
             // Base64 puro — NÃO usar data URI (v0.7+ do Evolution GO).
             'url' => $base64,
@@ -901,7 +970,7 @@ class WhatsAppService
         $decoded = base64_decode($base64, true);
         if ($decoded !== false && $decoded !== '') {
             $fallback = $this->enviarMidiaMultipart(
-                $numero,
+                $destinatario,
                 $decoded,
                 $tipo,
                 $mime,
@@ -915,7 +984,7 @@ class WhatsAppService
             Log::warning('WhatsApp Evolution GO: falha ao enviar mídia (JSON e multipart)', [
                 'status' => $res->status(),
                 'tipo' => $tipo,
-                'numero' => self::normalizarNumero($numero),
+                'numero' => $destinatario,
                 'json_response' => $body,
                 'multipart_error' => $fallback['error'] ?? null,
             ]);
@@ -930,7 +999,7 @@ class WhatsAppService
         Log::warning('WhatsApp Evolution GO: falha ao enviar mídia', [
             'status' => $res->status(),
             'tipo' => $tipo,
-            'numero' => self::normalizarNumero($numero),
+            'numero' => $destinatario,
             'response' => $body,
         ]);
 
@@ -958,7 +1027,7 @@ class WhatsAppService
 
         try {
             $fields = [
-                'number' => self::normalizarNumero($numero),
+                'number' => self::resolverDestinatario($numero),
                 'type' => $tipo,
                 'filename' => $fileName,
             ];
@@ -969,10 +1038,10 @@ class WhatsAppService
                 $fields['mimetype'] = $mime;
             }
 
-            $res = Http::withHeaders([
-                'apikey' => $this->apiKey,
-                'instanceId' => $this->resolveInstanceId(),
-            ])
+            $headers = $this->getApiHeaders();
+            unset($headers['Content-Type']); // multipart define o boundary
+
+            $res = Http::withHeaders($headers)
                 ->timeout(config('whatsapp.timeout', 120))
                 ->attach(
                     'file',
@@ -1194,11 +1263,26 @@ class WhatsAppService
                 return 'Número não está registrado no WhatsApp (verifique DDD + número).';
             }
 
+            if (stripos($error, 'error 420') !== false || preg_match('/\b420\b/', $error)) {
+                return 'WhatsApp recusou o envio (erro 420). '
+                    . 'Isso é comum em canais de anúncio de Comunidade — use um grupo normal. '
+                    . 'Também pode ocorrer se a mídia não estiver acessível publicamente; '
+                    . 'confira se a URL abre no navegador e tente novamente.';
+            }
+
             return $error;
         }
 
         if (!empty($body['message']) && is_string($body['message']) && strtolower($body['message']) !== 'success') {
-            return (string) $body['message'];
+            $message = (string) $body['message'];
+            if (stripos($message, 'error 420') !== false || preg_match('/\b420\b/', $message)) {
+                return 'WhatsApp recusou o envio (erro 420). '
+                    . 'Isso é comum em canais de anúncio de Comunidade — use um grupo normal. '
+                    . 'Também pode ocorrer se a mídia não estiver acessível publicamente; '
+                    . 'confira se a URL abre no navegador e tente novamente.';
+            }
+
+            return $message;
         }
 
         return 'Erro ao comunicar com a Evolution GO';
