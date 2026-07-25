@@ -39,16 +39,16 @@
 @endphp
 
 @if(count($items) > 0)
-<div class="financial-module-nav notificacoes-module-nav mb-4">
-    <div class="financial-module-nav__intro mb-3">
-        <h1 class="financial-module-nav__title">Notificações</h1>
-        <p class="financial-module-nav__subtitle mb-0">WhatsApp, grupos, enquetes e templates</p>
+<div class="notificacoes-module-nav mb-4">
+    <div class="notificacoes-module-nav__intro mb-3">
+        <h1 class="notificacoes-module-nav__title">Notificações</h1>
+        <p class="notificacoes-module-nav__subtitle mb-0">WhatsApp, grupos, enquetes e templates</p>
     </div>
 
-    <div class="financial-module-nav__grid">
+    <div class="notificacoes-module-nav__grid">
         @foreach($items as $item)
             <a href="{{ route($item['route']) }}"
-               class="financial-module-nav__item {{ !empty($item['active']) ? 'is-active' : '' }}">
+               class="notificacoes-module-nav__item {{ !empty($item['active']) ? 'is-active' : '' }}">
                 <i class="{{ $item['icon'] }}" aria-hidden="true"></i>
                 <span>{{ $item['label'] }}</span>
             </a>

@@ -33,7 +33,7 @@
     <link rel="stylesheet" href="{{ asset('css/css/skins/default.css') }}" />
 
     <!-- Theme Custom CSS -->
-    <link rel="stylesheet" href="{{ asset('css/css/custom.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/css/custom.css') }}?v={{ @filemtime(public_path('css/css/custom.css')) ?: '1' }}">
 
     <!-- Head Libs -->
     <script src="{{ asset('vendor/vendor/modernizr/modernizr.js') }}"></script>
