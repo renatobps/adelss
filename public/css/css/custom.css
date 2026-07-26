@@ -413,21 +413,18 @@
 }
 
 @media (max-width: 767.98px) {
+    /* Todos os submenus vis?veis na p?gina (sem scroll horizontal): grid que quebra em linhas */
     .adelss-module-nav__grid {
-        display: flex;
-        flex-wrap: nowrap;
-        overflow-x: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(6.25rem, 1fr));
         gap: 0.45rem;
-        padding-bottom: 0.25rem;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
     }
 
     .adelss-module-nav__item {
-        flex: 0 0 auto;
-        min-width: 6.5rem;
+        min-width: 0;
         min-height: 58px;
-        padding: 0.45rem 0.65rem;
+        padding: 0.45rem 0.5rem;
+        text-align: center;
     }
 
     .adelss-module-nav__item i {
@@ -435,8 +432,9 @@
     }
 
     .adelss-module-nav__item span {
-        font-size: 0.72rem;
-        white-space: nowrap;
+        font-size: 0.75rem;
+        white-space: normal;   /* permite quebrar r?tulos longos por palavra */
+        overflow-wrap: break-word;
     }
 }
 
@@ -447,11 +445,8 @@
 
 .adelss-module-nav--compact .adelss-module-nav__grid--tabs {
     display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
+    flex-wrap: wrap; /* abas quebram em linhas em vez de scroll horizontal */
     gap: 0.4rem;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
 }
 
 .adelss-module-nav--compact .adelss-module-nav__item {
