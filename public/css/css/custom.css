@@ -163,9 +163,10 @@
         font-weight: 700;
     }
 
+    /* Grade flex?vel: adapta-se ? quantidade de m?dulos vis?veis (sem buracos) */
     .welcome-mobile-grid {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
         gap: 12px;
     }
 
@@ -192,7 +193,7 @@
     }
 
     .welcome-mobile-item span {
-        font-size: 0.78rem;
+        font-size: 0.875rem; /* >= 14px para legibilidade mobile */
         font-weight: 500;
         line-height: 1.2;
     }
@@ -207,7 +208,93 @@
     }
 }
 
-/* Ações de tabela: dropdown compacto no mobile */
+/* ---------------------------------------------------------------------------
+   KPI do dashboard (widget-summary): corrige quebra letra a letra.
+   O tema Porto usa display:table + word-break:break-all + ?cone de 90px,
+   o que esmaga o texto em colunas estreitas (col-6 em 320px).
+--------------------------------------------------------------------------- */
+.card-featured-left .widget-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.card-featured-left .widget-summary .widget-summary-col {
+    display: block;
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0; /* permite o texto usar o espa?o restante sem estourar */
+}
+
+.card-featured-left .widget-summary .widget-summary-col-icon {
+    flex: 0 0 auto; /* ?cone nunca encolhe nem empurra o texto */
+    width: auto;
+}
+
+.card-featured-left .widget-summary .summary-icon {
+    width: 52px;
+    height: 52px;
+    min-width: 52px;
+    line-height: 52px;
+    font-size: 1.6rem;
+    margin-right: 0;
+    flex-shrink: 0;
+}
+
+.card-featured-left .widget-summary .summary {
+    min-height: 0;
+    word-break: normal;        /* nunca quebrar por caractere */
+    overflow-wrap: break-word; /* quebra por palavra quando necess?rio */
+}
+
+.card-featured-left .widget-summary .summary .title {
+    white-space: normal;
+    font-size: 0.9rem; /* ~14.4px */
+}
+
+.card-featured-left .widget-summary .summary-footer a {
+    font-size: 0.875rem; /* >= 14px */
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+}
+
+/* Telas muito estreitas: ?cone acima do texto, centralizado */
+@media (max-width: 399.98px) {
+    .card-featured-left .widget-summary {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 8px;
+    }
+
+    .card-featured-left .widget-summary .widget-summary-col {
+        width: 100%;
+    }
+
+    .card-featured-left .widget-summary .summary-footer {
+        text-align: center;
+    }
+}
+
+/* Menu suspenso do usu?rio (header): ?rea de toque e feedback do estado aberto */
+.userbox > a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 6px 10px;
+}
+
+.userbox .custom-caret {
+    transition: transform 0.2s ease;
+}
+
+.userbox a[aria-expanded="true"] .custom-caret,
+.userbox.show .custom-caret {
+    transform: rotate(180deg);
+}
+
+/* A??es de tabela: dropdown compacto no mobile */
 @media (max-width: 767.98px) {
     .table-actions-mobile .dropdown-toggle {
         min-width: 2.5rem;
@@ -221,13 +308,13 @@
     }
 }
 
-/* Cabeçalho Porto — tom escuro padronizado */
+/* Cabe?alho Porto ? tom escuro padronizado */
 .page-header {
     background: #2E353E !important;
     border-bottom-color: #2E353E !important;
 }
 
-/* Hub de navegação de módulos (cards horizontais — padrão global) */
+/* Hub de navega??o de m?dulos (cards horizontais ? padr?o global) */
 .adelss-module-nav {
     width: 100%;
 }
@@ -385,7 +472,7 @@
     white-space: nowrap;
 }
 
-/* —— Módulo Membros —— */
+/* ?? M?dulo Membros ?? */
 .members-kpi-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -454,7 +541,7 @@
     gap: 0.85rem;
 }
 @media (min-width: 576px) {
-    /* 2 cards por linha × 5 linhas = 10 por página */
+    /* 2 cards por linha ? 5 linhas = 10 por p?gina */
     .members-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 .members-person-card {
@@ -656,7 +743,7 @@
 .members-table--grouped tbody td:nth-child(1) { width: 58%; }
 .members-table--grouped tbody td:nth-child(2) { width: 42%; }
 
-/* �� Permiss�es (/permissoes) �� */
+/* ?? Permiss?es (/permissoes) ?? */
 .perms-toolbar {
     display: flex;
     flex-wrap: wrap;

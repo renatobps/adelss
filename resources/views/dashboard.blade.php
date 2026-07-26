@@ -17,45 +17,19 @@
                 <p class="card-subtitle">Sistema de gestão e administração</p>
             </header>
             <div class="card-body">
+                {{-- Acessos Rápidos: mesma fonte de dados/permissões do menu lateral (App\Support\ModuleMenu) --}}
+                @php
+                    $quickAccessModules = \App\Support\ModuleMenu::itemsFor(Auth::user());
+                @endphp
                 <div class="welcome-mobile-menu d-lg-none">
                     <h4 class="welcome-mobile-title">Acessos Rápidos</h4>
                     <div class="welcome-mobile-grid">
-                        <a class="welcome-mobile-item" href="{{ route('dashboard') }}">
-                            <i class="bx bx-home-alt"></i>
-                            <span>Início</span>
-                        </a>
-                        <a class="welcome-mobile-item" href="{{ route('members.index') }}">
-                            <i class="bx bx-user"></i>
-                            <span>Membros</span>
-                        </a>
-                        <a class="welcome-mobile-item" href="{{ route('notificacoes.painel.index') }}">
-                            <i class="bx bx-bell"></i>
-                            <span>Mensagens</span>
-                        </a>
-                        <a class="welcome-mobile-item" href="{{ route('agenda.calendario.index') }}">
-                            <i class="bx bx-calendar"></i>
-                            <span>Eventos</span>
-                        </a>
-                        <a class="welcome-mobile-item" href="{{ route('discipleship.dashboard.discipulador') }}">
-                            <i class="bx bx-group"></i>
-                            <span>Discipulado</span>
-                        </a>
-                        <a class="welcome-mobile-item" href="{{ route('moriah.ministerio') }}">
-                            <i class="bx bx-music"></i>
-                            <span>Moriah</span>
-                        </a>
-                        <a class="welcome-mobile-item" href="{{ route('financial.summary') }}">
-                            <i class="bx bx-dollar"></i>
-                            <span>Financeiro</span>
-                        </a>
-                        <a class="welcome-mobile-item" href="{{ route('ensino.estudos.index') }}">
-                            <i class="bx bx-book-reader"></i>
-                            <span>Ensino</span>
-                        </a>
-                        <a class="welcome-mobile-item" href="{{ route('pgis.index') }}">
-                            <i class="bx bx-group"></i>
-                            <span>PGIs</span>
-                        </a>
+                        @foreach($quickAccessModules as $module)
+                            <a class="welcome-mobile-item" href="{{ $module['url'] }}">
+                                <i class="{{ $module['icon'] }}" aria-hidden="true"></i>
+                                <span>{{ $module['short_label'] ?? $module['label'] }}</span>
+                            </a>
+                        @endforeach
                     </div>
                 </div>
 
