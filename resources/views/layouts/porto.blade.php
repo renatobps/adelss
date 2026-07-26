@@ -1,5 +1,5 @@
 <!doctype html>
-<html class="fixed">
+<html class="modern fixed">
 <head>
     <!-- Basic -->
     <meta charset="UTF-8">
@@ -29,6 +29,9 @@
     <!-- Theme CSS -->
     <link rel="stylesheet" href="{{ asset('css/css/theme.css') }}" />
 
+    <!-- Theme Layout (Modern) -->
+    <link rel="stylesheet" href="{{ asset('css/css/layouts/modern.css') }}" />
+
     <!-- Skin CSS -->
     <link rel="stylesheet" href="{{ asset('css/css/skins/default.css') }}" />
 
@@ -51,8 +54,9 @@
         <!-- start: header -->
         <header class="header">
             <div class="logo-container">
-                <a href="{{ route('dashboard') }}" class="logo" style="display: flex; align-items: center; padding: 10px 0;">
-                    <img src="{{ asset('img/img/LOG SS preta.png') }}" alt="ADELSS" style="max-height: 45px; width: auto; object-fit: contain;" />
+                <a href="{{ route('dashboard') }}" class="logo">
+                    <img src="{{ asset('img/img/LOG SS branca.png') }}" class="logo-image" width="45" height="45" alt="ADELSS" />
+                    <img src="{{ asset('img/img/LOG SS preta.png') }}" class="logo-image-mobile" width="45" height="45" alt="ADELSS" />
                 </a>
 
                 <div class="d-md-none toggle-sidebar-left" data-toggle-class="sidebar-left-opened" data-target="html" data-fire-event="sidebar-left-opened">
@@ -137,10 +141,7 @@
             <!-- start: sidebar -->
             <aside id="sidebar-left" class="sidebar-left">
                 <div class="sidebar-header">
-                    <div class="sidebar-title">
-                        Navegação
-                    </div>
-                    <div class="sidebar-toggle d-none d-md-block" data-toggle-class="sidebar-left-collapsed" data-target="html" data-fire-event="sidebar-left-toggle">
+                    <div class="sidebar-toggle d-none d-md-flex" data-toggle-class="sidebar-left-collapsed" data-target="html" data-fire-event="sidebar-left-toggle">
                         <i class="fas fa-bars" aria-label="Toggle sidebar"></i>
                     </div>
                 </div>
@@ -151,15 +152,35 @@
                             <ul class="nav nav-main">
                                 {{-- Menu de módulos: fonte única em App\Support\ModuleMenu (mesma usada nos Acessos Rápidos do dashboard) --}}
                                 @php
-                                    $menuModules = \App\Support\ModuleMenu::itemsFor(Auth::user());
+                                    $menuModules = collect(\App\Support\ModuleMenu::itemsFor(Auth::user()));
                                 @endphp
-                                @foreach($menuModules as $module)
+
+                                {{-- Itens sem categoria (Visão Geral) ficam soltos no topo --}}
+                                @foreach($menuModules->whereNull('category') as $module)
                                 <li class="{{ request()->routeIs(...$module['patterns']) ? 'nav-active' : '' }}">
                                     <a class="nav-link" href="{{ $module['url'] }}">
                                         <i class="{{ $module['icon'] }}" aria-hidden="true"></i>
                                         <span>{{ $module['label'] }}</span>
                                     </a>
                                 </li>
+                                @endforeach
+
+                                {{-- Categorias: o título só aparece se houver ao menos um item visível --}}
+                                @foreach(\App\Support\ModuleMenu::CATEGORIES as $category)
+                                    @php
+                                        $categoryModules = $menuModules->where('category', $category);
+                                    @endphp
+                                    @if($categoryModules->isNotEmpty())
+                                        <li class="nav-group-label" aria-hidden="true">{{ $category }}</li>
+                                        @foreach($categoryModules as $module)
+                                        <li class="{{ request()->routeIs(...$module['patterns']) ? 'nav-active' : '' }}">
+                                            <a class="nav-link" href="{{ $module['url'] }}">
+                                                <i class="{{ $module['icon'] }}" aria-hidden="true"></i>
+                                                <span>{{ $module['label'] }}</span>
+                                            </a>
+                                        </li>
+                                        @endforeach
+                                    @endif
                                 @endforeach
                             </ul>
                         </nav>

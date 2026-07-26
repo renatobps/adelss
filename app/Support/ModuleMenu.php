@@ -13,6 +13,21 @@ use App\Models\Pgi;
  */
 class ModuleMenu
 {
+    public const CATEGORY_ADMIN = 'Administração';
+    public const CATEGORY_MODULES = 'Módulos';
+    public const CATEGORY_COMMUNICATION = 'Comunicação';
+
+    /**
+     * Ordem de exibição das categorias no menu lateral.
+     * Para adicionar um módulo novo, basta incluí-lo em itemsFor()
+     * com a 'category' desejada — o agrupamento é automático.
+     */
+    public const CATEGORIES = [
+        self::CATEGORY_ADMIN,
+        self::CATEGORY_MODULES,
+        self::CATEGORY_COMMUNICATION,
+    ];
+
     /**
      * Retorna somente os módulos visíveis para o usuário informado.
      *
@@ -23,6 +38,7 @@ class ModuleMenu
      *   'icon'        => classes do ícone,
      *   'url'         => rota de destino (já resolvida por permissão),
      *   'patterns'    => padrões de rota para estado ativo (request()->routeIs()),
+     *   'category'    => categoria do menu lateral (null = solto no topo),
      * ]
      *
      * @param  \App\Models\User|null  $user
@@ -80,6 +96,7 @@ class ModuleMenu
             'icon' => 'bx bx-home-alt',
             'url' => route('dashboard'),
             'patterns' => ['dashboard'],
+            'category' => null, // dashboard fica solto no topo, sem categoria
         ];
 
         // Página Principal
@@ -90,6 +107,7 @@ class ModuleMenu
                 'icon' => 'bx bx-globe',
                 'url' => route('pagina-principal.edit'),
                 'patterns' => ['pagina-principal.*'],
+                'category' => self::CATEGORY_ADMIN,
             ];
         }
 
@@ -109,6 +127,7 @@ class ModuleMenu
                 'icon' => 'bx bx-user',
                 'url' => $canViewMembers ? route('members.index') : route('member-roles.index'),
                 'patterns' => ['members.*', 'member-roles.*', 'permissions.*'],
+                'category' => self::CATEGORY_MODULES,
             ];
         }
 
@@ -120,6 +139,7 @@ class ModuleMenu
                 'icon' => 'bx bx-group',
                 'url' => route('pgis.index'),
                 'patterns' => ['pgis.*'],
+                'category' => self::CATEGORY_MODULES,
             ];
         }
 
@@ -130,6 +150,7 @@ class ModuleMenu
             'icon' => 'bx bx-book-reader',
             'url' => route('ensino.estudos.index'),
             'patterns' => ['ensino.*'],
+            'category' => self::CATEGORY_MODULES,
         ];
 
         // Financeiro
@@ -161,6 +182,7 @@ class ModuleMenu
                 'icon' => 'bx bx-dollar',
                 'url' => $financialUrl,
                 'patterns' => ['financial.*'],
+                'category' => self::CATEGORY_MODULES,
             ];
         }
 
@@ -175,6 +197,7 @@ class ModuleMenu
                 'icon' => 'bx bx-church',
                 'url' => ($isAdmin || $canViewCultosRelatorios) ? route('cultos.index') : route('cultos.settings.edit'),
                 'patterns' => ['cultos.*'],
+                'category' => self::CATEGORY_MODULES,
             ];
         }
 
@@ -198,6 +221,7 @@ class ModuleMenu
                 'icon' => 'bx bx-images',
                 'url' => $midiaUrl,
                 'patterns' => ['midia.*'],
+                'category' => self::CATEGORY_COMMUNICATION,
             ];
         }
 
@@ -208,6 +232,7 @@ class ModuleMenu
             'icon' => 'bx bx-calendar',
             'url' => route('agenda.calendario.index'),
             'patterns' => ['agenda.*'],
+            'category' => self::CATEGORY_MODULES,
         ];
 
         // Serviço
@@ -236,6 +261,7 @@ class ModuleMenu
                 'icon' => 'bx bx-cog',
                 'url' => $servicoUrl,
                 'patterns' => ['servico.*', 'departments.*', 'voluntarios.*'],
+                'category' => self::CATEGORY_MODULES,
             ];
         }
 
@@ -252,6 +278,7 @@ class ModuleMenu
                     ? route('rifas.index')
                     : route('rifas.relatorios.dashboard'),
                 'patterns' => ['rifas.*'],
+                'category' => self::CATEGORY_MODULES,
             ];
         }
 
@@ -262,6 +289,7 @@ class ModuleMenu
             'icon' => 'fa-solid fa-music',
             'url' => route('moriah.schedules.index'),
             'patterns' => ['moriah.*'],
+            'category' => self::CATEGORY_MODULES,
         ];
 
         // Notificações
@@ -272,6 +300,7 @@ class ModuleMenu
                 'icon' => 'bx bx-bell',
                 'url' => route('notificacoes.painel.index'),
                 'patterns' => ['notificacoes.*'],
+                'category' => self::CATEGORY_COMMUNICATION,
             ];
         }
 
@@ -300,6 +329,7 @@ class ModuleMenu
                 'icon' => 'bx bx-group',
                 'url' => $discipuladoUrl,
                 'patterns' => ['discipleship.*'],
+                'category' => self::CATEGORY_MODULES,
             ];
         }
 

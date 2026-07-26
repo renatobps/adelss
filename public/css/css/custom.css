@@ -278,6 +278,16 @@
 }
 
 /* Menu suspenso do usu?rio (header): ?rea de toque e feedback do estado aberto */
+/* Titulos de secao do menu lateral: usa o componente nativo nav-group-label do layout Modern
+   (estilo e ocultacao no modo colapsado ja vem de css/layouts/modern.css) */
+ul.nav-main li.nav-group-label {
+    color: #575f6b;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    pointer-events: none;
+    user-select: none;
+}
+
 .userbox > a {
     display: flex;
     align-items: center;
