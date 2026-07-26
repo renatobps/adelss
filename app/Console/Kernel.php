@@ -24,6 +24,11 @@ class Kernel extends ConsoleKernel
             ->everyFifteenMinutes()
             ->withoutOverlapping();
 
+        // Geocodifica endereços de membros (mapa) — Nominatim ~1 req/s
+        $schedule->command('members:geocode-addresses --limit=20')
+            ->hourly()
+            ->withoutOverlapping();
+
         // Purge de logs antigos de notificação (domingo 03:00)
         $schedule->command('logs:purge-old')->weeklyOn(0, '03:00');
     }

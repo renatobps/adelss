@@ -64,8 +64,9 @@
                     @if($member->photo_url)
                         <img src="{{ $member->photo_url }}" class="rounded img-fluid" alt="{{ $member->name }}">
                     @else
-                        <div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="height: 200px;">
-                            <i class="fas fa-user text-white" style="font-size: 5rem;"></i>
+                        <div class="rounded d-flex align-items-center justify-content-center"
+                             style="height: 200px;background:{{ $member->avatar_color }};color:#fff;font-size:4rem;font-weight:700;">
+                            {{ $member->initials }}
                         </div>
                     @endif
                     <div class="thumb-info-title">

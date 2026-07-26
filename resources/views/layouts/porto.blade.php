@@ -641,7 +641,7 @@
                         && !request()->routeIs('financial.checkout.*');
                     $isNotificacoesModule = request()->routeIs('notificacoes.*');
                     $isMidiaModule = request()->routeIs('midia.*');
-                    $isMembersModule = request()->routeIs('members.*')
+                    $isMembersModule = (request()->routeIs('members.*') && !request()->routeIs('members.public.*'))
                         || request()->routeIs('member-roles.*')
                         || request()->routeIs('permissions.*');
                     $isPgisModule = request()->routeIs('pgis.*');

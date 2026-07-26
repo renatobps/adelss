@@ -53,6 +53,7 @@
                                     <option value="inativo" {{ old('status') == 'inativo' ? 'selected' : '' }}>Inativo</option>
                                     <option value="visitante" {{ old('status') == 'visitante' ? 'selected' : '' }}>Visitante</option>
                                     <option value="membro_transferido" {{ old('status') == 'membro_transferido' ? 'selected' : '' }}>Membro Transferido</option>
+                                    <option value="pendente" {{ old('status') == 'pendente' ? 'selected' : '' }}>Pendente</option>
                                 </select>
                                 @error('status')
                                     <div class="invalid-feedback">{{ $message }}</div>
@@ -137,6 +138,19 @@
                                 @enderror
                             </div>
                         </div>
+
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="marriage_date" class="form-label">Data de Casamento</label>
+                                <input type="date" class="form-control @error('marriage_date') is-invalid @enderror"
+                                       id="marriage_date" name="marriage_date" value="{{ old('marriage_date') }}">
+                                @error('marriage_date')
+                                    <div class="invalid-feedback">{{ $message }}</div>
+                                @enderror
+                            </div>
+                        </div>
+
+                        @include('members.partials.custom-fields', ['customFields' => $customFields ?? collect()])
 
                         <div class="col-md-12 mb-3 mt-3">
                             <h5 class="border-bottom pb-2">Associações</h5>

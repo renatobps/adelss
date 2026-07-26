@@ -373,7 +373,7 @@
                                     <div class="np-multiselect__list" data-list>
                                         @forelse($members as $m)
                                             <label class="np-multiselect__option" data-label="{{ Str::lower($m->name.' '.$m->phone) }}">
-                                                <input type="checkbox" name="members[]" value="{{ $m->id }}" {{ in_array($m->id, old('members', [])) ? 'checked' : '' }}>
+                                                <input type="checkbox" name="members[]" value="{{ $m->id }}" {{ in_array($m->id, $preselectedMembers ?? old('members', [])) ? 'checked' : '' }}>
                                                 <span>
                                                     <strong>{{ $m->name }}</strong>
                                                     <span class="d-block small text-muted">{{ $m->phone }}</span>

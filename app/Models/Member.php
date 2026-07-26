@@ -11,12 +11,27 @@ class Member extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public const STATUS_ATIVO = 'ativo';
+    public const STATUS_INATIVO = 'inativo';
+    public const STATUS_VISITANTE = 'visitante';
+    public const STATUS_TRANSFERIDO = 'membro_transferido';
+    public const STATUS_PENDENTE = 'pendente';
+
+    public const STATUSES = [
+        self::STATUS_ATIVO => 'Ativo',
+        self::STATUS_INATIVO => 'Inativo',
+        self::STATUS_VISITANTE => 'Visitante',
+        self::STATUS_TRANSFERIDO => 'Transferido',
+        self::STATUS_PENDENTE => 'Pendente',
+    ];
+
     protected $fillable = [
         'name',
         'email',
         'phone',
         'gender',
         'marital_status',
+        'marriage_date',
         'birth_date',
         'photo_url',
         'status',
@@ -26,6 +41,9 @@ class Member extends Model
         'city',
         'state',
         'zip_code',
+        'latitude',
+        'longitude',
+        'geocoded_at',
         'membership_date',
         'notes',
         'department_id',
@@ -36,6 +54,10 @@ class Member extends Model
     protected $casts = [
         'birth_date' => 'date',
         'membership_date' => 'date',
+        'marriage_date' => 'date',
+        'geocoded_at' => 'datetime',
+        'latitude' => 'float',
+        'longitude' => 'float',
     ];
 
     /**
@@ -157,6 +179,11 @@ class Member extends Model
     }
 
 
+    public function customFieldValues()
+    {
+        return $this->hasMany(MemberCustomFieldValue::class);
+    }
+
     /**
      * Retorna a idade do membro
      */
@@ -166,6 +193,46 @@ class Member extends Model
             return null;
         }
         return $this->birth_date->age;
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return self::STATUSES[$this->status] ?? (string) $this->status;
+    }
+
+    /** Iniciais determinísticas (ex: Millene Da Silva Mendes → MD). */
+    public function getInitialsAttribute(): string
+    {
+        $parts = preg_split('/\s+/', trim((string) $this->name)) ?: [];
+        $parts = array_values(array_filter($parts, fn ($p) => $p !== ''));
+        if ($parts === []) {
+            return '?';
+        }
+        $first = mb_substr($parts[0], 0, 1);
+        $second = count($parts) > 1 ? mb_substr($parts[count($parts) - 1], 0, 1) : '';
+
+        return mb_strtoupper($first . $second);
+    }
+
+    /** Cor de fundo estável a partir do nome. */
+    public function getAvatarColorAttribute(): string
+    {
+        $palette = ['#0088CC', '#14B8A6', '#8B5CF6', '#F59E0B', '#EF4444', '#EC4899', '#10B981', '#6366F1'];
+        $hash = crc32(mb_strtolower(trim((string) $this->name)));
+
+        return $palette[abs($hash) % count($palette)];
+    }
+
+    public function fullAddress(): string
+    {
+        return collect([$this->address, $this->city, $this->state, $this->zip_code])
+            ->filter(fn ($v) => filled($v))
+            ->implode(', ');
+    }
+
+    public function hasCoordinates(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
     }
 
     /**

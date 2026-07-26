@@ -49,12 +49,24 @@ class PainelController extends Controller
         $departments = Department::active()->orderBy('name')->get(['id', 'name']);
         $canManageHistorico = $request->user()?->can('notificacoes.historico.manage') ?? false;
 
+        $preselectedMembers = old('members', []);
+        if ($request->filled('member_id')) {
+            $preselectedMembers = array_values(array_unique(array_merge(
+                (array) $preselectedMembers,
+                [(int) $request->input('member_id')]
+            )));
+        }
+        if ($request->filled('members')) {
+            $preselectedMembers = array_values(array_unique(array_map('intval', (array) $request->input('members'))));
+        }
+
         return view('notificacoes.painel.index', compact(
             'notificacoes',
             'stats',
             'members',
             'departments',
             'perPage',
+            'preselectedMembers',
             'canManageHistorico'
         ));
     }

@@ -44,6 +44,14 @@ class PermissionController extends Controller
         $assignedPermissions = $user ? $user->permissions->pluck('id')->toArray() : [];
         $assignedRolePermissions = $selectedRole ? $selectedRole->permissions->pluck('id')->toArray() : [];
 
+        // Mapa cargo → IDs de permissão (atalho "copiar de um cargo" no form do membro)
+        $rolePermissionsMap = MemberRole::query()
+            ->with('permissions')
+            ->get()
+            ->mapWithKeys(fn (MemberRole $role) => [
+                (string) $role->id => $role->permissions->pluck('id')->values()->all(),
+            ]);
+
         return view('permissions.index', compact(
             'members',
             'roles',
@@ -52,7 +60,8 @@ class PermissionController extends Controller
             'selectedRole',
             'modules',
             'assignedPermissions',
-            'assignedRolePermissions'
+            'assignedRolePermissions',
+            'rolePermissionsMap'
         ));
     }
 

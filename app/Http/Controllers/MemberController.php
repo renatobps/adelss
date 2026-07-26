@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Member;
+use App\Models\MemberCustomField;
+use App\Models\MemberCustomFieldValue;
+use App\Models\MemberSetting;
 use App\Models\User;
 use App\Services\Members\MemberUserService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
@@ -23,34 +27,105 @@ class MemberController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', Member::class);
+        $perPage = (int) $request->input('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100], true)) {
+            $perPage = 10;
+        }
+        $members = $this->filteredMembersQuery($request)
+            ->paginate($perPage)
+            ->withQueryString();
+
+        $now = now();
+        $monthStart = $now->copy()->startOfMonth();
+        $birthdaysMonth = (int) $request->input('bday_month', $now->month);
+        $birthdaysYear = (int) $request->input('bday_year', $now->year);
+        if ($birthdaysMonth < 1 || $birthdaysMonth > 12) {
+            $birthdaysMonth = $now->month;
+        }
+
+        $kpis = [
+            'ativos' => Member::query()->where('status', Member::STATUS_ATIVO)->count(),
+            'visitantes' => Member::query()->where('status', Member::STATUS_VISITANTE)->count(),
+            'visitantes_mes' => Member::query()
+                ->where('status', Member::STATUS_VISITANTE)
+                ->where('created_at', '>=', $monthStart)
+                ->count(),
+            'novos_mes' => Member::query()->where('created_at', '>=', $monthStart)->count(),
+            'aniversariantes' => Member::query()
+                ->whereNotNull('birth_date')
+                ->whereMonth('birth_date', $now->month)
+                ->count(),
+            'lideres' => Member::query()->whereNotNull('role_id')->count(),
+            'pendentes' => Member::query()->where('status', Member::STATUS_PENDENTE)->count(),
+        ];
+
+        $birthdayMembers = Member::query()
+            ->whereNotNull('birth_date')
+            ->whereMonth('birth_date', $birthdaysMonth)
+            ->get(['id', 'name', 'birth_date', 'photo_url', 'phone', 'status'])
+            ->sortBy(fn (Member $m) => (int) $m->birth_date->format('d'))
+            ->values();
+
+        $mapMembers = Member::query()
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->get(['id', 'name', 'latitude', 'longitude', 'address', 'city', 'status', 'photo_url']);
+
+        $mappedCount = $mapMembers->count();
+        $addressCount = Member::query()
+            ->where(function ($q) {
+                $q->where(function ($inner) {
+                    $inner->whereNotNull('address')->where('address', '!=', '');
+                })->orWhere(function ($inner) {
+                    $inner->whereNotNull('city')->where('city', '!=', '');
+                });
+            })
+            ->count();
+
+        $publicRegistrationUrl = null;
+        try {
+            if (MemberSetting::publicRegistrationEnabled()) {
+                $publicRegistrationUrl = route('members.public.create', [
+                    'token' => MemberSetting::publicRegistrationToken(),
+                ]);
+            }
+        } catch (\Throwable) {
+            $publicRegistrationUrl = null;
+        }
+
+        return view('members.index', compact(
+            'members',
+            'perPage',
+            'kpis',
+            'birthdaysMonth',
+            'birthdaysYear',
+            'birthdayMembers',
+            'mapMembers',
+            'mappedCount',
+            'addressCount',
+            'publicRegistrationUrl'
+        ));
+    }
+
+    private function filteredMembersQuery(Request $request)
+    {
         $query = Member::with(['department', 'departments', 'pgi', 'role']);
 
-        // Busca
-        if ($request->has('search') && $request->search) {
+        if ($request->filled('search')) {
             $query->search($request->search);
         }
-
-        // Filtro por status
-        if ($request->has('status') && $request->status) {
+        if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-
-        // Filtro por gênero
-        if ($request->has('gender') && $request->gender) {
+        if ($request->filled('gender')) {
             $query->byGender($request->gender);
         }
-
-        // Filtro por departamento
-        if ($request->has('department_id') && $request->department_id) {
+        if ($request->filled('department_id')) {
             $query->where('department_id', $request->department_id);
         }
-
-        // Filtro por cargo
-        if ($request->has('role_id') && $request->role_id) {
+        if ($request->filled('role_id')) {
             $query->where('role_id', $request->role_id);
         }
-
-        // Filtro por vínculo com PGI
         if ($request->filled('pgi_vinculo')) {
             if ($request->pgi_vinculo === 'com_pgi') {
                 $query->whereNotNull('pgi_id');
@@ -59,14 +134,16 @@ class MemberController extends Controller
             }
         }
 
-        // Ordenação
         $sortBy = $request->get('sort_by', 'name');
         $sortOrder = $request->get('sort_order', 'asc');
-        $query->orderBy($sortBy, $sortOrder);
+        if (!in_array($sortBy, ['name', 'created_at', 'status', 'birth_date'], true)) {
+            $sortBy = 'name';
+        }
+        if (!in_array(strtolower($sortOrder), ['asc', 'desc'], true)) {
+            $sortOrder = 'asc';
+        }
 
-        $members = $query->get();
-
-        return view('members.index', compact('members'));
+        return $query->orderBy($sortBy, $sortOrder);
     }
 
     /**
@@ -77,7 +154,9 @@ class MemberController extends Controller
         $this->authorize('create', Member::class);
         $roles = \App\Models\MemberRole::active()->orderBy('name')->get();
         $departments = \App\Models\Department::active()->orderBy('name')->get();
-        return view('members.create', compact('roles', 'departments'));
+        $customFields = MemberCustomField::active()->get();
+
+        return view('members.create', compact('roles', 'departments', 'customFields'));
     }
 
     /**
@@ -98,7 +177,7 @@ class MemberController extends Controller
             'marital_status' => 'nullable|in:solteiro,casado,divorciado,viuvo,uniao_estavel',
             'birth_date' => 'nullable|date',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'status' => 'required|in:ativo,inativo,visitante,membro_transferido',
+            'status' => 'required|in:ativo,inativo,visitante,membro_transferido,pendente',
             'cpf' => 'nullable|string|unique:members,cpf',
             'rg' => 'nullable|string|max:20',
             'address' => 'nullable|string',
@@ -106,11 +185,13 @@ class MemberController extends Controller
             'state' => 'nullable|string|max:2',
             'zip_code' => 'nullable|string|max:10',
             'membership_date' => 'nullable|date',
+            'marriage_date' => 'nullable|date',
             'notes' => 'nullable|string',
             'departments' => 'nullable|array',
             'departments.*' => 'exists:departments,id',
             'pgi_id' => 'nullable|exists:pgis,id',
             'role_id' => 'nullable|exists:member_roles,id',
+            'custom_fields' => 'nullable|array',
         ]);
 
         // Upload da foto
@@ -118,6 +199,7 @@ class MemberController extends Controller
             $path = $request->file('photo')->store('members/photos', 'public');
             $validated['photo_url'] = $path;
         }
+        unset($validated['custom_fields']);
 
         // Remover departments do validated para não tentar salvar diretamente
         $departments = $validated['departments'] ?? [];
@@ -135,6 +217,8 @@ class MemberController extends Controller
         if (!empty($departments)) {
             $member->departments()->sync($departments);
         }
+
+        $this->syncCustomFields($member, $request->input('custom_fields', []));
 
         return redirect()->route('members.index')
             ->with('success', 'Membro cadastrado com sucesso!');
@@ -394,7 +478,13 @@ class MemberController extends Controller
         $this->authorize('update', $member);
         $roles = \App\Models\MemberRole::active()->orderBy('name')->get();
         $departments = \App\Models\Department::active()->orderBy('name')->get();
-        return view('members.edit', compact('member', 'roles', 'departments'));
+        $customFields = MemberCustomField::active()->get();
+        $customFieldValues = $member->customFieldValues()
+            ->get()
+            ->pluck('value', 'member_custom_field_id')
+            ->all();
+
+        return view('members.edit', compact('member', 'roles', 'departments', 'customFields', 'customFieldValues'));
     }
 
     /**
@@ -429,7 +519,7 @@ class MemberController extends Controller
             'marital_status' => 'nullable|in:solteiro,casado,divorciado,viuvo,uniao_estavel',
             'birth_date' => 'nullable|date',
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'status' => 'required|in:ativo,inativo,visitante,membro_transferido',
+            'status' => 'required|in:ativo,inativo,visitante,membro_transferido,pendente',
             'cpf' => 'nullable|string|unique:members,cpf,' . $member->id,
             'rg' => 'nullable|string|max:20',
             'address' => 'nullable|string',
@@ -437,19 +527,21 @@ class MemberController extends Controller
             'state' => 'nullable|string|max:2',
             'zip_code' => 'nullable|string|max:10',
             'membership_date' => 'nullable|date',
+            'marriage_date' => 'nullable|date',
             'notes' => 'nullable|string',
             'departments' => 'nullable|array',
             'departments.*' => 'exists:departments,id',
             'pgi_id' => 'nullable|exists:pgis,id',
             'role_id' => 'nullable|exists:member_roles,id',
             'new_password' => 'nullable|string|min:6|confirmed',
+            'custom_fields' => 'nullable|array',
         ]);
 
         // Upload da foto
         if ($request->hasFile('photo')) {
             // Remove foto antiga se existir
-            if ($member->photo_url) {
-                Storage::disk('public')->delete($member->photo_url);
+            if ($member->getRawOriginal('photo_url')) {
+                Storage::disk('public')->delete($member->getRawOriginal('photo_url'));
             }
             $path = $request->file('photo')->store('members/photos', 'public');
             $validated['photo_url'] = $path;
@@ -457,7 +549,7 @@ class MemberController extends Controller
 
         // Remover departments do validated para não tentar salvar diretamente
         $departments = $validated['departments'] ?? [];
-        unset($validated['departments'], $validated['new_password'], $validated['new_password_confirmation']);
+        unset($validated['departments'], $validated['new_password'], $validated['new_password_confirmation'], $validated['custom_fields']);
 
         // Converter valores vazios para null (para limpar pgi, role se necessário)
         if (empty($validated['pgi_id'])) {
@@ -467,10 +559,21 @@ class MemberController extends Controller
             $validated['role_id'] = null;
         }
 
+        // Endereço mudou → limpar geocode para reprocessar
+        if (($validated['address'] ?? null) !== $member->address
+            || ($validated['city'] ?? null) !== $member->city
+            || ($validated['state'] ?? null) !== $member->state
+            || ($validated['zip_code'] ?? null) !== $member->zip_code) {
+            $validated['latitude'] = null;
+            $validated['longitude'] = null;
+            $validated['geocoded_at'] = null;
+        }
+
         $member->update($validated);
 
         // Sincronizar departamentos
         $member->departments()->sync($departments ?? []);
+        $this->syncCustomFields($member, $request->input('custom_fields', []));
 
         $hadUser = (bool) $member->user;
         $accessUser = $this->memberUserService->syncFromMember(
@@ -829,6 +932,95 @@ class MemberController extends Controller
         } catch (\Exception $e) {
             return redirect()->route('members.index')
                 ->with('error', 'Erro ao importar arquivo: ' . $e->getMessage());
+        }
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $this->authorize('viewAny', Member::class);
+        $members = $this->filteredMembersQuery($request)->get();
+        $pdf = Pdf::loadView('members.exports.pdf', compact('members'))
+            ->setPaper('a4', 'landscape');
+
+        return $pdf->download('membros-' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $this->authorize('viewAny', Member::class);
+        $members = $this->filteredMembersQuery($request)->get();
+        $filename = 'membros-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($members) {
+            $out = fopen('php://output', 'w');
+            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($out, ['Nome', 'Email', 'Telefone', 'Status', 'Gênero', 'Nascimento', 'Membresia', 'Casamento', 'Cidade', 'UF', 'Cargo', 'Departamentos', 'PGI'], ';');
+            foreach ($members as $m) {
+                fputcsv($out, [
+                    $m->name,
+                    $m->email,
+                    $m->phone,
+                    $m->status_label,
+                    $m->gender === 'M' ? 'Masculino' : ($m->gender === 'F' ? 'Feminino' : ''),
+                    optional($m->birth_date)->format('d/m/Y'),
+                    optional($m->membership_date)->format('d/m/Y'),
+                    optional($m->marriage_date)->format('d/m/Y'),
+                    $m->city,
+                    $m->state,
+                    $m->role->name ?? '',
+                    $m->departments->pluck('name')->join(', ') ?: ($m->department->name ?? ''),
+                    $m->pgi->name ?? '',
+                ], ';');
+            }
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    public function blankFormPdf()
+    {
+        $this->authorize('create', Member::class);
+        $customFields = MemberCustomField::active()->get();
+        $pdf = Pdf::loadView('members.exports.blank-form', compact('customFields'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('ficha-cadastro-membro.pdf');
+    }
+
+    public function publicLink(Request $request)
+    {
+        $this->authorize('create', Member::class);
+        if ($request->boolean('regenerate') || strlen((string) MemberSetting::getValue('public_registration_token')) > 12) {
+            MemberSetting::setValue('public_registration_token', MemberSetting::generateShortToken(10));
+        }
+        MemberSetting::setValue('public_registration_enabled', '1');
+        $url = route('members.public.create', ['token' => MemberSetting::publicRegistrationToken()]);
+
+        return back()
+            ->with('success', 'Link público pronto.')
+            ->with('public_registration_url', $url);
+    }
+
+    private function syncCustomFields(Member $member, array $values): void
+    {
+        if ($values === []) {
+            return;
+        }
+
+        $fields = MemberCustomField::active()->get()->keyBy('id');
+        foreach ($values as $fieldId => $value) {
+            $fieldId = (int) $fieldId;
+            if (!$fields->has($fieldId)) {
+                continue;
+            }
+            MemberCustomFieldValue::query()->updateOrCreate(
+                [
+                    'member_id' => $member->id,
+                    'member_custom_field_id' => $fieldId,
+                ],
+                ['value' => is_array($value) ? json_encode($value) : (string) $value]
+            );
         }
     }
 }
