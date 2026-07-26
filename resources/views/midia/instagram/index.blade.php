@@ -9,8 +9,6 @@
 @endsection
 
 @section('content')
-@include('midia.partials.nav', ['active' => 'instagram'])
-
 @if(session('success'))
     <div class="alert alert-success">{{ session('success') }}</div>
 @endif

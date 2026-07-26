@@ -9,8 +9,6 @@
 @endsection
 
 @section('content')
-@include('cultos.partials.module-nav', ['active' => 'analyses'])
-
 <div class="row g-3">
     <div class="col-lg-6">
         <div class="card border-0 shadow-sm h-100">

@@ -10,8 +10,6 @@
 @section('content')
 @php $fmt = fn ($v) => 'R$ ' . number_format((float) $v, 2, ',', '.'); @endphp
 
-@include('cultos.partials.module-nav', ['active' => 'index'])
-
 <div class="row g-3 mb-4">
     <div class="col-6 col-xl-3">
         <div class="card h-100 border-0 shadow-sm">

@@ -9,8 +9,6 @@
 @endsection
 
 @section('content')
-@include('cultos.partials.module-nav', ['active' => 'form'])
-
 <div class="card border-0 shadow-sm">
     <div class="card-header bg-white">
         <h5 class="mb-0">Editar Relatório de Culto</h5>

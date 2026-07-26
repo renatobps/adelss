@@ -9,8 +9,6 @@
 @endsection
 
 @section('content')
-@include('cultos.partials.module-nav', ['active' => 'settings'])
-
 <form method="POST" action="{{ route('cultos.settings.update') }}">
     @csrf
     @method('PUT')

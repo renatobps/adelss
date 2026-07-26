@@ -429,84 +429,37 @@
                                 </li>
                                 @endif
 
-                                {{-- MENU MEMBROS - Verificar permissão de visualização ou cargos --}}
+                                {{-- MENU MEMBROS — submenus no grid da página --}}
                                 @if($canViewMembers || $canManageRoles)
-                                <li class="nav-parent {{ request()->routeIs('members.*') || request()->routeIs('member-roles.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                @php
+                                    $membersHomeRoute = $canViewMembers
+                                        ? route('members.index')
+                                        : ($canManageRoles ? route('member-roles.index') : route('permissions.index'));
+                                @endphp
+                                <li class="{{ request()->routeIs('members.*') || request()->routeIs('member-roles.*') || request()->routeIs('permissions.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ $membersHomeRoute }}">
                                         <i class="bx bx-user" aria-hidden="true"></i>
                                         <span>Membros</span>
                                     </a>
-                                    <ul class="nav nav-children">
-                                        @if($canViewMembers)
-                                        <li class="{{ request()->routeIs('members.index') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('members.index') }}">
-                                                Ver Todos
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($canManageRoles)
-                                        <li class="{{ request()->routeIs('member-roles.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('member-roles.index') }}">
-                                                Cargos
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($canManagePermissions)
-                                        <li class="{{ request()->routeIs('permissions.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('permissions.index') }}">
-                                                Permissões
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
                                 </li>
                                 @endif
 
-                                {{-- MENU PGIs - Verificar permissão de visualização, se faz parte de PGI ou se é líder --}}
+                                {{-- MENU PGIs — submenus no grid da página --}}
                                 @if($canViewPgis || $hasPgi || $isLeaderOfPgi)
-                                <li class="nav-parent {{ request()->routeIs('pgis.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                <li class="{{ request()->routeIs('pgis.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ route('pgis.index') }}">
                                         <i class="bx bx-group" aria-hidden="true"></i>
                                         <span>PGIs</span>
                                     </a>
-                                    <ul class="nav nav-children">
-                                        <li class="{{ request()->routeIs('pgis.index') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('pgis.index') }}">
-                                                Listar PGIs
-                                            </a>
-                                        </li>
-                                    </ul>
                                 </li>
                                 @endif
 
-                                {{-- MENU ENSINO - Estudos disponível para todos, outros verificam permissão --}}
-                                <li class="nav-parent {{ request()->routeIs('ensino.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                {{-- MENU ENSINO — submenus no grid da página --}}
+                                <li class="{{ request()->routeIs('ensino.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ route('ensino.estudos.index') }}">
                                         <i class="bx bx-book-reader" aria-hidden="true"></i>
                                         <span>Ensino</span>
                                     </a>
-                                    <ul class="nav nav-children">
-                                        {{-- Estudos: disponível para todos --}}
-                                        <li class="{{ request()->routeIs('ensino.estudos.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('ensino.estudos.index') }}">
-                                                <i class="bx bx-file"></i>Estudos
-                                            </a>
-                                        </li>
-                                        @if($isAdmin || $canViewEscolas)
-                                        <li class="{{ request()->routeIs('ensino.escolas.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('ensino.escolas.index') }}">
-                                                <i class="bx bx-list-ul"></i>Escolas
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewTurmas || $isStudentOfAnyClass || $isTeacherOfAnyClass)
-                                        <li class="{{ request()->routeIs('ensino.turmas.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('ensino.turmas.index') }}">
-                                                <i class="fa-solid fa-graduation-cap"></i>Turmas
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
                                 </li>
 
                                 {{-- MENU FINANCEIRO — submenus ficam no grid da página principal --}}
@@ -544,180 +497,80 @@
                                 </li>
                                 @endif
 
-                                {{-- MENU MÍDIA --}}
+                                {{-- MENU MÍDIA — submenus no grid da página --}}
                                 @if($isAdmin || $canViewMidiaArquivos || $canViewMidiaInstagram || $canManageMidiaConfig || $canManageMidiaInstagramConfig)
-                                <li class="nav-parent {{ request()->routeIs('midia.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                @php
+                                    if ($isAdmin || $canViewMidiaArquivos) {
+                                        $midiaHomeRoute = route('midia.index');
+                                    } elseif ($canViewMidiaInstagram) {
+                                        $midiaHomeRoute = route('midia.instagram.posts.index');
+                                    } else {
+                                        $midiaHomeRoute = route('midia.settings');
+                                    }
+                                @endphp
+                                <li class="{{ request()->routeIs('midia.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ $midiaHomeRoute }}">
                                         <i class="bx bx-images" aria-hidden="true"></i>
                                         <span>Mídia</span>
                                     </a>
-                                    <ul class="nav nav-children">
-                                        @if($isAdmin || $canViewMidiaArquivos)
-                                        <li class="{{ request()->routeIs('midia.index') || request()->routeIs('midia.upload') || request()->routeIs('midia.folders.*') || request()->routeIs('midia.download') || request()->routeIs('midia.preview') || request()->routeIs('midia.destroy') || request()->routeIs('midia.move') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('midia.index') }}">
-                                                <i class="bx bx-folder"></i> Arquivos
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewMidiaInstagram)
-                                        <li class="{{ request()->routeIs('midia.instagram.posts.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('midia.instagram.posts.index') }}">
-                                                <i class="bx bxl-instagram"></i> Publicações Instagram
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canManageMidiaConfig || $canManageMidiaInstagramConfig)
-                                        <li class="{{ request()->routeIs('midia.settings') || request()->routeIs('midia.google.*') || request()->routeIs('midia.instagram.redirect') || request()->routeIs('midia.instagram.callback') || request()->routeIs('midia.instagram.disconnect') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('midia.settings') }}">
-                                                <i class="bx bx-cog"></i> Configurações
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
                                 </li>
                                 @endif
 
-                                {{-- MENU AGENDA - Disponível para todos --}}
-                                <li class="nav-parent {{ request()->routeIs('agenda.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                {{-- MENU AGENDA — submenus no grid da página --}}
+                                <li class="{{ request()->routeIs('agenda.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ route('agenda.calendario.index') }}">
                                         <i class="bx bx-calendar" aria-hidden="true"></i>
                                         <span>Agenda</span>
                                     </a>
-                                    <ul class="nav nav-children">
-                                        <li class="{{ request()->routeIs('agenda.calendario.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('agenda.calendario.index') }}">
-                                                <i class="bx bx-calendar"></i>Calendário
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('agenda.eventos.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('agenda.eventos.index') }}">
-                                                <i class="bx bx-calendar-event"></i>Eventos
-                                            </a>
-                                        </li>
-                                    </ul>
                                 </li>
 
-                                {{-- MENU SERVIÇO - Verificar permissões --}}
+                                {{-- MENU SERVIÇO — submenus no grid da página --}}
                                 @if($isAdmin || $canViewDepartments || $canViewVoluntariosCadastro || $canViewVoluntariosAreas || $canViewVoluntariosEscalas || $canViewVoluntariosHistorico || $canViewVoluntariosRelatorios)
-                                <li class="nav-parent {{ request()->routeIs('servico.*') || request()->routeIs('departments.*') || request()->routeIs('voluntarios.*') || request()->routeIs('voluntarios.cadastro.*') || request()->routeIs('voluntarios.areas.*') || request()->routeIs('voluntarios.escalas.*') || request()->routeIs('voluntarios.escalas-mensais.*') || request()->routeIs('voluntarios.historico.*') || request()->routeIs('voluntarios.relatorios.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                @php
+                                    if ($isAdmin || $canViewDepartments) {
+                                        $servicoHomeRoute = route('departments.index');
+                                    } elseif ($canViewVoluntariosAreas) {
+                                        $servicoHomeRoute = route('voluntarios.areas.index');
+                                    } elseif ($canViewVoluntariosEscalas) {
+                                        $servicoHomeRoute = route('voluntarios.escalas-mensais.index');
+                                    } elseif ($canViewVoluntariosHistorico) {
+                                        $servicoHomeRoute = route('voluntarios.historico.index');
+                                    } else {
+                                        $servicoHomeRoute = route('voluntarios.relatorios.dashboard');
+                                    }
+                                @endphp
+                                <li class="{{ request()->routeIs('servico.*') || request()->routeIs('departments.*') || request()->routeIs('voluntarios.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ $servicoHomeRoute }}">
                                         <i class="bx bx-cog" aria-hidden="true"></i>
                                         <span>Serviço</span>
                                     </a>
-                                    <ul class="nav nav-children">
-                                        @if($isAdmin || $canViewDepartments)
-                                        <li class="{{ request()->routeIs('departments.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('departments.index') }}">
-                                                <i class="bx bx-building"></i>Departamentos
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewVoluntariosAreas)
-                                        <li class="{{ request()->routeIs('voluntarios.areas.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('voluntarios.areas.index') }}">
-                                                <i class="bx bx-category"></i>Áreas de Serviço
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewVoluntariosEscalas)
-                                        <li class="{{ request()->routeIs('voluntarios.escalas-mensais.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('voluntarios.escalas-mensais.index') }}">
-                                                <i class="bx bx-calendar"></i>Escalas Mensais (Cultos)
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewVoluntariosHistorico)
-                                        <li class="{{ request()->routeIs('voluntarios.historico.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('voluntarios.historico.index') }}">
-                                                <i class="bx bx-history"></i>Histórico de Serviço
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewVoluntariosRelatorios)
-                                        <li class="{{ request()->routeIs('voluntarios.relatorios.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('voluntarios.relatorios.dashboard') }}">
-                                                <i class="bx bx-bar-chart-alt-2"></i>Relatórios
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
                                 </li>
                                 @endif
 
-                                {{-- MENU RIFAS --}}
+                                {{-- MENU RIFAS — submenus no grid da página --}}
                                 @if($isAdmin || $canViewRifas || $canManageRifaSales || $canViewRifaReports)
-                                <li class="nav-parent {{ request()->routeIs('rifas.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                @php
+                                    $rifasHomeRoute = ($isAdmin || $canViewRifas || $canManageRifaSales)
+                                        ? route('rifas.index')
+                                        : route('rifas.relatorios.dashboard');
+                                @endphp
+                                <li class="{{ request()->routeIs('rifas.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ $rifasHomeRoute }}">
                                         <i class="bx bx-grid-alt" aria-hidden="true"></i>
                                         <span>Rifas</span>
                                     </a>
-                                    <ul class="nav nav-children">
-                                        @if($isAdmin || $canViewRifas)
-                                        <li class="{{ request()->routeIs('rifas.index') || request()->routeIs('rifas.create') || request()->routeIs('rifas.edit') || request()->routeIs('rifas.show') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('rifas.index') }}">
-                                                <i class="bx bx-list-ul"></i>Cadastro
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canManageRifaSales)
-                                        <li class="{{ request()->routeIs('rifas.vendas.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('rifas.index') }}">
-                                                <i class="bx bx-credit-card"></i>Vendas
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($isAdmin || $canViewRifaReports)
-                                        <li class="{{ request()->routeIs('rifas.relatorios.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('rifas.relatorios.dashboard') }}">
-                                                <i class="bx bx-bar-chart-alt-2"></i>Relatórios
-                                            </a>
-                                        </li>
-                                        @endif
-                                    </ul>
                                 </li>
                                 @endif
 
-                                {{-- MENU MORIAH --}}
-                                <li class="nav-parent {{ request()->routeIs('moriah.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                {{-- MENU MORIAH — submenus no grid da página --}}
+                                <li class="{{ request()->routeIs('moriah.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ route('moriah.schedules.index') }}">
                                         <i class="fa-solid fa-music" aria-hidden="true"></i>
                                         <span>Moriah</span>
                                     </a>
-                                    <ul class="nav nav-children">
-                                        <li class="{{ request()->routeIs('moriah.inicio.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="#">
-                                                <i class="bx bx-home"></i>Início
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('moriah.schedules.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('moriah.schedules.index') }}">
-                                                <i class="bx bx-calendar-check"></i>Escalas
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('moriah.repertorio.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('moriah.repertorio.index') }}">
-                                                <i class="bx bx-music"></i>Repertório
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('moriah.notificacoes.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="#">
-                                                <i class="bx bx-bell"></i>Notificação
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('moriah.ministerio.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('moriah.ministerio') }}">
-                                                <i class="bx bx-church"></i>Ministério
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('moriah.unavailabilities.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('moriah.unavailabilities.index') }}">
-                                                <i class="bx bx-right-arrow-alt"></i>Indisponibilidades
-                                            </a>
-                                        </li>
-                                    </ul>
                                 </li>
 
-                                {{-- MENU NOTIFICAÇÕES — submenus ficam no grid da página principal --}}
+                                {{-- MENU NOTIFICAÇÕES — submenus no grid da página --}}
                                 @if($isAdmin || ($canViewNotificacoes ?? false))
                                 <li class="{{ request()->routeIs('notificacoes.*') ? 'nav-active' : '' }}">
                                     <a class="nav-link" href="{{ route('notificacoes.painel.index') }}">
@@ -727,67 +580,24 @@
                                 </li>
                                 @endif
 
-                                {{-- MENU DISCIPULADO --}}
+                                {{-- MENU DISCIPULADO — submenus no grid da página --}}
                                 @if($canViewDiscipulado || $canViewCiclos || $canViewMembrosDiscipulado || $canViewEncontros || $canViewIndicadores || $canViewPropositos || $canViewFeedbacks)
-                                <li class="nav-parent {{ request()->routeIs('discipleship.*') ? 'nav-expanded nav-active' : '' }}">
-                                    <a class="nav-link" href="#">
+                                @php
+                                    if ($canViewCiclos) {
+                                        $discipuladoHomeRoute = route('discipleship.cycles.index');
+                                    } elseif ($canViewMembrosDiscipulado) {
+                                        $discipuladoHomeRoute = route('discipleship.members.index');
+                                    } elseif ($canViewEncontros) {
+                                        $discipuladoHomeRoute = route('discipleship.meetings.index');
+                                    } else {
+                                        $discipuladoHomeRoute = route('discipleship.dashboard.discipulador');
+                                    }
+                                @endphp
+                                <li class="{{ request()->routeIs('discipleship.*') ? 'nav-active' : '' }}">
+                                    <a class="nav-link" href="{{ $discipuladoHomeRoute }}">
                                         <i class="bx bx-group" aria-hidden="true"></i>
                                         <span>Discipulado</span>
                                     </a>
-                                    <ul class="nav nav-children">
-                                        @if($canViewCiclos)
-                                        <li class="{{ request()->routeIs('discipleship.cycles.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('discipleship.cycles.index') }}">
-                                                <i class="bx bx-calendar-alt"></i>Ciclos
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($canViewMembrosDiscipulado)
-                                        <li class="{{ request()->routeIs('discipleship.members.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('discipleship.members.index') }}">
-                                                <i class="bx bx-user"></i>Membros
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($canViewEncontros)
-                                        <li class="{{ request()->routeIs('discipleship.meetings.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('discipleship.meetings.index') }}">
-                                                <i class="bx bx-calendar"></i>Encontros
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($canViewIndicadores)
-                                        <li class="{{ request()->routeIs('discipleship.indicators.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('discipleship.indicators.index') }}">
-                                                <i class="bx bx-bar-chart"></i>Indicadores
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($canViewPropositos)
-                                        <li class="{{ request()->routeIs('discipleship.goals.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('discipleship.goals.index') }}">
-                                                <i class="bx bx-target-lock"></i>Propósitos
-                                            </a>
-                                        </li>
-                                        @endif
-                                        @if($canViewFeedbacks)
-                                        <li class="{{ request()->routeIs('discipleship.feedbacks.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('discipleship.feedbacks.index') }}">
-                                                <i class="bx bx-message"></i>Feedbacks
-                                            </a>
-                                        </li>
-                                        @endif
-                                        <li class="{{ request()->routeIs('discipleship.dashboard.*') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('discipleship.dashboard.discipulador') }}">
-                                                <i class="bx bx-dashboard"></i>Dashboard
-                                            </a>
-                                        </li>
-                                        <li class="{{ request()->routeIs('discipleship.help') ? 'nav-active' : '' }}">
-                                            <a class="nav-link" href="{{ route('discipleship.help') }}">
-                                                <i class="bx bx-help-circle"></i>Ajuda
-                                            </a>
-                                        </li>
-                                    </ul>
                                 </li>
                                 @endif
                             </ul>
@@ -830,6 +640,20 @@
                         && !request()->routeIs('financial.transactions.receipt*')
                         && !request()->routeIs('financial.checkout.*');
                     $isNotificacoesModule = request()->routeIs('notificacoes.*');
+                    $isMidiaModule = request()->routeIs('midia.*');
+                    $isMembersModule = request()->routeIs('members.*')
+                        || request()->routeIs('member-roles.*')
+                        || request()->routeIs('permissions.*');
+                    $isPgisModule = request()->routeIs('pgis.*');
+                    $isEnsinoModule = request()->routeIs('ensino.*');
+                    $isCultosModule = request()->routeIs('cultos.*');
+                    $isAgendaModule = request()->routeIs('agenda.*');
+                    $isServicoModule = request()->routeIs('servico.*')
+                        || request()->routeIs('departments.*')
+                        || request()->routeIs('voluntarios.*');
+                    $isRifasModule = request()->routeIs('rifas.*');
+                    $isMoriahModule = request()->routeIs('moriah.*');
+                    $isDiscipleshipModule = request()->routeIs('discipleship.*');
                 @endphp
                 <header class="page-header">
                     <h2>@yield('page-title', 'Página')</h2>
@@ -936,12 +760,41 @@
                     @endif
                 @endif
 
+                @if($isMembersModule)
+                    @include('members.partials.module-nav')
+                @endif
+                @if($isPgisModule)
+                    @include('pgis.partials.module-nav')
+                @endif
+                @if($isEnsinoModule)
+                    @include('ensino.partials.module-nav')
+                @endif
                 @if($isFinancialModule)
                     @include('financial.partials.module-nav')
                 @endif
-
+                @if($isCultosModule)
+                    @include('cultos.partials.module-nav')
+                @endif
+                @if($isMidiaModule)
+                    @include('midia.partials.module-nav')
+                @endif
+                @if($isAgendaModule)
+                    @include('agenda.partials.module-nav')
+                @endif
+                @if($isServicoModule)
+                    @include('servico.partials.module-nav')
+                @endif
+                @if($isRifasModule)
+                    @include('rifas.partials.module-nav')
+                @endif
+                @if($isMoriahModule)
+                    @include('moriah.partials.module-nav')
+                @endif
                 @if($isNotificacoesModule)
                     @include('notificacoes.partials.module-nav')
+                @endif
+                @if($isDiscipleshipModule)
+                    @include('discipleship.partials.module-nav')
                 @endif
 
                 @yield('content')

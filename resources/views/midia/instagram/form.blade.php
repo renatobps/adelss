@@ -10,8 +10,6 @@
 @endsection
 
 @section('content')
-@include('midia.partials.nav', ['active' => 'instagram'])
-
 @if($canScheduleInstagram && !$instagramConnected)
     <div class="alert alert-warning">
         Conecte o Instagram antes de agendar para Feed/Reels/Stories.
