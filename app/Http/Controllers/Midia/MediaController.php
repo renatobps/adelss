@@ -158,10 +158,20 @@ class MediaController extends Controller
             ? MediaFolder::find($validated['parent_folder_id'])
             : null;
 
-        $driveFolderId = $this->drive->createFolder(
-            $validated['name'],
-            $parent?->google_drive_folder_id
-        );
+        try {
+            $driveFolderId = $this->drive->createFolder(
+                $validated['name'],
+                $parent?->google_drive_folder_id
+            );
+        } catch (\Throwable $e) {
+            Log::error('Falha ao criar pasta no Google Drive', [
+                'name' => $validated['name'],
+                'parent_folder_id' => $parent?->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', $this->driveErrorMessage($e));
+        }
 
         MediaFolder::create([
             'name' => $validated['name'],
@@ -174,9 +184,19 @@ class MediaController extends Controller
         return back()->with('success', 'Pasta criada no Google Drive.');
     }
 
-    public function download(MediaFile $mediaFile): StreamedResponse
+    public function download(MediaFile $mediaFile): StreamedResponse|\Illuminate\Http\RedirectResponse
     {
-        $contents = $this->drive->downloadContents($mediaFile->google_drive_file_id);
+        try {
+            $contents = $this->drive->downloadContents($mediaFile->google_drive_file_id);
+        } catch (\Throwable $e) {
+            Log::error('Falha no download do Google Drive', [
+                'media_file_id' => $mediaFile->id,
+                'drive_file_id' => $mediaFile->google_drive_file_id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return back()->with('error', $this->driveErrorMessage($e));
+        }
 
         return response()->streamDownload(function () use ($contents) {
             echo $contents;
@@ -215,7 +235,17 @@ class MediaController extends Controller
             ?: GoogleDriveSetting::current()->root_folder_id;
 
         if ($newParent) {
-            $this->drive->moveFile($mediaFile->google_drive_file_id, $newParent, $oldParent);
+            try {
+                $this->drive->moveFile($mediaFile->google_drive_file_id, $newParent, $oldParent);
+            } catch (\Throwable $e) {
+                Log::error('Falha ao mover arquivo no Google Drive', [
+                    'media_file_id' => $mediaFile->id,
+                    'drive_file_id' => $mediaFile->google_drive_file_id,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return back()->with('error', $this->driveErrorMessage($e));
+            }
         }
 
         $mediaFile->update(['media_folder_id' => $target?->id]);
@@ -229,7 +259,16 @@ class MediaController extends Controller
             abort(404);
         }
 
-        $contents = $this->drive->downloadContents($mediaFile->google_drive_file_id);
+        try {
+            $contents = $this->drive->downloadContents($mediaFile->google_drive_file_id);
+        } catch (\Throwable $e) {
+            Log::warning('Preview do Drive indisponível', [
+                'media_file_id' => $mediaFile->id,
+                'drive_file_id' => $mediaFile->google_drive_file_id,
+                'error' => $e->getMessage(),
+            ]);
+            abort(404);
+        }
 
         return response($contents, 200, [
             'Content-Type' => $mediaFile->mime_type,
@@ -375,6 +414,11 @@ class MediaController extends Controller
     private function driveErrorMessage(\Throwable $e): string
     {
         $msg = $e->getMessage();
+
+        if (str_contains($msg, 'ACCESS_TOKEN_SCOPE_INSUFFICIENT') || stripos($msg, 'insufficientScopes') !== false) {
+            return 'A autorização do Google Drive está com permissões desatualizadas (escopo insuficiente). '
+                . 'Desconecte e conecte novamente a conta em Mídia > Configurações — será pedido um novo consentimento ao Google.';
+        }
 
         if (str_contains($msg, 'invalid_grant') || str_contains($msg, 'Reconecte a conta')) {
             return 'A conexão com o Google Drive expirou ou foi revogada. Reconecte a conta em Mídia > Configurações.';

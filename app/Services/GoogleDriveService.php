@@ -14,6 +14,46 @@ use RuntimeException;
 
 class GoogleDriveService
 {
+    /**
+     * Executa uma chamada à API do Drive com log detalhado em caso de falha.
+     * Captura Google\Service\Exception, registra código/motivo/método e
+     * relança RuntimeException com mensagem tratável pelos controllers.
+     *
+     * @template T
+     * @param  callable(): T  $fn
+     * @return T
+     */
+    private function callDrive(string $operation, callable $fn)
+    {
+        try {
+            return $fn();
+        } catch (\Google\Service\Exception $e) {
+            $errors = $e->getErrors();
+            $reason = is_array($errors) && isset($errors[0]['reason']) ? (string) $errors[0]['reason'] : '';
+
+            Log::error("Google Drive API: falha em {$operation}", [
+                'operation' => $operation,
+                'code' => $e->getCode(),
+                'reason' => $reason,
+                'message' => $e->getMessage(),
+            ]);
+
+            if (
+                str_contains($e->getMessage(), 'ACCESS_TOKEN_SCOPE_INSUFFICIENT')
+                || in_array($reason, ['insufficientScopes', 'insufficientPermissions'], true)
+            ) {
+                throw new RuntimeException(
+                    'ACCESS_TOKEN_SCOPE_INSUFFICIENT: a autorização atual do Google Drive não tem as permissões necessárias. '
+                        . 'Desconecte e conecte novamente a conta em Mídia > Configurações para renovar o consentimento.',
+                    403,
+                    $e
+                );
+            }
+
+            throw new RuntimeException("Google Drive ({$operation}): " . $e->getMessage(), (int) $e->getCode(), $e);
+        }
+    }
+
     public function makeClient(?GoogleDriveSetting $settings = null): GoogleClient
     {
         $client = new GoogleClient();
@@ -166,12 +206,12 @@ class GoogleDriveService
             addslashes($name)
         );
 
-        $existing = $drive->files->listFiles([
+        $existing = $this->callDrive('files.list (ensureRootFolder)', fn () => $drive->files->listFiles([
             'q' => $query,
             'spaces' => 'drive',
             'fields' => 'files(id, name)',
             'pageSize' => 1,
-        ]);
+        ]));
 
         if (count($existing->getFiles()) > 0) {
             return $existing->getFiles()[0]->getId();
@@ -183,7 +223,7 @@ class GoogleDriveService
             'parents' => [$folderId],
         ]);
 
-        $created = $drive->files->create($folder, ['fields' => 'id']);
+        $created = $this->callDrive('files.create (ensureRootFolder)', fn () => $drive->files->create($folder, ['fields' => 'id']));
 
         return $created->getId();
     }
@@ -201,12 +241,12 @@ class GoogleDriveService
             $q .= ' and (' . $extraQuery . ')';
         }
 
-        $result = $this->drive()->files->listFiles([
+        $result = $this->callDrive('files.list (listFilesInFolder)', fn () => $this->drive()->files->listFiles([
             'q' => $q,
             'spaces' => 'drive',
             'fields' => 'files(id, name, mimeType, size, modifiedTime, thumbnailLink, iconLink)',
             'pageSize' => 100,
-        ]);
+        ]));
 
         return $result->getFiles() ?? [];
     }
@@ -218,9 +258,9 @@ class GoogleDriveService
      */
     public function getFilePreviewLinks(string $fileId): array
     {
-        $file = $this->drive()->files->get($fileId, [
+        $file = $this->callDrive('files.get (previewLinks)', fn () => $this->drive()->files->get($fileId, [
             'fields' => 'id, mimeType, thumbnailLink, iconLink',
-        ]);
+        ]));
 
         return [
             'thumbnailLink' => $file->getThumbnailLink(),
@@ -320,7 +360,7 @@ class GoogleDriveService
             'parents' => [$parent],
         ]);
 
-        $created = $drive->files->create($folder, ['fields' => 'id']);
+        $created = $this->callDrive('files.create (createFolder)', fn () => $drive->files->create($folder, ['fields' => 'id']));
 
         return $created->getId();
     }
@@ -348,12 +388,12 @@ class GoogleDriveService
             'parents' => [$parent],
         ]);
 
-        $created = $drive->files->create($meta, [
+        $created = $this->callDrive('files.create (uploadFile)', fn () => $drive->files->create($meta, [
             'data' => file_get_contents($path),
             'mimeType' => $mime,
             'uploadType' => 'multipart',
             'fields' => 'id, name, mimeType, size',
-        ]);
+        ]));
 
         return [
             'id' => $created->getId(),
@@ -365,7 +405,7 @@ class GoogleDriveService
 
     public function downloadContents(string $fileId): string
     {
-        $response = $this->drive()->files->get($fileId, ['alt' => 'media']);
+        $response = $this->callDrive('files.get (download)', fn () => $this->drive()->files->get($fileId, ['alt' => 'media']));
 
         return $response->getBody()->getContents();
     }
@@ -373,19 +413,19 @@ class GoogleDriveService
     public function getTemporaryDownloadUrl(string $fileId): string
     {
         $drive = $this->drive();
-        $drive->permissions->create($fileId, new \Google\Service\Drive\Permission([
+        $this->callDrive('permissions.create (tempUrl)', fn () => $drive->permissions->create($fileId, new \Google\Service\Drive\Permission([
             'type' => 'anyone',
             'role' => 'reader',
-        ]));
+        ])));
 
-        $file = $drive->files->get($fileId, ['fields' => 'webContentLink,webViewLink']);
+        $file = $this->callDrive('files.get (tempUrl)', fn () => $drive->files->get($fileId, ['fields' => 'webContentLink,webViewLink']));
 
         return $file->getWebContentLink() ?: $file->getWebViewLink();
     }
 
     public function deleteFile(string $fileId): void
     {
-        $this->drive()->files->delete($fileId);
+        $this->callDrive('files.delete', fn () => $this->drive()->files->delete($fileId));
     }
 
     public function moveFile(string $fileId, string $newParentId, ?string $oldParentId = null): void
@@ -395,6 +435,6 @@ class GoogleDriveService
             $params['removeParents'] = $oldParentId;
         }
 
-        $this->drive()->files->update($fileId, new DriveFile(), $params);
+        $this->callDrive('files.update (move)', fn () => $this->drive()->files->update($fileId, new DriveFile(), $params));
     }
 }
