@@ -697,8 +697,9 @@ ul.nav-main li.nav-group-label {
 #memberQuickModal {
     z-index: 2000;
 }
-#memberQuickModal + .modal-backdrop,
-.modal-backdrop.show {
+/* Eleva o backdrop apenas quando a modal de membro está aberta,
+   sem afetar as demais modais do sistema (Bootstrap usa 1050/1055). */
+body:has(#memberQuickModal.show) .modal-backdrop.show {
     z-index: 1990;
 }
 .members-quick-modal {

@@ -137,7 +137,7 @@
                             <div id="rolesContainer" style="min-height: 150px; border: 2px dashed #ddd; border-radius: 4px; padding: 1rem; background-color: #f8f9fa;">
                                 <div id="rolesList">
                                     <div class="alert alert-info mb-2" style="background-color: #e9ecef; border: none;">
-                                        <small><strong>Líder</strong></div>
+                                        <small><strong>Líder</strong></small>
                                     </div>
                                 </div>
                             </div>

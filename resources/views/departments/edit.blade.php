@@ -165,7 +165,7 @@
                                     @foreach($department->roles as $role)
                                         @if($role->is_default)
                                             <div class="alert alert-info mb-2" style="background-color: #e9ecef; border: none;">
-                                                <small><strong>{{ $role->name }}</strong></div>
+                                                <small><strong>{{ $role->name }}</strong></small>
                                             </div>
                                         @else
                                             <div class="alert alert-light mb-2" id="role-{{ $role->id }}">
