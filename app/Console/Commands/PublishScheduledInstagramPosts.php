@@ -57,11 +57,20 @@ class PublishScheduledInstagramPosts extends Command
                         continue;
                     }
 
+                    // PENDING é sempre processado; PUBLISHING só é retomado se estiver
+                    // travado há 15+ min (evita reenvio duplicado quando outro processo
+                    // ainda está publicando este mesmo destino).
+                    $stuckThreshold = now()->subMinutes(15);
                     $pending = $post->destinations
-                        ->whereIn('status', [
-                            ScheduledPostDestination::STATUS_PENDING,
-                            ScheduledPostDestination::STATUS_PUBLISHING,
-                        ])
+                        ->filter(function (ScheduledPostDestination $d) use ($stuckThreshold) {
+                            if ($d->status === ScheduledPostDestination::STATUS_PENDING) {
+                                return true;
+                            }
+
+                            return $d->status === ScheduledPostDestination::STATUS_PUBLISHING
+                                && $d->updated_at !== null
+                                && $d->updated_at->lte($stuckThreshold);
+                        })
                         ->values();
 
                     $instagramPending = $pending->filter(fn (ScheduledPostDestination $d) => $d->isInstagram())->values();
@@ -153,10 +162,29 @@ class PublishScheduledInstagramPosts extends Command
         ScheduledPostDestination $destination,
         string $mediaUrl
     ): void {
-        $destination->update([
-            'status' => ScheduledPostDestination::STATUS_PUBLISHING,
-            'error_message' => null,
-        ]);
+        // Claim atômico: apenas um processo consegue assumir este destino.
+        // Se outro processo já o marcou como PUBLISHING recentemente, não reenvia
+        // (evita a mesma mensagem duas vezes no grupo).
+        $claimed = ScheduledPostDestination::query()
+            ->whereKey($destination->id)
+            ->where(function ($q) {
+                $q->where('status', ScheduledPostDestination::STATUS_PENDING)
+                    ->orWhere(function ($q2) {
+                        $q2->where('status', ScheduledPostDestination::STATUS_PUBLISHING)
+                            ->where('updated_at', '<=', now()->subMinutes(15));
+                    });
+            })
+            ->update([
+                'status' => ScheduledPostDestination::STATUS_PUBLISHING,
+                'error_message' => null,
+                'updated_at' => now(),
+            ]);
+
+        if ($claimed === 0) {
+            $this->warn("Post #{$post->id}: destino WhatsApp já está sendo publicado por outro processo — ignorando.");
+
+            return;
+        }
 
         try {
             if (!$destination->isWhatsAppGroup()) {

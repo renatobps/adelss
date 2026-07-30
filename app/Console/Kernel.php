@@ -19,7 +19,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('financial:notify-due-expenses')->hourly();
         $schedule->command('financial:send-smart-summary')->hourly();
         $schedule->command('cultos:check-pastoral-alerts')->dailyAt('09:00');
-        $schedule->command('midia:publish-instagram-posts')->everyFiveMinutes();
+        // withoutOverlapping evita duas execuções simultâneas (causa de envio
+        // duplicado ao WhatsApp quando a publicação no Instagram demora +5 min)
+        $schedule->command('midia:publish-instagram-posts')
+            ->everyFiveMinutes()
+            ->withoutOverlapping(30);
         $schedule->command('midia:remove-expired-instagram-posts')
             ->everyFifteenMinutes()
             ->withoutOverlapping();

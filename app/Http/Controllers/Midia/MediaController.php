@@ -10,6 +10,7 @@ use App\Models\MediaFolder;
 use App\Services\GoogleDriveService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -87,6 +88,8 @@ class MediaController extends Controller
         $parentDriveId = $folder?->google_drive_folder_id;
 
         $created = 0;
+        $uploadError = null;
+
         foreach ($request->file('files', []) as $file) {
             if (!$file->isValid()) {
                 continue;
@@ -97,11 +100,22 @@ class MediaController extends Controller
                 ? MediaFile::CATEGORY_PHOTO
                 : MediaFile::CATEGORY_DOCUMENT;
 
-            $uploaded = $this->drive->uploadFile(
-                $file,
-                $file->getClientOriginalName(),
-                $parentDriveId
-            );
+            try {
+                $uploaded = $this->drive->uploadFile(
+                    $file,
+                    $file->getClientOriginalName(),
+                    $parentDriveId
+                );
+            } catch (\Throwable $e) {
+                Log::error('Falha no upload para o Google Drive', [
+                    'file' => $file->getClientOriginalName(),
+                    'media_folder_id' => $folder?->id,
+                    'drive_parent_id' => $parentDriveId,
+                    'error' => $e->getMessage(),
+                ]);
+                $uploadError = $this->driveErrorMessage($e);
+                break;
+            }
 
             MediaFile::create([
                 'name' => pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME),
@@ -117,6 +131,12 @@ class MediaController extends Controller
                 'uploaded_by' => Auth::id(),
             ]);
             $created++;
+        }
+
+        if ($uploadError !== null) {
+            $prefix = $created > 0 ? $created . ' arquivo(s) enviado(s), mas houve falha: ' : '';
+
+            return back()->with('error', $prefix . $uploadError);
         }
 
         return back()->with('success', $created . ' arquivo(s) enviado(s) ao Google Drive.');
@@ -227,6 +247,11 @@ class MediaController extends Controller
         try {
             $thumb = $this->drive->downloadThumbnailContents($mediaFile->google_drive_file_id);
         } catch (\Throwable $e) {
+            Log::warning('Miniatura do Drive indisponível', [
+                'media_file_id' => $mediaFile->id,
+                'drive_file_id' => $mediaFile->google_drive_file_id,
+                'error' => $e->getMessage(),
+            ]);
             abort(404);
         }
 
@@ -342,5 +367,33 @@ class MediaController extends Controller
             'google' => GoogleDriveSetting::current(),
             'instagram' => InstagramSetting::current(),
         ]);
+    }
+
+    /**
+     * Converte erros da API do Google Drive em mensagens acionáveis para o usuário.
+     */
+    private function driveErrorMessage(\Throwable $e): string
+    {
+        $msg = $e->getMessage();
+
+        if (str_contains($msg, 'invalid_grant') || str_contains($msg, 'Reconecte a conta')) {
+            return 'A conexão com o Google Drive expirou ou foi revogada. Reconecte a conta em Mídia > Configurações.';
+        }
+
+        if (str_contains($msg, 'File not found') || str_contains($msg, 'notFound')) {
+            return 'A pasta não está acessível na conta do Google Drive conectada. '
+                . 'Se a conta do Drive foi trocada ou reconectada, as pastas criadas antes ficam inacessíveis — '
+                . 'crie a pasta novamente ou reconecte a conta original em Mídia > Configurações.';
+        }
+
+        if (stripos($msg, 'insufficient') !== false || stripos($msg, 'permission') !== false) {
+            return 'Sem permissão no Google Drive para esta operação. Reconecte a conta em Mídia > Configurações.';
+        }
+
+        if (str_contains($msg, 'storageQuotaExceeded') || stripos($msg, 'quota') !== false) {
+            return 'A conta do Google Drive conectada está sem espaço ou excedeu a cota de uso.';
+        }
+
+        return 'Falha ao comunicar com o Google Drive: ' . $msg;
     }
 }
