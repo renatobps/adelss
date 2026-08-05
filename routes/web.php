@@ -7,6 +7,7 @@ use App\Http\Controllers\Agenda\PublicEventController;
 use App\Http\Controllers\Ensino\PublicStudyFormController;
 use App\Http\Controllers\Webhooks\MercadoPagoWebhookController;
 use App\Http\Controllers\Webhooks\EvolutionWebhookController;
+use App\Http\Controllers\PublicMemberRegistrationController;
 
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
@@ -20,6 +21,10 @@ Route::post('/evento/{slug}/inscricao', [PublicEventController::class, 'register
 
 Route::get('/estudo-formulario/{slug}', [PublicStudyFormController::class, 'show'])->name('study.forms.public.show');
 Route::post('/estudo-formulario/{slug}/responder', [PublicStudyFormController::class, 'submit'])->name('study.forms.public.submit');
+
+// Cadastro público de membro (sem login)
+Route::get('/cadastro-membro/{token}', [PublicMemberRegistrationController::class, 'create'])->name('members.public.create');
+Route::post('/cadastro-membro/{token}', [PublicMemberRegistrationController::class, 'store'])->name('members.public.store');
 Route::post('/webhooks/mercado-pago', [MercadoPagoWebhookController::class, 'handle'])->name('webhooks.mercadopago');
 Route::post('/webhook', [EvolutionWebhookController::class, 'handle'])->name('webhooks.evolution');
 Route::post('/webhook/{event}', [EvolutionWebhookController::class, 'handle'])

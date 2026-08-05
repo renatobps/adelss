@@ -29,7 +29,7 @@ class PublicMemberRegistrationController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'nullable|email|unique:members,email',
-            'phone' => 'nullable|string|max:20',
+            'phone' => ['required', 'string', 'max:20', 'regex:/^\(\d{2}\) \d{5}-\d{4}$/'],
             'gender' => 'nullable|in:M,F',
             'marital_status' => 'nullable|in:solteiro,casado,divorciado,viuvo,uniao_estavel',
             'birth_date' => 'nullable|date',
@@ -41,6 +41,9 @@ class PublicMemberRegistrationController extends Controller
             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'notes' => 'nullable|string|max:2000',
             'custom_fields' => 'nullable|array',
+        ], [
+            'phone.required' => 'O campo Telefone / WhatsApp é obrigatório.',
+            'phone.regex' => 'Informe o telefone no formato (00) 00000-0000.',
         ]);
 
         $photoPath = null;

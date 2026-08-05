@@ -60,8 +60,10 @@
                     <input type="text" name="name" class="form-control" value="{{ old('name') }}" required>
                 </div>
                 <div class="col-md-6">
-                    <label class="form-label">Telefone / WhatsApp</label>
-                    <input type="text" name="phone" class="form-control" value="{{ old('phone') }}" placeholder="(00) 00000-0000">
+                    <label class="form-label">Telefone / WhatsApp *</label>
+                    <input type="tel" name="phone" id="phoneInput" class="form-control" value="{{ old('phone') }}"
+                           placeholder="(00) 00000-0000" inputmode="numeric" maxlength="15" autocomplete="tel"
+                           pattern="\(\d{2}\) \d{5}-\d{4}" title="Informe no formato (00) 00000-0000" required>
                 </div>
                 <div class="col-md-6">
                     <label class="form-label">E-mail</label>
@@ -128,5 +130,21 @@
         </form>
     </div>
 </div>
+<script>
+    (function () {
+        const input = document.getElementById('phoneInput');
+        function applyMask(value) {
+            const digits = value.replace(/\D/g, '').slice(0, 11);
+            if (digits.length === 0) return '';
+            if (digits.length <= 2) return '(' + digits;
+            if (digits.length <= 7) return '(' + digits.slice(0, 2) + ') ' + digits.slice(2);
+            return '(' + digits.slice(0, 2) + ') ' + digits.slice(2, 7) + '-' + digits.slice(7);
+        }
+        input.addEventListener('input', function () {
+            this.value = applyMask(this.value);
+        });
+        input.value = applyMask(input.value);
+    })();
+</script>
 </body>
 </html>

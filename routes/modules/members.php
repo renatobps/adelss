@@ -3,12 +3,7 @@
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\MemberCustomFieldController;
 use App\Http\Controllers\MemberRoleController;
-use App\Http\Controllers\PublicMemberRegistrationController;
 use Illuminate\Support\Facades\Route;
-
-// Cadastro público (sem login)
-Route::get('cadastro-membro/{token}', [PublicMemberRegistrationController::class, 'create'])->name('members.public.create');
-Route::post('cadastro-membro/{token}', [PublicMemberRegistrationController::class, 'store'])->name('members.public.store');
 
 // Rotas do modulo de Membros
 Route::middleware('module.access:members')->group(function () {
