@@ -11,4 +11,11 @@ return [
     'default_delay' => (int) env('WHATSAPP_DEFAULT_DELAY', 700),
     'timeout' => (int) env('WHATSAPP_TIMEOUT', 120),
     'max_retries' => (int) env('WHATSAPP_MAX_RETRIES', 3),
+
+    // Destinatários dos alertas de queda/recuperação da conexão (separados por vírgula).
+    // Lido via config() — nunca env() direto — por causa do config:cache em produção.
+    'alert_emails' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('WHATSAPP_ALERT_EMAILS', ''))
+    ))),
 ];

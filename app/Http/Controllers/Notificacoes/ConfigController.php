@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Notificacoes;
 
 use App\Http\Controllers\Controller;
 use App\Models\Department;
+use App\Models\WhatsAppConnectionLog;
 use App\Services\NotificacaoService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
@@ -23,11 +24,18 @@ class ConfigController extends Controller
         $instanciaPadrao = trim((string) (config('whatsapp.instance_name') ?? ''));
         $instanciaId = $this->whatsapp->getActiveInstanceId();
 
+        $connectionLogs = WhatsAppConnectionLog::query()
+            ->orderByDesc('checked_at')
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get();
+
         return view('notificacoes.config.index', compact(
             'configurado',
             'instanciaSelecionada',
             'instanciaPadrao',
-            'instanciaId'
+            'instanciaId',
+            'connectionLogs'
         ));
     }
 

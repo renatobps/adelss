@@ -218,6 +218,32 @@
 
             <section role="main" class="content-body">
                 @php
+                    // Banner de WhatsApp desconectado: lê o último log gravado pelo
+                    // comando whatsapp:check-connection (cache 1 min; sem chamada à API).
+                    $whatsappBannerLog = null;
+                    $whatsappBannerUser = Illuminate\Support\Facades\Auth::user();
+                    if ($whatsappBannerUser && ($whatsappBannerUser->is_admin || $whatsappBannerUser->hasPermission('notificacoes.manage') || $whatsappBannerUser->hasPermission('notificacoes.view'))) {
+                        $whatsappBannerLog = Illuminate\Support\Facades\Cache::remember(
+                            'whatsapp.last_connection_log',
+                            60,
+                            fn () => App\Models\WhatsAppConnectionLog::query()
+                                ->orderByDesc('checked_at')
+                                ->orderByDesc('id')
+                                ->first()
+                        );
+                    }
+                @endphp
+                @if($whatsappBannerLog && !$whatsappBannerLog->isOnline())
+                    <div class="alert alert-danger d-flex align-items-center gap-2 mb-3" role="alert">
+                        <i class="bx bx-error-circle fs-4 flex-shrink-0"></i>
+                        <div>
+                            <strong>O WhatsApp está desconectado</strong> — notificações não estão sendo enviadas
+                            (verificado às {{ $whatsappBannerLog->checked_at->format('H:i') }}).
+                            <a href="{{ route('notificacoes.config.index') }}" class="alert-link">Clique aqui para reconectar</a>.
+                        </div>
+                    </div>
+                @endif
+                @php
                     $isFinancialModule = request()->routeIs('financial.*')
                         && !request()->routeIs('financial.transactions.receipt*')
                         && !request()->routeIs('financial.checkout.*');

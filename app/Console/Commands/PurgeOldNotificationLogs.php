@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\FinancialNotificationLog;
 use App\Models\NotificacaoEnviada;
+use App\Models\WhatsAppConnectionLog;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -29,9 +30,14 @@ class PurgeOldNotificationLogs extends Command
             ->where('created_at', '<', $cutoff)
             ->count();
 
+        $connectionCount = WhatsAppConnectionLog::query()
+            ->where('checked_at', '<', $cutoff)
+            ->count();
+
         $this->info("Retenção: {$days} dias (anteriores a {$cutoff->format('d/m/Y H:i')})");
         $this->line("financial_notification_logs: {$financialCount}");
         $this->line("notificacoes_enviadas: {$whatsappCount}");
+        $this->line("whatsapp_connection_logs: {$connectionCount}");
 
         if ($dryRun) {
             $this->warn('Dry-run: nenhum registro foi removido.');
@@ -46,7 +52,11 @@ class PurgeOldNotificationLogs extends Command
             ->where('created_at', '<', $cutoff)
             ->delete();
 
-        $this->info("Removidos: {$deletedFinancial} logs financeiros, {$deletedWhatsapp} notificações WhatsApp.");
+        $deletedConnection = WhatsAppConnectionLog::query()
+            ->where('checked_at', '<', $cutoff)
+            ->delete();
+
+        $this->info("Removidos: {$deletedFinancial} logs financeiros, {$deletedWhatsapp} notificações WhatsApp, {$deletedConnection} verificações de conexão.");
 
         return self::SUCCESS;
     }

@@ -33,6 +33,11 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping();
 
+        // Monitor de conexão do WhatsApp (alerta por e-mail — nunca por WhatsApp)
+        $schedule->command('whatsapp:check-connection')
+            ->everyTenMinutes()
+            ->withoutOverlapping();
+
         // Purge de logs antigos de notificação (domingo 03:00)
         $schedule->command('logs:purge-old')->weeklyOn(0, '03:00');
     }

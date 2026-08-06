@@ -1067,6 +1067,42 @@ class WhatsAppService
         }
     }
 
+    /**
+     * Verificação de conexão para monitoramento (comando agendado e tela de config).
+     * Normaliza o resultado de getConnectionStatus() e nunca lança exceção:
+     * falha na consulta à API vira status "erro_consulta".
+     *
+     * @return array{status: string, connected: bool, instance_name: string, instance_id: string, raw_state: ?string}
+     */
+    public function checkConnectionStatus(): array
+    {
+        $instanceName = $this->getActiveInstanceName();
+        $instanceId = $this->getActiveInstanceId();
+
+        try {
+            $status = $this->getConnectionStatus();
+            $connected = (bool) ($status['connected'] ?? false);
+
+            return [
+                'status' => $connected
+                    ? \App\Models\WhatsAppConnectionLog::STATUS_CONECTADO
+                    : \App\Models\WhatsAppConnectionLog::STATUS_DESCONECTADO,
+                'connected' => $connected,
+                'instance_name' => $instanceName,
+                'instance_id' => $instanceId,
+                'raw_state' => (string) ($status['state'] ?? ''),
+            ];
+        } catch (\Throwable $e) {
+            return [
+                'status' => \App\Models\WhatsAppConnectionLog::STATUS_ERRO_CONSULTA,
+                'connected' => false,
+                'instance_name' => $instanceName,
+                'instance_id' => $instanceId,
+                'raw_state' => mb_substr($e->getMessage(), 0, 255),
+            ];
+        }
+    }
+
     public function getConnectionStatus(?string $instanceId = null): array
     {
         if ($this->apiUrl === '' || $this->apiKey === '') {

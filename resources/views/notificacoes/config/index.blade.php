@@ -245,6 +245,60 @@
         </section>
     </div>
 </div>
+
+<!-- Histórico de Conexão (monitoramento automático) -->
+<div class="row">
+    <div class="col-12">
+        <section class="card">
+            <header class="card-header">
+                <h5 class="mb-0"><i class="bx bx-pulse me-2"></i> Histórico de Conexão</h5>
+                <p class="card-subtitle mb-0">Verificação automática a cada 10 minutos</p>
+            </header>
+            <div class="card-body">
+                @if(($connectionLogs ?? collect())->isEmpty())
+                    <p class="text-muted text-center mb-0">Nenhuma verificação registrada ainda. O monitoramento grava um registro a cada 10 minutos.</p>
+                @else
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Data/Hora</th>
+                                    <th>Instância</th>
+                                    <th>Status</th>
+                                    <th>Alerta</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($connectionLogs as $log)
+                                    <tr>
+                                        <td>{{ $log->checked_at->format('d/m/Y H:i') }}</td>
+                                        <td>{{ $log->instance_name }}</td>
+                                        <td>
+                                            @if($log->isOnline())
+                                                <span class="badge bg-success">Conectado</span>
+                                            @elseif($log->status === App\Models\WhatsAppConnectionLog::STATUS_ERRO_CONSULTA)
+                                                <span class="badge bg-warning text-dark">Erro na consulta</span>
+                                            @else
+                                                <span class="badge bg-danger">Desconectado</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($log->notified)
+                                                <span class="badge bg-info text-dark">E-mail enviado</span>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        </section>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
