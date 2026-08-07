@@ -204,26 +204,6 @@
                         </div>
                     </div>
                 </form>
-                <hr>
-                <h6 class="mb-3"><i class="bx bx-building me-1"></i> Enviar para Departamento</h6>
-                <form id="teste-departamento-form" onsubmit="enviarTesteDepartamento(event)">
-                    <div class="row align-items-end">
-                        <div class="col-md-4">
-                            <label class="form-label">Departamento</label>
-                            <select id="teste_departamento" class="form-select" required>
-                                <option value="">Selecione...</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Mensagem</label>
-                            <input type="text" id="teste_mensagem_grupo" class="form-control" value="Teste em grupo! 👋" required>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">&nbsp;</label>
-                            <button type="submit" class="btn btn-primary w-100"><i class="bx bx-send me-1"></i> Enviar</button>
-                        </div>
-                    </div>
-                </form>
                 <div id="teste-result" class="mt-3"></div>
             </div>
         </section>
@@ -363,58 +343,6 @@
             .catch(function() {
                 resultEl.innerHTML = '<div class="alert alert-danger">Erro de conexão.</div>';
                 addLog('Erro ao enviar mensagem teste', 'danger');
-            });
-    };
-
-    window.enviarTesteDepartamento = function(e) {
-        e.preventDefault();
-        var deptId = document.getElementById('teste_departamento').value;
-        var mensagem = document.getElementById('teste_mensagem_grupo').value.trim();
-        if (!deptId || !mensagem) { alert('Selecione um departamento e preencha a mensagem'); return; }
-        var resultEl = document.getElementById('teste-result');
-        resultEl.innerHTML = '<div class="alert alert-info"><span class="spinner-border spinner-border-sm me-2"></span>Enviando para o departamento...</div>';
-        var formData = new FormData();
-        formData.append('_token', csrf);
-        formData.append('department_id', deptId);
-        formData.append('mensagem', mensagem);
-        fetch(base + '/config/teste', { method: 'POST', body: formData, headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' } })
-            .then(function(r) { return r.json().catch(function() { return {}; }); })
-            .then(function(res) {
-                if (res.success) {
-                    var d = res.data || {};
-                    resultEl.innerHTML = '<div class="alert alert-success"><i class="bx bx-check-circle me-2"></i>Enviadas: ' + (d.enviadas || 0) + ', Erros: ' + (d.erros || 0) + '</div>';
-                    addLog('Mensagens enviadas para departamento (sucesso: ' + (d.enviadas || 0) + ')', 'success');
-                } else {
-                    resultEl.innerHTML = '<div class="alert alert-danger"><i class="bx bx-error-circle me-2"></i>' + (res.error || 'Erro') + '</div>';
-                    addLog('Erro ao enviar para departamento: ' + (res.error || ''), 'danger');
-                }
-            })
-            .catch(function() {
-                resultEl.innerHTML = '<div class="alert alert-danger">Erro de conexão.</div>';
-                addLog('Erro ao enviar para departamento', 'danger');
-            });
-    };
-
-    window.carregarDepartamentos = function() {
-        fetch(base + '/departamentos-lista-json')
-            .then(function(r) { return r.json(); })
-            .then(function(data) {
-                var sel = document.getElementById('teste_departamento');
-                if (!sel) return;
-                while (sel.options.length > 1) sel.remove(1);
-                if (Array.isArray(data) && data.length > 0) {
-                    data.forEach(function(d) {
-                        var opt = document.createElement('option');
-                        opt.value = d.id;
-                        opt.textContent = d.name;
-                        sel.appendChild(opt);
-                    });
-                } else {
-                    var opt = document.createElement('option');
-                    opt.disabled = true;
-                    opt.textContent = 'Nenhum departamento cadastrado';
-                    sel.appendChild(opt);
-                }
             });
     };
 
@@ -599,7 +527,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         verificarStatus();
         carregarInstancias();
-        carregarDepartamentos();
     });
 })();
 </script>
