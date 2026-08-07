@@ -66,6 +66,15 @@ class FinancialModulePolicy
             || $user->hasPermission('financial.accounts.manage')
             || $user->hasPermission('financial.contacts.manage')
             || $user->hasPermission('financial.cost-centers.manage')
-            || $user->hasPermission('financial.reports.manage');
+            || $user->hasPermission('financial.reports.manage')
+            || $user->hasPermission('financial.campanhas.view')
+            || $user->hasPermission('financial.campanhas.manage');
+    }
+
+    public function campaignAction(User $user, string $action): bool
+    {
+        return $user->is_admin
+            || $user->hasPermission('financial.campanhas.manage')
+            || $user->hasPermission("financial.campanhas.{$action}");
     }
 }

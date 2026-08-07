@@ -17,6 +17,8 @@ class Kernel extends ConsoleKernel
 
         // Lembretes / resumos financeiros (horário vem da configuração da automação)
         $schedule->command('financial:notify-due-expenses')->hourly();
+        // Lembretes de parcelas de campanhas de arrecadação
+        $schedule->command('campaigns:notify-due-installments')->dailyAt('09:00')->withoutOverlapping();
         $schedule->command('financial:send-smart-summary')->hourly();
         $schedule->command('cultos:check-pastoral-alerts')->dailyAt('09:00');
         // withoutOverlapping evita duas execuções simultâneas (causa de envio

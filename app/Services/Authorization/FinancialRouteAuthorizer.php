@@ -130,6 +130,10 @@ class FinancialRouteAuthorizer
             );
         }
 
+        if (str_starts_with($routeName ?? '', 'financial.campaigns')) {
+            return $this->authorizeCampaignRoute($user, $routeName, $denyAccess);
+        }
+
         if (str_starts_with($routeName ?? '', 'financial.cost-centers')) {
             return $this->authorizeResourceRoute(
                 $user,
@@ -144,6 +148,44 @@ class FinancialRouteAuthorizer
         return $this->modulePolicy->accessModule($user)
             ? null
             : $denyAccess('Acesso negado. Você não tem permissão para acessar este módulo.');
+    }
+
+    /**
+     * Campanhas de arrecadação: mapeia cada rota para a ação
+     * financial.campanhas.{view|create|edit|delete|pagar|estornar}.
+     *
+     * @param  callable(string): Response  $denyAccess
+     */
+    private function authorizeCampaignRoute(User $user, ?string $routeName, callable $denyAccess): ?Response
+    {
+        $action = match ($routeName) {
+            'financial.campaigns.create',
+            'financial.campaigns.store',
+            'financial.campaigns.sponsors.store' => 'create',
+            'financial.campaigns.edit',
+            'financial.campaigns.update',
+            'financial.campaigns.sponsors.update' => 'edit',
+            'financial.campaigns.destroy',
+            'financial.campaigns.sponsors.destroy' => 'delete',
+            'financial.campaigns.installments.pay',
+            'financial.campaigns.installments.pay-batch',
+            'financial.campaigns.installments.resend' => 'pagar',
+            'financial.campaigns.installments.reverse' => 'estornar',
+            default => 'view',
+        };
+
+        $labels = [
+            'view' => 'visualizar campanhas',
+            'create' => 'criar campanhas ou adicionar patrocinadores',
+            'edit' => 'editar campanhas',
+            'delete' => 'excluir registros de campanhas',
+            'pagar' => 'registrar pagamentos de campanhas',
+            'estornar' => 'estornar pagamentos de campanhas',
+        ];
+
+        return $this->modulePolicy->campaignAction($user, $action)
+            ? null
+            : $denyAccess("Acesso negado. Você não tem permissão para {$labels[$action]}.");
     }
 
     /**

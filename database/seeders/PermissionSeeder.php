@@ -347,6 +347,20 @@ class PermissionSeeder extends Seeder
                         ['name' => 'Ver', 'key' => 'financial.reports.view'],
                     ],
                 ],
+                // Campanhas de arrecadação (independentes da contabilidade)
+                [
+                    'name' => 'Campanhas',
+                    'key' => 'financial.campanhas.manage',
+                    'description' => 'Permissões para gerenciar campanhas de arrecadação',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'financial.campanhas.view'],
+                        ['name' => 'Adicionar', 'key' => 'financial.campanhas.create'],
+                        ['name' => 'Editar', 'key' => 'financial.campanhas.edit'],
+                        ['name' => 'Excluir', 'key' => 'financial.campanhas.delete'],
+                        ['name' => 'Registrar pagamento', 'key' => 'financial.campanhas.pagar'],
+                        ['name' => 'Estornar pagamento', 'key' => 'financial.campanhas.estornar'],
+                    ],
+                ],
             ],
         ];
 

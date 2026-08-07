@@ -161,11 +161,14 @@ class ModuleMenu
         $canViewContacts = $can('financial.contacts.view', 'financial.contacts.manage');
         $canViewCostCenters = $can('financial.cost-centers.view', 'financial.cost-centers.manage');
         $canViewFinReports = $can('financial.reports.view', 'financial.reports.manage');
-        if ($isAdmin || $canViewReceitas || $canViewDespesas || $canViewFinCategories || $canViewAccounts || $canViewContacts || $canViewCostCenters || $canViewFinReports) {
+        $canViewCampanhas = $can('financial.campanhas.view', 'financial.campanhas.manage');
+        if ($isAdmin || $canViewReceitas || $canViewDespesas || $canViewFinCategories || $canViewAccounts || $canViewContacts || $canViewCostCenters || $canViewFinReports || $canViewCampanhas) {
             if ($isAdmin || $canViewReceitas || $canViewDespesas) {
                 $financialUrl = route('financial.summary');
             } elseif ($canViewFinReports) {
                 $financialUrl = route('financial.reports.index');
+            } elseif ($canViewCampanhas) {
+                $financialUrl = route('financial.campaigns.index');
             } elseif ($canViewAccounts) {
                 $financialUrl = route('financial.accounts.index');
             } elseif ($canViewFinCategories) {

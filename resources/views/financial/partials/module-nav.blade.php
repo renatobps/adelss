@@ -9,6 +9,7 @@
     $canViewContacts = $isAdmin || $user?->hasPermission('financial.contacts.view') || $user?->hasPermission('financial.contacts.manage');
     $canViewCostCenters = $isAdmin || $user?->hasPermission('financial.cost-centers.view') || $user?->hasPermission('financial.cost-centers.manage');
     $canViewReports = $isAdmin || $user?->hasPermission('financial.reports.view') || $user?->hasPermission('financial.reports.manage');
+    $canViewCampaigns = $isAdmin || $user?->hasPermission('financial.campanhas.view') || $user?->hasPermission('financial.campanhas.manage');
 
     $items = array_values(array_filter([
         $canViewTransactions ? [
@@ -52,6 +53,12 @@
             'icon' => 'bx bx-store',
             'url' => route('financial.contacts.index'),
             'active' => request()->routeIs('financial.contacts.*'),
+        ] : null,
+        $canViewCampaigns ? [
+            'label' => 'Campanhas',
+            'icon' => 'bx bx-donate-heart',
+            'url' => route('financial.campaigns.index'),
+            'active' => request()->routeIs('financial.campaigns.*'),
         ] : null,
         $canViewReports ? [
             'label' => 'Relatórios',

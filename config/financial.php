@@ -8,4 +8,9 @@ return [
         'send_pdf_receipt' => env('FINANCIAL_WHATSAPP_PDF_RECEIPT', true),
         'due_reminder_days_ahead' => (int) env('FINANCIAL_DESPESA_LEMBRETE_DIAS', 1),
     ],
+
+    'campaigns' => [
+        // Dias de antecedência do lembrete de parcela de campanha a vencer
+        'due_reminder_days_ahead' => (int) env('CAMPAIGN_PARCELA_LEMBRETE_DIAS', 3),
+    ],
 ];
