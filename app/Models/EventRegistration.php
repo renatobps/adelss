@@ -22,10 +22,17 @@ class EventRegistration extends Model
         'address',
         'custom_answers',
         'status',
+        'registration_number',
+        'check_in_token',
+        'receipt_sent_at',
+        'checked_in_at',
+        'checked_in_by',
     ];
 
     protected $casts = [
         'custom_answers' => 'array',
+        'receipt_sent_at' => 'datetime',
+        'checked_in_at' => 'datetime',
     ];
 
     public function event(): BelongsTo
@@ -36,5 +43,19 @@ class EventRegistration extends Model
     public function payment(): HasOne
     {
         return $this->hasOne(EventRegistrationPayment::class, 'event_registration_id');
+    }
+
+    public function checkedInBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'checked_in_by');
+    }
+
+    public function isPaymentApproved(): bool
+    {
+        if (!$this->event?->is_paid) {
+            return true;
+        }
+
+        return strtolower((string) ($this->payment?->status ?? '')) === 'approved';
     }
 }

@@ -9,7 +9,11 @@ use App\Models\EventRegistration;
 use App\Models\EventRegistrationField;
 use App\Models\EventScheduleItem;
 use App\Models\EventSpeaker;
+use App\Services\EventRegistrationReceiptService;
 use App\Services\WhatsAppService;
+use App\Support\PdfText;
+use App\Support\QrCode;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -255,9 +259,192 @@ class EventosController extends Controller
             'status' => ['required', 'in:pendente,confirmado,cancelado'],
         ]);
 
+        $previousStatus = $registration->status;
         $registration->update(['status' => $validated['status']]);
 
-        return back()->with('success', 'Status da inscrição atualizado.');
+        $notice = 'Status da inscrição atualizado.';
+
+        // Ao confirmar manualmente, envia o comprovante (falha não reverte o status).
+        if ($validated['status'] === EventRegistration::STATUS_CONFIRMADO
+            && $previousStatus !== EventRegistration::STATUS_CONFIRMADO) {
+            $resultado = app(EventRegistrationReceiptService::class)->enviarComprovante($registration);
+            if ($resultado['success'] ?? false) {
+                $notice .= ' Comprovante enviado por WhatsApp.';
+            } elseif ($resultado['skipped'] ?? false) {
+                $notice .= ' Comprovante não enviado — inscrito sem telefone cadastrado.';
+            } else {
+                $notice .= ' Falha ao enviar o comprovante por WhatsApp — use "Reenviar comprovante".';
+            }
+        }
+
+        return back()->with('success', $notice);
+    }
+
+    public function resendRegistrationReceipt(Event $event, EventRegistration $registration, EventRegistrationReceiptService $receiptService)
+    {
+        $this->authorize('manageRegistrations', $event);
+
+        if ((int) $registration->event_id !== (int) $event->id) {
+            abort(404);
+        }
+
+        $resultado = $receiptService->enviarComprovante($registration);
+
+        if ($resultado['success'] ?? false) {
+            return back()->with('success', 'Comprovante enviado por WhatsApp para ' . $registration->name . '.');
+        }
+
+        if ($resultado['skipped'] ?? false) {
+            return back()->with('error', 'Comprovante não enviado — inscrito sem telefone cadastrado.');
+        }
+
+        return back()->with('error', 'Falha ao enviar o comprovante: ' . ($resultado['error'] ?? 'erro desconhecido'));
+    }
+
+    public function registrationReceiptPdf(Event $event, EventRegistration $registration, EventRegistrationReceiptService $receiptService)
+    {
+        $this->authorize('manageRegistrations', $event);
+
+        if ((int) $registration->event_id !== (int) $event->id) {
+            abort(404);
+        }
+
+        $pdf = Pdf::loadView('agenda.eventos.pdf.comprovante', $receiptService->pdfViewData($registration))
+            ->setPaper('a4');
+
+        $fileName = 'comprovante-' . Str::slug((string) ($registration->registration_number ?: 'inscricao-' . $registration->id)) . '.pdf';
+
+        return $pdf->download($fileName);
+    }
+
+    /**
+     * QR Code da página pública do evento (PNG ou SVG).
+     */
+    public function qrcode(Request $request, Event $event)
+    {
+        $this->authorize('view', $event);
+        abort_unless($event->public_slug, 404, 'Este evento não possui página pública.');
+
+        $url = $this->publicUrl($event);
+        $slug = Str::slug($event->title) ?: 'evento';
+
+        if ($request->query('format') === 'svg') {
+            return response(QrCode::svg($url), 200, [
+                'Content-Type' => 'image/svg+xml',
+                'Content-Disposition' => 'attachment; filename="qrcode-' . $slug . '.svg"',
+            ]);
+        }
+
+        $disposition = $request->boolean('inline') ? 'inline' : 'attachment';
+
+        return response(QrCode::png($url, 10), 200, [
+            'Content-Type' => 'image/png',
+            'Content-Disposition' => $disposition . '; filename="qrcode-' . $slug . '.png"',
+        ]);
+    }
+
+    /**
+     * Cartaz de divulgação em PDF (A4) com banner, dados do evento e QR Code.
+     */
+    public function cartaz(Event $event)
+    {
+        $this->authorize('view', $event);
+        abort_unless($event->public_slug, 404, 'Este evento não possui página pública.');
+
+        $url = $this->publicUrl($event);
+
+        $pdf = Pdf::loadView('agenda.eventos.pdf.cartaz', [
+            'event' => $event,
+            'eventTitle' => PdfText::stripEmoji((string) $event->title),
+            'bannerDataUri' => EventRegistrationReceiptService::publicFileDataUri($event->banner_image),
+            'qrDataUri' => QrCode::pngDataUri($url, 10),
+            'publicUrl' => $url,
+        ])->setPaper('a4');
+
+        return $pdf->download('cartaz-' . (Str::slug($event->title) ?: 'evento') . '.pdf');
+    }
+
+    /**
+     * Tela de check-in por QR Code na entrada do evento.
+     */
+    public function checkIn(Event $event)
+    {
+        $this->authorize('manageRegistrations', $event);
+
+        [$present, $total] = $this->checkInCounters($event);
+
+        return view('agenda.eventos.check-in', compact('event', 'present', 'total'));
+    }
+
+    /**
+     * Valida um token de check-in e registra a presença (JSON).
+     */
+    public function checkInValidate(Request $request, Event $event)
+    {
+        $this->authorize('manageRegistrations', $event);
+
+        $token = trim((string) $request->input('token'));
+
+        $respond = function (string $result, string $message, ?EventRegistration $registration = null) use ($event) {
+            [$present, $total] = $this->checkInCounters($event);
+
+            return response()->json([
+                'result' => $result,
+                'message' => $message,
+                'name' => $registration?->name,
+                'registration_number' => $registration?->registration_number,
+                'present' => $present,
+                'total' => $total,
+            ]);
+        };
+
+        if ($token === '') {
+            return $respond('not_found', 'Inscrição não encontrada.');
+        }
+
+        $registration = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->where('check_in_token', $token)
+            ->with('payment')
+            ->first();
+
+        if (!$registration) {
+            return $respond('not_found', 'Inscrição não encontrada.');
+        }
+
+        if ($registration->status === EventRegistration::STATUS_CANCELADO) {
+            return $respond('cancelled', 'Inscrição cancelada.', $registration);
+        }
+
+        if ($registration->checked_in_at) {
+            return $respond('already', 'Já utilizado às ' . $registration->checked_in_at->format('H:i') . '.', $registration);
+        }
+
+        $paymentPending = $event->is_paid && !$registration->isPaymentApproved();
+        if ($paymentPending && !$request->boolean('force')) {
+            return $respond('pending', 'Pagamento pendente.', $registration);
+        }
+
+        $registration->update([
+            'checked_in_at' => now(),
+            'checked_in_by' => $request->user()?->id,
+        ]);
+
+        return $respond('ok', 'Entrada liberada.', $registration);
+    }
+
+    /**
+     * @return array{0: int, 1: int} [presentes, total de inscrições válidas]
+     */
+    private function checkInCounters(Event $event): array
+    {
+        $base = $event->registrations()
+            ->whereIn('status', [EventRegistration::STATUS_PENDENTE, EventRegistration::STATUS_CONFIRMADO]);
+
+        return [
+            (clone $base)->whereNotNull('checked_in_at')->count(),
+            $base->count(),
+        ];
     }
 
     public function sendPixToRegistrationWhatsapp(Event $event, EventRegistration $registration, WhatsAppService $whatsAppService)
@@ -415,6 +602,7 @@ class EventosController extends Controller
             'schedules' => 'nullable|array',
             'schedules.*.title' => 'nullable|string|max:255',
             'schedules.*.detail' => 'nullable|string|max:2000',
+            'schedules.*.day' => 'nullable|integer|min:1|max:60',
             'schedules.*.hh' => 'nullable|integer|min:0|max:23',
             'schedules.*.mm' => 'nullable|integer|min:0|max:59',
             'schedules.*.responsible_name' => 'nullable|string|max:255',
@@ -550,6 +738,7 @@ class EventosController extends Controller
 
             EventScheduleItem::create([
                 'event_id' => $event->id,
+                'day' => max(1, (int) ($row['day'] ?? 1)),
                 'title' => $title,
                 'detail' => $row['detail'] ?? null,
                 'responsible_name' => $row['responsible_name'] ?? null,

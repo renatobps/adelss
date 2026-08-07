@@ -9,6 +9,7 @@ class EventScheduleItem extends Model
 {
     protected $fillable = [
         'event_id',
+        'day',
         'title',
         'detail',
         'responsible_name',
@@ -19,6 +20,7 @@ class EventScheduleItem extends Model
     ];
 
     protected $casts = [
+        'day' => 'integer',
         'time_hh' => 'integer',
         'time_mm' => 'integer',
         'sort_order' => 'integer',

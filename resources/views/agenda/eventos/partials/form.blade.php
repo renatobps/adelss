@@ -9,6 +9,7 @@
             'existing_responsible_photo' => $s->responsible_photo_path,
             'hh' => $s->time_hh,
             'mm' => $s->time_mm,
+            'day' => $s->day ?? 1,
         ])->values()->all();
     }
     if (empty($schedules)) {
@@ -19,6 +20,7 @@
             'existing_responsible_photo' => '',
             'hh' => '',
             'mm' => '',
+            'day' => 1,
         ]];
     }
 
@@ -247,6 +249,8 @@
                             <input type="number" name="schedules[{{ $i }}][hh]" class="form-control" placeholder="HH" min="0" max="23" style="max-width:80px" value="{{ $row['hh'] ?? '' }}">
                             <span>:</span>
                             <input type="number" name="schedules[{{ $i }}][mm]" class="form-control" placeholder="MM" min="0" max="59" style="max-width:80px" value="{{ $row['mm'] ?? '' }}">
+                            <span class="text-muted small ms-2">Dia</span>
+                            <input type="number" name="schedules[{{ $i }}][day]" class="form-control" min="1" max="60" style="max-width:70px" value="{{ $row['day'] ?? 1 }}" title="Dia do evento (1 = primeiro dia)">
                             <button type="button" class="btn btn-outline-danger btn-sm remove-row ms-auto">×</button>
                         </div>
                     </div>
@@ -367,6 +371,8 @@
             '<input type="number" name="schedules['+si+'][hh]" class="form-control" placeholder="HH" min="0" max="23" style="max-width:80px">' +
             '<span>:</span>' +
             '<input type="number" name="schedules['+si+'][mm]" class="form-control" placeholder="MM" min="0" max="59" style="max-width:80px">' +
+            '<span class="text-muted small ms-2">Dia</span>' +
+            '<input type="number" name="schedules['+si+'][day]" class="form-control" min="1" max="60" style="max-width:70px" value="1" title="Dia do evento (1 = primeiro dia)">' +
             '<button type="button" class="btn btn-outline-danger btn-sm remove-row ms-auto">×</button></div>';
         wrap.appendChild(div);
         si++;

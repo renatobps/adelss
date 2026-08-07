@@ -27,6 +27,11 @@
                             <i class="bx bx-link-external"></i> Página do evento
                         </a>
                     @endif
+                    @if($canEditRegistrations)
+                        <a href="{{ route('agenda.eventos.check-in', $event) }}" class="btn btn-success btn-sm">
+                            <i class="bx bx-qr-scan"></i> Check-in
+                        </a>
+                    @endif
                     <a href="{{ route('agenda.eventos.edit', $event) }}" class="btn btn-primary btn-sm"><i class="bx bx-edit"></i> Editar evento</a>
                 </div>
             </header>
@@ -48,12 +53,14 @@
                     <table class="table table-striped table-bordered mb-0">
                         <thead>
                             <tr>
+                                <th>Inscrição</th>
                                 <th>Nome</th>
                                 <th style="min-width: 11rem;">Status</th>
                                 <th>E-mail</th>
                                 <th>Telefone</th>
                                 <th>Pagamento</th>
                                 <th>Valor</th>
+                                <th>Comprovante</th>
                                 <th>Data</th>
                             </tr>
                         </thead>
@@ -63,6 +70,14 @@
                                     $st = $r->status ?? \App\Models\EventRegistration::STATUS_PENDENTE;
                                 @endphp
                                 <tr>
+                                    <td>
+                                        <strong class="d-block">{{ $r->registration_number ?: '—' }}</strong>
+                                        @if($r->checked_in_at)
+                                            <span class="badge bg-success mt-1" title="Check-in em {{ $r->checked_in_at->format('d/m/Y H:i') }}">
+                                                Presente {{ $r->checked_in_at->format('H:i') }}
+                                            </span>
+                                        @endif
+                                    </td>
                                     <td>{{ $r->name }}</td>
                                     <td>
                                         @if($canEditRegistrations)
@@ -135,11 +150,35 @@
                                             —
                                         @endif
                                     </td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-1">
+                                            @if($r->receipt_sent_at)
+                                                <small class="text-success" title="{{ $r->receipt_sent_at->format('d/m/Y H:i') }}">
+                                                    <i class="bx bx-check"></i> Enviado {{ $r->receipt_sent_at->format('d/m H:i') }}
+                                                </small>
+                                            @else
+                                                <small class="text-muted">Não enviado</small>
+                                            @endif
+                                            <div class="d-flex gap-1">
+                                                <a href="{{ route('agenda.eventos.registrations.receipt-pdf', [$event, $r]) }}" class="btn btn-outline-secondary btn-xs" title="Baixar comprovante em PDF">
+                                                    <i class="bx bxs-file-pdf"></i> PDF
+                                                </a>
+                                                @if($canEditRegistrations)
+                                                    <form method="post" action="{{ route('agenda.eventos.registrations.resend-receipt', [$event, $r]) }}">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-outline-success btn-xs" @disabled(empty($r->phone)) title="{{ empty($r->phone) ? 'Inscrito sem telefone' : 'Reenviar comprovante por WhatsApp' }}">
+                                                            <i class="bx bxl-whatsapp"></i> {{ $r->receipt_sent_at ? 'Reenviar' : 'Enviar' }}
+                                                        </button>
+                                                    </form>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td>{{ $r->created_at?->format('d/m/Y H:i:s') }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-muted">Nenhuma inscrição neste evento.</td>
+                                    <td colspan="9" class="text-muted">Nenhuma inscrição neste evento.</td>
                                 </tr>
                             @endforelse
                         </tbody>

@@ -317,19 +317,286 @@
     border-radius: 14px;
 }
 
-.evx-day-tabs {
+.evx-sched-controls {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: center;
-    margin-bottom: 16px;
+    gap: 12px;
+    margin-bottom: 22px;
 }
 
-.evx-day-tabs button {
+.evx-day-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+}
+
+.evx-day-tab {
+    border: 1px solid #d0d9e6;
+    border-radius: 999px;
+    background: #fff;
+    color: #334155;
+    padding: 8px 18px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    min-height: 44px;
+}
+
+.evx-day-tab small {
+    display: block;
+    font-weight: 500;
+    font-size: 0.7rem;
+    opacity: 0.7;
+}
+
+.evx-day-tab.active {
+    background: var(--evx-accent);
+    border-color: var(--evx-accent);
+    color: #fff;
+}
+
+.evx-view-toggle {
+    display: inline-flex;
+    border: 1px solid #d0d9e6;
+    border-radius: 999px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.evx-view-toggle button {
     border: 0;
-    border-radius: 6px;
+    background: transparent;
+    color: #475569;
+    font-weight: 700;
+    font-size: 0.82rem;
+    padding: 10px 18px;
+    min-height: 44px;
+}
+
+.evx-view-toggle button.active {
     background: var(--evx-accent);
     color: #fff;
-    padding: 10px 18px;
+}
+
+/* ---- Timeline compacta da programação ---- */
+
+.evx-day-pane {
+    display: none;
+    max-width: 780px;
+    margin: 0 auto;
+}
+
+.evx-day-pane.active {
+    display: block;
+}
+
+.evx-period {
+    margin-bottom: 18px;
+}
+
+.evx-period-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #64748b;
+    margin-bottom: 6px;
+    padding-left: 4px;
+}
+
+.evx-period-head i {
+    color: var(--evx-accent-2);
+}
+
+.evx-tl {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.evx-tl-item + .evx-tl-item {
+    border-top: 1px solid #eef2f7;
+}
+
+.evx-tl-head {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    padding: 0 14px 0 0;
+    min-height: 44px;
+    cursor: pointer;
+}
+
+.evx-tl-head:disabled {
+    cursor: default;
+}
+
+.evx-tl-time {
+    flex: 0 0 58px;
+    text-align: right;
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: var(--evx-accent-2);
+    font-variant-numeric: tabular-nums;
+}
+
+.evx-tl-track {
+    flex: 0 0 26px;
+    position: relative;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.evx-tl-track::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    margin-left: -1px;
+    background: #e2e8f0;
+}
+
+.evx-tl-item:first-child .evx-tl-track::before {
+    top: 50%;
+}
+
+.evx-tl-item:last-child .evx-tl-track::before {
+    bottom: 50%;
+}
+
+.evx-tl-item:only-child .evx-tl-track::before {
+    display: none;
+}
+
+.evx-tl-dot {
+    position: relative;
+    z-index: 1;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--evx-accent);
+    box-shadow: 0 0 0 3px #fff;
+}
+
+.evx-tl-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 10px 10px 10px 4px;
+}
+
+.evx-tl-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #0f172a;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.evx-tl-resp {
+    font-size: 0.8rem;
+    color: #64748b;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+    max-width: 45%;
+}
+
+.evx-tl-caret {
+    flex: 0 0 auto;
+    color: #94a3b8;
+    font-size: 0.75rem;
+    transition: transform 0.2s ease;
+}
+
+.evx-tl-item.open .evx-tl-caret {
+    transform: rotate(180deg);
+}
+
+.evx-tl-body {
+    display: none;
+    padding: 0 14px 14px 88px;
+}
+
+.evx-tl-item.open .evx-tl-body,
+.evx-detailed .evx-tl-body {
+    display: block;
+}
+
+.evx-detailed .evx-tl-caret {
+    display: none;
+}
+
+.evx-tl-body-inner p {
+    margin: 0;
+    color: #475569;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.evx-tl-body-inner.with-photo {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.evx-tl-body-inner.with-photo img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    object-position: center;
+    border-radius: 10px;
+    flex-shrink: 0;
+}
+
+/* Item acontecendo agora */
+
+.evx-tl-now-badge {
+    display: none;
+    flex: 0 0 auto;
+    background: var(--evx-accent);
+    color: #fff;
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-radius: 999px;
+    padding: 3px 9px;
+    margin-right: 8px;
+    animation: evx-now-pulse 1.6s ease-in-out infinite;
+}
+
+.evx-tl-item.evx-tl-now {
+    background: color-mix(in srgb, var(--evx-accent) 7%, #fff);
+    box-shadow: inset 3px 0 0 var(--evx-accent);
+}
+
+.evx-tl-item.evx-tl-now .evx-tl-now-badge {
+    display: inline-block;
+}
+
+@keyframes evx-now-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
 }
 
 .evx-schedule-list {
@@ -469,6 +736,23 @@
 @media (max-width: 767px) {
     .evx-topbar-inner {
         min-height: 64px;
+    }
+    .evx-tl-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
+    }
+    .evx-tl-title,
+    .evx-tl-resp {
+        white-space: normal;
+        max-width: 100%;
+    }
+    .evx-tl-time {
+        flex-basis: 46px;
+        font-size: 0.8rem;
+    }
+    .evx-tl-body {
+        padding-left: 76px;
     }
     .evx-brand strong {
         font-size: 0.8rem;

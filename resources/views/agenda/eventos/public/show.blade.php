@@ -94,32 +94,131 @@
 </section>
 
 @if($event->scheduleItems->isNotEmpty())
+@php
+    $scheduleStartDay = $event->start_date->copy()->startOfDay();
+    $scheduleEndDay = ($event->end_date ?: $event->start_date)->copy()->startOfDay();
+    $scheduleTotalDays = max(1, (int) $scheduleStartDay->diffInDays($scheduleEndDay) + 1);
+
+    // Itens sem horário vão para o fim do dia, mantendo a ordem manual como desempate.
+    $sortedScheduleItems = $event->scheduleItems->sortBy(function ($item) {
+        $minutes = $item->time_hh === null ? (24 * 60 + 1) : ((int) $item->time_hh * 60 + (int) ($item->time_mm ?? 0));
+
+        return sprintf('%05d-%05d', $minutes, (int) $item->sort_order);
+    })->values();
+
+    $itemsByDay = $sortedScheduleItems
+        ->groupBy(fn ($item) => min(max((int) ($item->day ?? 1), 1), $scheduleTotalDays))
+        ->sortKeys();
+
+    $periodOf = function ($item) {
+        if ($item->time_hh === null) {
+            return 'sem';
+        }
+        $hh = (int) $item->time_hh;
+        if ($hh <= 11) {
+            return 'manha';
+        }
+
+        return $hh <= 17 ? 'tarde' : 'noite';
+    };
+
+    $periodLabels = ['manha' => 'Manhã', 'tarde' => 'Tarde', 'noite' => 'Noite', 'sem' => 'Horário a definir'];
+    $periodIcons = ['manha' => 'fa-sun', 'tarde' => 'fa-cloud-sun', 'noite' => 'fa-moon', 'sem' => 'fa-clock'];
+    $showDayTabs = $scheduleTotalDays > 1;
+@endphp
 <section id="programacao" class="evx-section">
     <div class="container">
         <p class="evx-kicker text-center">Guia do Evento</p>
-        <h2 class="text-center mb-4"></h2>
-        <div class="evx-day-tabs">
-            <button class="active" type="button">Dia 1</button>
+        <h2 class="text-center mb-3">Programação</h2>
+
+        <div class="evx-sched-controls">
+            @if($showDayTabs)
+                <div class="evx-day-tabs" role="tablist">
+                    @foreach($itemsByDay as $dayNumber => $dayItems)
+                        <button
+                            type="button"
+                            class="evx-day-tab {{ $loop->first ? 'active' : '' }}"
+                            data-day-target="evx-day-{{ $dayNumber }}"
+                            role="tab"
+                            aria-selected="{{ $loop->first ? 'true' : 'false' }}"
+                        >
+                            Dia {{ $dayNumber }}
+                            <small>{{ $scheduleStartDay->copy()->addDays($dayNumber - 1)->format('d/m') }}</small>
+                        </button>
+                    @endforeach
+                </div>
+            @endif
+            <div class="evx-view-toggle" role="group" aria-label="Modo de visualização da programação">
+                <button type="button" class="active" data-view="compact">Compacta</button>
+                <button type="button" data-view="detailed">Detalhada</button>
+            </div>
         </div>
-        <div class="evx-schedule-list">
-            @foreach($event->scheduleItems as $item)
-                <article class="evx-schedule-item">
-                    <div class="evx-time">
-                        {{ str_pad((string)($item->time_hh ?? 0), 2, '0', STR_PAD_LEFT) }}:{{ str_pad((string)($item->time_mm ?? 0), 2, '0', STR_PAD_LEFT) }}
-                    </div>
-                    <div class="evx-content">
-                        <h3>{{ $item->title }}</h3>
-                        <p>{{ $item->detail ?: 'Detalhes desta atividade serão compartilhados no evento.' }}</p>
-                    </div>
-                    <div class="evx-speaker">
-                        @if($item->responsible_photo_path)
-                            <img src="{{ \App\Models\Event::publicStorageUrl($item->responsible_photo_path) }}" alt="Responsável">
-                        @elseif($event->speakers->isNotEmpty() && $event->speakers->first()->photo_path)
-                            <img src="{{ \App\Models\Event::publicStorageUrl($event->speakers->first()->photo_path) }}" alt="Palestrante">
+
+        <div class="evx-schedule" id="evx-schedule">
+            @foreach($itemsByDay as $dayNumber => $dayItems)
+                <div
+                    class="evx-day-pane {{ $loop->first ? 'active' : '' }}"
+                    id="evx-day-{{ $dayNumber }}"
+                    data-date="{{ $scheduleStartDay->copy()->addDays($dayNumber - 1)->format('Y-m-d') }}"
+                >
+                    @foreach(['manha', 'tarde', 'noite', 'sem'] as $period)
+                        @php
+                            $periodItems = $dayItems->filter(fn ($it) => $periodOf($it) === $period)->values();
+                        @endphp
+                        @if($periodItems->isNotEmpty())
+                            <div class="evx-period">
+                                <div class="evx-period-head">
+                                    <i class="fas {{ $periodIcons[$period] }}" aria-hidden="true"></i>
+                                    <span>{{ $periodLabels[$period] }}</span>
+                                </div>
+                                <div class="evx-tl">
+                                    @foreach($periodItems as $item)
+                                        @php
+                                            $hasTime = $item->time_hh !== null;
+                                            $minutes = $hasTime ? ((int) $item->time_hh * 60 + (int) ($item->time_mm ?? 0)) : null;
+                                            $timeLabel = $hasTime
+                                                ? sprintf('%02d:%02d', (int) $item->time_hh, (int) ($item->time_mm ?? 0))
+                                                : '--:--';
+                                            $photoUrl = $item->responsible_photo_path
+                                                ? \App\Models\Event::publicStorageUrl($item->responsible_photo_path)
+                                                : null;
+                                            $detailText = trim((string) $item->detail);
+                                            $hasDetails = $detailText !== '' || $photoUrl;
+                                        @endphp
+                                        <div class="evx-tl-item {{ $hasDetails ? 'has-details' : '' }}" @if($minutes !== null) data-minutes="{{ $minutes }}" @endif>
+                                            <button type="button" class="evx-tl-head" @if($hasDetails) aria-expanded="false" @else disabled @endif>
+                                                <span class="evx-tl-time">{{ $timeLabel }}</span>
+                                                <span class="evx-tl-track"><span class="evx-tl-dot"></span></span>
+                                                <span class="evx-tl-main">
+                                                    <span class="evx-tl-title">{{ $item->title }}</span>
+                                                    @if($item->responsible_name)
+                                                        <span class="evx-tl-resp">{{ $item->responsible_name }}</span>
+                                                    @endif
+                                                </span>
+                                                <span class="evx-tl-now-badge" aria-hidden="true">Agora</span>
+                                                @if($hasDetails)
+                                                    <i class="fas fa-chevron-down evx-tl-caret" aria-hidden="true"></i>
+                                                @endif
+                                            </button>
+                                            @if($hasDetails)
+                                                <div class="evx-tl-body">
+                                                    <div class="evx-tl-body-inner {{ $photoUrl ? 'with-photo' : '' }}">
+                                                        @if($photoUrl)
+                                                            <img src="{{ $photoUrl }}" alt="{{ $item->responsible_name ?: 'Responsável' }}">
+                                                        @endif
+                                                        @if($detailText !== '')
+                                                            <p>{{ $detailText }}</p>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
                         @endif
-                        <strong>{{ $item->responsible_name ?: ($event->speakers->first()->name ?? 'Equipe do Evento') }}</strong>
-                    </div>
-                </article>
+                    @endforeach
+                </div>
             @endforeach
         </div>
     </div>
@@ -523,6 +622,89 @@ document.addEventListener('DOMContentLoaded', function () {
         initCardFormIfNeeded();
     }
     @endif
+
+    // ------- Programação: abas de dia, accordion, toggle de visualização e "acontecendo agora" -------
+    var schedule = document.getElementById('evx-schedule');
+    if (schedule) {
+        var dayTabs = document.querySelectorAll('.evx-day-tab');
+        var dayPanes = schedule.querySelectorAll('.evx-day-pane');
+
+        var activateDay = function (paneId) {
+            dayPanes.forEach(function (pane) {
+                pane.classList.toggle('active', pane.id === paneId);
+            });
+            dayTabs.forEach(function (tab) {
+                var isActive = tab.getAttribute('data-day-target') === paneId;
+                tab.classList.toggle('active', isActive);
+                tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+        };
+
+        dayTabs.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                activateDay(tab.getAttribute('data-day-target'));
+            });
+        });
+
+        // Accordion (visão compacta)
+        schedule.querySelectorAll('.evx-tl-item.has-details .evx-tl-head').forEach(function (head) {
+            head.addEventListener('click', function () {
+                if (schedule.classList.contains('evx-detailed')) return;
+                var item = head.closest('.evx-tl-item');
+                var open = item.classList.toggle('open');
+                head.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+        });
+
+        // Toggle Compacta / Detalhada
+        document.querySelectorAll('.evx-view-toggle button').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                document.querySelectorAll('.evx-view-toggle button').forEach(function (b) {
+                    b.classList.toggle('active', b === btn);
+                });
+                schedule.classList.toggle('evx-detailed', btn.getAttribute('data-view') === 'detailed');
+            });
+        });
+
+        // Destaque do item "acontecendo agora" + scroll automático
+        (function () {
+            var now = new Date();
+            var pad = function (n) { return String(n).padStart(2, '0'); };
+            var todayStr = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+            var todayPane = null;
+            dayPanes.forEach(function (pane) {
+                if (pane.getAttribute('data-date') === todayStr) todayPane = pane;
+            });
+            if (!todayPane) return;
+
+            activateDay(todayPane.id);
+
+            var nowMinutes = now.getHours() * 60 + now.getMinutes();
+            var timed = Array.prototype.filter.call(
+                todayPane.querySelectorAll('.evx-tl-item[data-minutes]'),
+                function () { return true; }
+            );
+            if (!timed.length) return;
+
+            var current = null;
+            for (var i = 0; i < timed.length; i++) {
+                var start = parseInt(timed[i].getAttribute('data-minutes'), 10);
+                var next = (i + 1 < timed.length) ? parseInt(timed[i + 1].getAttribute('data-minutes'), 10) : (24 * 60);
+                if (nowMinutes >= start && nowMinutes < next) {
+                    current = timed[i];
+                    break;
+                }
+            }
+            if (!current) return;
+
+            current.classList.add('evx-tl-now');
+            if (!window.location.hash) {
+                setTimeout(function () {
+                    current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 600);
+            }
+        })();
+    }
 
     var countdown = document.querySelector('.evx-countdown');
     if (countdown) {

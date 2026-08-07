@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Event;
 use App\Models\EventRegistration;
 use App\Models\EventRegistrationPayment;
+use App\Services\EventRegistrationReceiptService;
 use App\Services\Payments\MercadoPagoService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
@@ -259,10 +260,11 @@ class PublicEventController extends Controller
                     ->with('error', $baseMessage.$friendlyDetail);
             }
 
+            $this->ensureReceiptCredentials($registration);
             $this->sendWhatsAppNotifications($event, $registration);
 
             return back()
-                ->with('success', 'Inscrição recebida! Conclua o pagamento do ingresso para confirmar sua vaga.')
+                ->with('success', 'Inscrição recebida! Número de inscrição: '.($registration->registration_number ?: '-').'. Conclua o pagamento do ingresso para confirmar sua vaga.')
                 ->with('pix_payment', [
                     'qr_code_base64' => $paymentRecord->qr_code_base64,
                     'qr_code_text' => $paymentRecord->qr_code_text,
@@ -282,6 +284,8 @@ class PublicEventController extends Controller
             'status' => EventRegistration::STATUS_PENDENTE,
         ]);
 
+        $this->ensureReceiptCredentials($registration);
+
         if (!empty($event->notify_emails)) {
             $emails = array_filter(array_map('trim', explode(',', $event->notify_emails)));
             foreach ($emails as $to) {
@@ -300,12 +304,35 @@ class PublicEventController extends Controller
             }
         }
 
-        $this->sendWhatsAppNotifications($event, $registration);
+        // Evento gratuito: a inscrição já está completa — envia o comprovante (texto + PDF).
+        // A mensagem personalizada do evento, se existir, também é enviada.
+        $this->sendWhatsAppNotifications($event, $registration, !empty($event->registration_success_message));
 
-        return back()->with('success', 'Inscrição realizada com sucesso!');
+        try {
+            app(EventRegistrationReceiptService::class)->enviarComprovante($registration);
+        } catch (\Throwable $e) {
+            Log::warning('Falha ao enviar comprovante de inscrição (evento gratuito)', [
+                'registration_id' => $registration->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return back()->with('success', 'Inscrição realizada com sucesso! Número de inscrição: '.($registration->registration_number ?: '-').'.');
     }
 
-    private function sendWhatsAppNotifications(Event $event, EventRegistration $registration): void
+    private function ensureReceiptCredentials(EventRegistration $registration): void
+    {
+        try {
+            app(EventRegistrationReceiptService::class)->ensureCredentials($registration);
+        } catch (\Throwable $e) {
+            Log::warning('Falha ao gerar número/token da inscrição', [
+                'registration_id' => $registration->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendWhatsAppNotifications(Event $event, EventRegistration $registration, bool $includeRegistrantMessage = true): void
     {
         try {
             $service = app(WhatsAppService::class);
@@ -314,7 +341,7 @@ class PublicEventController extends Controller
                 return;
             }
 
-            if (! empty($registration->phone)) {
+            if ($includeRegistrantMessage && ! empty($registration->phone)) {
                 $service->enviarMensagem(
                     $registration->phone,
                     $this->buildRegistrantMessage($event, $registration)

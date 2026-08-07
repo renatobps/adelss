@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\EventRegistration;
 use App\Models\EventRegistrationPayment;
 use App\Models\PaymentTransaction;
+use App\Services\EventRegistrationReceiptService;
 use App\Services\FinancialNotificationService;
 use App\Services\Payments\MercadoPagoService;
 use Illuminate\Http\JsonResponse;
@@ -61,7 +62,8 @@ class MercadoPagoWebhookController extends Controller
             throw new \RuntimeException('Pagamento sem ID externo.');
         }
 
-        DB::transaction(function () use ($externalId, $payment, $webhookPayload) {
+        $confirmedRegistration = DB::transaction(function () use ($externalId, $payment, $webhookPayload) {
+            $confirmedRegistration = null;
             $handled = false;
             /** @var PaymentTransaction|null $paymentTransaction */
             $paymentTransaction = PaymentTransaction::query()
@@ -138,6 +140,7 @@ class MercadoPagoWebhookController extends Controller
                     if ($status === 'approved') {
                         if ($registration->status !== EventRegistration::STATUS_CONFIRMADO) {
                             $registration->update(['status' => EventRegistration::STATUS_CONFIRMADO]);
+                            $confirmedRegistration = $registration;
                         }
                     } elseif (in_array($status, ['rejected', 'cancelled', 'refunded', 'charged_back'], true)) {
                         $registration->update(['status' => EventRegistration::STATUS_CANCELADO]);
@@ -150,7 +153,21 @@ class MercadoPagoWebhookController extends Controller
                     'external_payment_id' => $externalId,
                 ]);
             }
+
+            return $confirmedRegistration;
         });
+
+        // Envio do comprovante fora da transação: falha de envio nunca invalida a inscrição.
+        if ($confirmedRegistration) {
+            try {
+                app(EventRegistrationReceiptService::class)->enviarComprovante($confirmedRegistration);
+            } catch (\Throwable $e) {
+                Log::warning('Falha ao enviar comprovante de inscrição após pagamento aprovado', [
+                    'registration_id' => $confirmedRegistration->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 
     private function isSignatureValid(Request $request): bool
