@@ -73,6 +73,13 @@ class CampaignController extends Controller
     {
         $data = $this->validateCampaign($request);
 
+        // Alterar a data ou a mensagem programada libera um novo envio.
+        $newDate = $data['reminder_send_date'] ?? null;
+        $currentDate = $campaign->reminder_send_date?->format('Y-m-d');
+        if ($newDate !== $currentDate || ($data['reminder_message'] ?? null) !== $campaign->reminder_message) {
+            $data['reminder_sent_at'] = null;
+        }
+
         // Valor/quantidade de parcelas só valem para novos patrocinadores;
         // parcelas já geradas não são alteradas retroativamente.
         $campaign->update($data);
@@ -108,8 +115,10 @@ class CampaignController extends Controller
 
         $pdf = Pdf::loadView('financial.campaigns.pdf.carne', [
             'campaign' => $campaign,
-            'sponsors' => $campaign->sponsors,
-            'logoPath' => public_path('img/img/LOG SS AZUL.png'),
+            'groups' => $campaign->sponsors
+                ->map(fn ($sponsor) => ['sponsor' => $sponsor, 'installments' => $sponsor->installments])
+                ->values()
+                ->all(),
         ])->setPaper('a4');
 
         return $pdf->download('carnes-' . \Illuminate\Support\Str::slug($campaign->name) . '.pdf');
@@ -256,6 +265,21 @@ class CampaignController extends Controller
 
     private function validateCampaign(Request $request): array
     {
+        $data = $this->doValidateCampaign($request);
+
+        // Checkbox desmarcado envia o campo desabilitado (ausente): limpa a cor
+        // personalizada para voltar a herdar a cor do departamento/padrão.
+        $data['accent_color'] = $data['accent_color'] ?? null;
+
+        // Campos limpos no formulário devem apagar o valor salvo.
+        $data['reminder_message'] = $data['reminder_message'] ?? null;
+        $data['reminder_send_date'] = $data['reminder_send_date'] ?? null;
+
+        return $data;
+    }
+
+    private function doValidateCampaign(Request $request): array
+    {
         return $request->validate(
             [
                 'name' => 'required|string|max:255',
@@ -268,10 +292,18 @@ class CampaignController extends Controller
                 'start_date' => 'nullable|date',
                 'end_date' => 'nullable|date|after_or_equal:start_date',
                 'receipt_message' => 'nullable|string|max:1000',
+                'accent_color' => 'nullable|regex:/^#[0-9A-Fa-f]{6}$/',
+                'pix_key' => 'nullable|string|max:255',
+                'pix_recipient' => 'nullable|string|max:255|required_with:pix_key',
+                'reminder_message' => 'nullable|string|max:1000|required_with:reminder_send_date',
+                'reminder_send_date' => 'nullable|date|required_with:reminder_message',
                 'status' => 'required|in:ativa,encerrada,cancelada',
             ],
             [
                 'name.required' => 'Informe o nome da campanha.',
+                'pix_recipient.required_with' => 'Informe o nome do recebedor da chave PIX.',
+                'reminder_message.required_with' => 'Informe a mensagem a enviar na data programada.',
+                'reminder_send_date.required_with' => 'Informe a data de envio da mensagem programada.',
                 'installment_amount.required' => 'Informe o valor da parcela.',
                 'installment_amount.min' => 'O valor da parcela deve ser maior que zero.',
                 'installments_count.required' => 'Informe a quantidade de parcelas.',

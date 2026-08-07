@@ -157,8 +157,9 @@ class CampaignSponsorController extends Controller
 
         $pdf = Pdf::loadView('financial.campaigns.pdf.carne', [
             'campaign' => $sponsor->campaign,
-            'sponsors' => collect([$sponsor]),
-            'logoPath' => public_path('img/img/LOG SS AZUL.png'),
+            'groups' => [
+                ['sponsor' => $sponsor, 'installments' => $sponsor->installments],
+            ],
         ])->setPaper('a4');
 
         return $pdf->download('carne-' . Str::slug($sponsor->name) . '.pdf');

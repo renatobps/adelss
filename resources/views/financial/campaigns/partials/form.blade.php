@@ -70,8 +70,79 @@
     </div>
 </div>
 
-<div class="mb-3">
-    <label class="form-label">Mensagem do recibo</label>
-    <textarea name="receipt_message" class="form-control" rows="2" maxlength="1000"
-              placeholder="Texto ou versículo impresso no recibo. Ex: “Cada um contribua segundo propôs no seu coração...” (2 Co 9:7)">{{ old('receipt_message', $c?->receipt_message) }}</textarea>
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Chave PIX</label>
+        <input type="text" name="pix_key" class="form-control" maxlength="255"
+               value="{{ old('pix_key', $c?->pix_key) }}"
+               placeholder="CPF, CNPJ, telefone, e-mail ou chave aleatória">
+        <small class="text-muted">Impressa no carnê, nas parcelas pendentes, para facilitar o pagamento.</small>
+    </div>
+    <div class="col-md-6 mb-3">
+        <label class="form-label">Nome do recebedor (PIX)</label>
+        <input type="text" name="pix_recipient" class="form-control" maxlength="255"
+               value="{{ old('pix_recipient', $c?->pix_recipient) }}"
+               placeholder="Nome que aparece ao pagar (confirmação do destinatário)">
+    </div>
 </div>
+
+<div class="row">
+    <div class="col-md-8 mb-3">
+        <label class="form-label">Mensagem do recibo</label>
+        <textarea name="receipt_message" class="form-control" rows="2" maxlength="1000"
+                  placeholder="Texto ou versículo impresso no recibo. Ex: “Cada um contribua segundo propôs no seu coração...” (2 Co 9:7)">{{ old('receipt_message', $c?->receipt_message) }}</textarea>
+        <small class="text-muted">Emojis são exibidos no WhatsApp, mas removidos automaticamente do PDF impresso.</small>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label class="form-label">Cor do carnê</label>
+        @php($accentValue = old('accent_color', $c?->accent_color))
+        <div class="form-check form-switch mb-1">
+            <input class="form-check-input" type="checkbox" id="accentToggle" @checked((bool) $accentValue)>
+            <label class="form-check-label small" for="accentToggle">Usar cor personalizada</label>
+        </div>
+        <input type="color" name="accent_color" id="accentColor" class="form-control form-control-color"
+               value="{{ $accentValue ?: '#0088CC' }}" @disabled(!$accentValue) title="Cor de destaque do carnê em PDF">
+        <small class="text-muted">Sem cor personalizada, usa a cor do departamento ou o azul padrão.</small>
+    </div>
+</div>
+
+<hr class="my-3">
+
+<h6 class="mb-1"><i class="bx bxl-whatsapp me-1"></i>Mensagem programada aos patrocinadores</h6>
+<p class="text-muted small mb-3">
+    Enviada por WhatsApp, uma única vez, na data escolhida — a todos os patrocinadores da campanha com telefone cadastrado.
+    Útil para avisar o dia do pagamento.
+</p>
+<div class="row">
+    <div class="col-md-8 mb-3">
+        <label class="form-label">Mensagem a enviar</label>
+        <textarea name="reminder_message" class="form-control" rows="3" maxlength="1000"
+                  placeholder="Ex: Olá {nome}! Amanhã é o dia do pagamento da parcela de {valor_parcela} da campanha {campanha}. Deus abençoe!">{{ old('reminder_message', $c?->reminder_message) }}</textarea>
+        <small class="text-muted">Você pode usar <code>{nome}</code>, <code>{campanha}</code> e <code>{valor_parcela}</code> — serão substituídos automaticamente.</small>
+    </div>
+    <div class="col-md-4 mb-3">
+        <label class="form-label">Data do envio</label>
+        <input type="date" name="reminder_send_date" class="form-control"
+               value="{{ old('reminder_send_date', $c?->reminder_send_date?->format('Y-m-d')) }}">
+        @if($c?->reminder_sent_at)
+            <small class="text-success d-block mt-1">
+                <i class="bx bx-check-double"></i> Enviada em {{ $c->reminder_sent_at->format('d/m/Y H:i') }}.
+                Para reenviar, escolha uma nova data.
+            </small>
+        @else
+            <small class="text-muted">O envio ocorre por volta das 09:10 do dia escolhido.</small>
+        @endif
+    </div>
+</div>
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggle = document.getElementById('accentToggle');
+    const color = document.getElementById('accentColor');
+    toggle?.addEventListener('change', function () {
+        color.disabled = !this.checked;
+    });
+});
+</script>
+@endpush

@@ -1,8 +1,13 @@
+@php
+    use App\Support\PdfText;
+    $campaignName = PdfText::stripEmoji($campaign->name);
+    $departmentName = $campaign->department ? PdfText::stripEmoji($campaign->department->name) : null;
+@endphp
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Prestação de Contas — {{ $campaign->name }}</title>
+    <title>Prestação de Contas — {{ $campaignName }}</title>
     <style>
         @page {
             margin: 0;
@@ -66,9 +71,9 @@
             <table width="100%" style="border-collapse: collapse;">
                 <tr>
                     <td>
-                        <h1>Prestação de Contas — {{ $campaign->name }}</h1>
+                        <h1>Prestação de Contas — {{ $campaignName }}</h1>
                         <p>
-                            @if($campaign->department) Departamento: {{ $campaign->department->name }} • @endif
+                            @if($departmentName) Departamento: {{ $departmentName }} • @endif
                             Gerado em {{ now()->format('d/m/Y H:i') }}
                             @if($from || $to)
                                 • Período: {{ $from?->format('d/m/Y') ?? 'início' }} a {{ $to?->format('d/m/Y') ?? 'hoje' }}
@@ -175,7 +180,7 @@
         </table>
 
         <div class="rodape">
-            Relatório gerado exclusivamente a partir dos registros da campanha "{{ $campaign->name }}" —
+            Relatório gerado exclusivamente a partir dos registros da campanha "{{ $campaignName }}" —
             valores independentes da contabilidade do módulo Financeiro. ADELSS Sistema Web.
         </div>
     </div>

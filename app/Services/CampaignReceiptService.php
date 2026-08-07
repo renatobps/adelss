@@ -87,16 +87,19 @@ class CampaignReceiptService
 
     /**
      * Gera o PDF do recibo individual e retorna o caminho do arquivo temporário.
+     * Usa o mesmo template do carnê: parcela paga sai com o carimbo "PAGO".
      */
     public function gerarPdfRecibo(CampaignInstallment $installment): ?string
     {
         try {
             $installment->loadMissing('sponsor.campaign.department');
+            $sponsor = $installment->sponsor;
 
-            $pdf = Pdf::loadView('financial.campaigns.pdf.receipt', [
-                'installments' => collect([$installment]),
-                'campaign' => $installment->sponsor->campaign,
-                'logoPath' => public_path('img/img/LOG SS AZUL.png'),
+            $pdf = Pdf::loadView('financial.campaigns.pdf.carne', [
+                'campaign' => $sponsor->campaign,
+                'groups' => [
+                    ['sponsor' => $sponsor, 'installments' => collect([$installment])],
+                ],
             ])->setPaper('a4');
 
             $dir = storage_path('app/temp/campaign-receipts');

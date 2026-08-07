@@ -24,6 +24,12 @@ class Campaign extends Model
         'start_date',
         'end_date',
         'receipt_message',
+        'accent_color',
+        'pix_key',
+        'pix_recipient',
+        'reminder_message',
+        'reminder_send_date',
+        'reminder_sent_at',
         'status',
         'created_by',
     ];
@@ -35,6 +41,8 @@ class Campaign extends Model
         'first_due_date' => 'date',
         'start_date' => 'date',
         'end_date' => 'date',
+        'reminder_send_date' => 'date',
+        'reminder_sent_at' => 'datetime',
     ];
 
     public function department(): BelongsTo
@@ -102,6 +110,16 @@ class Campaign extends Model
             ->where('campaign_installments.status', CampaignInstallment::STATUS_PENDENTE)
             ->whereNotNull('campaign_installments.due_date')
             ->whereDate('campaign_installments.due_date', '<', now()->toDateString());
+    }
+
+    /**
+     * Cor de destaque usada nos PDFs (pílula de valor, título, barra do versículo).
+     * Prioridade: cor da campanha > cor do departamento > azul padrão do sistema.
+     */
+    public function accentColor(): string
+    {
+        return $this->accent_color
+            ?: ($this->department?->color ?: '#0088CC');
     }
 
     /**
