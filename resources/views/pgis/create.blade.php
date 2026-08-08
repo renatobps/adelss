@@ -254,6 +254,20 @@
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
                                     </div>
+
+                                    <div class="mb-3">
+                                        <label for="map_location" class="form-label">Localização no mapa</label>
+                                        <input type="text" class="form-control @error('map_location') is-invalid @enderror"
+                                               id="map_location" name="map_location" value="{{ old('map_location') }}"
+                                               placeholder="Cole o link do Google Maps ou -15.919001, -47.756919">
+                                        @error('map_location')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <small class="form-text text-muted">
+                                            Opcional. Marque o ponto no Google Maps e cole o link para o mapa
+                                            mostrar o local exato do encontro.
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
                         </div>

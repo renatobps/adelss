@@ -256,12 +256,33 @@
 
                                     <div class="mb-3">
                                         <label for="number" class="form-label">Número</label>
-                                        <input type="text" class="form-control @error('number') is-invalid @enderror" 
-                                               id="number" name="number" value="{{ old('number', $pgi->number) }}" 
+                                        <input type="text" class="form-control @error('number') is-invalid @enderror"
+                                               id="number" name="number" value="{{ old('number', $pgi->number) }}"
                                                placeholder="Digite o número">
                                         @error('number')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="map_location" class="form-label">Localização no mapa</label>
+                                        <input type="text" class="form-control @error('map_location') is-invalid @enderror"
+                                               id="map_location" name="map_location" value="{{ old('map_location') }}"
+                                               placeholder="Cole o link do Google Maps ou -15.919001, -47.756919">
+                                        @error('map_location')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        <small class="form-text text-muted">
+                                            @if($pgi->hasCoordinates())
+                                                Ponto atual:
+                                                <a href="https://www.google.com/maps/search/?api=1&query={{ $pgi->latitude }},{{ $pgi->longitude }}"
+                                                   target="_blank" rel="noopener">{{ $pgi->latitude }}, {{ $pgi->longitude }}</a>.
+                                                Preencha apenas se quiser corrigir.
+                                            @else
+                                                Endereços de chácara e lote raramente são encontrados automaticamente.
+                                                Marque o ponto no Google Maps e cole o link aqui.
+                                            @endif
+                                        </small>
                                     </div>
                                 </div>
                             </div>

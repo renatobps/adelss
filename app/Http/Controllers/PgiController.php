@@ -153,6 +153,14 @@ class PgiController extends Controller
             $validated['banner_url'] = $request->file('banner')->store('pgis/banners', 'public');
         }
 
+        $coordinates = $this->parseMapLocation($request);
+
+        if ($coordinates !== null) {
+            $validated['latitude'] = $coordinates['lat'];
+            $validated['longitude'] = $coordinates['lng'];
+            $validated['geocoded_at'] = now();
+        }
+
         Pgi::create($validated);
 
         return redirect()->route('pgis.index')
@@ -318,6 +326,19 @@ class PgiController extends Controller
             $validated['latitude'] = null;
             $validated['longitude'] = null;
             $validated['geocoded_at'] = null;
+        }
+
+        // Coordenadas informadas manualmente têm prioridade sobre a geocodificação.
+        $coordinates = $this->parseMapLocation($request);
+
+        if ($coordinates !== null) {
+            $validated['latitude'] = $coordinates['lat'];
+            $validated['longitude'] = $coordinates['lng'];
+            $validated['geocoded_at'] = now();
+        } elseif ($request->filled('map_location')) {
+            return back()
+                ->withErrors(['map_location' => 'Não foi possível ler as coordenadas. Cole o link do Google Maps ou use o formato "-15.919001, -47.756919".'])
+                ->withInput();
         }
 
         $pgi->update($validated);
@@ -523,6 +544,20 @@ class PgiController extends Controller
         }
 
         return back()->with('success', "Envio concluído para participantes do PGI: {$totais['enviadas']} enviadas, {$totais['erros']} erros.");
+    }
+
+    /**
+     * Coordenadas informadas no formulário (link do Google Maps ou "lat, lng").
+     *
+     * @return array{lat: float, lng: float}|null
+     */
+    private function parseMapLocation(Request $request): ?array
+    {
+        if (! $request->filled('map_location')) {
+            return null;
+        }
+
+        return app(PgiGeocodingService::class)->parseLocationInput((string) $request->input('map_location'));
     }
 
     /**

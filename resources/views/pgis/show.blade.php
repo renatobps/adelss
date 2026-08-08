@@ -543,11 +543,27 @@
         <div id="localizacaoCollapse" class="accordion-collapse collapse" data-bs-parent="#pgiSecondary">
             <div class="accordion-body">
                 @if($fullAddress !== '')
-                    <p class="mb-3"><i class="bx bx-map-pin me-1"></i>{{ $fullAddress }}</p>
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <span><i class="bx bx-map-pin me-1"></i>{{ $fullAddress }}</span>
+                        @if($pgi->hasCoordinates())
+                            <a href="https://www.google.com/maps/search/?api=1&query={{ $pgi->latitude }},{{ $pgi->longitude }}"
+                               target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+                                <i class="bx bx-navigation me-1"></i>Abrir no Google Maps
+                            </a>
+                        @endif
+                    </div>
                     <div id="pgiMap" class="pgi-map"></div>
+                    @if($canEditPgis)
+                        <p class="text-muted small mt-2 mb-0">
+                            Ponto no lugar errado?
+                            <a href="{{ route('pgis.edit', $pgi) }}">Cole o link do Google Maps na edição do PGI</a>.
+                        </p>
+                    @endif
                     <p class="text-muted small mt-2 mb-0 d-none" id="pgiMapFallback">
                         Não foi possível localizar este endereço no mapa.
-                        <a href="{{ route('pgis.edit', $pgi) }}">Revise o endereço do PGI</a>.
+                        @if($canEditPgis)
+                            <a href="{{ route('pgis.edit', $pgi) }}">Informe o ponto exato na edição do PGI</a>.
+                        @endif
                     </p>
                 @else
                     @include('pgis.partials.empty-state', [
