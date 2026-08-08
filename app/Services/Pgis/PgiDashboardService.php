@@ -100,6 +100,26 @@ class PgiDashboardService
     }
 
     /**
+     * Membros presentes na última reunião com chamada feita.
+     *
+     * @return Collection<int, \App\Models\Member>
+     */
+    public function lastMeetingPresentees(Pgi $pgi): Collection
+    {
+        $meeting = $this->registeredMeetings($pgi, 1)->first();
+
+        if (! $meeting) {
+            return collect();
+        }
+
+        $presentIds = $meeting->presentMemberIds();
+
+        return $pgi->members
+            ->filter(fn ($member) => in_array((int) $member->id, $presentIds, true))
+            ->values();
+    }
+
+    /**
      * Indicadores exibidos no topo da página do PGI.
      *
      * @return array<string, int|float|null>

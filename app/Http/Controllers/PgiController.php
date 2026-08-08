@@ -194,6 +194,7 @@ class PgiController extends Controller
             'frequency' => $dashboard->memberFrequency($windowMeetings),
             'absentees' => $dashboard->consecutiveAbsentees($pgi, (int) config('pgis.absence_alert_threshold', 3)),
             'lastMeetingAbsentees' => $dashboard->lastMeetingAbsentees($pgi),
+            'lastMeetingPresentees' => $dashboard->lastMeetingPresentees($pgi),
             'absenceThreshold' => (int) config('pgis.absence_alert_threshold', 3),
             'enquetes' => $enquetes,
         ]);
@@ -497,7 +498,7 @@ class PgiController extends Controller
 
         $request->validate([
             'tipo_envio' => 'required|in:texto,imagem,video,enquete',
-            'destinatarios' => 'nullable|in:todos,ausentes,selecionados',
+            'destinatarios' => 'nullable|in:todos,ausentes,presentes,selecionados',
             'membros' => 'nullable|array',
             'membros.*' => 'integer|exists:members,id',
             'mensagem' => 'nullable|string|max:4096',
@@ -571,6 +572,7 @@ class PgiController extends Controller
 
         $members = match ($request->input('destinatarios', 'todos')) {
             'ausentes' => $dashboard->lastMeetingAbsentees($pgi->loadMissing('members')),
+            'presentes' => $dashboard->lastMeetingPresentees($pgi->loadMissing('members')),
             'selecionados' => $pgi->members()->whereIn('id', $request->input('membros', []))->get(),
             default => $pgi->members()->get(),
         };

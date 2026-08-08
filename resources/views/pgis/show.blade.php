@@ -437,6 +437,9 @@
                                     <option value="ausentes" {{ old('destinatarios') === 'ausentes' ? 'selected' : '' }}>
                                         Ausentes na última reunião ({{ $lastMeetingAbsentees->filter(fn ($m) => filled($m->phone))->count() }})
                                     </option>
+                                    <option value="presentes" {{ old('destinatarios') === 'presentes' ? 'selected' : '' }}>
+                                        Presentes na última reunião ({{ $lastMeetingPresentees->filter(fn ($m) => filled($m->phone))->count() }})
+                                    </option>
                                     <option value="selecionados" {{ old('destinatarios') === 'selecionados' ? 'selected' : '' }}>
                                         Seleção manual
                                     </option>
