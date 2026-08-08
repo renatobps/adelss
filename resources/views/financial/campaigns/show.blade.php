@@ -81,6 +81,15 @@
             </a>
         @endif
         @if($canEdit)
+            <a href="{{ route('financial.campaigns.reminders.edit', $campaign) }}"
+               class="btn btn-outline-{{ $reminderSettings->isActiveFor($campaign) ? 'success' : 'secondary' }} btn-sm">
+                <i class="bx bx-bell me-1"></i>Lembretes
+                @if($reminderSettings->isActiveFor($campaign))
+                    <span class="badge bg-success ms-1">ativo</span>
+                @elseif($reminderSettings->paused)
+                    <span class="badge bg-warning text-dark ms-1">pausado</span>
+                @endif
+            </a>
             <a href="{{ route('financial.campaigns.edit', $campaign) }}" class="btn btn-outline-secondary btn-sm">
                 <i class="bx bx-edit me-1"></i>Editar
             </a>

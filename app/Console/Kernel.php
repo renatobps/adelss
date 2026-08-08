@@ -21,6 +21,12 @@ class Kernel extends ConsoleKernel
         $schedule->command('campaigns:notify-due-installments')->dailyAt('09:00')->withoutOverlapping();
         // Mensagem programada da campanha (ex: aviso do dia do pagamento)
         $schedule->command('campaigns:send-scheduled-messages')->dailyAt('09:10')->withoutOverlapping();
+        // Lembretes de parcelas em atraso: roda de hora em hora e o próprio
+        // comando confere horário/dia configurados na tela de cada campanha.
+        // O lote é lento de propósito (8–20s entre mensagens), daí o lock longo.
+        $schedule->command('campaigns:send-reminders')
+            ->hourly()
+            ->withoutOverlapping(120);
         $schedule->command('financial:send-smart-summary')->hourly();
         $schedule->command('cultos:check-pastoral-alerts')->dailyAt('09:00');
         // withoutOverlapping evita duas execuções simultâneas (causa de envio

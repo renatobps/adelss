@@ -9,6 +9,7 @@ use App\Models\EventRegistrationPayment;
 use App\Services\EventRegistrationReceiptService;
 use App\Services\Payments\MercadoPagoService;
 use App\Services\WhatsAppService;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -150,6 +151,12 @@ class PublicEventController extends Controller
             }
         }
 
+        // Segunda barreira contra duplo clique: o bloqueio do botão no navegador não
+        // protege requisições diretas nem falhas de JavaScript.
+        if ($duplicateResponse = $this->respondToExistingRegistration($event, $validated['email'] ?? null, $validated['phone'] ?? null)) {
+            return $duplicateResponse;
+        }
+
         if ($event->is_paid) {
             $price = (float) ($event->price ?? 0);
             if ($price <= 0) {
@@ -233,6 +240,14 @@ class PublicEventController extends Controller
                     return [$registration, $paymentRecord];
                 });
             } catch (\Throwable $e) {
+                // Requisições simultâneas: o índice único barrou a segunda antes do PHP.
+                if ($this->isDuplicateRegistrationError($e)) {
+                    $response = $this->respondToExistingRegistration($event, $validated['email'] ?? null, $validated['phone'] ?? null, true);
+                    if ($response) {
+                        return $response;
+                    }
+                }
+
                 try {
                     Log::warning('Falha ao gerar pagamento de ingresso', [
                         'event_id' => $event->id,
@@ -264,25 +279,31 @@ class PublicEventController extends Controller
             $this->sendWhatsAppNotifications($event, $registration);
 
             return back()
-                ->with('success', 'Inscrição recebida! Número de inscrição: '.($registration->registration_number ?: '-').'. Conclua o pagamento do ingresso para confirmar sua vaga.')
-                ->with('pix_payment', [
-                    'qr_code_base64' => $paymentRecord->qr_code_base64,
-                    'qr_code_text' => $paymentRecord->qr_code_text,
-                    'amount' => number_format((float) $paymentRecord->amount, 2, ',', '.'),
-                    'status' => $paymentRecord->status,
-                    'payment_method' => $paymentRecord->payment_method,
-                ]);
+                ->with('success', $this->successMessage($event, $registration))
+                ->with('pix_payment', $this->pixPaymentPayload($paymentRecord));
         }
 
-        $registration = EventRegistration::create([
-            'event_id' => $event->id,
-            'name' => $validated['name'],
-            'email' => $validated['email'] ?? null,
-            'phone' => $validated['phone'] ?? null,
-            'address' => $validated['address'] ?? null,
-            'custom_answers' => $customAnswers ?: null,
-            'status' => EventRegistration::STATUS_PENDENTE,
-        ]);
+        try {
+            $registration = EventRegistration::create([
+                'event_id' => $event->id,
+                'name' => $validated['name'],
+                'email' => $validated['email'] ?? null,
+                'phone' => $validated['phone'] ?? null,
+                'address' => $validated['address'] ?? null,
+                'custom_answers' => $customAnswers ?: null,
+                'status' => EventRegistration::STATUS_PENDENTE,
+            ]);
+        } catch (\Throwable $e) {
+            if (! $this->isDuplicateRegistrationError($e)) {
+                throw $e;
+            }
+            $response = $this->respondToExistingRegistration($event, $validated['email'] ?? null, $validated['phone'] ?? null, true);
+            if (! $response) {
+                throw $e;
+            }
+
+            return $response;
+        }
 
         $this->ensureReceiptCredentials($registration);
 
@@ -317,7 +338,158 @@ class PublicEventController extends Controller
             ]);
         }
 
-        return back()->with('success', 'Inscrição realizada com sucesso! Número de inscrição: '.($registration->registration_number ?: '-').'.');
+        return back()->with('success', $this->successMessage($event, $registration));
+    }
+
+    /**
+     * Reenvia o comprovante de uma inscrição já existente, a pedido de quem tentou
+     * se inscrever de novo. Não cria nem altera registros.
+     */
+    public function resendReceipt(Request $request, string $slug)
+    {
+        $event = Event::query()
+            ->where('public_slug', $slug)
+            ->where('visibility', 'public')
+            ->firstOrFail();
+
+        $validated = $request->validate([
+            'contato' => ['required', 'string', 'max:255'],
+        ]);
+
+        $registration = $this->findExistingRegistration(
+            $event,
+            filter_var($validated['contato'], FILTER_VALIDATE_EMAIL) ? $validated['contato'] : null,
+            filter_var($validated['contato'], FILTER_VALIDATE_EMAIL) ? null : $validated['contato']
+        );
+
+        if (! $registration) {
+            return back()->with('error', 'Não encontramos uma inscrição com esse contato neste evento.');
+        }
+
+        if (empty($registration->phone)) {
+            return back()->with('error', 'Sua inscrição não tem telefone cadastrado — fale com a organização do evento.');
+        }
+
+        $resultado = app(EventRegistrationReceiptService::class)->enviarComprovante($registration);
+
+        return $resultado['success'] ?? false
+            ? back()->with('success', 'Comprovante reenviado por WhatsApp para o telefone cadastrado.')
+            : back()->with('error', 'Não foi possível reenviar o comprovante agora. Tente novamente em alguns minutos.');
+    }
+
+    /**
+     * Inscrição já existente no evento para o mesmo e-mail ou telefone.
+     */
+    private function findExistingRegistration(Event $event, ?string $email, ?string $phone): ?EventRegistration
+    {
+        $email = trim((string) $email);
+        $phone = trim((string) $phone);
+
+        if ($email === '' && $phone === '') {
+            return null;
+        }
+
+        return EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->where(function ($q) use ($email, $phone) {
+                if ($email !== '') {
+                    $q->orWhereRaw('LOWER(email) = ?', [mb_strtolower($email)]);
+                }
+                if ($phone !== '') {
+                    $q->orWhere('phone', $phone);
+                }
+            })
+            ->with('payment')
+            ->orderByDesc('created_at')
+            ->first();
+    }
+
+    /**
+     * Decide o que fazer quando o contato já tem inscrição no evento.
+     *
+     * Dentro da janela de duplo envio a pessoa recebe a mesma mensagem de sucesso —
+     * ela clicou duas vezes e não precisa saber disso. Passada a janela, é uma
+     * tentativa consciente de se inscrever de novo: avisamos e oferecemos o reenvio
+     * do comprovante em vez de criar um registro paralelo.
+     */
+    private function respondToExistingRegistration(Event $event, ?string $email, ?string $phone, bool $forceDoubleSubmit = false)
+    {
+        $existing = $this->findExistingRegistration($event, $email, $phone);
+        if (! $existing) {
+            return null;
+        }
+
+        $window = now()->subMinutes(EventRegistration::DOUBLE_SUBMIT_WINDOW_MINUTES);
+        $isDoubleSubmit = $forceDoubleSubmit || ($existing->created_at && $existing->created_at->greaterThan($window));
+
+        if ($isDoubleSubmit) {
+            $redirect = back()->with('success', $this->successMessage($event, $existing));
+
+            if ($event->is_paid && $existing->payment) {
+                $redirect->with('pix_payment', $this->pixPaymentPayload($existing->payment));
+            }
+
+            return $redirect;
+        }
+
+        $redirect = back()->with('duplicate_registration', [
+            'numero' => $existing->registration_number ?: '-',
+            'criada_em' => $existing->created_at?->format('d/m/Y \à\s H:i'),
+            'contato' => $existing->email ?: $existing->phone,
+            'tem_telefone' => ! empty($existing->phone),
+            'pagamento_pendente' => $event->is_paid && ! $existing->isPaymentApproved(),
+        ]);
+
+        // Em evento pago com pagamento em aberto, bloquear sem mais nada deixaria a
+        // pessoa sem caminho: devolvemos o PIX da inscrição que ela já tem.
+        if ($event->is_paid && $existing->payment && ! $existing->isPaymentApproved()) {
+            $redirect->with('pix_payment', $this->pixPaymentPayload($existing->payment));
+        }
+
+        return $redirect;
+    }
+
+    private function successMessage(Event $event, EventRegistration $registration): string
+    {
+        $numero = $registration->registration_number ?: '-';
+
+        return $event->is_paid
+            ? 'Inscrição recebida! Número de inscrição: '.$numero.'. Conclua o pagamento do ingresso para confirmar sua vaga.'
+            : 'Inscrição realizada com sucesso! Número de inscrição: '.$numero.'.';
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function pixPaymentPayload(EventRegistrationPayment $payment): array
+    {
+        return [
+            'qr_code_base64' => $payment->qr_code_base64,
+            'qr_code_text' => $payment->qr_code_text,
+            'amount' => number_format((float) $payment->amount, 2, ',', '.'),
+            'status' => $payment->status,
+            'payment_method' => $payment->payment_method,
+        ];
+    }
+
+    /**
+     * Violação dos índices únicos (event_id + e-mail / telefone) criados como rede
+     * de segurança contra requisições simultâneas.
+     */
+    private function isDuplicateRegistrationError(\Throwable $e): bool
+    {
+        while ($e !== null) {
+            if ($e instanceof QueryException && (int) ($e->errorInfo[1] ?? 0) === 1062) {
+                return true;
+            }
+            if (str_contains(mb_strtolower($e->getMessage()), 'event_registrations_event_email_unique')
+                || str_contains(mb_strtolower($e->getMessage()), 'event_registrations_event_phone_unique')) {
+                return true;
+            }
+            $e = $e->getPrevious();
+        }
+
+        return false;
     }
 
     private function ensureReceiptCredentials(EventRegistration $registration): void

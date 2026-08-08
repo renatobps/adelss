@@ -280,6 +280,27 @@
             @if(session('error'))
                 <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
+            @if(session('duplicate_registration'))
+                @php($jaInscrito = session('duplicate_registration'))
+                <div class="alert alert-warning">
+                    <strong>Você já está inscrito neste evento.</strong><br>
+                    Inscrição nº {{ $jaInscrito['numero'] }}, feita em {{ $jaInscrito['criada_em'] }}.
+                    @if($jaInscrito['pagamento_pendente'] ?? false)
+                        <div class="mt-1">O pagamento continua em aberto — conclua abaixo para confirmar sua vaga.</div>
+                    @endif
+                    @if($jaInscrito['tem_telefone'])
+                        <form method="post" action="{{ route('events.public.resend-receipt', $event->public_slug) }}" class="mt-2">
+                            @csrf
+                            <input type="hidden" name="contato" value="{{ $jaInscrito['contato'] }}">
+                            <button type="submit" class="btn btn-sm btn-outline-dark">
+                                Reenviar meu comprovante por WhatsApp
+                            </button>
+                        </form>
+                    @else
+                        <div class="mt-1"><small>Fale com a organização do evento para receber o comprovante.</small></div>
+                    @endif
+                </div>
+            @endif
             @if(!$event->registration_enabled)
                 <p class="text-muted mb-0">Inscrições encerradas.</p>
             @elseif($spotsLeft !== null && $spotsLeft === 0)
@@ -440,7 +461,10 @@
                         </div>
                     @endforeach
 
-                    <button type="submit" class="event-cta w-100 text-center">Enviar inscrição</button>
+                    <button type="submit" id="event-registration-submit" class="event-cta w-100 text-center">
+                        <span class="js-submit-label">Enviar inscrição</span>
+                        <span class="js-submit-spinner spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                    </button>
                 </form>
             @endif
         </div>
@@ -497,6 +521,39 @@ document.addEventListener('DOMContentLoaded', function () {
     var allowNativeSubmit = false;
     var mpCardForm = null;
     var mpCardFormInitialized = false;
+
+    var submitBtn = document.getElementById('event-registration-submit');
+    var isSubmitting = false;
+
+    var setSubmitting = function (state) {
+        isSubmitting = state;
+        if (!submitBtn) return;
+        submitBtn.disabled = state;
+        var label = submitBtn.querySelector('.js-submit-label');
+        var spinner = submitBtn.querySelector('.js-submit-spinner');
+        if (label) label.textContent = state ? 'Enviando...' : 'Enviar inscrição';
+        if (spinner) spinner.classList.toggle('d-none', !state);
+    };
+
+    if (formEl) {
+        // Primeira barreira contra inscrição duplicada: o segundo clique não vira
+        // uma segunda requisição. Registrado antes do Mercado Pago para vir primeiro.
+        formEl.addEventListener('submit', function (event) {
+            if (isSubmitting) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                return;
+            }
+            setSubmitting(true);
+        });
+    }
+
+    // Voltar pelo histórico pode restaurar a página com o botão travado.
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) {
+            setSubmitting(false);
+        }
+    });
 
     var syncCardPayerData = function () {
         if (hiddenCardEmail && emailInput) {
@@ -578,6 +635,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         syncCardPayerData();
                         var cardData = mpCardForm.getCardFormData();
                         if (!cardData || !cardData.token) {
+                            setSubmitting(false);
                             alert('Não foi possível tokenizar o cartão. Verifique os dados.');
                             return;
                         }

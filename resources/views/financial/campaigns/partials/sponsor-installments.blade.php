@@ -38,6 +38,8 @@
     @endif
 </div>
 
+@include('financial.campaigns.partials.sponsor-reminder-history')
+
 <div class="table-responsive">
     <table class="table table-sm align-middle mb-2">
         <thead>

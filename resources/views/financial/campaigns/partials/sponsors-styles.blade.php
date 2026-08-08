@@ -80,6 +80,8 @@
 .cs-badge--em_dia { background: rgba(0, 136, 204, .12); color: #0088CC; }
 .cs-badge--quitado { background: rgba(31, 168, 85, .12); color: #1FA855; }
 .cs-badge--nao_iniciado { background: #EEF0F2; color: #6C757D; }
+.cs-badge--muted { background: #EEF0F2; color: #6C757D; margin-left: .25rem; }
+.cs-badge--limit { background: rgba(245, 166, 35, .16); color: #A56A00; margin-left: .25rem; }
 
 .cs-table td, .cs-table th { padding: .45rem .5rem; vertical-align: middle; }
 .cs-table tbody tr { cursor: pointer; border-left: 3px solid transparent; }

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Financial;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignInstallment;
+use App\Models\CampaignReminderLog;
 use App\Models\CampaignSponsor;
 use App\Models\Department;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -100,6 +101,8 @@ class CampaignController extends Controller
             'campaign' => $campaign,
             'metrics' => $metrics,
             'sponsors' => $sponsors,
+            'reminderSettings' => $campaign->reminderSettings(),
+            'reminderStats' => $this->reminderStats($sponsors->getCollection()),
             'counts' => $counts,
             'chargeableCount' => $chargeableCount,
             'filters' => $filters,
@@ -126,6 +129,44 @@ class CampaignController extends Controller
             'view' => $text('view') === 'tabela' ? 'tabela' : 'lista',
             'per_page' => in_array($perPage, self::SPONSOR_PER_PAGE, true) ? $perPage : 20,
         ];
+    }
+
+    /**
+     * Lembretes já enviados por patrocinador da página: total, data do último
+     * e quantos foram para a parcela mais antiga em atraso (que é o que define
+     * o limite). Uma consulta agregada, em vez de duas por linha.
+     *
+     * @return array<int, array{total:int,last:?string,for_oldest:int}>
+     */
+    private function reminderStats(\Illuminate\Support\Collection $sponsors): array
+    {
+        if ($sponsors->isEmpty()) {
+            return [];
+        }
+
+        $rows = CampaignReminderLog::query()
+            ->whereIn('campaign_sponsor_id', $sponsors->pluck('id'))
+            ->where('status', CampaignReminderLog::STATUS_ENVIADO)
+            ->where('type', CampaignReminderLog::TYPE_ATRASO)
+            ->selectRaw('campaign_sponsor_id, campaign_installment_id, COUNT(*) as total, MAX(sent_at) as last_sent')
+            ->groupBy('campaign_sponsor_id', 'campaign_installment_id')
+            ->get();
+
+        $stats = [];
+        foreach ($sponsors as $sponsor) {
+            $own = $rows->where('campaign_sponsor_id', $sponsor->id);
+            $oldest = $sponsor->getAttribute('oldest_overdue_id');
+
+            $stats[$sponsor->id] = [
+                'total' => (int) $own->sum('total'),
+                'last' => $own->max('last_sent'),
+                'for_oldest' => $oldest
+                    ? (int) $own->where('campaign_installment_id', $oldest)->sum('total')
+                    : 0,
+            ];
+        }
+
+        return $stats;
     }
 
     private function applySponsorSort(Builder $query, string $sort): Builder

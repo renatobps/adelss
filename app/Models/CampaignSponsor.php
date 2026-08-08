@@ -23,7 +23,12 @@ class CampaignSponsor extends Model
         'name',
         'phone',
         'notes',
+        'reminders_enabled',
         'created_by',
+    ];
+
+    protected $casts = [
+        'reminders_enabled' => 'boolean',
     ];
 
     public function campaign(): BelongsTo
@@ -45,6 +50,20 @@ class CampaignSponsor extends Model
     {
         return $this->hasMany(CampaignInstallment::class)
             ->where('status', CampaignInstallment::STATUS_PAGO);
+    }
+
+    public function reminderLogs(): HasMany
+    {
+        return $this->hasMany(CampaignReminderLog::class)->orderByDesc('created_at');
+    }
+
+    /** Parcelas vencidas e ainda em aberto, da mais antiga para a mais recente. */
+    public function overdueInstallments()
+    {
+        return $this->installments
+            ->filter(fn ($i) => $i->isOverdue())
+            ->sortBy('due_date')
+            ->values();
     }
 
     public function totalPaid(): float
@@ -105,7 +124,13 @@ class CampaignSponsor extends Model
             ->selectSub($count($pendentes()), 'pending_count')
             ->selectSub($sum($pendentes()), 'pending_amount')
             ->selectSub($count($vencidas()), 'overdue_count')
-            ->selectSub($sum($vencidas()), 'overdue_amount');
+            ->selectSub($sum($vencidas()), 'overdue_amount')
+            // Parcela que ancora a contagem de lembretes já enviados.
+            ->selectSub(
+                $vencidas()->orderBy('campaign_installments.due_date')->limit(1)
+                    ->selectRaw('campaign_installments.id'),
+                'oldest_overdue_id'
+            );
     }
 
     public function scopeSearch(Builder $query, ?string $term): Builder

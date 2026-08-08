@@ -18,6 +18,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::get('/evento/{slug}', [PublicEventController::class, 'show'])->name('events.public.show');
 Route::post('/evento/{slug}/inscricao', [PublicEventController::class, 'register'])->name('events.public.register');
+Route::post('/evento/{slug}/inscricao/reenviar-comprovante', [PublicEventController::class, 'resendReceipt'])
+    ->middleware('throttle:5,10')
+    ->name('events.public.resend-receipt');
 
 Route::get('/estudo-formulario/{slug}', [PublicStudyFormController::class, 'show'])->name('study.forms.public.show');
 Route::post('/estudo-formulario/{slug}/responder', [PublicStudyFormController::class, 'submit'])->name('study.forms.public.submit');

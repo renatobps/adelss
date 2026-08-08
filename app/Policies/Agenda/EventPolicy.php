@@ -45,7 +45,20 @@ class EventPolicy
 
     public function manageRegistrations(User $user, Event $event): bool
     {
-        return $this->update($user, $event);
+        return $this->update($user, $event)
+            || $user->hasPermission('agenda.inscricoes.edit')
+            || $user->hasPermission('agenda.inscricoes.manage');
+    }
+
+    /**
+     * Excluir é permissão à parte de editar: quem gerencia inscrições no dia do
+     * evento não precisa poder apagá-las.
+     */
+    public function deleteRegistrations(User $user, Event $event): bool
+    {
+        return $user->is_admin
+            || $user->hasPermission('agenda.inscricoes.delete')
+            || $user->hasPermission('agenda.inscricoes.manage');
     }
 
     public function uploadEditorImage(User $user): bool

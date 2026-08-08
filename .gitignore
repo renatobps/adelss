@@ -17,4 +17,13 @@ yarn-error.log
 /.idea
 /.vscode
 
+# Credenciais de acesso ao servidor
+/acessar SSH.txt
+# Dumps do banco: contêm dados pessoais de membros
+/database/dumps
+# Cópia compactada do projeto (carrega .env junto)
+/adelss.zip
+# Sobras de conflito de merge
+*.orig
+
 

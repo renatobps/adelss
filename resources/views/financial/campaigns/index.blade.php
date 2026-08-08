@@ -23,11 +23,16 @@
         <h4 class="mb-0">Campanhas de Arrecadação</h4>
         <small class="text-muted">Arrecadações pontuais com prestação de contas própria — independentes do caixa da igreja.</small>
     </div>
-    @if($canCreate)
-        <a href="{{ route('financial.campaigns.create') }}" class="btn btn-primary">
-            <i class="bx bx-plus me-1"></i> Nova Campanha
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ route('financial.campaigns.reminders.global') }}" class="btn btn-outline-secondary">
+            <i class="bx bx-bell me-1"></i> Lembretes (padrão)
         </a>
-    @endif
+        @if($canCreate)
+            <a href="{{ route('financial.campaigns.create') }}" class="btn btn-primary">
+                <i class="bx bx-plus me-1"></i> Nova Campanha
+            </a>
+        @endif
+    </div>
 </div>
 
 @if($campaigns->isEmpty())

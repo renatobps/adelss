@@ -46,7 +46,10 @@
                 </td>
                 <td class="text-end text-success fw-semibold">R$ {{ number_format($s['paid_amount'], 2, ',', '.') }}</td>
                 <td class="text-end d-none d-md-table-cell">R$ {{ number_format($s['pending_amount'], 2, ',', '.') }}</td>
-                <td><span class="cs-badge cs-badge--{{ $situacao }}">{{ CampaignSponsor::SITUACOES[$situacao] }}</span></td>
+                <td>
+                    <span class="cs-badge cs-badge--{{ $situacao }}">{{ CampaignSponsor::SITUACOES[$situacao] }}</span>
+                    @include('financial.campaigns.partials.sponsor-reminder-badge')
+                </td>
                 <td class="text-end">
                     <div class="dropdown">
                         <button type="button" class="btn btn-sm btn-link text-secondary p-0 px-1" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Ações">
@@ -74,6 +77,7 @@
                                     </button>
                                 </li>
                             @endif
+                            @include('financial.campaigns.partials.sponsor-reminder-actions')
                             @if($canDelete)
                                 <li><hr class="dropdown-divider"></li>
                                 <li>

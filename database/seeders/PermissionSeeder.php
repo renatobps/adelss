@@ -444,6 +444,17 @@ class PermissionSeeder extends Seeder
                         ['name' => 'Excluir', 'key' => 'agenda.categories.delete'],
                     ],
                 ],
+                // Inscrições em eventos
+                [
+                    'name' => 'Inscrições',
+                    'key' => 'agenda.inscricoes.manage',
+                    'description' => 'Permissões para gerenciar inscrições em eventos',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'agenda.inscricoes.view'],
+                        ['name' => 'Editar', 'key' => 'agenda.inscricoes.edit'],
+                        ['name' => 'Excluir', 'key' => 'agenda.inscricoes.delete'],
+                    ],
+                ],
             ],
         ];
 

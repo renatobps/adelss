@@ -70,7 +70,17 @@ class AgendaRouteAuthorizer
                     : $denyAccess('Acesso negado. Você não tem permissão para excluir eventos.');
             }
 
-            if ($routeName === 'agenda.eventos.registrations.status') {
+            if (in_array($routeName, [
+                'agenda.eventos.registrations.destroy',
+                'agenda.eventos.registrations.restore',
+            ], true)) {
+                return $this->eventPolicy->deleteRegistrations($user, new \App\Models\Event())
+                    ? null
+                    : $denyAccess('Acesso negado. Você não tem permissão para excluir inscrições.');
+            }
+
+            if (str_starts_with($routeName, 'agenda.eventos.registrations.')
+                && ! in_array($routeName, ['agenda.eventos.registrations.export', 'agenda.eventos.registrations.export-pdf'], true)) {
                 return $this->eventPolicy->manageRegistrations($user, new \App\Models\Event())
                     ? null
                     : $denyAccess('Acesso negado. Você não tem permissão para alterar inscrições.');

@@ -7,14 +7,19 @@ use App\Models\Event;
 use App\Models\EventCategory;
 use App\Models\EventRegistration;
 use App\Models\EventRegistrationField;
+use App\Models\EventRegistrationPayment;
 use App\Models\EventScheduleItem;
 use App\Models\EventSpeaker;
+use App\Services\AuditLogger;
+use App\Services\EventRegistrationBatchSender;
+use App\Services\EventRegistrationDuplicateFinder;
 use App\Services\EventRegistrationReceiptService;
 use App\Services\WhatsAppService;
 use App\Support\PdfText;
 use App\Support\QrCode;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -220,27 +225,435 @@ class EventosController extends Controller
             ->with('success', 'Evento duplicado. Revise e publique.');
     }
 
+    /** Situações disponíveis nos chips de filtro da listagem de inscrições. */
+    private const REGISTRATION_SITUACOES = [
+        'todos' => 'Todos',
+        'confirmados' => 'Confirmados',
+        'pendentes' => 'Pendentes',
+        'presentes' => 'Presentes',
+        'ausentes' => 'Ausentes',
+        'sem_comprovante' => 'Comprovante não enviado',
+        'cancelados' => 'Cancelados',
+        'duplicadas' => 'Possíveis duplicadas',
+        'excluidas' => 'Excluídas',
+    ];
+
+    private const REGISTRATION_SORTS = [
+        'recentes' => 'Mais recentes',
+        'antigas' => 'Mais antigas',
+        'nome' => 'Nome (A-Z)',
+        'status' => 'Status',
+    ];
+
     public function registrations(Request $request, Event $event)
     {
         $this->authorize('manageRegistrations', $event);
         $event = Event::query()
             ->apenasEventosGerais()
             ->whereKey($event->id)
-            ->with('category')
+            ->with(['category', 'registrationFields'])
             ->firstOrFail();
 
-        $registrations = $event->registrations()
-            ->with('payment')
-            ->orderByDesc('created_at')
-            ->paginate(20)
+        $filters = $this->registrationFilters($request);
+        $duplicateGroups = app(EventRegistrationDuplicateFinder::class)->groupsForEvent($event);
+        $duplicateIds = $duplicateGroups->flatten(1)->pluck('id')->all();
+
+        $registrations = $this->registrationsQuery($event, $filters, $duplicateIds)
+            ->with(['payment', 'checkedInBy'])
+            ->paginate($filters['per_page'])
             ->withQueryString();
 
         $user = $request->user();
-        $canEditRegistrations = $user && ($user->is_admin
-            || $user->hasPermission('agenda.events.edit')
-            || $user->hasPermission('agenda.events.manage'));
+        $canEditRegistrations = $user && $user->can('manageRegistrations', $event);
+        $canDeleteRegistrations = $user && $user->can('deleteRegistrations', $event);
 
-        return view('agenda.eventos.registrations', compact('event', 'registrations', 'canEditRegistrations'));
+        return view('agenda.eventos.registrations', [
+            'event' => $event,
+            'registrations' => $registrations,
+            'filters' => $filters,
+            'situacoes' => self::REGISTRATION_SITUACOES,
+            'sortOptions' => self::REGISTRATION_SORTS,
+            'stats' => $this->registrationStats($event, $duplicateIds),
+            'duplicateIds' => array_flip($duplicateIds),
+            'duplicateGroupCount' => $duplicateGroups->count(),
+            'canEditRegistrations' => $canEditRegistrations,
+            'canDeleteRegistrations' => $canDeleteRegistrations,
+        ]);
+    }
+
+    /**
+     * Atualiza os dados de contato de um inscrito (correção de digitação, troca de
+     * telefone). Status e presença têm fluxos próprios.
+     */
+    public function updateRegistrationData(Request $request, Event $event, EventRegistration $registration)
+    {
+        $this->authorize('manageRegistrations', $event);
+        $this->assertRegistrationBelongsToEvent($event, $registration);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'phone' => ['nullable', 'regex:/^\(\d{2}\)\s\d{5}-\d{4}$/'],
+            'address' => ['nullable', 'string', 'max:500'],
+        ], [
+            'phone.regex' => 'Informe o telefone no formato (99) 99999-9999.',
+        ]);
+
+        try {
+            $registration->update([
+                'name' => $validated['name'],
+                'email' => $validated['email'] ?: null,
+                'phone' => $validated['phone'] ?: null,
+                'address' => $validated['address'] ?: null,
+            ]);
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Já existe outra inscrição neste evento com esse e-mail ou telefone.');
+        }
+
+        AuditLogger::log('agenda', 'inscricoes.editar', "Dados da inscrição {$registration->registration_number} atualizados.", [
+            'event_id' => $event->id,
+            'registration_id' => $registration->id,
+        ]);
+
+        return back()->with('success', 'Dados da inscrição atualizados.');
+    }
+
+    /**
+     * Exclusão (soft delete) — caminho para duplicatas, testes e erros de cadastro.
+     * Inscrição com pagamento confirmado só sai por cancelamento, para não quebrar
+     * a conciliação financeira do evento.
+     */
+    public function destroyRegistration(Request $request, Event $event, EventRegistration $registration)
+    {
+        $this->authorize('deleteRegistrations', $event);
+        $this->assertRegistrationBelongsToEvent($event, $registration);
+
+        $registration->loadMissing('payment');
+        if ($registration->hasConfirmedPayment()) {
+            return back()->with('error', 'Esta inscrição tem pagamento confirmado e não pode ser excluída. Cancele a inscrição (com o devido estorno) em vez de excluí-la.');
+        }
+
+        $registration->deleted_by = $request->user()?->id;
+        $registration->save();
+        $registration->delete();
+
+        AuditLogger::log('agenda', 'inscricoes.excluir', "Inscrição {$registration->registration_number} ({$registration->name}) excluída.", [
+            'event_id' => $event->id,
+            'event_title' => $event->title,
+            'registration_id' => $registration->id,
+            'registration_number' => $registration->registration_number,
+            'name' => $registration->name,
+            'email' => $registration->email,
+        ]);
+
+        return back()->with('success', "Inscrição de {$registration->name} excluída. Use o filtro \"Excluídas\" para restaurar.");
+    }
+
+    public function restoreRegistration(Event $event, EventRegistration $registration)
+    {
+        $this->authorize('deleteRegistrations', $event);
+        $this->assertRegistrationBelongsToEvent($event, $registration);
+
+        try {
+            $registration->deleted_by = null;
+            $registration->restore();
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Não foi possível restaurar: já existe outra inscrição ativa neste evento com o mesmo e-mail ou telefone.');
+        }
+
+        AuditLogger::log('agenda', 'inscricoes.restaurar', "Inscrição {$registration->registration_number} restaurada.", [
+            'event_id' => $event->id,
+            'registration_id' => $registration->id,
+        ]);
+
+        return back()->with('success', "Inscrição de {$registration->name} restaurada.");
+    }
+
+    /**
+     * Ações sobre a seleção múltipla da listagem.
+     */
+    public function bulkRegistrations(Request $request, Event $event, EventRegistrationBatchSender $batchSender)
+    {
+        $this->authorize('manageRegistrations', $event);
+
+        $validated = $request->validate([
+            'acao' => ['required', 'in:confirmar,comprovante,excluir,exportar'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $registrations = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->whereIn('id', $validated['ids'])
+            ->with('payment')
+            ->orderBy('name')
+            ->get();
+
+        if ($registrations->isEmpty()) {
+            return back()->with('error', 'Nenhuma inscrição válida na seleção.');
+        }
+
+        return match ($validated['acao']) {
+            'confirmar' => $this->bulkConfirm($registrations),
+            'comprovante' => $this->bulkSendReceipts($registrations, $batchSender),
+            'excluir' => $this->bulkDelete($request, $event, $registrations),
+            'exportar' => $this->streamRegistrationsCsv($event, $registrations),
+        };
+    }
+
+    public function exportRegistrations(Request $request, Event $event)
+    {
+        $this->authorize('manageRegistrations', $event);
+
+        $filters = $this->registrationFilters($request);
+        $duplicateIds = app(EventRegistrationDuplicateFinder::class)->duplicateIdsForEvent($event);
+
+        $registrations = $this->registrationsQuery($event, $filters, $duplicateIds)
+            ->with('payment')
+            ->get();
+
+        return $this->streamRegistrationsCsv($event, $registrations);
+    }
+
+    public function exportRegistrationsPdf(Request $request, Event $event)
+    {
+        $this->authorize('manageRegistrations', $event);
+
+        $filters = $this->registrationFilters($request);
+        $duplicateIds = app(EventRegistrationDuplicateFinder::class)->duplicateIdsForEvent($event);
+
+        $registrations = $this->registrationsQuery($event, $filters, $duplicateIds)
+            ->with('payment')
+            ->get();
+
+        $pdf = Pdf::loadView('agenda.eventos.pdf.inscricoes', [
+            'event' => $event,
+            'eventTitle' => PdfText::stripEmoji((string) $event->title),
+            'registrations' => $registrations,
+            'situacaoLabel' => self::REGISTRATION_SITUACOES[$filters['situacao']] ?? 'Todos',
+            'busca' => $filters['q'],
+        ])->setPaper('a4', 'landscape');
+
+        return $pdf->download('inscricoes-' . (Str::slug($event->title) ?: 'evento') . '.pdf');
+    }
+
+    /**
+     * @return array{q:string,situacao:string,sort:string,per_page:int}
+     */
+    private function registrationFilters(Request $request): array
+    {
+        $situacao = (string) $request->query('situacao', 'todos');
+        $sort = (string) $request->query('sort', 'recentes');
+        $perPage = (int) $request->query('per_page', 25);
+
+        return [
+            'q' => trim((string) $request->query('q', '')),
+            'situacao' => array_key_exists($situacao, self::REGISTRATION_SITUACOES) ? $situacao : 'todos',
+            'sort' => array_key_exists($sort, self::REGISTRATION_SORTS) ? $sort : 'recentes',
+            'per_page' => in_array($perPage, [25, 50, 100], true) ? $perPage : 25,
+        ];
+    }
+
+    /**
+     * @param  array<int, int>  $duplicateIds
+     */
+    private function registrationsQuery(Event $event, array $filters, array $duplicateIds = []): Builder
+    {
+        $query = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->search($filters['q']);
+
+        match ($filters['situacao']) {
+            'confirmados' => $query->where('status', EventRegistration::STATUS_CONFIRMADO),
+            'pendentes' => $query->where('status', EventRegistration::STATUS_PENDENTE),
+            'cancelados' => $query->where('status', EventRegistration::STATUS_CANCELADO),
+            'presentes' => $query->whereNotNull('checked_in_at'),
+            'ausentes' => $query->whereNull('checked_in_at')->emVaga(),
+            'sem_comprovante' => $query->whereNull('receipt_sent_at')->emVaga(),
+            'duplicadas' => $query->whereIn('id', $duplicateIds ?: [0]),
+            'excluidas' => $query->onlyTrashed(),
+            default => $query,
+        };
+
+        return match ($filters['sort']) {
+            'antigas' => $query->orderBy('created_at')->orderBy('id'),
+            'nome' => $query->orderBy('name'),
+            'status' => $query->orderBy('status')->orderByDesc('created_at'),
+            default => $query->orderByDesc('created_at')->orderByDesc('id'),
+        };
+    }
+
+    /**
+     * @param  array<int, int>  $duplicateIds
+     * @return array<string, mixed>
+     */
+    private function registrationStats(Event $event, array $duplicateIds): array
+    {
+        $row = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw("SUM(CASE WHEN status = 'confirmado' THEN 1 ELSE 0 END) as confirmados")
+            ->selectRaw("SUM(CASE WHEN status = 'pendente' THEN 1 ELSE 0 END) as pendentes")
+            ->selectRaw("SUM(CASE WHEN status = 'cancelado' THEN 1 ELSE 0 END) as cancelados")
+            ->selectRaw('SUM(CASE WHEN checked_in_at IS NOT NULL THEN 1 ELSE 0 END) as presentes')
+            ->selectRaw("SUM(CASE WHEN checked_in_at IS NULL AND status <> 'cancelado' THEN 1 ELSE 0 END) as ausentes")
+            ->selectRaw("SUM(CASE WHEN receipt_sent_at IS NULL AND status <> 'cancelado' THEN 1 ELSE 0 END) as sem_comprovante")
+            ->first();
+
+        $total = (int) ($row->total ?? 0);
+        $cancelados = (int) ($row->cancelados ?? 0);
+        $presentes = (int) ($row->presentes ?? 0);
+        $emVaga = max(0, $total - $cancelados);
+
+        $arrecadado = 0.0;
+        if ($event->is_paid) {
+            $arrecadado = (float) EventRegistrationPayment::query()
+                ->whereIn('event_registration_id', EventRegistration::query()->where('event_id', $event->id)->select('id'))
+                ->whereRaw('LOWER(status) = ?', ['approved'])
+                ->sum('amount');
+        }
+
+        return [
+            'total' => $total,
+            'em_vaga' => $emVaga,
+            'confirmados' => (int) ($row->confirmados ?? 0),
+            'pendentes' => (int) ($row->pendentes ?? 0),
+            'cancelados' => $cancelados,
+            'presentes' => $presentes,
+            'ausentes' => (int) ($row->ausentes ?? 0),
+            'sem_comprovante' => (int) ($row->sem_comprovante ?? 0),
+            'duplicadas' => count($duplicateIds),
+            'excluidas' => EventRegistration::onlyTrashed()->where('event_id', $event->id)->count(),
+            'presentes_percentual' => $emVaga > 0 ? round(($presentes / $emVaga) * 100) : 0,
+            'arrecadado' => $arrecadado,
+            'vagas' => $event->max_spots,
+            'vagas_percentual' => $event->max_spots > 0 ? min(100, round(($emVaga / $event->max_spots) * 100)) : null,
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, EventRegistration>  $registrations
+     */
+    private function bulkConfirm($registrations)
+    {
+        $confirmadas = 0;
+        foreach ($registrations as $registration) {
+            if ($registration->status === EventRegistration::STATUS_CONFIRMADO) {
+                continue;
+            }
+            $registration->update(['status' => EventRegistration::STATUS_CONFIRMADO]);
+            $confirmadas++;
+        }
+
+        return back()->with('success', $confirmadas === 0
+            ? 'As inscrições selecionadas já estavam confirmadas.'
+            : "{$confirmadas} inscrição(ões) confirmada(s). Use \"Enviar comprovante\" para avisar os inscritos.");
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, EventRegistration>  $registrations
+     */
+    private function bulkSendReceipts($registrations, EventRegistrationBatchSender $batchSender)
+    {
+        $resultado = $batchSender->sendReceipts($registrations);
+
+        $mensagem = "{$resultado['sent']} comprovante(s) enviado(s).";
+        if ($resultado['skipped'] > 0) {
+            $mensagem .= " {$resultado['skipped']} ignorado(s) (sem telefone ou fora do lote).";
+        }
+        if ($resultado['failed'] > 0) {
+            $mensagem .= " {$resultado['failed']} falha(s).";
+        }
+        if ($resultado['aborted']) {
+            $mensagem .= ' ' . $resultado['aborted'];
+        }
+
+        return back()->with($resultado['failed'] > 0 || $resultado['aborted'] ? 'warning' : 'success', $mensagem);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, EventRegistration>  $registrations
+     */
+    private function bulkDelete(Request $request, Event $event, $registrations)
+    {
+        $this->authorize('deleteRegistrations', $event);
+
+        $excluidas = 0;
+        $bloqueadas = [];
+
+        foreach ($registrations as $registration) {
+            if ($registration->hasConfirmedPayment()) {
+                $bloqueadas[] = $registration->name;
+                continue;
+            }
+            $registration->deleted_by = $request->user()?->id;
+            $registration->save();
+            $registration->delete();
+            $excluidas++;
+        }
+
+        AuditLogger::log('agenda', 'inscricoes.excluir-lote', "{$excluidas} inscrição(ões) excluída(s) em lote.", [
+            'event_id' => $event->id,
+            'event_title' => $event->title,
+            'registration_ids' => $registrations->pluck('id')->all(),
+            'excluidas' => $excluidas,
+            'bloqueadas' => $bloqueadas,
+        ]);
+
+        $mensagem = "{$excluidas} inscrição(ões) excluída(s).";
+        if ($bloqueadas !== []) {
+            $mensagem .= ' Com pagamento confirmado (cancele em vez de excluir): ' . implode(', ', $bloqueadas) . '.';
+        }
+
+        return back()->with($bloqueadas !== [] ? 'warning' : 'success', $mensagem);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, EventRegistration>  $registrations
+     */
+    private function streamRegistrationsCsv(Event $event, $registrations)
+    {
+        $filename = 'inscricoes-' . (Str::slug($event->title) ?: 'evento') . '-' . now()->format('Y-m-d') . '.csv';
+
+        return response()->streamDownload(function () use ($event, $registrations) {
+            $out = fopen('php://output', 'w');
+            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            $header = ['Inscrição', 'Nome', 'Status', 'E-mail', 'Telefone', 'Presença', 'Comprovante', 'Data da inscrição'];
+            if ($event->is_paid) {
+                array_splice($header, 5, 0, ['Pagamento', 'Valor']);
+            }
+            fputcsv($out, $header, ';');
+
+            foreach ($registrations as $r) {
+                $linha = [
+                    $r->registration_number ?: '-',
+                    $r->name,
+                    $r->status_label,
+                    $r->email ?: '',
+                    $r->phone ?: '',
+                    $r->checked_in_at ? 'Presente ' . $r->checked_in_at->format('d/m/Y H:i') : 'Ausente',
+                    $r->receipt_sent_at ? 'Enviado ' . $r->receipt_sent_at->format('d/m/Y H:i') : 'Não enviado',
+                    $r->created_at?->format('d/m/Y H:i'),
+                ];
+                if ($event->is_paid) {
+                    array_splice($linha, 5, 0, [
+                        strtoupper((string) ($r->payment->status ?? 'pendente')),
+                        $r->payment ? number_format((float) $r->payment->amount, 2, ',', '.') : '',
+                    ]);
+                }
+                fputcsv($out, $linha, ';');
+            }
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    private function assertRegistrationBelongsToEvent(Event $event, EventRegistration $registration): void
+    {
+        if ((int) $registration->event_id !== (int) $event->id) {
+            abort(404);
+        }
     }
 
     public function updateRegistrationStatus(Request $request, Event $event, EventRegistration $registration)

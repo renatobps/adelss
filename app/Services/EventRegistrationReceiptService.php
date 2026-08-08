@@ -52,6 +52,57 @@ class EventRegistrationReceiptService
     }
 
     /**
+     * Gera número e token para inscrições antigas que ficaram sem eles.
+     * Percorre em ordem cronológica para que o sequencial reflita a ordem de inscrição.
+     *
+     * @return int quantidade de inscrições atualizadas
+     */
+    public function backfillMissingCredentials(?int $eventId = null): int
+    {
+        $updated = 0;
+
+        // Os ids são coletados antes: a própria condição do filtro é a coluna que
+        // será preenchida, então paginar a consulta enquanto se escreve nela pularia registros.
+        $ids = EventRegistration::withTrashed()
+            ->when($eventId !== null, fn ($q) => $q->where('event_id', $eventId))
+            ->where(function ($q) {
+                $q->whereNull('registration_number')
+                    ->orWhere('registration_number', '')
+                    ->orWhereNull('check_in_token')
+                    ->orWhere('check_in_token', '');
+            })
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->pluck('id');
+
+        foreach ($ids->chunk(200) as $chunk) {
+            $registrations = EventRegistration::withTrashed()
+                ->whereIn('id', $chunk)
+                ->with('event')
+                ->orderBy('created_at')
+                ->orderBy('id')
+                ->get();
+
+            foreach ($registrations as $registration) {
+                if (! $registration->event) {
+                    continue;
+                }
+                try {
+                    $this->ensureCredentials($registration);
+                    $updated++;
+                } catch (\Throwable $e) {
+                    Log::warning('Evento: falha ao gerar número da inscrição em lote.', [
+                        'registration_id' => $registration->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+
+        return $updated;
+    }
+
+    /**
      * Envia o comprovante por WhatsApp (texto + PDF).
      * Nunca lança exceção: a inscrição não pode ser invalidada por falha de envio.
      *
@@ -207,7 +258,7 @@ class EventRegistrationReceiptService
     {
         do {
             $token = Str::random(20);
-        } while (EventRegistration::where('check_in_token', $token)->exists());
+        } while (EventRegistration::withTrashed()->where('check_in_token', $token)->exists());
 
         return $token;
     }
@@ -229,7 +280,9 @@ class EventRegistrationReceiptService
 
     private function nextSequence(Event $event, string $prefix, string $year): int
     {
-        $last = EventRegistration::query()
+        // Inclui excluídas: reaproveitar o número de uma inscrição removida faria
+        // dois comprovantes diferentes carregarem o mesmo identificador.
+        $last = EventRegistration::withTrashed()
             ->where('event_id', $event->id)
             ->whereNotNull('registration_number')
             ->where('registration_number', 'like', "{$prefix}-{$year}-%")

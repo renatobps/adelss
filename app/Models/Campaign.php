@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Campaign extends Model
 {
@@ -63,6 +64,22 @@ class Campaign extends Model
     public function installments(): HasManyThrough
     {
         return $this->hasManyThrough(CampaignInstallment::class, CampaignSponsor::class);
+    }
+
+    public function reminderSetting(): HasOne
+    {
+        return $this->hasOne(CampaignReminderSetting::class);
+    }
+
+    public function reminderLogs(): HasMany
+    {
+        return $this->hasMany(CampaignReminderLog::class);
+    }
+
+    /** Configuração de lembretes efetiva (própria ou herdada do padrão global). */
+    public function reminderSettings(): CampaignReminderSetting
+    {
+        return CampaignReminderSetting::effectiveFor($this);
     }
 
     public function totalRaised(): float

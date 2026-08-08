@@ -36,6 +36,7 @@
                     <span class="cs-amount">R$ {{ number_format($s['paid_amount'], 2, ',', '.') }}</span>
                     <span class="cs-status">
                         <span class="cs-badge cs-badge--{{ $situacao }}">{{ CampaignSponsor::SITUACOES[$situacao] }}</span>
+                        @include('financial.campaigns.partials.sponsor-reminder-badge')
                     </span>
                 </button>
                 <div class="cs-menu dropdown">
@@ -57,6 +58,7 @@
                                 </button>
                             </li>
                         @endif
+                        @include('financial.campaigns.partials.sponsor-reminder-actions')
                         @if($canDelete)
                             <li><hr class="dropdown-divider"></li>
                             <li>
