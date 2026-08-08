@@ -128,6 +128,8 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
         Route::put('/patrocinadores/{sponsor}', [CampaignSponsorController::class, 'update'])->name('sponsors.update');
         Route::delete('/patrocinadores/{sponsor}', [CampaignSponsorController::class, 'destroy'])->name('sponsors.destroy');
         Route::get('/patrocinadores/{sponsor}/carne', [CampaignSponsorController::class, 'carne'])->name('sponsors.carne');
+        Route::get('/patrocinadores/{sponsor}/parcelas', [CampaignSponsorController::class, 'installments'])->name('sponsors.installments');
+        Route::post('/{campaign}/cobrar-atrasados', [CampaignSponsorController::class, 'chargeOverdue'])->whereNumber('campaign')->name('sponsors.charge-overdue');
 
         Route::post('/parcelas/{installment}/pagar', [CampaignInstallmentController::class, 'pay'])->name('installments.pay');
         Route::post('/parcelas/pagar-lote', [CampaignInstallmentController::class, 'payBatch'])->name('installments.pay-batch');

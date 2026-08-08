@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Financial;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\CampaignInstallment;
 use App\Models\CampaignSponsor;
 use App\Models\Member;
+use App\Services\WhatsAppService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class CampaignSponsorController extends Controller
@@ -146,6 +149,104 @@ class CampaignSponsorController extends Controller
         return redirect()
             ->route('financial.campaigns.show', $campaignId)
             ->with('success', 'Patrocinador removido com sucesso.');
+    }
+
+    /**
+     * Parcelas do patrocinador em HTML, carregadas sob demanda quando o
+     * accordion (ou o painel lateral da visão em tabela) é aberto.
+     */
+    public function installments(CampaignSponsor $sponsor)
+    {
+        $sponsor->load(['campaign', 'installments']);
+
+        return response()->view('financial.campaigns.partials.sponsor-installments', [
+            'campaign' => $sponsor->campaign,
+            'sponsor' => $sponsor,
+        ]);
+    }
+
+    /**
+     * Cobrança em massa por WhatsApp dos patrocinadores em atraso que batem
+     * com a busca aplicada na listagem.
+     */
+    public function chargeOverdue(Request $request, Campaign $campaign, WhatsAppService $whatsapp)
+    {
+        $fallback = route('financial.campaigns.show', $campaign);
+        $returnUrl = (string) $request->input('return_url', '');
+        $redirect = fn () => redirect()->to(
+            Str::startsWith($returnUrl, $fallback) ? $returnUrl : $fallback
+        );
+
+        $today = now()->startOfDay();
+
+        $sponsors = $campaign->sponsors()
+            ->search($request->input('q'))
+            ->situacao('em_atraso')
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->with(['installments' => fn ($q) => $q->where('status', CampaignInstallment::STATUS_PENDENTE)])
+            ->orderBy('name')
+            ->get();
+
+        if ($sponsors->isEmpty()) {
+            return $redirect()->with('warning', 'Nenhum patrocinador em atraso com telefone cadastrado.');
+        }
+
+        @set_time_limit(0);
+
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($sponsors as $sponsor) {
+            $overdue = $sponsor->installments
+                ->filter(fn ($i) => $i->due_date !== null && $i->due_date->lt($today))
+                ->sortBy('due_date');
+
+            if ($overdue->isEmpty()) {
+                continue;
+            }
+
+            $mensagem = $this->overdueMessage($campaign, $sponsor, $overdue);
+
+            try {
+                $resultado = $whatsapp->enviarMensagem($sponsor->phone, $mensagem);
+                if ($resultado['success'] ?? false) {
+                    $sent++;
+                } else {
+                    $failed++;
+                    Log::warning('Campanha: falha ao cobrar patrocinador em atraso.', [
+                        'sponsor_id' => $sponsor->id,
+                        'error' => $resultado['error'] ?? 'desconhecido',
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                $failed++;
+                Log::error('Campanha: erro inesperado ao cobrar patrocinador em atraso.', [
+                    'sponsor_id' => $sponsor->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $message = "Cobrança enviada para {$sent} patrocinador(es).";
+        if ($failed > 0) {
+            $message .= " {$failed} falha(s) de envio.";
+        }
+
+        return $redirect()->with($failed > 0 ? 'warning' : 'success', $message);
+    }
+
+    private function overdueMessage(Campaign $campaign, CampaignSponsor $sponsor, $overdue): string
+    {
+        $total = (float) $overdue->sum('amount');
+
+        return "🔔 *Lembrete de contribuição — {$campaign->name}*\n\n"
+            . "Olá, {$sponsor->name}!\n"
+            . 'Consta em nosso controle *' . $overdue->count() . ' parcela(s) em atraso*, '
+            . 'somando *R$ ' . number_format($total, 2, ',', '.') . "*.\n"
+            . 'A mais antiga venceu em *' . $overdue->first()->due_date->format('d/m/Y') . "*.\n\n"
+            . "Se você já efetuou o pagamento, por favor desconsidere esta mensagem.\n"
+            . 'Deus abençoe sua generosidade! 🙏';
     }
 
     /**

@@ -169,7 +169,8 @@ class FinancialRouteAuthorizer
             'financial.campaigns.sponsors.destroy' => 'delete',
             'financial.campaigns.installments.pay',
             'financial.campaigns.installments.pay-batch',
-            'financial.campaigns.installments.resend' => 'pagar',
+            'financial.campaigns.installments.resend',
+            'financial.campaigns.sponsors.charge-overdue' => 'pagar',
             'financial.campaigns.installments.reverse' => 'estornar',
             default => 'view',
         };
@@ -179,7 +180,7 @@ class FinancialRouteAuthorizer
             'create' => 'criar campanhas ou adicionar patrocinadores',
             'edit' => 'editar campanhas',
             'delete' => 'excluir registros de campanhas',
-            'pagar' => 'registrar pagamentos de campanhas',
+            'pagar' => 'registrar pagamentos e cobranças de campanhas',
             'estornar' => 'estornar pagamentos de campanhas',
         ];
 

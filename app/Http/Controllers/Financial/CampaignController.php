@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Financial;
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
 use App\Models\CampaignInstallment;
+use App\Models\CampaignSponsor;
 use App\Models\Department;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -42,24 +44,99 @@ class CampaignController extends Controller
             ->with('success', 'Campanha criada com sucesso.');
     }
 
-    public function show(Campaign $campaign)
+    /**
+     * Ordenações da listagem de patrocinadores.
+     * O padrão prioriza quem precisa ser cobrado, não a ordem alfabética.
+     */
+    private const SPONSOR_SORTS = [
+        'atraso' => 'Mais em atraso',
+        'nome' => 'Nome (A-Z)',
+        'maior_pago' => 'Maior valor pago',
+        'menor_pago' => 'Menor valor pago',
+        'recentes' => 'Adicionado recentemente',
+    ];
+
+    private const SPONSOR_PER_PAGE = [20, 50, 100];
+
+    public function show(Request $request, Campaign $campaign)
     {
-        $campaign->load([
-            'department',
-            'sponsors' => fn ($q) => $q->orderBy('name'),
-            'sponsors.installments',
-        ]);
+        $campaign->load('department');
+
+        $filters = $this->sponsorFilters($request);
+
+        // As parcelas não são carregadas aqui: a listagem usa apenas os
+        // agregados de `withSummary()` e o accordion busca as parcelas por AJAX.
+        $base = CampaignSponsor::query()
+            ->where('campaign_id', $campaign->id)
+            ->search($filters['q']);
+
+        $counts = ['todos' => (clone $base)->count()];
+        foreach (array_keys(CampaignSponsor::SITUACOES) as $situacao) {
+            $counts[$situacao] = (clone $base)->situacao($situacao)->count();
+        }
+
+        // Quem realmente receberia a cobrança em massa (o restante não tem WhatsApp).
+        $chargeableCount = (clone $base)->situacao('em_atraso')
+            ->whereNotNull('phone')->where('phone', '!=', '')
+            ->count();
+
+        $sponsors = $this->applySponsorSort(
+            (clone $base)->withSummary()->situacao($filters['situacao']),
+            $filters['sort']
+        )->paginate($filters['per_page'])->withQueryString();
 
         $metrics = [
             'goal' => (float) ($campaign->goal_amount ?? 0),
+            // Tudo que os patrocinadores já se comprometeram a doar (pago + a receber).
+            'expected' => $campaign->totalExpected(),
             'raised' => $campaign->totalRaised(),
             'pending' => $campaign->totalPending(),
             'overdue' => $campaign->totalOverdue(),
             'progress' => $campaign->progressPercentage(),
-            'sponsors' => $campaign->sponsors->count(),
+            'sponsors' => $campaign->sponsors()->count(),
         ];
 
-        return view('financial.campaigns.show', compact('campaign', 'metrics'));
+        return view('financial.campaigns.show', [
+            'campaign' => $campaign,
+            'metrics' => $metrics,
+            'sponsors' => $sponsors,
+            'counts' => $counts,
+            'chargeableCount' => $chargeableCount,
+            'filters' => $filters,
+            'sortOptions' => self::SPONSOR_SORTS,
+            'perPageOptions' => self::SPONSOR_PER_PAGE,
+        ]);
+    }
+
+    /**
+     * @return array{q:string,situacao:string,sort:string,view:string,per_page:int}
+     */
+    private function sponsorFilters(Request $request): array
+    {
+        $text = fn (string $key) => is_string($v = $request->query($key)) ? $v : '';
+
+        $situacao = $text('situacao');
+        $sort = $text('sort');
+        $perPage = (int) $text('per_page');
+
+        return [
+            'q' => trim($text('q')),
+            'situacao' => array_key_exists($situacao, CampaignSponsor::SITUACOES) ? $situacao : 'todos',
+            'sort' => array_key_exists($sort, self::SPONSOR_SORTS) ? $sort : 'atraso',
+            'view' => $text('view') === 'tabela' ? 'tabela' : 'lista',
+            'per_page' => in_array($perPage, self::SPONSOR_PER_PAGE, true) ? $perPage : 20,
+        ];
+    }
+
+    private function applySponsorSort(Builder $query, string $sort): Builder
+    {
+        return match ($sort) {
+            'nome' => $query->orderBy('name'),
+            'maior_pago' => $query->orderByDesc('paid_amount')->orderBy('name'),
+            'menor_pago' => $query->orderBy('paid_amount')->orderBy('name'),
+            'recentes' => $query->orderByDesc('created_at')->orderBy('name'),
+            default => $query->orderByDesc('overdue_amount')->orderByDesc('overdue_count')->orderBy('name'),
+        };
     }
 
     public function edit(Campaign $campaign)
