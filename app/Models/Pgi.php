@@ -12,6 +12,7 @@ class Pgi extends Model
 
     protected $fillable = [
         'name',
+        'parent_pgi_id',
         'logo_url',
         'banner_url',
         'opening_date',
@@ -25,11 +26,17 @@ class Pgi extends Model
         'address',
         'neighborhood',
         'number',
+        'latitude',
+        'longitude',
+        'geocoded_at',
         'notes',
     ];
 
     protected $casts = [
         'opening_date' => 'date',
+        'latitude' => 'float',
+        'longitude' => 'float',
+        'geocoded_at' => 'datetime',
     ];
 
     /**
@@ -104,6 +111,59 @@ class Pgi extends Model
     public function meetings()
     {
         return $this->hasMany(Meeting::class);
+    }
+
+    /**
+     * PGI que gerou este grupo (multiplicação)
+     */
+    public function parent()
+    {
+        return $this->belongsTo(Pgi::class, 'parent_pgi_id');
+    }
+
+    /**
+     * PGIs gerados a partir deste grupo
+     */
+    public function children()
+    {
+        return $this->hasMany(Pgi::class, 'parent_pgi_id');
+    }
+
+    /**
+     * Endereço em uma linha, para exibição e geocodificação.
+     */
+    public function fullAddress(): string
+    {
+        $parts = array_filter([
+            trim((string) $this->address),
+            trim((string) $this->number),
+            trim((string) $this->neighborhood),
+        ], fn ($part) => $part !== '');
+
+        return implode(', ', $parts);
+    }
+
+    public function hasCoordinates(): bool
+    {
+        return $this->latitude !== null && $this->longitude !== null;
+    }
+
+    /**
+     * Dia da semana do PGI no formato do Carbon (0 = domingo).
+     */
+    public function dayOfWeekNumber(): ?int
+    {
+        $map = [
+            'domingo' => 0,
+            'segunda' => 1,
+            'terça' => 2,
+            'quarta' => 3,
+            'quinta' => 4,
+            'sexta' => 5,
+            'sábado' => 6,
+        ];
+
+        return $map[mb_strtolower(trim((string) $this->day_of_week))] ?? null;
     }
 }
 

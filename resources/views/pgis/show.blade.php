@@ -9,480 +9,605 @@
     <li><span>Detalhes do PGI</span></li>
 @endsection
 
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/css/pgis.css') }}?v={{ @filemtime(public_path('css/css/pgis.css')) ?: '1' }}">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+@endpush
+
 @section('content')
 @php
     $user = Auth::user();
     $isAdmin = $user?->is_admin ?? false;
-    $member = $user?->member;
-    $isLeader = $member && $pgi->isLeader($member);
-    
-    $canViewPgis = $isAdmin || 
-                   ($user && ($user->hasPermission('pgis.index.view') || 
-                              $user->hasPermission('pgis.index.manage')));
-    $canCreatePgis = $isAdmin || 
-                     ($user && ($user->hasPermission('pgis.index.create') || 
+    $viewerMember = $user?->member;
+    $isLeader = $viewerMember && $pgi->isLeader($viewerMember);
+
+    $canCreatePgis = $isAdmin ||
+                     ($user && ($user->hasPermission('pgis.index.create') ||
                                 $user->hasPermission('pgis.index.manage')));
-    $canEditPgis = $isAdmin || 
-                   ($user && ($user->hasPermission('pgis.index.edit') || 
+    $canEditPgis = $isAdmin ||
+                   ($user && ($user->hasPermission('pgis.index.edit') ||
                               $user->hasPermission('pgis.index.manage')));
-    $canDeletePgis = $isAdmin || 
-                     ($user && ($user->hasPermission('pgis.index.delete') || 
+    $canDeletePgis = $isAdmin ||
+                     ($user && ($user->hasPermission('pgis.index.delete') ||
                                 $user->hasPermission('pgis.index.manage')));
-    
-    // Líderes e líderes em treinamento podem criar reuniões
-    $canCreateMeetings = $isAdmin || $isLeader;
-    $canEditMeetings = $isAdmin || $isLeader;
-    $canDeleteMeetings = $isAdmin || $isLeader;
+
+    // Líderes e líderes em treinamento gerenciam reuniões e notificações
+    $canManageMeetings = $isAdmin || $isLeader;
     $canSendPgiNotification = $isAdmin || $isLeader;
+
+    $membersTotal = $pgi->members->count();
+    $membersSorted = $pgi->members->sortBy('name')->values();
+    $membersPreview = (int) config('pgis.members_preview', 8);
+    $leaders = collect([
+        ['member' => $pgi->leader1, 'role' => 'Líder'],
+        ['member' => $pgi->leader2, 'role' => 'Líder'],
+        ['member' => $pgi->leaderTraining1, 'role' => 'Em treinamento'],
+        ['member' => $pgi->leaderTraining2, 'role' => 'Em treinamento'],
+    ])->filter(fn ($item) => $item['member'] !== null)->values();
+
+    $headerColors = [
+        'Masculino' => ['start' => '#4169E1', 'end' => '#1E90FF'],
+        'Feminino' => ['start' => '#FF69B4', 'end' => '#FF1493'],
+        'Misto' => ['start' => '#9370DB', 'end' => '#BA55D3'],
+        'default' => ['start' => '#87CEEB', 'end' => '#4682B4'],
+    ];
+    $colors = $headerColors[$pgi->profile] ?? $headerColors['default'];
+    if ($pgi->time_schedule === 'Manhã') {
+        $colors = ['start' => '#90EE90', 'end' => '#98FB98'];
+    } elseif ($pgi->time_schedule === 'Tarde') {
+        $colors = ['start' => '#FF8C00', 'end' => '#FF6347'];
+    }
+
+    $fullAddress = $pgi->fullAddress();
 @endphp
 
 @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bx bx-check-circle me-2"></i>{{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+    </div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bx bx-error-circle me-2"></i>{{ session('error') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
     </div>
 @endif
 @if($errors->any())
     <div class="alert alert-danger alert-dismissible fade show" role="alert">
         <ul class="mb-0">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
     </div>
 @endif
 
-<div class="row">
-    <!-- Painel Esquerdo: Header do PGI e Liderança -->
-    <div class="col-lg-4 mb-4">
-        <!-- Header do PGI com Logo -->
-        <div class="card mb-4" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow: hidden;">
-            @php
-                $headerColors = [
-                    'Masculino' => ['start' => '#4169E1', 'end' => '#1E90FF'],
-                    'Feminino' => ['start' => '#FF69B4', 'end' => '#FF1493'],
-                    'Misto' => ['start' => '#9370DB', 'end' => '#BA55D3'],
-                    'default' => ['start' => '#87CEEB', 'end' => '#4682B4']
-                ];
-                $colors = $headerColors[$pgi->profile] ?? $headerColors['default'];
-                if ($pgi->time_schedule == 'Manhã') {
-                    $colors = ['start' => '#90EE90', 'end' => '#98FB98'];
-                } elseif ($pgi->time_schedule == 'Tarde') {
-                    $colors = ['start' => '#FF8C00', 'end' => '#FF6347'];
-                }
-            @endphp
-            <div class="card-header p-0" style="height: 200px; background: linear-gradient(135deg, {{ $colors['start'] }} 0%, {{ $colors['end'] }} 100%); position: relative; overflow: hidden;">
-                @if($pgi->banner_url)
-                    <img src="{{ asset('storage/' . $pgi->banner_url) }}" 
-                         alt="Banner do PGI" 
-                         style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;">
-                    <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3);"></div>
-                @endif
-                <!-- Botão para trocar banner -->
-                @if($canEditPgis)
-                <button type="button" 
-                        class="btn btn-sm btn-light position-absolute" 
-                        style="top: 10px; right: 10px; z-index: 2; padding: 4px 8px; border-radius: 4px; opacity: 0.9;"
-                        data-bs-toggle="modal" 
-                        data-bs-target="#updateBannerModal"
-                        title="Trocar banner">
-                    <i class="bx bx-image" style="font-size: 1.2rem;"></i>
-                </button>
-                @endif
-                <div class="position-absolute top-0 start-0 p-4 w-100 h-100 d-flex align-items-center justify-content-center" style="z-index: 1;">
-                    <div class="text-center text-white">
-                        <h2 class="mb-0 fw-bold" style="font-size: 2.5rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">{{ $pgi->name }}</h2>
-                        <small style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">PEQUENO GRUPO INTEGRADO</small>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Logo Circular -->
-            <div class="card-body text-center">
-                <div class="position-relative d-inline-block mb-3" style="margin-top: -40px;">
-                    <div class="bg-white rounded-circle d-inline-flex align-items-center justify-content-center shadow-sm overflow-hidden" 
-                         style="width: 80px; height: 80px; border: 3px solid white;">
+{{-- ============ Cabeçalho: identidade + informações essenciais ============ --}}
+<div class="card pgi-card pgi-hero mb-4">
+    <div class="pgi-hero__banner"
+         style="background: linear-gradient(135deg, {{ $colors['start'] }} 0%, {{ $colors['end'] }} 100%);
+                @if($pgi->banner_url) background-image: url('{{ asset('storage/' . $pgi->banner_url) }}'); @endif">
+        @if($pgi->banner_url)<div class="pgi-hero__overlay"></div>@endif
+        @if($canEditPgis)
+            <button type="button" class="btn btn-sm btn-light position-absolute pgi-touch"
+                    style="top: 10px; right: 10px; z-index: 2;"
+                    data-bs-toggle="modal" data-bs-target="#updateBannerModal" title="Trocar banner">
+                <i class="bx bx-image"></i>
+            </button>
+        @endif
+    </div>
+
+    <div class="card-body">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="d-flex align-items-end gap-3">
+                    <div class="pgi-hero__logo position-relative d-flex align-items-center justify-content-center flex-shrink-0">
                         @if($pgi->logo_url)
-                            <img src="{{ asset('storage/' . $pgi->logo_url) }}" 
-                                 alt="Logo do PGI" 
-                                 style="width: 100%; height: 100%; object-fit: cover;">
+                            <img src="{{ asset('storage/' . $pgi->logo_url) }}" alt="Logo do PGI">
+                        @elseif($pgi->profile === 'Masculino')
+                            <i class="bx bx-male text-primary" style="font-size: 2.5rem;"></i>
+                        @elseif($pgi->profile === 'Feminino')
+                            <i class="bx bx-female text-danger" style="font-size: 2.5rem;"></i>
                         @else
-                            @if($pgi->profile == 'Masculino')
-                                <i class="bx bx-male text-primary" style="font-size: 3rem;"></i>
-                            @elseif($pgi->profile == 'Feminino')
-                                <i class="bx bx-female text-danger" style="font-size: 3rem;"></i>
-                            @else
-                                <i class="bx bx-group text-info" style="font-size: 3rem;"></i>
-                            @endif
+                            <i class="bx bx-group text-info" style="font-size: 2.5rem;"></i>
+                        @endif
+                        @if($canEditPgis)
+                            <button type="button" class="btn btn-sm btn-light position-absolute rounded-circle"
+                                    style="bottom: -4px; right: -4px; width: 28px; height: 28px; padding: 0;"
+                                    data-bs-toggle="modal" data-bs-target="#updateLogoModal" title="Trocar logo">
+                                <i class="bx bx-image"></i>
+                            </button>
                         @endif
                     </div>
-                    <!-- Botão para trocar logo -->
-                    <button type="button" 
-                            class="btn btn-sm btn-light position-absolute rounded-circle" 
-                            style="bottom: -5px; right: -5px; width: 28px; height: 28px; padding: 0; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
-                            data-bs-toggle="modal" 
-                            data-bs-target="#updateLogoModal"
-                            title="Trocar logo">
-                        <i class="bx bx-image" style="font-size: 1rem;"></i>
-                    </button>
-                </div>
-                <h4 class="mb-3">{{ $pgi->name }}</h4>
-                
-                <!-- Liderança -->
-                <div class="mb-3">
-                    <strong class="d-block mb-2 small text-muted">Liderança:</strong>
-                    <div class="d-flex gap-2 align-items-center justify-content-center flex-wrap">
-                        @if($pgi->leader1)
-                            @if($pgi->leader1->photo_url)
-                                <img src="{{ $pgi->leader1->photo_url }}" 
-                                     alt="{{ $pgi->leader1->name }}" 
-                                     class="rounded-circle" 
-                                     width="50" 
-                                     height="50"
-                                     style="object-fit: cover; border: 2px solid #007bff;"
-                                     title="{{ $pgi->leader1->name }}">
-                            @else
-                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center border border-primary" 
-                                     style="width: 50px; height: 50px;"
-                                     title="{{ $pgi->leader1->name }}">
-                                    <i class="bx bx-user text-white"></i>
-                                </div>
+                    <div class="pb-1">
+                        <h4 class="mb-1">{{ $pgi->name }}</h4>
+                        <div class="text-muted small">
+                            Pequeno Grupo Integrado
+                            @if($pgi->parent)
+                                · multiplicação de <a href="{{ route('pgis.show', $pgi->parent) }}">{{ $pgi->parent->name }}</a>
                             @endif
-                        @endif
-                        
-                        @if($pgi->leader2)
-                            @if($pgi->leader2->photo_url)
-                                <img src="{{ $pgi->leader2->photo_url }}" 
-                                     alt="{{ $pgi->leader2->name }}" 
-                                     class="rounded-circle" 
-                                     width="50" 
-                                     height="50"
-                                     style="object-fit: cover; border: 2px solid #007bff;"
-                                     title="{{ $pgi->leader2->name }}">
-                            @else
-                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center border border-primary" 
-                                     style="width: 50px; height: 50px;"
-                                     title="{{ $pgi->leader2->name }}">
-                                    <i class="bx bx-user text-white"></i>
-                                </div>
-                            @endif
-                        @endif
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Painel Central: Lista de Membros -->
-    <div class="col-lg-4 mb-4">
-        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); height: 100%;">
-            <header class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bx bx-group me-2"></i>Membros ({{ $pgi->members->count() }})
-                </h5>
-                @if($canEditPgis)
-                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
-                    <i class="bx bx-plus me-1"></i>Adicionar
-                </button>
-                @endif
-            </header>
-            <div class="card-body" style="max-height: 600px; overflow-y: auto;">
-                <!-- Campo de pesquisa -->
-                <div class="mb-3">
-                    <input type="text" class="form-control form-control-sm" id="memberSearch" 
-                           placeholder="Pesquisar membro...">
-                </div>
-
-                @if($pgi->members->count() > 0)
-                    <ul class="list-group list-group-flush" id="memberList">
-                        @foreach($pgi->members as $member)
-                            <li class="list-group-item d-flex justify-content-between align-items-center px-0" data-member-name="{{ strtolower($member->name) }}">
-                                <div class="d-flex align-items-center">
-                                    @if($member->photo_url)
-                                        <img src="{{ $member->photo_url }}" 
-                                             alt="{{ $member->name }}" 
-                                             class="rounded-circle me-2" 
-                                             width="35" 
-                                             height="35"
-                                             style="object-fit: cover;">
-                                    @else
-                                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2" 
-                                             style="width: 35px; height: 35px;">
-                                            <i class="bx bx-user text-white" style="font-size: 0.8rem;"></i>
-                                        </div>
-                                    @endif
-                                    <span>{{ $member->name }}</span>
+                <div class="mt-4">
+                    <span class="pgi-fact__label mb-2">Liderança</span>
+                    @if($leaders->isEmpty())
+                        <p class="text-muted small mb-0">Nenhum líder definido.</p>
+                    @else
+                        <div class="d-flex flex-wrap gap-3">
+                            @foreach($leaders as $leader)
+                                <div class="d-flex align-items-center gap-2">
+                                    @include('members.partials.avatar', ['member' => $leader['member'], 'size' => 42])
+                                    <div>
+                                        <div class="pgi-member__name small">{{ $leader['member']->name }}</div>
+                                        <div class="pgi-member__freq">{{ $leader['role'] }}</div>
+                                    </div>
                                 </div>
-                                @if($canEditPgis)
-                                <form action="{{ route('pgis.members.detach', [$pgi, $member]) }}" method="POST" class="d-inline" onsubmit="return confirm('Tem certeza que deseja remover este membro do PGI?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm text-danger p-0" title="Remover">
-                                        <i class="bx bx-trash"></i>
-                                    </button>
-                                </form>
-                                @endif
-                            </li>
-                        @endforeach
-                    </ul>
-                @else
-                    <p class="text-muted text-center py-4">Nenhum membro vinculado</p>
-                @endif
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Painel Direito: Informações -->
-    <div class="col-lg-4 mb-4">
-        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); height: 100%;">
-            <header class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0">
-                    <i class="bx bx-info-circle me-2"></i>Informações
-                </h5>
-                @if($canEditPgis || $canDeletePgis)
-                <div>
-                    @if($canEditPgis)
-                    <a href="{{ route('pgis.edit', $pgi) }}" class="btn btn-primary btn-sm">
-                        <i class="bx bx-edit me-1"></i>Editar
+            <div class="col-lg-7">
+                <div class="d-flex justify-content-end flex-wrap gap-2 mb-3">
+                    <a href="{{ route('pgis.relatorio', $pgi) }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bx bx-file me-1"></i>Relatório em PDF
                     </a>
+                    @if($canEditPgis)
+                        <a href="{{ route('pgis.edit', $pgi) }}" class="btn btn-primary btn-sm">
+                            <i class="bx bx-edit me-1"></i>Editar PGI
+                        </a>
                     @endif
                     @if($canDeletePgis)
-                    <form action="{{ route('pgis.destroy', $pgi) }}" method="POST" class="d-inline" 
-                          onsubmit="return confirm('Tem certeza que deseja remover este PGI?');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit" class="btn btn-danger btn-sm">
-                            <i class="bx bx-trash me-1"></i>Remover
-                        </button>
-                    </form>
+                        <form action="{{ route('pgis.destroy', $pgi) }}" method="POST"
+                              onsubmit="return confirm('Tem certeza que deseja remover este PGI?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-outline-danger btn-sm">
+                                <i class="bx bx-trash me-1"></i>Remover
+                            </button>
+                        </form>
                     @endif
                 </div>
-                @endif
-            </header>
-            <div class="card-body">
-                @if($pgi->opening_date)
-                    <p class="mb-2"><strong>Data de abertura:</strong> {{ $pgi->opening_date->format('d/m/Y') }}</p>
-                @endif
-                @if($pgi->day_of_week)
-                    <p class="mb-2">
-                        <strong>Dia da semana:</strong> 
-                        {{ ucfirst($pgi->day_of_week) }} 
-                        @if($pgi->time_schedule)
-                            ({{ $pgi->time_schedule }})
-                        @endif
-                    </p>
-                @endif
-                @if($pgi->profile)
-                    <p class="mb-2"><strong>Perfil:</strong> {{ $pgi->profile }}</p>
-                @endif
-                <p class="mb-2"><strong>Categorias:</strong> Sem categorias</p>
-                @if($pgi->leader1)
-                    <p class="mb-2"><strong>Líder 1:</strong> {{ $pgi->leader1->name }}</p>
-                @else
-                    <p class="mb-2"><strong>Líder 1:</strong> Não definido</p>
-                @endif
-                @if($pgi->leader2)
-                    <p class="mb-2"><strong>Líder 2:</strong> {{ $pgi->leader2->name }}</p>
-                @else
-                    <p class="mb-2"><strong>Líder 2:</strong> Não definido</p>
-                @endif
-                @if($pgi->leaderTraining1)
-                    <p class="mb-2"><strong>Líder em treinamento 1:</strong> {{ $pgi->leaderTraining1->name }}</p>
-                @else
-                    <p class="mb-2"><strong>Líder em treinamento 1:</strong> Não definido</p>
-                @endif
-                @if($pgi->leaderTraining2)
-                    <p class="mb-2"><strong>Líder em treinamento 2:</strong> {{ $pgi->leaderTraining2->name }}</p>
-                @else
-                    <p class="mb-2"><strong>Líder em treinamento 2:</strong> Não definido</p>
-                @endif
-                @if($pgi->address || $pgi->neighborhood)
-                    <p class="mb-2">
-                        <strong>Endereço:</strong> 
-                        {{ trim(($pgi->address ?? '') . ($pgi->neighborhood ? ', ' . $pgi->neighborhood : '') . ($pgi->number ? ', ' . $pgi->number : '')) }}
-                    </p>
-                @endif
+
+                <div class="pgi-facts">
+                    <div>
+                        <span class="pgi-fact__label">Encontro</span>
+                        <span class="pgi-fact__value">
+                            {{ $pgi->day_of_week ? ucfirst($pgi->day_of_week) : 'Dia não definido' }}
+                            @if($pgi->time_schedule) · {{ $pgi->time_schedule }} @endif
+                        </span>
+                    </div>
+                    <div>
+                        <span class="pgi-fact__label">Perfil</span>
+                        <span class="pgi-fact__value">{{ $pgi->profile ?: 'Não informado' }}</span>
+                    </div>
+                    <div>
+                        <span class="pgi-fact__label">Data de abertura</span>
+                        <span class="pgi-fact__value">{{ $pgi->opening_date?->format('d/m/Y') ?: 'Não informada' }}</span>
+                    </div>
+                    <div>
+                        <span class="pgi-fact__label">Endereço</span>
+                        <span class="pgi-fact__value">{{ $fullAddress ?: 'Não cadastrado' }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Dashboard de Reuniões -->
-<div class="row">
-    @if($canSendPgiNotification)
-    <div class="col-12 mb-4">
-        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <header class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bx bxl-whatsapp me-2"></i>Notificar participantes do PGI
-                </h5>
-            </header>
-            <div class="card-body">
-                <form action="{{ route('pgis.notificacoes.enviar', $pgi) }}" method="POST" enctype="multipart/form-data">
-                    @csrf
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <label class="form-label">Tipo de envio <span class="text-danger">*</span></label>
-                            <select class="form-select" name="tipo_envio" id="tipo_envio" required>
-                                <option value="texto" {{ old('tipo_envio', 'texto') === 'texto' ? 'selected' : '' }}>Texto</option>
-                                <option value="imagem" {{ old('tipo_envio') === 'imagem' ? 'selected' : '' }}>Imagem</option>
-                                <option value="video" {{ old('tipo_envio') === 'video' ? 'selected' : '' }}>Vídeo</option>
-                                <option value="enquete" {{ old('tipo_envio') === 'enquete' ? 'selected' : '' }}>Enquete cadastrada</option>
-                            </select>
-                        </div>
-                        <div class="col-md-8">
-                            <label class="form-label">Mensagem / legenda</label>
-                            <textarea class="form-control" name="mensagem" rows="2" maxlength="4096" placeholder="Mensagem para os participantes...">{{ old('mensagem') }}</textarea>
-                            <small class="text-muted">Obrigatória para envio em texto; opcional para imagem e vídeo.</small>
-                        </div>
-                        <div class="col-md-6" id="arquivoWrapper" style="display:none;">
-                            <label class="form-label">Arquivo (imagem ou vídeo)</label>
-                            <input type="file" class="form-control" name="arquivo" accept="image/*,video/mp4,video/mov,video/avi">
-                        </div>
-                        <div class="col-md-6" id="enqueteWrapper" style="display:none;">
-                            <label class="form-label">Enquete cadastrada</label>
-                            <select class="form-select" name="enquete_id">
-                                <option value="">Selecione...</option>
-                                @foreach($enquetes as $enquete)
-                                    <option value="{{ $enquete->id }}" {{ (string) old('enquete_id') === (string) $enquete->id ? 'selected' : '' }}>{{ $enquete->titulo }}</option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted">As enquetes vêm do menu Notificações &gt; Enquetes.</small>
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mt-3">
-                        <small class="text-muted">Destinatários: {{ $pgi->members->whereNotNull('phone')->where('phone', '!=', '')->count() }} participante(s) com telefone.</small>
-                        <button type="submit" class="btn btn-success">
-                            <i class="bx bx-send me-1"></i>Enviar via WhatsApp
-                        </button>
-                    </div>
-                </form>
+{{-- ============ Indicadores rápidos ============ --}}
+<div class="pgi-kpis mb-4">
+    <div class="pgi-kpi">
+        <div class="pgi-kpi__icon"><i class="bx bx-group"></i></div>
+        <div>
+            <div class="pgi-kpi__value">{{ $kpis['members'] }}</div>
+            <div class="pgi-kpi__label">Membros no grupo</div>
+        </div>
+    </div>
+    <div class="pgi-kpi">
+        <div class="pgi-kpi__icon"><i class="bx bx-line-chart"></i></div>
+        <div>
+            <div class="pgi-kpi__value">
+                {{ $kpis['average_attendance'] !== null ? number_format($kpis['average_attendance'], 1, ',', '.') : '—' }}
+            </div>
+            <div class="pgi-kpi__label">
+                Média de presença
+                @if($kpis['average_meetings'] > 0)
+                    ({{ $kpis['average_meetings'] }} {{ $kpis['average_meetings'] === 1 ? 'reunião' : 'reuniões' }})
+                @endif
             </div>
         </div>
     </div>
-    @endif
+    <div class="pgi-kpi">
+        <div class="pgi-kpi__icon"><i class="bx bx-calendar"></i></div>
+        <div>
+            <div class="pgi-kpi__value">{{ $kpis['meetings_this_month'] }}</div>
+            <div class="pgi-kpi__label">Reuniões no mês</div>
+        </div>
+    </div>
+    <div class="pgi-kpi">
+        <div class="pgi-kpi__icon"><i class="bx bx-user-plus"></i></div>
+        <div>
+            <div class="pgi-kpi__value">{{ $kpis['visitors_this_month'] }}</div>
+            <div class="pgi-kpi__label">Visitantes no mês</div>
+        </div>
+    </div>
+</div>
 
-    <!-- Painel: Reuniões -->
-    <div class="col-lg-5 mb-4">
-        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+{{-- ============ Atenção pastoral ============ --}}
+@if($absentees->isNotEmpty())
+    <div class="card pgi-card mb-4 border-warning">
+        <header class="card-header">
+            <h5 class="card-title mb-0 text-warning-emphasis">
+                <i class="bx bx-heart me-2"></i>Precisam de atenção pastoral ({{ $absentees->count() }})
+            </h5>
+        </header>
+        <div class="card-body">
+            <p class="text-muted small">
+                Ausentes nas últimas {{ $absenceThreshold }} reuniões com chamada registrada.
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+                @foreach($absentees as $member)
+                    <div class="d-flex align-items-center gap-2 border rounded px-2 py-1">
+                        @include('members.partials.avatar', ['member' => $member, 'size' => 34])
+                        <div>
+                            <div class="pgi-member__name small">{{ $member->name }}</div>
+                            @if($member->phone)
+                                <div class="pgi-member__freq">{{ $member->phone }}</div>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+            @if($canSendPgiNotification)
+                <a href="#notificarCollapse" data-bs-toggle="collapse" id="notifyAbsentees"
+                   class="btn btn-sm btn-outline-success mt-3">
+                    <i class="bx bxl-whatsapp me-1"></i>Enviar mensagem aos ausentes
+                </a>
+            @endif
+        </div>
+    </div>
+@endif
+
+<div class="row">
+    {{-- ============ Reuniões ============ --}}
+    <div class="col-lg-8 mb-4">
+        <div class="card pgi-card mb-4">
             <header class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
                     <i class="bx bx-calendar me-2"></i>Reuniões
+                    @if($meetings->total() > 0)
+                        <span class="text-muted fw-normal">({{ $meetings->total() }})</span>
+                    @endif
                 </h5>
-                @if($canCreateMeetings)
-                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#newMeetingModal">
-                    <i class="bx bx-plus me-1"></i>Nova reunião
-                </button>
+                @if($canManageMeetings)
+                    <a href="{{ route('pgis.meetings.create', $pgi) }}" class="btn btn-primary btn-sm">
+                        <i class="bx bx-plus me-1"></i>Nova reunião
+                    </a>
                 @endif
             </header>
-            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
-                @if($meetings->count() > 0)
-                    <div class="table-responsive">
-                    <table class="table table-sm mb-0">
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th class="text-center">Participantes</th>
-                                <th class="text-center">Visitantes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($meetings as $meeting)
-                                <tr>
-                                    <td>
-                                        <i class="bx bx-calendar me-1"></i>
-                                        {{ $meeting->meeting_date->format('d/m/Y') }}
-                                    </td>
-                                    <td class="text-center">{{ $meeting->participants_count }}</td>
-                                    <td class="text-center">{{ $meeting->visitors_count }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+            <div class="card-body">
+                @if($kpis['pending_attendance'] > 0 && $canManageMeetings)
+                    <div class="alert alert-warning py-2 small">
+                        <i class="bx bx-time-five me-1"></i>
+                        {{ $kpis['pending_attendance'] }} {{ $kpis['pending_attendance'] === 1 ? 'reunião está' : 'reuniões estão' }}
+                        com a chamada pendente.
                     </div>
-                @else
-                    <p class="text-muted text-center py-4">Nenhuma reunião cadastrada</p>
+                @endif
+
+                @forelse($meetings as $meeting)
+                    @include('pgis.partials.meeting-row', [
+                        'pgi' => $pgi,
+                        'meeting' => $meeting,
+                        'membersTotal' => $membersTotal,
+                        'canManageMeetings' => $canManageMeetings,
+                    ])
+                @empty
+                    @include('pgis.partials.empty-state', [
+                        'icon' => 'bx-calendar-plus',
+                        'title' => 'Nenhuma reunião registrada ainda',
+                        'description' => 'Cadastre a primeira reunião para começar a registrar presenças.',
+                        'actionUrl' => $canManageMeetings ? route('pgis.meetings.create', $pgi) : null,
+                        'actionLabel' => 'Registrar primeira reunião',
+                        'actionIcon' => 'bx-plus',
+                    ])
+                @endforelse
+
+                @if($meetings->hasPages())
+                    <div class="mt-3">{{ $meetings->links('pagination::bootstrap-5') }}</div>
                 @endif
             </div>
         </div>
-    </div>
 
-    <!-- Painel: Gráfico de Presença -->
-    <div class="col-lg-7 mb-4">
-        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+        <div class="card pgi-card">
             <header class="card-header">
                 <h5 class="card-title mb-0">
                     <i class="bx bx-bar-chart-alt-2 me-2"></i>Presentes nas últimas reuniões
                 </h5>
             </header>
             <div class="card-body">
-                <canvas id="attendanceChart" height="200"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Painéis Inferiores -->
-<div class="row">
-    <!-- Localização -->
-    <div class="col-lg-4 mb-4">
-        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); height: 100%;">
-            <header class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bx bx-map me-2"></i>Localização
-                </h5>
-            </header>
-            <div class="card-body text-center py-5">
-                <i class="bx bx-data text-primary" style="font-size: 4rem; opacity: 0.3;"></i>
-                <p class="text-muted mt-3">Não há dados disponíveis</p>
+                @if(count($chartData) > 0)
+                    <canvas id="attendanceChart" height="160"></canvas>
+                @else
+                    @include('pgis.partials.empty-state', [
+                        'icon' => 'bx-line-chart',
+                        'title' => 'Ainda não há dados de presença',
+                        'description' => 'O gráfico aparecerá após a primeira reunião com presença registrada.',
+                    ])
+                @endif
             </div>
         </div>
     </div>
 
-    <!-- Anotações -->
+    {{-- ============ Membros ============ --}}
     <div class="col-lg-4 mb-4">
-        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); height: 100%;">
-            <header class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bx bx-edit me-2"></i>Anotações
-                </h5>
+        <div class="card pgi-card">
+            <header class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0"><i class="bx bx-group me-2"></i>Membros ({{ $membersTotal }})</h5>
+                @if($canEditPgis)
+                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                        <i class="bx bx-plus me-1"></i>Adicionar
+                    </button>
+                @endif
             </header>
             <div class="card-body">
-                <form action="{{ route('pgis.update', $pgi) }}" method="POST">
-                    @csrf
-                    @method('PUT')
-                    <input type="hidden" name="name" value="{{ $pgi->name }}">
-                    <textarea class="form-control" name="notes" rows="8" 
-                              placeholder="Digite suas anotações aqui...">{{ $pgi->notes }}</textarea>
-                    <button type="submit" class="btn btn-primary btn-sm mt-3">
-                        <i class="bx bx-save me-1"></i>Salvar
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
+                @if($membersTotal > 0)
+                    <div class="mb-3">
+                        <input type="text" class="form-control form-control-sm" id="memberSearch"
+                               placeholder="Buscar membro..." autocomplete="off">
+                    </div>
 
-    <!-- PGIs filhos -->
-    <div class="col-lg-4 mb-4">
-        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); height: 100%;">
-            <header class="card-header">
-                <h5 class="card-title mb-0">
-                    <i class="bx bx-group me-2"></i>PGIs filhos
-                </h5>
-            </header>
-            <div class="card-body text-center py-5">
-                <i class="bx bx-data text-primary" style="font-size: 4rem; opacity: 0.3;"></i>
-                <p class="text-muted mt-3">Não há dados disponíveis</p>
+                    <div id="memberList">
+                        @foreach($membersSorted as $index => $member)
+                            @php $freq = $frequency[$member->id] ?? null; @endphp
+                            <div class="pgi-member member-item {{ $index >= $membersPreview ? 'member-item--extra d-none' : '' }}"
+                                 data-member-name="{{ mb_strtolower($member->name) }}">
+                                @include('members.partials.avatar', ['member' => $member, 'size' => 34])
+                                <div class="flex-grow-1" style="min-width: 0;">
+                                    <div class="pgi-member__name">{{ $member->name }}</div>
+                                    @if($freq)
+                                        <div class="pgi-member__freq">{{ $freq['present'] }}/{{ $freq['total'] }} últimas reuniões</div>
+                                    @endif
+                                </div>
+                                @if($canEditPgis)
+                                    <form action="{{ route('pgis.members.detach', [$pgi, $member]) }}" method="POST"
+                                          onsubmit="return confirm('Remover este membro do PGI?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-light text-danger pgi-touch" title="Remover">
+                                            <i class="bx bx-trash"></i>
+                                        </button>
+                                    </form>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+
+                    <p class="text-muted text-center mb-0 mt-2 d-none" id="memberNoResults">
+                        Nenhum membro encontrado.
+                    </p>
+
+                    @if($membersTotal > $membersPreview)
+                        <button type="button" class="btn btn-link btn-sm w-100 mt-2" id="toggleMembers"
+                                data-more="Ver todos os {{ $membersTotal }} membros" data-less="Ver menos">
+                            Ver todos os {{ $membersTotal }} membros
+                        </button>
+                    @endif
+                @else
+                    @include('pgis.partials.empty-state', [
+                        'icon' => 'bx-user-plus',
+                        'title' => 'Nenhum membro vinculado',
+                        'description' => 'Vincule membros da igreja a este pequeno grupo.',
+                    ])
+                    @if($canEditPgis)
+                        <div class="text-center">
+                            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addMemberModal">
+                                <i class="bx bx-plus me-1"></i>Adicionar membros
+                            </button>
+                        </div>
+                    @endif
+                @endif
             </div>
         </div>
     </div>
 </div>
 
-<!-- Modal: Adicionar Membro -->
+{{-- ============ Seções secundárias ============ --}}
+<div class="accordion mb-4" id="pgiSecondary">
+    @if($canSendPgiNotification)
+        <div class="accordion-item">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#notificarCollapse" aria-expanded="false">
+                    <i class="bx bxl-whatsapp me-2"></i>Notificar participantes
+                </button>
+            </h2>
+            <div id="notificarCollapse" class="accordion-collapse collapse" data-bs-parent="#pgiSecondary">
+                <div class="accordion-body">
+                    <form action="{{ route('pgis.notificacoes.enviar', $pgi) }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label" for="destinatarios">Destinatários <span class="text-danger">*</span></label>
+                                <select class="form-select" name="destinatarios" id="destinatarios">
+                                    <option value="todos" {{ old('destinatarios', 'todos') === 'todos' ? 'selected' : '' }}>
+                                        Todos os participantes ({{ $pgi->members->filter(fn ($m) => filled($m->phone))->count() }})
+                                    </option>
+                                    <option value="ausentes" {{ old('destinatarios') === 'ausentes' ? 'selected' : '' }}>
+                                        Ausentes na última reunião ({{ $lastMeetingAbsentees->filter(fn ($m) => filled($m->phone))->count() }})
+                                    </option>
+                                    <option value="selecionados" {{ old('destinatarios') === 'selecionados' ? 'selected' : '' }}>
+                                        Seleção manual
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="tipo_envio">Tipo de envio <span class="text-danger">*</span></label>
+                                <select class="form-select" name="tipo_envio" id="tipo_envio" required>
+                                    <option value="texto" {{ old('tipo_envio', 'texto') === 'texto' ? 'selected' : '' }}>Texto</option>
+                                    <option value="imagem" {{ old('tipo_envio') === 'imagem' ? 'selected' : '' }}>Imagem</option>
+                                    <option value="video" {{ old('tipo_envio') === 'video' ? 'selected' : '' }}>Vídeo</option>
+                                    <option value="enquete" {{ old('tipo_envio') === 'enquete' ? 'selected' : '' }}>Enquete cadastrada</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label" for="mensagem">Mensagem / legenda</label>
+                                <textarea class="form-control" name="mensagem" id="mensagem" rows="2" maxlength="4096"
+                                          placeholder="Mensagem para os participantes...">{{ old('mensagem') }}</textarea>
+                                <small class="text-muted">Obrigatória para texto; opcional para imagem e vídeo.</small>
+                            </div>
+
+                            <div class="col-12" id="membrosWrapper" style="display:none;">
+                                <label class="form-label">Selecione os destinatários</label>
+                                <div class="row g-2">
+                                    @foreach($membersSorted->filter(fn ($m) => filled($m->phone)) as $member)
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="membros[]"
+                                                       value="{{ $member->id }}" id="notify_member_{{ $member->id }}"
+                                                       {{ collect(old('membros', []))->contains($member->id) ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="notify_member_{{ $member->id }}">
+                                                    {{ $member->name }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+
+                            <div class="col-md-6" id="arquivoWrapper" style="display:none;">
+                                <label class="form-label">Arquivo (imagem ou vídeo)</label>
+                                <input type="file" class="form-control" name="arquivo" accept="image/*,video/mp4,video/mov,video/avi">
+                            </div>
+                            <div class="col-md-6" id="enqueteWrapper" style="display:none;">
+                                <label class="form-label">Enquete cadastrada</label>
+                                <select class="form-select" name="enquete_id">
+                                    <option value="">Selecione...</option>
+                                    @foreach($enquetes as $enquete)
+                                        <option value="{{ $enquete->id }}" {{ (string) old('enquete_id') === (string) $enquete->id ? 'selected' : '' }}>
+                                            {{ $enquete->titulo }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted">As enquetes vêm do menu Notificações &gt; Enquetes.</small>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end mt-3">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bx bx-send me-1"></i>Enviar via WhatsApp
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#anotacoesCollapse" aria-expanded="false">
+                <i class="bx bx-note me-2"></i>Anotações
+            </button>
+        </h2>
+        <div id="anotacoesCollapse" class="accordion-collapse collapse" data-bs-parent="#pgiSecondary">
+            <div class="accordion-body">
+                @if($canEditPgis)
+                    <form action="{{ route('pgis.update', $pgi) }}" method="POST">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="name" value="{{ $pgi->name }}">
+                        <input type="hidden" name="redirect_to" value="show">
+                        <textarea class="form-control" name="notes" rows="6"
+                                  placeholder="Digite suas anotações aqui...">{{ $pgi->notes }}</textarea>
+                        <button type="submit" class="btn btn-primary btn-sm mt-3">
+                            <i class="bx bx-save me-1"></i>Salvar anotações
+                        </button>
+                    </form>
+                @else
+                    <p class="mb-0" style="white-space: pre-line;">{{ $pgi->notes ?: 'Sem anotações.' }}</p>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#localizacaoCollapse" aria-expanded="false">
+                <i class="bx bx-map me-2"></i>Localização
+            </button>
+        </h2>
+        <div id="localizacaoCollapse" class="accordion-collapse collapse" data-bs-parent="#pgiSecondary">
+            <div class="accordion-body">
+                @if($fullAddress !== '')
+                    <p class="mb-3"><i class="bx bx-map-pin me-1"></i>{{ $fullAddress }}</p>
+                    <div id="pgiMap" class="pgi-map"></div>
+                    <p class="text-muted small mt-2 mb-0 d-none" id="pgiMapFallback">
+                        Não foi possível localizar este endereço no mapa.
+                        <a href="{{ route('pgis.edit', $pgi) }}">Revise o endereço do PGI</a>.
+                    </p>
+                @else
+                    @include('pgis.partials.empty-state', [
+                        'icon' => 'bx-map-pin',
+                        'title' => 'Endereço não cadastrado',
+                        'description' => 'Informe onde o grupo se reúne para exibir o mapa.',
+                        'actionUrl' => $canEditPgis ? route('pgis.edit', $pgi) : null,
+                        'actionLabel' => 'Editar PGI',
+                        'actionIcon' => 'bx-edit',
+                    ])
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="accordion-item">
+        <h2 class="accordion-header">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#filhosCollapse" aria-expanded="false">
+                <i class="bx bx-git-branch me-2"></i>PGIs filhos ({{ $pgi->children->count() }})
+            </button>
+        </h2>
+        <div id="filhosCollapse" class="accordion-collapse collapse" data-bs-parent="#pgiSecondary">
+            <div class="accordion-body">
+                @forelse($pgi->children as $child)
+                    <div class="pgi-member">
+                        <i class="bx bx-group fs-4 text-primary"></i>
+                        <div class="flex-grow-1">
+                            <a href="{{ route('pgis.show', $child) }}" class="pgi-member__name text-decoration-none">
+                                {{ $child->name }}
+                            </a>
+                            <div class="pgi-member__freq">
+                                {{ $child->day_of_week ? ucfirst($child->day_of_week) : 'Dia não definido' }}
+                                @if($child->time_schedule) · {{ $child->time_schedule }} @endif
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    @include('pgis.partials.empty-state', [
+                        'icon' => 'bx-git-branch',
+                        'title' => 'Este PGI ainda não multiplicou',
+                        'description' => 'Registre o grupo que nasceu deste PGI para acompanhar a multiplicação.',
+                        'actionUrl' => $canCreatePgis ? route('pgis.create', ['parent' => $pgi->id]) : null,
+                        'actionLabel' => 'Registrar PGI filho',
+                        'actionIcon' => 'bx-plus',
+                    ])
+                @endforelse
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ============ Modais ============ --}}
 @if($canEditPgis)
 <div class="modal fade" id="addMemberModal" tabindex="-1" aria-labelledby="addMemberModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="addMemberModalLabel">
-                    <i class="bx bx-user-plus me-2"></i>Adicionar Membro ao PGI
+                    <i class="bx bx-user-plus me-2"></i>Adicionar membro ao PGI
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
@@ -491,169 +616,42 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="member_search" class="form-label">Buscar membro</label>
-                        <input type="text" class="form-control" id="member_search" 
-                               placeholder="Digite o nome do membro...">
+                        <input type="text" class="form-control" id="member_search" placeholder="Digite o nome do membro...">
                     </div>
-                    <div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
+                    <div style="max-height: 400px; overflow-y: auto; border: 1px solid #eef0f2; border-radius: 8px; padding: 10px;">
                         @php
-                            // Buscar membros que não estão vinculados a este PGI
-                            $allMembers = \App\Models\Member::where(function($query) use ($pgi) {
-                                $query->whereNull('pgi_id')
-                                      ->orWhere('pgi_id', '!=', $pgi->id);
+                            $availableMembers = \App\Models\Member::where(function ($query) use ($pgi) {
+                                $query->whereNull('pgi_id')->orWhere('pgi_id', '!=', $pgi->id);
                             })->orderBy('name')->get();
                         @endphp
-                        @if($allMembers->count() > 0)
-                            @foreach($allMembers as $member)
-                                <div class="form-check mb-2 member-option" data-member-name="{{ strtolower($member->name) }}">
-                                    <input class="form-check-input" type="checkbox" 
-                                           id="add_member_{{ $member->id }}" 
-                                           name="members[]" 
-                                           value="{{ $member->id }}">
-                                    <label class="form-check-label d-flex align-items-center" for="add_member_{{ $member->id }}">
-                                        @if($member->photo_url)
-                                            <img src="{{ $member->photo_url }}" 
-                                                 alt="{{ $member->name }}" 
-                                                 class="rounded-circle me-2" 
-                                                 width="30" 
-                                                 height="30"
-                                                 style="object-fit: cover;">
-                                        @else
-                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2" 
-                                                 style="width: 30px; height: 30px;">
-                                                <i class="bx bx-user text-white" style="font-size: 0.7rem;"></i>
-                                            </div>
-                                        @endif
-                                        <span>{{ $member->name }}</span>
-                                    </label>
-                                </div>
-                            @endforeach
-                        @else
-                            <p class="text-muted text-center py-3">Todos os membros já estão vinculados a este PGI</p>
-                        @endif
+                        @forelse($availableMembers as $available)
+                            <div class="form-check mb-2 member-option" data-member-name="{{ mb_strtolower($available->name) }}">
+                                <input class="form-check-input" type="checkbox"
+                                       id="add_member_{{ $available->id }}" name="members[]" value="{{ $available->id }}">
+                                <label class="form-check-label d-flex align-items-center gap-2" for="add_member_{{ $available->id }}">
+                                    @include('members.partials.avatar', ['member' => $available, 'size' => 30])
+                                    <span>{{ $available->name }}</span>
+                                </label>
+                            </div>
+                        @empty
+                            <p class="text-muted text-center py-3 mb-0">Todos os membros já estão vinculados a este PGI</p>
+                        @endforelse
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bx bx-save me-1"></i>Adicionar Membros
-                    </button>
+                    <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i>Adicionar membros</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-@endif
 
-<!-- Modal: Nova Reunião -->
-@if($canCreateMeetings)
-<div class="modal fade" id="newMeetingModal" tabindex="-1" aria-labelledby="newMeetingModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="newMeetingModalLabel">
-                    <i class="bx bx-calendar-plus me-2"></i>Adicionar reunião
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-            </div>
-            <form action="{{ route('pgis.meetings.store', $pgi) }}" method="POST">
-                @csrf
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="meeting_date" class="form-label">Data da reunião <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control @error('meeting_date') is-invalid @enderror" 
-                                   id="meeting_date" name="meeting_date" 
-                                   value="{{ old('meeting_date', date('Y-m-d')) }}" required>
-                            @error('meeting_date')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label for="subject" class="form-label">Assunto</label>
-                            <input type="text" class="form-control @error('subject') is-invalid @enderror" 
-                                   id="subject" name="subject" value="{{ old('subject') }}" 
-                                   placeholder="Digite o assunto da reunião">
-                            @error('subject')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-6 mb-3">
-                            <label for="total_value" class="form-label">Valor total</label>
-                            <input type="number" step="0.01" min="0" class="form-control @error('total_value') is-invalid @enderror" 
-                                   id="total_value" name="total_value" value="{{ old('total_value', '0.00') }}" 
-                                   placeholder="0.00">
-                            @error('total_value')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Lista de presença</label>
-                        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
-                            @foreach($pgi->members as $member)
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" 
-                                           id="participant_{{ $member->id }}" 
-                                           name="participants[]" 
-                                           value="{{ $member->id }}"
-                                           {{ old('participants') && in_array($member->id, old('participants')) ? 'checked' : '' }}>
-                                    <label class="form-check-label" for="participant_{{ $member->id }}">
-                                        {{ $member->name }}
-                                    </label>
-                                </div>
-                            @endforeach
-                            @if($pgi->members->count() == 0)
-                                <p class="text-muted text-center py-3">Nenhum membro no PGI</p>
-                            @endif
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Visitantes (<span id="visitorCount">0</span>)</label>
-                        @if($canEditPgis)
-                        <button type="button" class="btn btn-primary btn-sm mb-2" id="addVisitorBtn">
-                            <i class="bx bx-plus me-1"></i>Adicionar visitante
-                        </button>
-                        @endif
-                        <div id="visitorsContainer" style="max-height: 200px; overflow-y: auto;">
-                            <!-- Visitantes serão adicionados aqui via JavaScript -->
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="notes" class="form-label">Anotações da reunião</label>
-                        <textarea class="form-control @error('notes') is-invalid @enderror" 
-                                  id="notes" name="notes" rows="4" 
-                                  placeholder="Digite as anotações da reunião...">{{ old('notes') }}</textarea>
-                        @error('notes')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bx bx-save me-1"></i>Salvar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-@endif
-
-<!-- Modal: Trocar Logo -->
-@if($canEditPgis)
 <div class="modal fade" id="updateLogoModal" tabindex="-1" aria-labelledby="updateLogoModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="updateLogoModalLabel">
-                    <i class="bx bx-image me-2"></i>Trocar Logo
-                </h5>
+                <h5 class="modal-title" id="updateLogoModalLabel"><i class="bx bx-image me-2"></i>Trocar logo</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <form action="{{ route('pgis.logo.update', $pgi) }}" method="POST" enctype="multipart/form-data">
@@ -661,41 +659,29 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="logo_file" class="form-label">Selecione a nova imagem do logo</label>
-                        <input type="file" class="form-control @error('logo') is-invalid @enderror" 
-                               id="logo_file" name="logo" accept="image/*" required>
-                        <small class="form-text text-muted">Formatos aceitos: JPEG, PNG, JPG, GIF, SVG. Tamanho máximo: 2MB.</small>
-                        @error('logo')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                        <input type="file" class="form-control" id="logo_file" name="logo" accept="image/*" required>
+                        <small class="form-text text-muted">JPEG, PNG, JPG, GIF ou SVG. Máximo 2MB.</small>
                     </div>
                     <div id="logoPreviewContainer" class="text-center" style="display: none;">
                         <p class="small text-muted mb-2">Preview:</p>
-                        <img id="logoPreviewImg" src="" alt="Preview do logo" 
-                             class="rounded-circle border border-2" 
+                        <img id="logoPreviewImg" src="" alt="Preview do logo" class="rounded-circle border border-2"
                              style="width: 150px; height: 150px; object-fit: cover;">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bx bx-save me-1"></i>Salvar
-                    </button>
+                    <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i>Salvar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-@endif
 
-<!-- Modal: Trocar Banner -->
-@if($canEditPgis)
 <div class="modal fade" id="updateBannerModal" tabindex="-1" aria-labelledby="updateBannerModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="updateBannerModalLabel">
-                    <i class="bx bx-image me-2"></i>Trocar Banner
-                </h5>
+                <h5 class="modal-title" id="updateBannerModalLabel"><i class="bx bx-image me-2"></i>Trocar banner</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <form action="{{ route('pgis.banner.update', $pgi) }}" method="POST" enctype="multipart/form-data">
@@ -703,219 +689,218 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="banner_file" class="form-label">Selecione a nova imagem do banner</label>
-                        <input type="file" class="form-control @error('banner') is-invalid @enderror" 
-                               id="banner_file" name="banner" accept="image/*" required>
-                        <small class="form-text text-muted">Formatos aceitos: JPEG, PNG, JPG, GIF, SVG. Tamanho máximo: 2MB.</small>
-                        @error('banner')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                        <input type="file" class="form-control" id="banner_file" name="banner" accept="image/*" required>
+                        <small class="form-text text-muted">JPEG, PNG, JPG, GIF ou SVG. Máximo 2MB.</small>
                     </div>
                     <div id="bannerPreviewContainer" class="text-center" style="display: none;">
                         <p class="small text-muted mb-2">Preview:</p>
-                        <img id="bannerPreviewImg" src="" alt="Preview do banner" 
-                             class="border border-2 rounded" 
+                        <img id="bannerPreviewImg" src="" alt="Preview do banner" class="border border-2 rounded"
                              style="max-width: 100%; max-height: 300px; object-fit: contain;">
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bx bx-save me-1"></i>Salvar
-                    </button>
+                    <button type="submit" class="btn btn-primary"><i class="bx bx-save me-1"></i>Salvar</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 @endif
+@endsection
 
 @push('scripts')
+@if(count($chartData) > 0)
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Gráfico de presença
-    const ctx = document.getElementById('attendanceChart');
-    if (ctx) {
-        const chartData = @json($chartData);
-        
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: chartData.map(item => item.date),
-                datasets: [
-                    {
-                        label: 'Participantes',
-                        data: chartData.map(item => item.participants),
-                        borderColor: 'rgb(54, 162, 235)',
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        fill: true,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Visitantes',
-                        data: chartData.map(item => item.visitors),
-                        borderColor: 'rgb(255, 159, 64)',
-                        backgroundColor: 'rgba(255, 159, 64, 0.2)',
-                        fill: true,
-                        tension: 0.4
-                    },
-                    {
-                        label: 'Total',
-                        data: chartData.map(item => item.total),
-                        borderColor: 'rgb(75, 192, 192)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        fill: false,
-                        tension: 0.4
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: 20,
-                        ticks: {
-                            stepSize: 2
-                        }
-                    }
+(function () {
+    const canvas = document.getElementById('attendanceChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+
+    const chartData = @json($chartData);
+
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: chartData.map((item) => item.date),
+            datasets: [
+                {
+                    label: 'Participantes',
+                    data: chartData.map((item) => item.participants),
+                    borderColor: '#0088CC',
+                    backgroundColor: 'rgba(0, 136, 204, 0.15)',
+                    fill: true,
+                    tension: 0.35,
                 },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    }
-                }
-            }
-        });
+                {
+                    label: 'Visitantes',
+                    data: chartData.map((item) => item.visitors),
+                    borderColor: '#F59E0B',
+                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                    fill: true,
+                    tension: 0.35,
+                },
+            ],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+            plugins: { legend: { display: true, position: 'top' } },
+        },
+    });
+})();
+</script>
+@endif
+
+<script>
+(function () {
+    // Busca e "ver todos" na lista de membros
+    const memberList = document.getElementById('memberList');
+    const toggleMembers = document.getElementById('toggleMembers');
+    const memberNoResults = document.getElementById('memberNoResults');
+    let showingAll = false;
+
+    function memberItems() {
+        return memberList ? Array.from(memberList.querySelectorAll('.member-item')) : [];
     }
 
-    // Busca de membros na lista do PGI
+    toggleMembers?.addEventListener('click', function () {
+        showingAll = !showingAll;
+        memberList.querySelectorAll('.member-item--extra').forEach((item) => {
+            item.classList.toggle('d-none', !showingAll);
+        });
+        this.textContent = showingAll ? this.dataset.less : this.dataset.more;
+    });
+
+    document.getElementById('memberSearch')?.addEventListener('input', function () {
+        const term = this.value.trim().toLowerCase();
+        let visible = 0;
+
+        memberItems().forEach((item, index) => {
+            const matches = (item.dataset.memberName || '').includes(term);
+            const withinPreview = showingAll || term !== '' || !item.classList.contains('member-item--extra');
+            const show = matches && withinPreview;
+            item.classList.toggle('d-none', !show);
+            if (matches) visible++;
+        });
+
+        memberNoResults?.classList.toggle('d-none', visible > 0);
+        if (toggleMembers) {
+            toggleMembers.classList.toggle('d-none', term !== '');
+        }
+    });
+
+    // Campos condicionais do envio por WhatsApp
     const tipoEnvioEl = document.getElementById('tipo_envio');
+    const destinatariosEl = document.getElementById('destinatarios');
     const arquivoWrapper = document.getElementById('arquivoWrapper');
     const enqueteWrapper = document.getElementById('enqueteWrapper');
+    const membrosWrapper = document.getElementById('membrosWrapper');
     const arquivoInput = document.querySelector('input[name="arquivo"]');
     const enqueteSelect = document.querySelector('select[name="enquete_id"]');
 
     function atualizarCamposEnvioPgi() {
-        if (!tipoEnvioEl || !arquivoWrapper || !enqueteWrapper) {
-            return;
-        }
+        if (!tipoEnvioEl) return;
         const tipo = tipoEnvioEl.value;
         const isMidia = tipo === 'imagem' || tipo === 'video';
-        arquivoWrapper.style.display = isMidia ? '' : 'none';
-        enqueteWrapper.style.display = tipo === 'enquete' ? '' : 'none';
 
-        if (arquivoInput) {
-            arquivoInput.required = isMidia;
-        }
-        if (enqueteSelect) {
-            enqueteSelect.required = tipo === 'enquete';
-        }
+        if (arquivoWrapper) arquivoWrapper.style.display = isMidia ? '' : 'none';
+        if (enqueteWrapper) enqueteWrapper.style.display = tipo === 'enquete' ? '' : 'none';
+        if (arquivoInput) arquivoInput.required = isMidia;
+        if (enqueteSelect) enqueteSelect.required = tipo === 'enquete';
+    }
+
+    function atualizarDestinatarios() {
+        if (!membrosWrapper || !destinatariosEl) return;
+        membrosWrapper.style.display = destinatariosEl.value === 'selecionados' ? '' : 'none';
     }
 
     tipoEnvioEl?.addEventListener('change', atualizarCamposEnvioPgi);
+    destinatariosEl?.addEventListener('change', atualizarDestinatarios);
     atualizarCamposEnvioPgi();
+    atualizarDestinatarios();
 
-    document.getElementById('memberSearch')?.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const memberItems = document.querySelectorAll('#memberList li');
-        
-        memberItems.forEach(item => {
-            const memberName = item.getAttribute('data-member-name');
-            if (memberName && memberName.includes(searchTerm)) {
-                item.style.display = '';
-            } else {
-                item.style.display = 'none';
-            }
+    document.getElementById('notifyAbsentees')?.addEventListener('click', function () {
+        if (!destinatariosEl) return;
+        destinatariosEl.value = 'ausentes';
+        atualizarDestinatarios();
+    });
+
+    // Busca no modal de adicionar membros
+    document.getElementById('member_search')?.addEventListener('input', function () {
+        const term = this.value.trim().toLowerCase();
+        document.querySelectorAll('.member-option').forEach((option) => {
+            option.style.display = (option.dataset.memberName || '').includes(term) ? '' : 'none';
         });
     });
 
-    // Busca de membros no modal de adicionar
-    document.getElementById('member_search')?.addEventListener('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const memberOptions = document.querySelectorAll('.member-option');
-        
-        memberOptions.forEach(option => {
-            const memberName = option.getAttribute('data-member-name');
-            if (memberName && memberName.includes(searchTerm)) {
-                option.style.display = '';
-            } else {
-                option.style.display = 'none';
+    // Preview de logo e banner
+    function bindPreview(inputId, containerId, imgId) {
+        document.getElementById(inputId)?.addEventListener('change', function (event) {
+            const file = event.target.files[0];
+            const container = document.getElementById(containerId);
+            const img = document.getElementById(imgId);
+            if (!container || !img) return;
+
+            if (!file) {
+                container.style.display = 'none';
+                return;
             }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                container.style.display = 'block';
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
         });
-    });
-
-    // Adicionar visitantes
-    let visitorIndex = 0;
-    document.getElementById('addVisitorBtn')?.addEventListener('click', function() {
-        const container = document.getElementById('visitorsContainer');
-        const visitorHtml = `
-                        <div class="input-group mb-2 visitor-input" data-index="${visitorIndex}">
-                            <input type="text" class="form-control form-control-sm" 
-                                   name="visitors[${visitorIndex}][name]" 
-                                   placeholder="Nome do visitante">
-                            <button type="button" class="btn btn-danger btn-sm remove-visitor">
-                                <i class="bx bx-trash"></i>
-                            </button>
-                        </div>
-        `;
-        container.insertAdjacentHTML('beforeend', visitorHtml);
-        visitorIndex++;
-        updateVisitorCount();
-    });
-
-    // Remover visitante
-    document.addEventListener('click', function(e) {
-        if (e.target.closest('.remove-visitor')) {
-            e.target.closest('.visitor-input').remove();
-            updateVisitorCount();
-        }
-    });
-
-    function updateVisitorCount() {
-        const count = document.querySelectorAll('.visitor-input').length;
-        document.getElementById('visitorCount').textContent = count;
     }
 
-    // Preview do logo ao selecionar arquivo no modal
-    document.getElementById('logo_file')?.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const previewContainer = document.getElementById('logoPreviewContainer');
-        const previewImg = document.getElementById('logoPreviewImg');
-        
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                previewContainer.style.display = 'block';
-                previewImg.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        } else {
-            previewContainer.style.display = 'none';
-        }
-    });
-
-    // Preview do banner ao selecionar arquivo no modal
-    document.getElementById('banner_file')?.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        const previewContainer = document.getElementById('bannerPreviewContainer');
-        const previewImg = document.getElementById('bannerPreviewImg');
-        
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                previewContainer.style.display = 'block';
-                previewImg.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        } else {
-            previewContainer.style.display = 'none';
-        }
-    });
-
-    // Bootstrap 5 inicializa modais automaticamente com data-bs-toggle
-    // Não é necessária inicialização manual, mas podemos adicionar tratamento de erros
+    bindPreview('logo_file', 'logoPreviewContainer', 'logoPreviewImg');
+    bindPreview('banner_file', 'bannerPreviewContainer', 'bannerPreviewImg');
+})();
 </script>
+
+@if($fullAddress !== '')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(function () {
+    const mapEl = document.getElementById('pgiMap');
+    const collapse = document.getElementById('localizacaoCollapse');
+    if (!mapEl || !collapse || typeof L === 'undefined') return;
+
+    let loaded = false;
+
+    function loadMap() {
+        if (loaded) return;
+        loaded = true;
+
+        fetch(@json(route('pgis.localizacao', $pgi)), { headers: { 'Accept': 'application/json' } })
+            .then((response) => response.json())
+            .then((data) => {
+                if (!data.found) {
+                    mapEl.classList.add('d-none');
+                    document.getElementById('pgiMapFallback')?.classList.remove('d-none');
+                    return;
+                }
+
+                const map = L.map(mapEl).setView([data.lat, data.lng], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap',
+                    maxZoom: 18,
+                }).addTo(map);
+                L.marker([data.lat, data.lng]).addTo(map).bindPopup(@json($pgi->name));
+                setTimeout(() => map.invalidateSize(), 200);
+            })
+            .catch(() => {
+                mapEl.classList.add('d-none');
+                document.getElementById('pgiMapFallback')?.classList.remove('d-none');
+            });
+    }
+
+    collapse.addEventListener('shown.bs.collapse', loadMap);
+})();
+</script>
+@endif
 @endpush
-@endsection

@@ -5,28 +5,34 @@ namespace App\Http\Controllers;
 use App\Models\Meeting;
 use App\Models\MeetingAttendance;
 use App\Models\Pgi;
-use App\Models\Member;
+use App\Services\Pgis\PgiDashboardService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Support\Facades\DB;
 
 class MeetingController extends Controller
 {
     /**
-     * Show the form for creating a new resource.
+     * Formulário de nova reunião.
      */
     public function create(Pgi $pgi)
     {
         $this->authorize('manageMeetings', $pgi);
 
-        $members = $pgi->members()->orderBy('name')->get();
-        return view('meetings.create', compact('pgi', 'members'));
+        return view('pgis.meetings.create', [
+            'pgi' => $pgi,
+            'suggestedDate' => $this->nextMeetingDate($pgi),
+            'recurringLimit' => (int) config('pgis.recurring_limit', 12),
+        ]);
     }
 
     /**
-     * Display a listing of the resource for a PGI.
+     * Lista de reuniões do PGI (consumo interno via JSON).
      */
     public function index(Pgi $pgi)
     {
+        $this->authorize('view', $pgi);
+
         $meetings = $pgi->meetings()
             ->with(['attendances.member'])
             ->orderBy('meeting_date', 'desc')
@@ -36,7 +42,7 @@ class MeetingController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Cria a reunião e encaminha para a chamada.
      */
     public function store(Request $request, Pgi $pgi)
     {
@@ -46,23 +52,8 @@ class MeetingController extends Controller
             'meeting_date' => 'required|date',
             'subject' => 'nullable|string|max:255',
             'total_value' => 'nullable|numeric|min:0',
-            'participants' => 'nullable|array',
-            'participants.*' => 'exists:members,id',
-            'visitors' => 'nullable|array',
-            'visitors.*.name' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-        ], [
-            'meeting_date.required' => 'A data da reunião é obrigatória.',
-            'meeting_date.date' => 'A data da reunião deve ser uma data válida.',
-            'subject.max' => 'O assunto não pode ter mais de 255 caracteres.',
-            'total_value.numeric' => 'O valor total deve ser um número.',
-            'total_value.min' => 'O valor total não pode ser negativo.',
-            'participants.array' => 'Os participantes devem ser uma lista válida.',
-            'participants.*.exists' => 'Um ou mais participantes selecionados não existem.',
-            'visitors.array' => 'Os visitantes devem ser uma lista válida.',
-            'visitors.*.name.string' => 'O nome do visitante deve ser um texto.',
-            'visitors.*.name.max' => 'O nome do visitante não pode ter mais de 255 caracteres.',
-        ]);
+        ], $this->meetingMessages());
 
         $meeting = Meeting::create([
             'pgi_id' => $pgi->id,
@@ -72,88 +63,118 @@ class MeetingController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        // Adicionar participantes
-        if (isset($validated['participants']) && is_array($validated['participants'])) {
-            foreach ($validated['participants'] as $memberId) {
-                if (!empty($memberId)) {
-                    MeetingAttendance::create([
-                        'meeting_id' => $meeting->id,
-                        'member_id' => $memberId,
-                        'type' => 'participant',
-                    ]);
-                }
-            }
+        if ($request->boolean('skip_attendance')) {
+            return redirect()->route('pgis.show', $pgi)
+                ->with('success', 'Reunião cadastrada. A chamada segue pendente.');
         }
 
-        // Adicionar visitantes
-        if (isset($validated['visitors']) && is_array($validated['visitors'])) {
-            foreach ($validated['visitors'] as $visitor) {
-                if (isset($visitor['name']) && !empty(trim($visitor['name']))) {
-                    MeetingAttendance::create([
-                        'meeting_id' => $meeting->id,
-                        'visitor_name' => trim($visitor['name']),
-                        'type' => 'visitor',
-                    ]);
-                }
-            }
-        }
-
-        // Atualizar contadores
-        $meeting->updateCounters();
-
-        return redirect()->route('pgis.show', $pgi)
-            ->with('success', 'Reunião cadastrada com sucesso!');
+        return redirect()->route('pgis.meetings.attendance', [$pgi, $meeting])
+            ->with('success', 'Reunião cadastrada! Registre a presença dos participantes.');
     }
 
     /**
-     * Show the form for editing the specified resource.
+     * Cria as próximas reuniões seguindo o dia da semana do PGI.
+     */
+    public function storeRecurring(Request $request, Pgi $pgi)
+    {
+        $this->authorize('manageMeetings', $pgi);
+
+        $limit = (int) config('pgis.recurring_limit', 12);
+
+        $validated = $request->validate([
+            'start_date' => 'required|date',
+            'occurrences' => "required|integer|min:1|max:{$limit}",
+            'subject' => 'nullable|string|max:255',
+        ], [
+            'start_date.required' => 'Informe a data da primeira reunião.',
+            'start_date.date' => 'A data da primeira reunião deve ser válida.',
+            'occurrences.required' => 'Informe quantas reuniões devem ser criadas.',
+            'occurrences.max' => "É possível criar no máximo {$limit} reuniões de uma vez.",
+            'subject.max' => 'O assunto não pode ter mais de 255 caracteres.',
+        ]);
+
+        $date = Carbon::parse($validated['start_date'])->startOfDay();
+        $weekday = $pgi->dayOfWeekNumber();
+
+        if ($weekday !== null && $date->dayOfWeek !== $weekday) {
+            $date = $date->next($weekday);
+        }
+
+        $created = 0;
+        $skipped = 0;
+
+        for ($i = 0; $i < (int) $validated['occurrences']; $i++) {
+            $exists = $pgi->meetings()->whereDate('meeting_date', $date->toDateString())->exists();
+
+            if ($exists) {
+                $skipped++;
+            } else {
+                Meeting::create([
+                    'pgi_id' => $pgi->id,
+                    'meeting_date' => $date->toDateString(),
+                    'subject' => $validated['subject'] ?? null,
+                ]);
+                $created++;
+            }
+
+            $date = $date->copy()->addWeek();
+        }
+
+        $message = "{$created} reunião(ões) criada(s) na recorrência semanal.";
+        if ($skipped > 0) {
+            $message .= " {$skipped} data(s) já possuíam reunião e foram ignoradas.";
+        }
+
+        return redirect()->route('pgis.show', $pgi)->with('success', $message);
+    }
+
+    /**
+     * Detalhe da reunião: presentes, ausentes e visitantes.
+     */
+    public function show(Pgi $pgi, Meeting $meeting)
+    {
+        $this->authorize('view', $pgi);
+        $this->ensureMeetingBelongsToPgi($pgi, $meeting);
+
+        $meeting->load(['attendances.member', 'registeredBy']);
+        $pgi->load('members');
+
+        $presentIds = $meeting->presentMemberIds();
+
+        return view('pgis.meetings.show', [
+            'pgi' => $pgi,
+            'meeting' => $meeting,
+            'presentMembers' => $pgi->members->whereIn('id', $presentIds)->sortBy('name')->values(),
+            'absentMembers' => $pgi->members->whereNotIn('id', $presentIds)->sortBy('name')->values(),
+            'visitors' => $meeting->attendances->where('type', 'visitor')->values(),
+        ]);
+    }
+
+    /**
+     * Formulário de edição dos dados da reunião (não altera a chamada).
      */
     public function edit(Pgi $pgi, Meeting $meeting)
     {
         $this->authorize('manageMeetings', $pgi);
+        $this->ensureMeetingBelongsToPgi($pgi, $meeting);
 
-        $members = $pgi->members()->orderBy('name')->get();
-        $meeting->load(['attendances.member']);
-        return view('meetings.edit', compact('pgi', 'meeting', 'members'));
+        return view('pgis.meetings.edit', compact('pgi', 'meeting'));
     }
 
     /**
-     * Display the specified resource.
-     */
-    public function show(Meeting $meeting)
-    {
-        $meeting->load(['pgi', 'attendances.member']);
-        return response()->json($meeting);
-    }
-
-    /**
-     * Update the specified resource in storage.
+     * Atualiza os dados da reunião preservando a lista de presença.
      */
     public function update(Request $request, Pgi $pgi, Meeting $meeting)
     {
         $this->authorize('manageMeetings', $pgi);
+        $this->ensureMeetingBelongsToPgi($pgi, $meeting);
 
         $validated = $request->validate([
             'meeting_date' => 'required|date',
             'subject' => 'nullable|string|max:255',
             'total_value' => 'nullable|numeric|min:0',
-            'participants' => 'nullable|array',
-            'participants.*' => 'exists:members,id',
-            'visitors' => 'nullable|array',
-            'visitors.*.name' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
-        ], [
-            'meeting_date.required' => 'A data da reunião é obrigatória.',
-            'meeting_date.date' => 'A data da reunião deve ser uma data válida.',
-            'subject.max' => 'O assunto não pode ter mais de 255 caracteres.',
-            'total_value.numeric' => 'O valor total deve ser um número.',
-            'total_value.min' => 'O valor total não pode ser negativo.',
-            'participants.array' => 'Os participantes devem ser uma lista válida.',
-            'participants.*.exists' => 'Um ou mais participantes selecionados não existem.',
-            'visitors.array' => 'Os visitantes devem ser uma lista válida.',
-            'visitors.*.name.string' => 'O nome do visitante deve ser um texto.',
-            'visitors.*.name.max' => 'O nome do visitante não pode ter mais de 255 caracteres.',
-        ]);
+        ], $this->meetingMessages());
 
         $meeting->update([
             'meeting_date' => $validated['meeting_date'],
@@ -162,53 +183,147 @@ class MeetingController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
-        // Remover presenças antigas
-        $meeting->attendances()->delete();
-
-        // Adicionar participantes
-        if (isset($validated['participants']) && is_array($validated['participants'])) {
-            foreach ($validated['participants'] as $memberId) {
-                if (!empty($memberId)) {
-                    MeetingAttendance::create([
-                        'meeting_id' => $meeting->id,
-                        'member_id' => $memberId,
-                        'type' => 'participant',
-                    ]);
-                }
-            }
-        }
-
-        // Adicionar visitantes
-        if (isset($validated['visitors']) && is_array($validated['visitors'])) {
-            foreach ($validated['visitors'] as $visitor) {
-                if (isset($visitor['name']) && !empty(trim($visitor['name']))) {
-                    MeetingAttendance::create([
-                        'meeting_id' => $meeting->id,
-                        'visitor_name' => trim($visitor['name']),
-                        'type' => 'visitor',
-                    ]);
-                }
-            }
-        }
-
-        // Atualizar contadores
-        $meeting->updateCounters();
-
-        return redirect()->route('pgis.show', $pgi)
+        return redirect()->route('pgis.meetings.show', [$pgi, $meeting])
             ->with('success', 'Reunião atualizada com sucesso!');
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Tela de chamada, pensada para uso no celular.
+     */
+    public function attendance(Pgi $pgi, Meeting $meeting, PgiDashboardService $dashboard)
+    {
+        $this->authorize('manageMeetings', $pgi);
+        $this->ensureMeetingBelongsToPgi($pgi, $meeting);
+
+        $meeting->load('attendances');
+        $pgi->load('members');
+
+        return view('pgis.meetings.attendance', [
+            'pgi' => $pgi,
+            'meeting' => $meeting,
+            'members' => $pgi->members->sortBy('name')->values(),
+            'presentIds' => $meeting->presentMemberIds(),
+            'visitors' => $meeting->attendances->where('type', 'visitor')->values(),
+            'frequency' => $dashboard->memberFrequency(
+                $dashboard->registeredMeetings($pgi, (int) config('pgis.attendance_window', 10))
+            ),
+        ]);
+    }
+
+    /**
+     * Salva (ou refaz) a chamada da reunião.
+     */
+    public function storeAttendance(Request $request, Pgi $pgi, Meeting $meeting)
+    {
+        $this->authorize('manageMeetings', $pgi);
+        $this->ensureMeetingBelongsToPgi($pgi, $meeting);
+
+        $validated = $request->validate([
+            'participants' => 'nullable|array',
+            'participants.*' => 'integer|exists:members,id',
+            'visitors' => 'nullable|array',
+            'visitors.*.name' => 'nullable|string|max:255',
+            'visitors.*.phone' => 'nullable|string|max:30',
+            'notes' => 'nullable|string',
+        ], [
+            'participants.array' => 'A lista de presença é inválida.',
+            'participants.*.exists' => 'Um ou mais participantes selecionados não existem.',
+            'visitors.*.name.max' => 'O nome do visitante não pode ter mais de 255 caracteres.',
+            'visitors.*.phone.max' => 'O telefone do visitante não pode ter mais de 30 caracteres.',
+        ]);
+
+        // Só aceita membros que realmente pertencem a este PGI.
+        $memberIds = $pgi->members()
+            ->whereIn('id', $validated['participants'] ?? [])
+            ->pluck('id')
+            ->all();
+
+        DB::transaction(function () use ($meeting, $memberIds, $validated, $request) {
+            $meeting->attendances()->delete();
+
+            foreach ($memberIds as $memberId) {
+                MeetingAttendance::create([
+                    'meeting_id' => $meeting->id,
+                    'member_id' => $memberId,
+                    'type' => 'participant',
+                ]);
+            }
+
+            foreach ($validated['visitors'] ?? [] as $visitor) {
+                $name = trim((string) ($visitor['name'] ?? ''));
+
+                if ($name === '') {
+                    continue;
+                }
+
+                MeetingAttendance::create([
+                    'meeting_id' => $meeting->id,
+                    'visitor_name' => $name,
+                    'visitor_phone' => trim((string) ($visitor['phone'] ?? '')) ?: null,
+                    'type' => 'visitor',
+                ]);
+            }
+
+            if ($request->has('notes')) {
+                $meeting->notes = $validated['notes'] ?? null;
+            }
+
+            $meeting->attendance_registered_at = now();
+            $meeting->attendance_registered_by = auth()->id();
+            $meeting->save();
+
+            $meeting->updateCounters();
+        });
+
+        return redirect()->route('pgis.meetings.show', [$pgi, $meeting])
+            ->with('success', 'Chamada registrada com sucesso!');
+    }
+
+    /**
+     * Remove a reunião.
      */
     public function destroy(Pgi $pgi, Meeting $meeting)
     {
         $this->authorize('manageMeetings', $pgi);
+        $this->ensureMeetingBelongsToPgi($pgi, $meeting);
 
         $meeting->delete();
 
         return redirect()->route('pgis.show', $pgi)
             ->with('success', 'Reunião excluída com sucesso!');
     }
-}
 
+    private function ensureMeetingBelongsToPgi(Pgi $pgi, Meeting $meeting): void
+    {
+        abort_unless((int) $meeting->pgi_id === (int) $pgi->id, 404);
+    }
+
+    /**
+     * Próxima data sugerida conforme o dia da semana do PGI.
+     */
+    private function nextMeetingDate(Pgi $pgi): string
+    {
+        $weekday = $pgi->dayOfWeekNumber();
+        $today = now()->startOfDay();
+
+        if ($weekday === null || $today->dayOfWeek === $weekday) {
+            return $today->toDateString();
+        }
+
+        return $today->copy()->previous($weekday)->toDateString();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function meetingMessages(): array
+    {
+        return [
+            'meeting_date.required' => 'A data da reunião é obrigatória.',
+            'meeting_date.date' => 'A data da reunião deve ser uma data válida.',
+            'subject.max' => 'O assunto não pode ter mais de 255 caracteres.',
+            'total_value.numeric' => 'O valor total deve ser um número.',
+            'total_value.min' => 'O valor total não pode ser negativo.',
+        ];
+    }
+}

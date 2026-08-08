@@ -7,9 +7,13 @@ use App\Models\Pgi;
 use App\Models\Member;
 use App\Services\EnqueteService;
 use App\Services\NotificacaoService;
+use App\Services\Pgis\PgiDashboardService;
+use App\Services\Pgis\PgiGeocodingService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class PgiController extends Controller
 {
@@ -88,12 +92,14 @@ class PgiController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
         $this->authorize('create', Pgi::class);
 
         $members = Member::orderBy('name')->get();
-        return view('pgis.create', compact('members'));
+        $parentPgi = $request->filled('parent') ? Pgi::find($request->integer('parent')) : null;
+
+        return view('pgis.create', compact('members', 'parentPgi'));
     }
 
     /**
@@ -105,6 +111,7 @@ class PgiController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'parent_pgi_id' => 'nullable|exists:pgis,id',
             'opening_date' => 'nullable|date',
             'day_of_week' => 'nullable|in:segunda,terça,quarta,quinta,sexta,sábado,domingo',
             'profile' => 'nullable|in:Masculino,Feminino,Misto',
@@ -155,35 +162,80 @@ class PgiController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Pgi $pgi)
+    public function show(Pgi $pgi, PgiDashboardService $dashboard)
+    {
+        $this->authorize('view', $pgi);
+
+        $pgi->load(['leader1', 'leader2', 'leaderTraining1', 'leaderTraining2', 'members', 'children', 'parent']);
+
+        $meetings = $pgi->meetings()
+            ->orderByDesc('meeting_date')
+            ->orderByDesc('id')
+            ->paginate((int) config('pgis.meetings_per_page', 10), ['*'], 'reunioes')
+            ->withQueryString();
+
+        $windowMeetings = $dashboard->registeredMeetings($pgi, (int) config('pgis.attendance_window', 10));
+
+        $enquetes = Enquete::ativas()->orderByDesc('created_at')->get(['id', 'titulo']);
+
+        return view('pgis.show', [
+            'pgi' => $pgi,
+            'meetings' => $meetings,
+            'chartData' => $dashboard->chartData($pgi),
+            'kpis' => $dashboard->kpis($pgi, $windowMeetings),
+            'frequency' => $dashboard->memberFrequency($windowMeetings),
+            'absentees' => $dashboard->consecutiveAbsentees($pgi, (int) config('pgis.absence_alert_threshold', 3)),
+            'lastMeetingAbsentees' => $dashboard->lastMeetingAbsentees($pgi),
+            'absenceThreshold' => (int) config('pgis.absence_alert_threshold', 3),
+            'enquetes' => $enquetes,
+        ]);
+    }
+
+    /**
+     * Coordenadas do endereço do PGI para o mapa (geocodificadas sob demanda).
+     */
+    public function localizacao(Pgi $pgi, PgiGeocodingService $geocoding)
+    {
+        $this->authorize('view', $pgi);
+
+        $coordinates = $geocoding->resolve($pgi);
+
+        return response()->json([
+            'address' => $pgi->fullAddress(),
+            'found' => $coordinates !== null,
+            'lat' => $coordinates['lat'] ?? null,
+            'lng' => $coordinates['lng'] ?? null,
+        ]);
+    }
+
+    /**
+     * Relatório do PGI em PDF para prestação de contas.
+     */
+    public function relatorio(Pgi $pgi, PgiDashboardService $dashboard)
     {
         $this->authorize('view', $pgi);
 
         $pgi->load(['leader1', 'leader2', 'leaderTraining1', 'leaderTraining2', 'members']);
-        
-        // Carregar reuniões para o dashboard
-        $meetings = $pgi->meetings()
-            ->with(['attendances.member'])
-            ->orderBy('meeting_date', 'desc')
-            ->limit(12)
-            ->get();
-        
-        // Preparar dados para o gráfico
-        $chartData = $pgi->meetings()
-            ->orderBy('meeting_date', 'asc')
-            ->get()
-            ->map(function ($meeting) {
-                return [
-                    'date' => $meeting->meeting_date->format('d/m/Y'),
-                    'participants' => $meeting->participants_count,
-                    'visitors' => $meeting->visitors_count,
-                    'total' => $meeting->participants_count + $meeting->visitors_count,
-                ];
-            });
-        
-        $enquetes = Enquete::ativas()->orderByDesc('created_at')->get(['id', 'titulo']);
 
-        return view('pgis.show', compact('pgi', 'meetings', 'chartData', 'enquetes'));
+        $meetings = $pgi->meetings()
+            ->orderByDesc('meeting_date')
+            ->orderByDesc('id')
+            ->get();
+
+        $windowMeetings = $dashboard->registeredMeetings($pgi, (int) config('pgis.attendance_window', 10));
+
+        $pdf = Pdf::loadView('pgis.pdf.relatorio', [
+            'pgi' => $pgi,
+            'meetings' => $meetings,
+            'kpis' => $dashboard->kpis($pgi, $windowMeetings),
+            'frequency' => $dashboard->memberFrequency($windowMeetings),
+            'absentees' => $dashboard->consecutiveAbsentees($pgi, (int) config('pgis.absence_alert_threshold', 3)),
+            'absenceThreshold' => (int) config('pgis.absence_alert_threshold', 3),
+            'churchName' => config('app.name', 'ADELSS'),
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('pgi-' . Str::slug($pgi->name) . '-' . now()->format('Y-m-d') . '.pdf');
     }
 
     /**
@@ -206,6 +258,7 @@ class PgiController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'parent_pgi_id' => 'nullable|exists:pgis,id',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'banner' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'opening_date' => 'nullable|date',
@@ -257,9 +310,23 @@ class PgiController extends Controller
             $validated['banner_url'] = $request->file('banner')->store('pgis/banners', 'public');
         }
 
+        // Endereço alterado invalida as coordenadas já resolvidas para o mapa.
+        $addressChanged = collect(['address', 'neighborhood', 'number'])
+            ->contains(fn ($field) => array_key_exists($field, $validated) && $validated[$field] !== $pgi->{$field});
+
+        if ($addressChanged) {
+            $validated['latitude'] = null;
+            $validated['longitude'] = null;
+            $validated['geocoded_at'] = null;
+        }
+
         $pgi->update($validated);
 
-        return redirect()->route('pgis.index')
+        $redirectTo = $request->input('redirect_to') === 'show'
+            ? route('pgis.show', $pgi)
+            : route('pgis.index');
+
+        return redirect()->to($redirectTo)
             ->with('success', 'PGI atualizado com sucesso!');
     }
 
@@ -403,12 +470,15 @@ class PgiController extends Controller
     /**
      * Envia notificações WhatsApp para os participantes do PGI.
      */
-    public function enviarNotificacao(Request $request, Pgi $pgi)
+    public function enviarNotificacao(Request $request, Pgi $pgi, PgiDashboardService $dashboard)
     {
         $this->authorize('sendNotification', $pgi);
 
         $request->validate([
             'tipo_envio' => 'required|in:texto,imagem,video,enquete',
+            'destinatarios' => 'nullable|in:todos,ausentes,selecionados',
+            'membros' => 'nullable|array',
+            'membros.*' => 'integer|exists:members,id',
             'mensagem' => 'nullable|string|max:4096',
             'arquivo' => 'nullable|file|mimes:jpeg,jpg,png,webp,mp4,mov,avi|max:51200',
             'enquete_id' => 'nullable|integer|exists:notificacao_enquetes,id',
@@ -416,10 +486,12 @@ class PgiController extends Controller
 
         $tipo = $request->input('tipo_envio');
         $mensagem = (string) $request->input('mensagem', '');
-        $members = $pgi->members()->whereNotNull('phone')->where('phone', '!=', '')->get();
+        $members = $this->resolveNotificationRecipients($request, $pgi, $dashboard);
 
         if ($members->isEmpty()) {
-            return back()->withErrors(['destinatarios' => 'Este PGI não possui participantes com telefone cadastrado.']);
+            return back()->withErrors([
+                'destinatarios' => 'Nenhum destinatário com telefone cadastrado para a seleção escolhida.',
+            ])->withInput();
         }
 
         if ($tipo === 'enquete') {
@@ -451,6 +523,24 @@ class PgiController extends Controller
         }
 
         return back()->with('success', "Envio concluído para participantes do PGI: {$totais['enviadas']} enviadas, {$totais['erros']} erros.");
+    }
+
+    /**
+     * Resolve os destinatários da notificação conforme a opção escolhida no formulário.
+     *
+     * @return \Illuminate\Support\Collection<int, Member>
+     */
+    private function resolveNotificationRecipients(Request $request, Pgi $pgi, PgiDashboardService $dashboard)
+    {
+        $withPhone = fn ($member) => filled($member->phone);
+
+        $members = match ($request->input('destinatarios', 'todos')) {
+            'ausentes' => $dashboard->lastMeetingAbsentees($pgi->loadMissing('members')),
+            'selecionados' => $pgi->members()->whereIn('id', $request->input('membros', []))->get(),
+            default => $pgi->members()->get(),
+        };
+
+        return $members->filter($withPhone)->values();
     }
 }
 

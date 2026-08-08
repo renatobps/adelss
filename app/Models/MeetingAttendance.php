@@ -13,6 +13,7 @@ class MeetingAttendance extends Model
         'meeting_id',
         'member_id',
         'visitor_name',
+        'visitor_phone',
         'type',
     ];
 

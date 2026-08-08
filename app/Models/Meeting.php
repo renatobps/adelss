@@ -18,6 +18,8 @@ class Meeting extends Model
         'participants_count',
         'visitors_count',
         'notes',
+        'attendance_registered_at',
+        'attendance_registered_by',
     ];
 
     protected $casts = [
@@ -25,6 +27,7 @@ class Meeting extends Model
         'total_value' => 'decimal:2',
         'participants_count' => 'integer',
         'visitors_count' => 'integer',
+        'attendance_registered_at' => 'datetime',
     ];
 
     /**
@@ -60,6 +63,14 @@ class Meeting extends Model
     }
 
     /**
+     * Usuário que fez a chamada
+     */
+    public function registeredBy()
+    {
+        return $this->belongsTo(User::class, 'attendance_registered_by');
+    }
+
+    /**
      * Atualiza contadores automaticamente
      */
     public function updateCounters()
@@ -68,5 +79,25 @@ class Meeting extends Model
         $this->visitors_count = $this->attendances()->where('type', 'visitor')->count();
         $this->save();
     }
-}
 
+    public function hasAttendanceRegistered(): bool
+    {
+        return $this->attendance_registered_at !== null;
+    }
+
+    /**
+     * IDs dos membros marcados como presentes.
+     *
+     * @return array<int, int>
+     */
+    public function presentMemberIds(): array
+    {
+        return $this->attendances
+            ->where('type', 'participant')
+            ->pluck('member_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+}

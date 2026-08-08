@@ -27,10 +27,23 @@ class PgiRouteAuthorizer
         $action = $request->route()?->getActionMethod();
         $pgi = $this->resolvePgi($request);
 
+        // Ver uma reunião exige apenas acesso ao PGI; alterar exige liderança.
+        if (in_array($routeName, ['pgis.meetings.show', 'pgis.meetings.index'], true)) {
+            return $pgi && $this->pgiPolicy->view($user, $pgi)
+                ? null
+                : $denyAccess('Acesso negado. Você não tem permissão para visualizar este PGI.');
+        }
+
         if (str_starts_with($routeName ?? '', 'pgis.meetings')) {
             return $pgi && $this->pgiPolicy->manageMeetings($user, $pgi)
                 ? null
                 : $denyAccess('Acesso negado. Apenas líderes e líderes em treinamento podem gerenciar reuniões.');
+        }
+
+        if (in_array($routeName, ['pgis.localizacao', 'pgis.relatorio'], true)) {
+            return $pgi && $this->pgiPolicy->view($user, $pgi)
+                ? null
+                : $denyAccess('Acesso negado. Você não tem permissão para visualizar este PGI.');
         }
 
         if ($routeName === 'pgis.index' || $action === 'index') {

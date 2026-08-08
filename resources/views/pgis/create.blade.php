@@ -27,6 +27,15 @@
                 <form action="{{ route('pgis.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
 
+                    @if(!empty($parentPgi))
+                        <input type="hidden" name="parent_pgi_id" value="{{ $parentPgi->id }}">
+                        <div class="alert alert-info">
+                            <i class="bx bx-git-branch me-2"></i>
+                            Este PGI será registrado como multiplicação de
+                            <strong>{{ $parentPgi->name }}</strong>.
+                        </div>
+                    @endif
+
                     <div class="row">
                         <!-- Seção: Informações -->
                         <div class="col-md-6">
