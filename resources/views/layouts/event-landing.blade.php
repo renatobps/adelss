@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="{{ asset('css/css/theme.css') }}" />
     <link rel="stylesheet" href="{{ asset('css/css/landing.css') }}" />
     <link rel="stylesheet" href="{{ asset('css/css/skins/default.css') }}" />
-    <link rel="stylesheet" href="{{ asset('css/css/event-landing.css') }}" />
+    <link rel="stylesheet" href="{{ asset('css/css/event-landing.css') }}?v={{ @filemtime(public_path('css/css/event-landing.css')) ?: '1' }}" />
     @stack('styles')
 </head>
 <body class="event-landing-body">
