@@ -276,7 +276,9 @@ class PublicEventController extends Controller
             }
 
             $this->ensureReceiptCredentials($registration);
-            $this->sendWhatsAppNotifications($event, $registration);
+            // Pagamento ainda pendente: não há comprovante para emitir, então a
+            // mensagem ao inscrito sai por aqui. O PDF vai depois da aprovação.
+            $this->sendWhatsAppNotifications($event, $registration, true);
 
             return back()
                 ->with('success', $this->successMessage($event, $registration))
@@ -325,9 +327,10 @@ class PublicEventController extends Controller
             }
         }
 
-        // Evento gratuito: a inscrição já está completa — envia o comprovante (texto + PDF).
-        // A mensagem personalizada do evento, se existir, também é enviada.
-        $this->sendWhatsAppNotifications($event, $registration, !empty($event->registration_success_message));
+        // Inscrição já completa: o inscrito recebe uma única mensagem, montada
+        // pelo comprovante a partir do texto configurado no evento. Aqui só
+        // avisamos o responsável.
+        $this->sendWhatsAppNotifications($event, $registration, false);
 
         try {
             app(EventRegistrationReceiptService::class)->enviarComprovante($registration);
@@ -504,7 +507,7 @@ class PublicEventController extends Controller
         }
     }
 
-    private function sendWhatsAppNotifications(Event $event, EventRegistration $registration, bool $includeRegistrantMessage = true): void
+    private function sendWhatsAppNotifications(Event $event, EventRegistration $registration, bool $includeRegistrantMessage): void
     {
         try {
             $service = app(WhatsAppService::class);
@@ -538,34 +541,19 @@ class PublicEventController extends Controller
     private function buildRegistrantMessage(Event $event, EventRegistration $registration): string
     {
         if (! empty($event->registration_success_message)) {
-            return $this->renderRegistrationSuccessMessage(
+            return EventRegistrationReceiptService::aplicarVariaveis(
                 $event->registration_success_message,
-                $event,
                 $registration
             );
         }
 
-        $statusLabel = $event->is_paid ? 'pendente de pagamento' : EventRegistration::STATUS_PENDENTE;
         $paymentLine = $event->is_paid ? "Ingresso: R$ ".number_format((float) ($event->price ?? 0), 2, ',', '.')."\n" : '';
 
         return "Olá, {$registration->name}! Sua inscrição no evento \"{$event->title}\" foi recebida com sucesso.\n"
             ."Data: ".$event->start_date->format('d/m/Y H:i')."\n"
             .$paymentLine
-            ."Status: ".$statusLabel."\n"
+            ."Status: pendente de pagamento\n"
             ."Nos vemos lá!";
-    }
-
-    private function renderRegistrationSuccessMessage(string $template, Event $event, EventRegistration $registration): string
-    {
-        $statusLabel = $event->is_paid ? 'pendente de pagamento' : EventRegistration::STATUS_PENDENTE;
-        $replacements = [
-            '{{nome}}' => (string) $registration->name,
-            '{{evento}}' => (string) $event->title,
-            '{{data}}' => $event->start_date ? $event->start_date->format('d/m/Y H:i') : '-',
-            '{{status}}' => $statusLabel,
-        ];
-
-        return strtr($template, $replacements);
     }
 
     private function buildResponsibleMessage(Event $event, EventRegistration $registration): string

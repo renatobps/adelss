@@ -64,12 +64,7 @@ class EventosController extends Controller
                 $event->status = 'agendado';
                 $event->recurrence = null;
                 $event->visibility = 'public';
-
-                if (empty($event->category_id)) {
-                    $event->category_id = EventCategory::query()
-                        ->whereRaw('LOWER(name) = ?', ['eventos'])
-                        ->value('id');
-                }
+                $this->aplicarCategoriaPadrao($event);
 
                 if ($request->hasFile('banner_image')) {
                     $event->banner_image = $request->file('banner_image')->store('events/banners', 'public');
@@ -121,6 +116,7 @@ class EventosController extends Controller
 
             DB::transaction(function () use ($request, $data, $event) {
                 $event->fill($data['base']);
+                $this->aplicarCategoriaPadrao($event);
 
                 if ($request->hasFile('banner_image')) {
                     if ($event->banner_image) {
@@ -1009,6 +1005,7 @@ class EventosController extends Controller
             'responsible_name' => 'nullable|string|max:255',
             'responsible_phone' => ['nullable', 'regex:/^\(\d{2}\)\s\d{5}-\d{4}$/'],
             'registration_success_message' => 'nullable|string|max:2000',
+            'send_receipt_pdf' => 'nullable|boolean',
             'registration_enabled' => 'nullable|boolean',
             'banner_image' => 'nullable|image|max:5120',
             'location_photos.*' => 'nullable|image|max:5120',
@@ -1082,10 +1079,26 @@ class EventosController extends Controller
             'responsible_name' => $v['responsible_name'] ?? null,
             'responsible_phone' => $v['responsible_phone'] ?? null,
             'registration_success_message' => $v['registration_success_message'] ?? null,
+            'send_receipt_pdf' => $request->boolean('send_receipt_pdf'),
             'registration_enabled' => $request->boolean('registration_enabled'),
         ];
 
         return ['base' => $base];
+    }
+
+    /**
+     * Evento deste módulo sem categoria não entra na agenda da página pública,
+     * que agrupa por categoria. Sem escolha do usuário, cai em "Eventos".
+     */
+    private function aplicarCategoriaPadrao(Event $event): void
+    {
+        if (! empty($event->category_id)) {
+            return;
+        }
+
+        $event->category_id = EventCategory::query()
+            ->whereRaw('LOWER(name) = ?', ['eventos'])
+            ->value('id');
     }
 
     private function uniqueSlugFromTitle(string $title): string

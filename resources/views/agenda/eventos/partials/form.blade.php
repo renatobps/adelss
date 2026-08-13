@@ -190,10 +190,21 @@
                     <input type="text" name="responsible_phone" class="form-control js-phone-mask" value="{{ old('responsible_phone', $e->responsible_phone ?? '') }}" placeholder="(11) 99999-9999" maxlength="15">
                     <small class="text-muted d-block mt-1">Receberá notificação de nova inscrição no evento.</small>
                 </div>
-                <div class="mb-3">
+                <div class="mb-2">
                     <label class="form-label">Mensagem WhatsApp para o inscrito</label>
                     <textarea name="registration_success_message" class="form-control" rows="4" placeholder="Ex.: Olá @{{nome}}, sua inscrição no evento @{{evento}} foi confirmada!">{{ old('registration_success_message', $e->registration_success_message ?? '') }}</textarea>
-                    <small class="text-muted d-block mt-1">Você pode usar: @{{nome}}, @{{evento}}, @{{data}}, @{{status}}.</small>
+                    <small class="text-muted d-block mt-1">
+                        Você pode usar: @{{nome}}, @{{evento}}, @{{data}}, @{{status}}, @{{inscricao}}, @{{local}}, @{{valor}}.
+                        Chave simples também funciona (@{nome}).
+                    </small>
+                    <small class="text-muted d-block">
+                        É a única mensagem que o inscrito recebe. Se ficar em branco, enviamos um comprovante padrão.
+                    </small>
+                </div>
+                <div class="form-check mb-3">
+                    <input type="checkbox" name="send_receipt_pdf" value="1" class="form-check-input" id="send_pdf" {{ old('send_receipt_pdf', $e?->send_receipt_pdf ?? true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="send_pdf">Enviar comprovante em PDF junto com a mensagem</label>
+                    <small class="text-muted d-block">Anexo na mesma mensagem, com o QR Code de check-in.</small>
                 </div>
                 <div class="form-check mb-0">
                     <input type="checkbox" name="registration_enabled" value="1" class="form-check-input" id="reg_en" {{ old('registration_enabled', $e?->registration_enabled ?? true) ? 'checked' : '' }}>

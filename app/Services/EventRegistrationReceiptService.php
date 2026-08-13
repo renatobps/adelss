@@ -103,7 +103,82 @@ class EventRegistrationReceiptService
     }
 
     /**
-     * Envia o comprovante por WhatsApp (texto + PDF).
+     * Mensagem única enviada ao inscrito: o texto configurado no evento quando
+     * existe, senão um comprovante padrão. É a legenda do PDF quando o anexo
+     * está ligado, e a mensagem inteira quando não está.
+     */
+    public function mensagemInscrito(EventRegistration $registration): string
+    {
+        $registration->loadMissing(['event', 'payment']);
+        $event = $registration->event;
+
+        $template = trim((string) $event->registration_success_message);
+        if ($template !== '') {
+            return self::aplicarVariaveis($template, $registration);
+        }
+
+        $paymentLine = $event->is_paid
+            ? 'Pagamento: ' . ($registration->isPaymentApproved() ? 'Confirmado' : 'Pendente') . "\n"
+            : '';
+
+        $anexoLine = $event->send_receipt_pdf
+            ? "\nApresente o comprovante em anexo (com QR Code) na entrada do evento."
+            : '';
+
+        return rtrim(
+            "*Comprovante de inscrição*\n\n"
+            . "Evento: *{$event->title}*\n"
+            . 'Inscrição nº: ' . ($registration->registration_number ?: '-') . "\n"
+            . "Nome: {$registration->name}\n"
+            . 'Data: ' . $event->start_date->format('d/m/Y H:i') . "\n"
+            . ($event->location ? "Local: {$event->location}\n" : '')
+            . $paymentLine
+            . $anexoLine
+        );
+    }
+
+    /**
+     * Substitui as variáveis do template. Aceita chave simples e dupla
+     * ({nome} e {{nome}}) porque as duas formas circulam nos textos já salvos.
+     */
+    public static function aplicarVariaveis(string $template, EventRegistration $registration): string
+    {
+        $registration->loadMissing(['event', 'payment']);
+        $event = $registration->event;
+
+        $valores = [
+            'nome' => (string) $registration->name,
+            'evento' => (string) $event->title,
+            'data' => $event->start_date?->format('d/m/Y H:i') ?? '-',
+            'status' => self::statusLabel($registration),
+            'inscricao' => (string) ($registration->registration_number ?: '-'),
+            'local' => (string) ($event->location ?: '-'),
+            'valor' => $event->is_paid
+                ? 'R$ ' . number_format((float) ($event->price ?? 0), 2, ',', '.')
+                : 'Gratuito',
+        ];
+
+        $substituicoes = [];
+        foreach ($valores as $chave => $valor) {
+            $substituicoes['{{' . $chave . '}}'] = $valor;
+            $substituicoes['{' . $chave . '}'] = $valor;
+        }
+
+        return strtr($template, $substituicoes);
+    }
+
+    private static function statusLabel(EventRegistration $registration): string
+    {
+        if ($registration->event?->is_paid) {
+            return $registration->isPaymentApproved() ? 'confirmada' : 'pendente de pagamento';
+        }
+
+        return mb_strtolower(EventRegistration::STATUSES[$registration->status] ?? (string) $registration->status);
+    }
+
+    /**
+     * Envia o comprovante por WhatsApp: uma única mensagem, com o PDF anexado
+     * quando o evento tem essa opção ligada.
      * Nunca lança exceção: a inscrição não pode ser invalidada por falha de envio.
      *
      * @return array{success: bool, skipped?: bool, error?: string}
@@ -131,23 +206,14 @@ class EventRegistrationReceiptService
             ]);
         }
 
-        $paymentLine = '';
-        if ($event->is_paid) {
-            $paymentLine = 'Pagamento: ' . ($registration->isPaymentApproved() ? 'Confirmado' : 'Pendente') . "\n";
-        }
-
-        $mensagem = "*Comprovante de inscrição*\n\n"
-            . "Evento: *{$event->title}*\n"
-            . 'Inscrição nº: ' . ($registration->registration_number ?: '-') . "\n"
-            . "Nome: {$registration->name}\n"
-            . 'Data: ' . $event->start_date->format('d/m/Y H:i') . "\n"
-            . ($event->location ? "Local: {$event->location}\n" : '')
-            . $paymentLine
-            . "\nApresente o comprovante em anexo (com QR Code) na entrada do evento.";
+        $mensagem = $this->mensagemInscrito($registration);
 
         try {
             $resultado = ['success' => false];
-            $pdfPath = $this->gerarPdfComprovante($registration);
+
+            // O PDF vai como anexo da própria mensagem, nunca como um segundo
+            // envio: o inscrito recebe uma conversa, não duas.
+            $pdfPath = $event->send_receipt_pdf ? $this->gerarPdfComprovante($registration) : null;
             if ($pdfPath) {
                 $resultado = $this->whatsappService->enviarDocumentoArquivo(
                     $phone,

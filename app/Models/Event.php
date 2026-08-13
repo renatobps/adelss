@@ -41,6 +41,7 @@ class Event extends Model
         'responsible_name',
         'responsible_phone',
         'registration_success_message',
+        'send_receipt_pdf',
         'registration_enabled',
         'location_photos',
     ];
@@ -57,6 +58,7 @@ class Event extends Model
         'hide_phone' => 'boolean',
         'hide_address' => 'boolean',
         'registration_enabled' => 'boolean',
+        'send_receipt_pdf' => 'boolean',
         'location_photos' => 'array',
     ];
 
@@ -228,11 +230,28 @@ class Event extends Model
     }
 
     /**
-     * Categoria Eventos — exibição em "Eventos do mês" na home.
+     * "Eventos do mês" na home: o que o módulo Agenda > Eventos publica.
+     * Não depende só da categoria "Eventos" — um evento com página pública
+     * entra mesmo sem categoria definida, desde que não seja culto/PGI.
      */
     public function scopeEventosDoMes($query)
     {
-        return $query->whereHas('category', fn ($c) => $c->whereRaw('LOWER(name) = ?', ['eventos']));
+        return $query->where(function ($q) {
+            $q->whereHas('category', fn ($c) => $c->whereRaw('LOWER(name) = ?', ['eventos']));
+
+            $q->orWhere(function ($q2) {
+                $q2->whereNotNull('public_slug')
+                    ->where('public_slug', '!=', '')
+                    ->where(function ($q3) {
+                        $q3->whereNull('category_id')
+                            ->orWhereHas('category', function ($cq) {
+                                $cq->whereRaw('LOWER(name) NOT LIKE ?', ['%culto%'])
+                                    ->whereRaw('LOWER(name) NOT LIKE ?', ['%pgi%'])
+                                    ->whereRaw('LOWER(name) NOT LIKE ?', ['%santa ceia%']);
+                            });
+                    });
+            });
+        });
     }
 
     /**
