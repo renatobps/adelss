@@ -281,7 +281,7 @@
                 <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
             @if(session('duplicate_registration'))
-                @php($jaInscrito = session('duplicate_registration'))
+                @php $jaInscrito = session('duplicate_registration'); @endphp
                 <div class="alert alert-warning">
                     <strong>Você já está inscrito neste evento.</strong><br>
                     Inscrição nº {{ $jaInscrito['numero'] }}, feita em {{ $jaInscrito['criada_em'] }}.
