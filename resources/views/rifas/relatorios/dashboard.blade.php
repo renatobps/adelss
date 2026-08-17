@@ -1,5 +1,9 @@
 @extends('layouts.porto')
 
+@php
+    $vendasTemDados = array_sum($periodo['quantidades']) + array_sum($periodo['valores']) > 0;
+@endphp
+
 @section('title', 'Relatórios de Rifas')
 @section('page-title', 'Relatórios de Rifas')
 
@@ -76,7 +80,17 @@
         <section class="card">
             <header class="card-header"><h2 class="card-title">Vendas por período</h2></header>
             <div class="card-body">
-                <canvas id="chartVendasPeriodo" height="110"></canvas>
+                @if($vendasTemDados)
+                    <div id="chartVendasPeriodo"></div>
+                    @if(count($periodo['labels']) > 7)
+                        <div class="chart-note d-md-none">Valores agrupados por semana.</div>
+                    @endif
+                @else
+                    @include('partials.chart-empty', [
+                        'message' => 'Sem vendas no período',
+                        'hint' => 'Ajuste o intervalo de datas para ver outro período.',
+                    ])
+                @endif
             </div>
         </section>
     </div>
@@ -106,51 +120,72 @@
 </div>
 @endsection
 
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    const labels = @json($periodo['labels']);
-    const quantidadeData = @json($periodo['quantidades']);
-    const valorData = @json($periodo['valores']);
+@if($vendasTemDados)
+@include('partials.apexcharts')
 
-    const ctx = document.getElementById('chartVendasPeriodo');
-    if (ctx) {
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels,
-                datasets: [
-                    {
-                        label: 'Números vendidos',
-                        data: quantidadeData,
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                        yAxisID: 'y',
-                    },
-                    {
-                        label: 'Valor arrecadado',
-                        data: valorData,
-                        borderColor: 'rgba(75, 192, 192, 1)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.3)',
-                        type: 'line',
-                        yAxisID: 'y1',
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        position: 'left'
-                    },
-                    y1: {
-                        beginAtZero: true,
-                        position: 'right',
-                        grid: { drawOnChartArea: false }
-                    }
-                }
-            }
-        });
+@push('scripts')
+<script>
+(function () {
+    var C = window.AdelssCharts;
+
+    if (!C || typeof ApexCharts === 'undefined' || !document.getElementById('chartVendasPeriodo')) {
+        return;
     }
+
+    var labels = @json($periodo['labels']);
+    var quantidades = @json($periodo['quantidades']);
+    var valores = @json($periodo['valores']);
+
+    var QUANTIDADE = 'Números vendidos';
+    var VALOR = 'Valor arrecadado';
+
+    function quantidadeFormatada(valor) {
+        var n = Number(valor) || 0;
+        return C.number(n) + (n === 1 ? ' número' : ' números');
+    }
+
+    C.render('chartVendasPeriodo', function (mobile) {
+        var dados = mobile
+            ? C.groupIntoWeeks(labels, [quantidades, valores])
+            : { labels: labels, series: [quantidades, valores] };
+
+        var estiloEixo = { colors: C.palette.textSecondary, fontSize: mobile ? '10px' : '12px' };
+
+        return {
+            chart: { type: 'line' },
+            colors: [C.palette.primary, C.palette.success],
+            stroke: { width: [0, 3], curve: 'smooth' },
+            markers: { size: mobile ? 0 : 3, hover: { size: 5 } },
+            series: [
+                { name: QUANTIDADE, type: 'column', data: dados.series[0] },
+                { name: VALOR, type: 'line', data: dados.series[1] }
+            ],
+            xaxis: { categories: dados.labels },
+            // Os dois eixos medem coisas diferentes: quantidade à esquerda,
+            // dinheiro à direita. Em celular o eixo da direita sai e o valor
+            // fica só no tooltip, que já traz a unidade correta.
+            yaxis: [
+                {
+                    seriesName: QUANTIDADE,
+                    labels: { formatter: C.abbreviateNumber, style: estiloEixo }
+                },
+                {
+                    seriesName: VALOR,
+                    opposite: true,
+                    labels: { show: !mobile, formatter: C.abbreviate, style: estiloEixo }
+                }
+            ],
+            tooltip: {
+                shared: true,
+                intersect: false,
+                y: [
+                    { formatter: quantidadeFormatada },
+                    { formatter: C.currency }
+                ]
+            }
+        };
+    }, { currency: false });
+})();
 </script>
 @endpush
+@endif

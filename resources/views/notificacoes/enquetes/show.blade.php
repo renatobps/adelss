@@ -115,10 +115,8 @@
             <h5 class="mb-0"><i class="bx bx-pie-chart-alt me-2"></i>Resultados</h5>
         </header>
         <div class="card-body">
-            <div class="d-flex justify-content-center">
-                <div style="width: 350px; height: 250px;">
-                    <canvas id="resultadosChart"></canvas>
-                </div>
+            <div class="mx-auto" style="max-width: 480px;">
+                <div id="resultadosChart"></div>
             </div>
         </div>
     </section>
@@ -223,46 +221,64 @@
 @endif
 
 @if($enquete->respostas_count > 0)
+@include('partials.apexcharts')
+
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-const ctx = document.getElementById('resultadosChart').getContext('2d');
-const estatisticas = @json($estatisticas);
+(function () {
+    var C = window.AdelssCharts;
 
-const labels = Object.keys(estatisticas);
-const data = Object.values(estatisticas).map(item => item.count);
-const colors = [
-    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0',
-    '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
-];
-
-new Chart(ctx, {
-    type: 'doughnut',
-    data: {
-        labels: labels,
-        datasets: [{
-            data: data,
-            backgroundColor: colors.slice(0, labels.length),
-            borderWidth: 2
-        }]
-    },
-    options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        aspectRatio: 1.5,
-        plugins: {
-            legend: { position: 'bottom' },
-            tooltip: {
-                callbacks: {
-                    label: function(context) {
-                        const item = estatisticas[context.label];
-                        return context.label + ': ' + item.count + ' (' + item.percentage + '%)';
-                    }
-                }
-            }
-        }
+    if (!C || typeof ApexCharts === 'undefined' || !document.getElementById('resultadosChart')) {
+        return;
     }
-});
+
+    var estatisticas = @json($estatisticas);
+    var opcoes = Object.keys(estatisticas);
+    var votos = opcoes.map(function (opcao) { return Number(estatisticas[opcao].count) || 0; });
+
+    // Muitas opções em uma rosca ficam ilegíveis: acima de 6, viram barras
+    // horizontais ordenadas por votos.
+    var comoBarras = opcoes.length > 6;
+
+    var total = votos.reduce(function (soma, valor) { return soma + valor; }, 0);
+
+    function comPercentual(valor) {
+        var percentual = total > 0 ? Math.round((valor / total) * 1000) / 10 : 0;
+        return C.number(valor) + (valor === 1 ? ' voto' : ' votos') + ' (' + C.number(percentual) + '%)';
+    }
+
+    C.render('resultadosChart', function (mobile) {
+        var dados = C.limitSlices(opcoes, votos, comoBarras ? opcoes.length : 5);
+
+        if (comoBarras) {
+            return {
+                chart: { type: 'bar' },
+                colors: [C.palette.primary],
+                plotOptions: { bar: { horizontal: true, borderRadius: 3, barHeight: '70%' } },
+                legend: { show: false },
+                series: [{ name: 'Votos', data: dados.values }],
+                xaxis: { categories: dados.labels },
+                yaxis: { labels: { maxWidth: mobile ? 110 : 200 } },
+                tooltip: { shared: false, y: { formatter: comPercentual } }
+            };
+        }
+
+        return {
+            chart: { type: 'donut' },
+            colors: C.categoryColors,
+            labels: dados.labels,
+            series: dados.values,
+            stroke: { width: 2 },
+            plotOptions: { pie: { donut: { size: '62%' } } },
+            legend: {
+                formatter: function (nome, opcoes) {
+                    return nome + ': ' + C.number(opcoes.w.globals.series[opcoes.seriesIndex]);
+                }
+            },
+            tooltip: { shared: false, y: { formatter: comPercentual } }
+        };
+    }, { currency: false });
+})();
 </script>
 @endpush
 @endif

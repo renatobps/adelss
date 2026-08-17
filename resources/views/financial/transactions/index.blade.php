@@ -54,7 +54,17 @@
                 </h5>
             </header>
             <div class="card-body">
-                <canvas id="monthlyTransactionChart" height="80"></canvas>
+                @include('financial.partials.daily-chart', [
+                    'chartId' => 'monthlyTransactionChart',
+                    'labels' => collect($chartData ?? [])->pluck('day')->all(),
+                    'receitas' => collect($chartData ?? [])->pluck('receitas')->all(),
+                    'despesas' => collect($chartData ?? [])->pluck('despesas')->all(),
+                    'aReceber' => collect($chartData ?? [])->pluck('a_receber')->all(),
+                    'aPagar' => collect($chartData ?? [])->pluck('a_pagar')->all(),
+                    'area' => true,
+                    'mobileNote' => 'Valores agrupados por período. Os previstos estão no box Previsão, abaixo.',
+                    'emptyMessage' => 'Sem movimentações no período selecionado',
+                ])
             </div>
         </div>
     </div>
@@ -164,31 +174,35 @@
                 </div>
             </div>
         </form>
-        <div class="row mt-3">
-            <div class="col-md-6">
-                <button type="submit" form="filterForm" class="btn btn-primary btn-sm">
-                    <i class="bx bx-filter me-1"></i>Aplicar Filtros
-                </button>
-                @if(request()->hasAny(['type', 'status', 'category_id', 'account_id', 'cost_center_id', 'start_date', 'end_date']))
-                    <a href="{{ route('financial.transactions.index') }}" class="btn btn-default btn-sm">
-                        <i class="bx bx-x me-1"></i>Limpar
-                    </a>
-                @endif
+        <div class="row g-2 mt-3">
+            <div class="col-12 col-md-6">
+                <div class="d-flex flex-wrap gap-2">
+                    <button type="submit" form="filterForm" class="btn btn-primary btn-sm">
+                        <i class="bx bx-filter me-1"></i>Aplicar Filtros
+                    </button>
+                    @if(request()->hasAny(['type', 'status', 'category_id', 'account_id', 'cost_center_id', 'start_date', 'end_date']))
+                        <a href="{{ route('financial.transactions.index') }}" class="btn btn-default btn-sm">
+                            <i class="bx bx-x me-1"></i>Limpar
+                        </a>
+                    @endif
+                </div>
             </div>
-            <div class="col-md-6 text-end">
-                <button type="button" class="btn btn-primary btn-sm me-1" data-bs-toggle="modal" data-bs-target="#importModal">
-                    <i class="bx bx-upload me-1"></i>Importar
-                </button>
-                @if($canCreateReceitas)
-                <button type="button" class="btn btn-success btn-sm me-1" data-bs-toggle="modal" data-bs-target="#createReceitaModal">
-                    <i class="bx bx-plus me-1"></i> Adicionar receita
-                </button>
-                @endif
-                @if($canCreateDespesas)
-                <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#createDespesaModal">
-                    <i class="bx bx-plus me-1"></i> Adicionar despesa
-                </button>
-                @endif
+            <div class="col-12 col-md-6">
+                <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="bx bx-upload me-1"></i>Importar
+                    </button>
+                    @if($canCreateReceitas)
+                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createReceitaModal">
+                        <i class="bx bx-plus me-1"></i> Adicionar receita
+                    </button>
+                    @endif
+                    @if($canCreateDespesas)
+                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#createDespesaModal">
+                        <i class="bx bx-plus me-1"></i> Adicionar despesa
+                    </button>
+                    @endif
+                </div>
             </div>
         </div>
     </div>
@@ -197,17 +211,17 @@
 <!-- Tabela de Transações -->
 <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
     <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <div>
                 <strong>Resultados: {{ $transactions->total() }} transações</strong>
             </div>
-            <div class="d-flex gap-2 align-items-center">
-                <select class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()" form="filterForm" name="per_page">
+            <div class="financial-tx-toolbar">
+                <select class="form-select form-select-sm financial-tx-toolbar__perpage" onchange="this.form.submit()" form="filterForm" name="per_page">
                     <option value="50" {{ request('per_page', 100) == 50 ? 'selected' : '' }}>50 resultados por página</option>
                     <option value="100" {{ request('per_page', 100) == 100 ? 'selected' : '' }}>100 resultados por página</option>
                     <option value="200" {{ request('per_page', 100) == 200 ? 'selected' : '' }}>200 resultados por página</option>
                 </select>
-                <input type="text" class="form-control form-control-sm" placeholder="Pesquisar" name="search" form="filterForm" value="{{ request('search') }}" style="width: 200px;">
+                <input type="text" class="form-control form-control-sm financial-tx-toolbar__search" placeholder="Pesquisar" name="search" form="filterForm" value="{{ request('search') }}">
                 <button type="submit" form="filterForm" class="btn btn-sm btn-outline-primary">
                     <i class="bx bx-search"></i>
                 </button>
@@ -565,6 +579,21 @@
         color: #b02a37;
     }
 
+    .financial-tx-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .financial-tx-toolbar__perpage {
+        width: auto;
+    }
+
+    .financial-tx-toolbar__search {
+        width: 200px;
+    }
+
     @media (max-width: 767.98px) {
         .financial-tx-card__side {
             width: 100%;
@@ -574,6 +603,22 @@
 
         .financial-tx-card__actions {
             justify-content: flex-start;
+        }
+
+        /* Larguras fixas aqui somavam mais que a tela e faziam a página
+           inteira rolar na horizontal. */
+        .financial-tx-toolbar {
+            width: 100%;
+        }
+
+        .financial-tx-toolbar__perpage {
+            width: 100%;
+        }
+
+        .financial-tx-toolbar__search {
+            width: auto;
+            flex: 1 1 8rem;
+            min-width: 0;
         }
     }
 </style>
@@ -1401,107 +1446,10 @@
 </div>
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 @if(!empty($mercadoPagoPublicKey))
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 @endif
 <script>
-    // Gráfico Mensal
-    const monthlyCtx = document.getElementById('monthlyTransactionChart');
-    if (monthlyCtx) {
-        const chartData = @json($chartData ?? []);
-        
-        console.log('Dados do gráfico:', chartData); // Debug
-        
-        // Extrair labels (dias) e dados
-        const labels = chartData.map(item => item.day);
-        const receitas = chartData.map(item => {
-            const value = parseFloat(item.receitas) || 0;
-            return value;
-        });
-        const despesas = chartData.map(item => {
-            const value = parseFloat(item.despesas) || 0;
-            return value;
-        });
-        const aReceber = chartData.map(item => {
-            const value = parseFloat(item.a_receber) || 0;
-            return value;
-        });
-        const aPagar = chartData.map(item => {
-            const value = parseFloat(item.a_pagar) || 0;
-            return value;
-        });
-        
-        console.log('Receitas:', receitas); // Debug
-        console.log('Despesas:', despesas); // Debug
-        
-        // Calcular máximo para o eixo Y
-        const allValues = [...receitas, ...despesas, ...aReceber, ...aPagar];
-        const maxValue = allValues.length > 0 ? Math.max(...allValues, 100) : 1000;
-        const yMax = Math.ceil(maxValue / 200) * 200; // Arredondar para múltiplo de 200
-        
-        new Chart(monthlyCtx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Receitas',
-                        data: receitas,
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'Despesas',
-                        data: despesas,
-                        borderColor: '#ff9800',
-                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    },
-                    {
-                        label: 'A receber',
-                        data: aReceber,
-                        borderColor: '#28a745',
-                        borderDash: [5, 5],
-                        backgroundColor: 'transparent',
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: 'A pagar',
-                        data: aPagar,
-                        borderColor: '#dc3545',
-                        borderDash: [5, 5],
-                        backgroundColor: 'transparent',
-                        tension: 0.4,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: yMax || 1000,
-                        ticks: {
-                            stepSize: Math.ceil((yMax || 1000) / 5)
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom'
-                    }
-                }
-            }
-        });
-    }
 
     const mercadoPagoPublicKey = @json($mercadoPagoPublicKey ?? '');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';

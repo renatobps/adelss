@@ -123,7 +123,10 @@
             </div>
             <div class="card-body">
                 <p class="text-muted small mb-3">Evolução ao longo dos encontros: Oração (min/dia), Jejum (h/semana) e Leitura (cap/dia)</p>
-                <canvas id="meetingsChart" height="120"></canvas>
+                <div id="meetingsChart"></div>
+                @if(count($chartData ?? []) > 7)
+                    <div class="chart-note d-md-none">Mostrando os 7 encontros mais recentes.</div>
+                @endif
             </div>
         </div>
         @endif
@@ -178,62 +181,53 @@
 </div>
 
 @if(count($chartData ?? []) >= 2)
+@include('partials.apexcharts')
+
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const chartData = @json($chartData ?? []);
-    if (chartData.length < 2) return;
-    const ctx = document.getElementById('meetingsChart');
-    if (!ctx) return;
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: chartData.map(d => d.label),
-            datasets: [
-                {
-                    label: 'Oração (min/dia)',
-                    data: chartData.map(d => d.oracao_min),
-                    borderColor: '#059669',
-                    backgroundColor: 'rgba(5, 150, 105, 0.1)',
-                    tension: 0.3,
-                },
-                {
-                    label: 'Jejum (h/semana)',
-                    data: chartData.map(d => d.jejum_horas),
-                    borderColor: '#dc2626',
-                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
-                    tension: 0.3
-                },
-                {
-                    label: 'Leitura (cap/dia)',
-                    data: chartData.map(d => d.leitura_cap),
-                    borderColor: '#2563eb',
-                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    tension: 0.3
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { position: 'top' },
-                tooltip: {
-                    callbacks: {
-                        label: function(ctx) {
-                            var labels = [' min/dia', ' h/semana', ' cap/dia'];
-                            return ctx.dataset.label + ': ' + ctx.parsed.y + (labels[ctx.datasetIndex] || '');
-                        }
+(function () {
+    var C = window.AdelssCharts;
+
+    if (!C || typeof ApexCharts === 'undefined' || !document.getElementById('meetingsChart')) {
+        return;
+    }
+
+    var chartData = @json($chartData ?? []);
+    var labels = chartData.map(function (d) { return d.label; });
+    var oracao = chartData.map(function (d) { return d.oracao_min; });
+    var jejum = chartData.map(function (d) { return d.jejum_horas; });
+    var leitura = chartData.map(function (d) { return d.leitura_cap; });
+
+    // Cada série tem unidade própria, então o valor aparece com o sufixo certo.
+    var unidades = [' min/dia', ' h/semana', ' cap/dia'];
+
+    C.render('meetingsChart', function (mobile) {
+        var dados = mobile
+            ? C.lastPoints(labels, [oracao, jejum, leitura])
+            : { labels: labels, series: [oracao, jejum, leitura] };
+
+        return {
+            chart: { type: 'line' },
+            colors: [C.palette.success, C.palette.danger, C.palette.primary],
+            stroke: { width: 2, curve: 'smooth' },
+            markers: { size: mobile ? 0 : 3, hover: { size: 5 } },
+            series: [
+                { name: 'Oração', data: dados.series[0] },
+                { name: 'Jejum', data: dados.series[1] },
+                { name: 'Leitura', data: dados.series[2] }
+            ],
+            xaxis: { categories: dados.labels },
+            tooltip: {
+                y: {
+                    formatter: function (valor, contexto) {
+                        var indice = contexto && typeof contexto.seriesIndex === 'number' ? contexto.seriesIndex : 0;
+                        return C.number(valor) + (unidades[indice] || '');
                     }
                 }
-            },
-            scales: {
-                y: { beginAtZero: true }
             }
-        }
-    });
-});
+        };
+    }, { currency: false });
+})();
 </script>
 @endpush
 @endif

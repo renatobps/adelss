@@ -13,6 +13,25 @@
 @php
     $fmt = fn ($v) => 'R$ ' . number_format((float) $v, 2, ',', '.');
     $resultadoPositivo = $resultado >= 0;
+
+    // Somas apenas para decidir se há gráfico a exibir e para o resumo em celular.
+    // Não alteram nenhum valor calculado no controller.
+    $somaSeries = function (array $dados, array $chaves) {
+        $total = 0.0;
+        foreach ($chaves as $chave) {
+            $total += array_sum(array_map('floatval', $dados[$chave] ?? []));
+        }
+
+        return $total;
+    };
+
+    $todasAsSeries = ['receitas', 'despesas', 'aReceber', 'aPagar'];
+    $mensalTemDados = $somaSeries($monthlyData ?? [], $todasAsSeries) > 0;
+    $anualTemDados = $somaSeries($annualData ?? [], $todasAsSeries) > 0;
+    $mensalAReceber = $somaSeries($monthlyData ?? [], ['aReceber']);
+    $mensalAPagar = $somaSeries($monthlyData ?? [], ['aPagar']);
+    $anualReceitas = $somaSeries($annualData ?? [], ['receitas']);
+    $anualDespesas = $somaSeries($annualData ?? [], ['despesas']);
 @endphp
 
 <div class="row g-3 mb-4">
@@ -116,7 +135,31 @@
                 </form>
             </header>
             <div class="card-body">
-                <canvas id="monthlyChart" height="60"></canvas>
+                @include('financial.partials.daily-chart', [
+                    'chartId' => 'monthlyChart',
+                    'labels' => $monthlyData['labels'] ?? [],
+                    'receitas' => $monthlyData['receitas'] ?? [],
+                    'despesas' => $monthlyData['despesas'] ?? [],
+                    'aReceber' => $monthlyData['aReceber'] ?? [],
+                    'aPagar' => $monthlyData['aPagar'] ?? [],
+                    'mobileNote' => 'Valores agrupados por semana do mês.',
+                    'emptyMessage' => 'Sem movimentações neste mês',
+                ])
+
+                @if($mensalTemDados)
+                    <div class="financial-chart-forecast d-md-none">
+                        <div class="financial-chart-forecast__item">
+                            <span>A receber</span>
+                            <strong class="financial-chart-forecast__value--receber">{{ $fmt($mensalAReceber) }}</strong>
+                        </div>
+                        <div class="financial-chart-forecast__item">
+                            <span>A pagar</span>
+                            <strong class="financial-chart-forecast__value--pagar">- {{ $fmt($mensalAPagar) }}</strong>
+                        </div>
+                    </div>
+                @else
+                    @include('partials.chart-empty', ['message' => 'Sem movimentações neste mês'])
+                @endif
             </div>
         </div>
     </div>
@@ -140,11 +183,52 @@
                 </form>
             </header>
             <div class="card-body">
-                <canvas id="annualChart" height="80"></canvas>
+                @if($anualTemDados)
+                    <div id="annualChart" class="d-none d-md-block"></div>
+
+                    <div class="financial-annual-mobile d-md-none">
+                        <div class="financial-annual-mobile__row">
+                            <div class="financial-annual-mobile__figures">
+                                <div class="financial-annual-mobile__label">Receitas em {{ $selectedYear }}</div>
+                                <div class="financial-annual-mobile__value financial-annual-mobile__value--receitas">{{ $fmt($anualReceitas) }}</div>
+                            </div>
+                            <div id="annualSparkReceitas" class="financial-annual-mobile__spark"></div>
+                        </div>
+                        <div class="financial-annual-mobile__row">
+                            <div class="financial-annual-mobile__figures">
+                                <div class="financial-annual-mobile__label">Despesas em {{ $selectedYear }}</div>
+                                <div class="financial-annual-mobile__value financial-annual-mobile__value--despesas">{{ $fmt($anualDespesas) }}</div>
+                            </div>
+                            <div id="annualSparkDespesas" class="financial-annual-mobile__spark"></div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#annualChartModal">
+                            <i class="bx bx-expand-alt me-1"></i>Ver gráfico completo
+                        </button>
+                    </div>
+                @else
+                    @include('partials.chart-empty', ['message' => 'Sem movimentações em ' . $selectedYear])
+                @endif
             </div>
         </div>
     </div>
 </div>
+
+@if($anualTemDados)
+<div class="modal fade" id="annualChartModal" tabindex="-1" aria-labelledby="annualChartModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="annualChartModalLabel">Resumo anual de {{ $selectedYear }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-2">Gire o aparelho para a horizontal para ver todos os meses com folga.</p>
+                <div id="annualChartFull"></div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 
 @push('styles')
 <style>
@@ -210,125 +294,145 @@
         font-size: 0.92rem;
         font-weight: 500;
     }
+    .financial-chart-forecast {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #EEF0F2;
+    }
+    .financial-chart-forecast__item {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.1rem;
+        font-size: 0.82rem;
+        color: #6C757D;
+    }
+    .financial-chart-forecast__item strong {
+        font-size: 0.95rem;
+    }
+    /* Mesmas cores das séries do gráfico, vindas dos tokens do sistema. */
+    .financial-chart-forecast__value--receber {
+        color: #1FA855;
+    }
+    .financial-chart-forecast__value--pagar {
+        color: #DC3545;
+    }
+    .financial-annual-mobile__value--receitas {
+        color: #0088CC;
+    }
+    .financial-annual-mobile__value--despesas {
+        color: #F5A623;
+    }
+    .financial-annual-mobile__row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        padding: 0.6rem 0;
+        border-bottom: 1px solid #EEF0F2;
+    }
+    .financial-annual-mobile__figures {
+        min-width: 0;
+    }
+    .financial-annual-mobile__label {
+        font-size: 0.82rem;
+        color: #6C757D;
+    }
+    .financial-annual-mobile__value {
+        font-size: 1.3rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    .financial-annual-mobile__spark {
+        width: 110px;
+        flex: 0 0 110px;
+    }
+    .financial-annual-mobile .btn {
+        margin-top: 0.85rem;
+    }
 </style>
 @endpush
 
+@include('partials.apexcharts')
+
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const annualData = @json($annualData ?? []);
-    const annualCtx = document.getElementById('annualChart');
-    if (annualCtx && annualData.labels) {
-        new Chart(annualCtx, {
-            type: 'line',
-            data: {
-                labels: annualData.labels,
-                datasets: [
-                    {
-                        label: 'Receitas',
-                        data: annualData.receitas || [],
-                        borderColor: '#007bff',
-                        backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: 'Despesas',
-                        data: annualData.despesas || [],
-                        borderColor: '#ff9800',
-                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: 'A receber',
-                        data: annualData.aReceber || [],
-                        borderColor: '#28a745',
-                        borderDash: [5, 5],
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: 'A pagar',
-                        data: annualData.aPagar || [],
-                        borderColor: '#dc3545',
-                        borderDash: [5, 5],
-                        tension: 0.4,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: annualData.maxValue || 1000
-                    }
-                },
-                plugins: {
-                    legend: { display: true, position: 'bottom' }
-                }
-            }
+(function () {
+    var C = window.AdelssCharts;
+
+    if (!C || typeof ApexCharts === 'undefined') {
+        return;
+    }
+
+    var annual = @json($annualData ?? []);
+
+    // Resumo anual: gráfico completo no desktop, sparklines com totais no celular.
+    var annualChart = null;
+    var annualSparksReady = false;
+    var annualFullChart = null;
+
+    function annualOptions(height) {
+        return C.deepMerge(C.baseOptions(C.isMobile()), {
+            chart: { type: 'line', height: height },
+            stroke: { width: [3, 3, 2, 2], curve: 'smooth', dashArray: [0, 0, 5, 5] },
+            markers: { size: 0, hover: { size: 4 } },
+            series: [
+                { name: 'Receitas', data: annual.receitas || [] },
+                { name: 'Despesas', data: annual.despesas || [] },
+                { name: 'A receber', data: annual.aReceber || [] },
+                { name: 'A pagar', data: annual.aPagar || [] }
+            ],
+            xaxis: { categories: annual.labels || [] }
         });
     }
 
-    const monthlyData = @json($monthlyData ?? []);
-    const monthlyCtx = document.getElementById('monthlyChart');
-    if (monthlyCtx && monthlyData.labels) {
-        new Chart(monthlyCtx, {
-            type: 'line',
-            data: {
-                labels: monthlyData.labels,
-                datasets: [
-                    {
-                        label: 'Receitas',
-                        data: monthlyData.receitas || [],
-                        borderColor: '#007bff',
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: 'Despesas',
-                        data: monthlyData.despesas || [],
-                        borderColor: '#ff9800',
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: 'A receber',
-                        data: monthlyData.aReceber || [],
-                        borderColor: '#28a745',
-                        borderDash: [5, 5],
-                        tension: 0.4,
-                        fill: false
-                    },
-                    {
-                        label: 'A pagar',
-                        data: monthlyData.aPagar || [],
-                        borderColor: '#dc3545',
-                        borderDash: [5, 5],
-                        tension: 0.4,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        max: monthlyData.maxValue || 1000
-                    }
-                },
-                plugins: {
-                    legend: { display: true, position: 'bottom' }
-                }
+    function setupAnnual() {
+        var container = document.getElementById('annualChart');
+
+        if (!container) {
+            return;
+        }
+
+        // Cada versão só é criada quando fica visível: o ApexCharts não consegue
+        // medir a largura de um container escondido por display:none.
+        if (!C.isMobile() && !annualChart) {
+            annualChart = new ApexCharts(container, annualOptions(320));
+            annualChart.render();
+        }
+
+        if (C.isMobile() && !annualSparksReady) {
+            C.sparkline('annualSparkReceitas', annual.receitas || [], C.seriesColors.receitas);
+            C.sparkline('annualSparkDespesas', annual.despesas || [], C.seriesColors.despesas);
+            annualSparksReady = true;
+        }
+    }
+
+    setupAnnual();
+
+    var resizeTimer = null;
+    window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(setupAnnual, 200);
+    });
+
+    var annualModal = document.getElementById('annualChartModal');
+    if (annualModal) {
+        annualModal.addEventListener('shown.bs.modal', function () {
+            if (annualFullChart) {
+                return;
             }
+
+            annualFullChart = new ApexCharts(
+                document.getElementById('annualChartFull'),
+                annualOptions(Math.max(260, window.innerHeight - 220))
+            );
+            annualFullChart.render();
         });
     }
+})();
 </script>
 @endpush
 @endsection

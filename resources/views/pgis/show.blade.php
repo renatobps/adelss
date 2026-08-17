@@ -328,7 +328,10 @@
             </header>
             <div class="card-body">
                 @if(count($chartData) > 0)
-                    <canvas id="attendanceChart" height="160"></canvas>
+                    <div id="attendanceChart"></div>
+                    @if(count($chartData) > 7)
+                        <div class="chart-note d-md-none">Mostrando as 7 reuniões mais recentes.</div>
+                    @endif
                 @else
                     @include('pgis.partials.empty-state', [
                         'icon' => 'bx-line-chart',
@@ -728,46 +731,50 @@
 @endif
 @endsection
 
+@if(count($chartData) > 0)
+    @include('partials.apexcharts')
+@endif
+
 @push('scripts')
 @if(count($chartData) > 0)
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 (function () {
-    const canvas = document.getElementById('attendanceChart');
-    if (!canvas || typeof Chart === 'undefined') return;
+    var C = window.AdelssCharts;
 
-    const chartData = @json($chartData);
+    if (!C || typeof ApexCharts === 'undefined' || !document.getElementById('attendanceChart')) {
+        return;
+    }
 
-    new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels: chartData.map((item) => item.date),
-            datasets: [
-                {
-                    label: 'Participantes',
-                    data: chartData.map((item) => item.participants),
-                    borderColor: '#0088CC',
-                    backgroundColor: 'rgba(0, 136, 204, 0.15)',
-                    fill: true,
-                    tension: 0.35,
-                },
-                {
-                    label: 'Visitantes',
-                    data: chartData.map((item) => item.visitors),
-                    borderColor: '#F59E0B',
-                    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                    fill: true,
-                    tension: 0.35,
-                },
+    var chartData = @json($chartData);
+    var labels = chartData.map(function (item) { return item.date; });
+    var participantes = chartData.map(function (item) { return item.participants; });
+    var visitantes = chartData.map(function (item) { return item.visitors; });
+
+    C.render('attendanceChart', function (mobile) {
+        // Reuniões são eventos avulsos: em tela pequena mostramos as mais
+        // recentes, em vez de somar períodos e perder o sentido do dado.
+        var dados = mobile
+            ? C.lastPoints(labels, [participantes, visitantes])
+            : { labels: labels, series: [participantes, visitantes] };
+
+        // Uma reunião só não forma tendência: como linha viraria um risco
+        // vertical, o grupo único é desenhado em barras.
+        var pontoUnico = dados.labels.length < 2;
+
+        return {
+            chart: { type: pontoUnico ? 'bar' : 'area' },
+            colors: [C.palette.primary, C.palette.warning],
+            stroke: { width: pontoUnico ? 0 : 2, curve: 'smooth' },
+            fill: { opacity: pontoUnico ? 1 : 0.15 },
+            plotOptions: { bar: { columnWidth: '40%', borderRadius: 3 } },
+            markers: { size: mobile ? 0 : 3, hover: { size: 5 } },
+            series: [
+                { name: 'Participantes', data: dados.series[0] },
+                { name: 'Visitantes', data: dados.series[1] }
             ],
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-            plugins: { legend: { display: true, position: 'top' } },
-        },
-    });
+            xaxis: { categories: dados.labels }
+        };
+    }, { currency: false });
 })();
 </script>
 @endif

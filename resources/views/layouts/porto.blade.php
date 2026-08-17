@@ -485,6 +485,9 @@
 
     <!-- Theme Initialization Files -->
     <script src="{{ asset('js/js/theme.init.js') }}"></script>
+
+    <!-- Configuração compartilhada dos gráficos (cores, moeda, responsividade) -->
+    <script src="{{ asset('js/adelss-charts.js') }}"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var $datepicker = $('#sidebar-datepicker');

@@ -160,7 +160,17 @@
 
                 <!-- Gráfico de Área -->
                 <div class="mb-4">
-                    <canvas id="revenuesChart" height="100"></canvas>
+                    @include('financial.partials.daily-chart', [
+                        'chartId' => 'revenuesChart',
+                        'labels' => collect($chartData ?? [])->pluck('day')->all(),
+                        'receitas' => collect($chartData ?? [])->pluck('receitas')->all(),
+                        'despesas' => collect($chartData ?? [])->pluck('despesas')->all(),
+                        'aReceber' => collect($chartData ?? [])->pluck('a_receber')->all(),
+                        'aPagar' => collect($chartData ?? [])->pluck('a_pagar')->all(),
+                        'area' => true,
+                        'mobileNote' => 'Receitas e despesas agrupadas por período. Os previstos estão na tabela abaixo.',
+                        'emptyMessage' => 'Sem receitas neste período',
+                    ])
                 </div>
 
                 <!-- Controles da Tabela -->
@@ -360,95 +370,6 @@
     </div>
 </div>
 
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Gráfico de Receitas Diárias
-        const revenuesCtx = document.getElementById('revenuesChart');
-        if (revenuesCtx) {
-            const chartData = @json($chartData ?? []);
-            
-            const labels = chartData.map(item => item.day);
-            const receitas = chartData.map(item => parseFloat(item.receitas || 0));
-            const despesas = chartData.map(item => parseFloat(item.despesas || 0));
-            const aReceber = chartData.map(item => parseFloat(item.a_receber || 0));
-            const aPagar = chartData.map(item => parseFloat(item.a_pagar || 0));
-            
-            const allValues = [...receitas, ...despesas, ...aReceber, ...aPagar];
-            const maxValue = allValues.length > 0 ? Math.max(...allValues, 0) : 0;
-            const yMax = maxValue > 0 ? Math.ceil(maxValue / 200) * 200 : 1000;
-            
-            new Chart(revenuesCtx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Receitas',
-                            data: receitas,
-                            borderColor: '#007bff',
-                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'Despesas',
-                            data: despesas,
-                            borderColor: '#ff9800',
-                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                            tension: 0.4,
-                            fill: true
-                        },
-                        {
-                            label: 'A receber',
-                            data: aReceber,
-                            borderColor: '#28a745',
-                            borderDash: [5, 5],
-                            backgroundColor: 'transparent',
-                            tension: 0.4,
-                            fill: false
-                        },
-                        {
-                            label: 'A pagar',
-                            data: aPagar,
-                            borderColor: '#dc3545',
-                            borderDash: [5, 5],
-                            backgroundColor: 'transparent',
-                            tension: 0.4,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: yMax,
-                            ticks: {
-                                stepSize: Math.ceil(yMax / 5)
-                            }
-                        },
-                        x: {
-                            ticks: {
-                                maxRotation: 45,
-                                minRotation: 45
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'bottom'
-                        }
-                    }
-                }
-            });
-        }
-    });
-</script>
-@endpush
+{{-- O gráfico é montado pelo partial financial.partials.daily-chart. --}}
 @endsection
 

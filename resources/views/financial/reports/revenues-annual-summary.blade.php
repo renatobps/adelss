@@ -122,7 +122,14 @@
 
                 <!-- Gráfico Mensal -->
                 <div class="mb-4">
-                    <canvas id="monthlyChart" height="80"></canvas>
+                    @include('financial.partials.monthly-bars-chart', [
+                        'chartId' => 'monthlyChart',
+                        'labels' => collect($chartData ?? [])->pluck('month_name')->all(),
+                        'values' => collect($chartData ?? [])->pluck('total')->all(),
+                        'seriesName' => 'Receitas por mês',
+                        'color' => '#0088CC',
+                        'emptyMessage' => 'Sem receitas registradas em ' . $year,
+                    ])
                 </div>
 
                 <!-- Resumo por Categoria -->
@@ -229,65 +236,7 @@
     </div>
 </div>
 
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Gráfico Mensal de Receitas
-        const monthlyCtx = document.getElementById('monthlyChart');
-        if (monthlyCtx) {
-            const chartData = @json($chartData ?? []);
-            
-            const labels = chartData.map(item => item.month_name);
-            const totals = chartData.map(item => parseFloat(item.total || 0));
-            
-            const maxValue = totals.length > 0 ? Math.max(...totals, 0) : 0;
-            const yMax = maxValue > 0 ? Math.ceil(maxValue / 200) * 200 : 1000;
-            
-            new Chart(monthlyCtx, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Receitas por Mês',
-                            data: totals,
-                            backgroundColor: 'rgba(0, 123, 255, 0.8)',
-                            borderColor: '#007bff',
-                            borderWidth: 1
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: yMax,
-                            ticks: {
-                                stepSize: Math.ceil(yMax / 5)
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return 'R$ ' + context.parsed.y.toFixed(2).replace('.', ',');
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    });
-</script>
-@endpush
+{{-- O gráfico é montado pelo partial financial.partials.monthly-bars-chart. --}}
 @endsection
 
 

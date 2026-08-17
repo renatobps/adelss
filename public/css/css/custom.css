@@ -934,3 +934,17 @@ mark.perms-mark {
     padding: 0 0.1em;
     border-radius: 0.15rem;
 }
+
+/* O Bootstrap espera .modal-body e .modal-footer como itens flex diretos de
+   .modal-content. Quando um <form> envolve os dois, ele entra no meio e não
+   encolhe: em tela cheia no mobile a altura de .modal-content é travada em
+   100%, o formulário transborda e a parte excedente aparece sem fundo, por
+   cima da página. Fazer o form participar do flex devolve o scroll ao corpo
+   e mantém o rodapé dentro do modal. */
+.modal-fullscreen-sm-down .modal-content > form,
+.modal-dialog-scrollable .modal-content > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+}
