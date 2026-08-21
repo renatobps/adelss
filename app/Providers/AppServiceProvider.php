@@ -143,6 +143,8 @@ class AppServiceProvider extends ServiceProvider
             'midia.instagram.view',
             'midia.instagram.schedule',
             'midia.instagram.configuracoes.manage',
+            'midia.formularios.view',
+            'midia.formularios.manage',
         ] as $ability) {
             Gate::define($ability, function ($user) use ($ability) {
                 return $user->is_admin || $user->hasPermission($ability);

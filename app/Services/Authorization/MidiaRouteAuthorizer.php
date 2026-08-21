@@ -67,6 +67,28 @@ class MidiaRouteAuthorizer
                 : $denyAccess('Acesso negado. Sem permissão para agendar publicações.');
         }
 
+        if (str_starts_with($route, 'midia.formularios.')) {
+            $somenteLeitura = [
+                'midia.formularios.index',
+                'midia.formularios.responses.index',
+                'midia.formularios.responses.show',
+                'midia.formularios.report',
+                'midia.formularios.export.pdf',
+                'midia.formularios.export.csv',
+            ];
+
+            if (in_array($route, $somenteLeitura, true)) {
+                return ($user->hasPermission('midia.formularios.view')
+                    || $user->hasPermission('midia.formularios.manage'))
+                    ? null
+                    : $denyAccess('Acesso negado. Sem permissão para ver formulários.');
+            }
+
+            return $user->hasPermission('midia.formularios.manage')
+                ? null
+                : $denyAccess('Acesso negado. Sem permissão para gerenciar formulários.');
+        }
+
         if ($route === 'midia.folders.store') {
             return $user->hasPermission('midia.pastas.manage')
                 ? null
@@ -95,7 +117,9 @@ class MidiaRouteAuthorizer
             || $user->hasPermission('midia.instagram.view')
             || $user->hasPermission('midia.whatsapp.schedule')
             || $user->hasPermission('midia.configuracoes.manage')
-            || $user->hasPermission('midia.instagram.configuracoes.manage'))
+            || $user->hasPermission('midia.instagram.configuracoes.manage')
+            || $user->hasPermission('midia.formularios.view')
+            || $user->hasPermission('midia.formularios.manage'))
             ? null
             : $denyAccess('Acesso negado ao módulo Mídia.');
     }

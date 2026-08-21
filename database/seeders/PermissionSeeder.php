@@ -1161,6 +1161,15 @@ class PermissionSeeder extends Seeder
                         ['name' => 'Agendar', 'key' => 'midia.whatsapp.schedule'],
                     ],
                 ],
+                [
+                    'name' => 'Formulários',
+                    'key' => 'midia.formularios',
+                    'description' => 'Formulários públicos de coleta de dados e suas respostas',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'midia.formularios.view'],
+                        ['name' => 'Gerenciar', 'key' => 'midia.formularios.manage'],
+                    ],
+                ],
             ],
         ];
 

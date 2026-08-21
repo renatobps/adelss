@@ -3,6 +3,8 @@
 use App\Http\Controllers\Midia\GoogleDriveAuthController;
 use App\Http\Controllers\Midia\InstagramAuthController;
 use App\Http\Controllers\Midia\MediaController;
+use App\Http\Controllers\Midia\MediaFormController;
+use App\Http\Controllers\Midia\MediaFormResponseController;
 use App\Http\Controllers\Midia\ScheduledPostController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +27,22 @@ Route::prefix('midia')->name('midia.')->middleware('module.access:midia')->group
         ->name('instagram.posts.destinations.retry');
 
     Route::get('whatsapp/grupos', [ScheduledPostController::class, 'listWhatsAppGroups'])->name('whatsapp.grupos');
+
+    Route::prefix('formularios')->name('formularios.')->group(function () {
+        Route::get('/', [MediaFormController::class, 'index'])->name('index');
+        Route::get('/criar', [MediaFormController::class, 'create'])->name('create');
+        Route::post('/', [MediaFormController::class, 'store'])->name('store');
+        Route::get('/{mediaForm}/editar', [MediaFormController::class, 'edit'])->name('edit');
+        Route::put('/{mediaForm}', [MediaFormController::class, 'update'])->name('update');
+        Route::delete('/{mediaForm}', [MediaFormController::class, 'destroy'])->name('destroy');
+
+        Route::get('/{mediaForm}/respostas', [MediaFormResponseController::class, 'index'])->name('responses.index');
+        Route::get('/{mediaForm}/respostas/{submission}', [MediaFormResponseController::class, 'show'])->name('responses.show');
+        Route::delete('/{mediaForm}/respostas/{submission}', [MediaFormResponseController::class, 'destroy'])->name('responses.destroy');
+        Route::get('/{mediaForm}/relatorio', [MediaFormResponseController::class, 'report'])->name('report');
+        Route::get('/{mediaForm}/exportar/pdf', [MediaFormResponseController::class, 'exportPdf'])->name('export.pdf');
+        Route::get('/{mediaForm}/exportar/csv', [MediaFormResponseController::class, 'exportCsv'])->name('export.csv');
+    });
 
     Route::get('/', [MediaController::class, 'index'])->name('index');
     Route::get('/arquivos/browse', [MediaController::class, 'browse'])->name('files.browse');

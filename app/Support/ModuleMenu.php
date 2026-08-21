@@ -209,11 +209,14 @@ class ModuleMenu
         $canViewMidiaInstagram = $can('midia.instagram.view');
         $canManageMidiaConfig = $can('midia.configuracoes.manage');
         $canManageMidiaInstagramConfig = $can('midia.instagram.configuracoes.manage');
-        if ($isAdmin || $canViewMidiaArquivos || $canViewMidiaInstagram || $canManageMidiaConfig || $canManageMidiaInstagramConfig) {
+        $canViewMidiaFormularios = $can('midia.formularios.view') || $can('midia.formularios.manage');
+        if ($isAdmin || $canViewMidiaArquivos || $canViewMidiaInstagram || $canManageMidiaConfig || $canManageMidiaInstagramConfig || $canViewMidiaFormularios) {
             if ($isAdmin || $canViewMidiaArquivos) {
                 $midiaUrl = route('midia.index');
             } elseif ($canViewMidiaInstagram) {
                 $midiaUrl = route('midia.instagram.posts.index');
+            } elseif ($canViewMidiaFormularios) {
+                $midiaUrl = route('midia.formularios.index');
             } else {
                 $midiaUrl = route('midia.settings');
             }

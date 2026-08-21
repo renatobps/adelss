@@ -6,6 +6,9 @@
     $canSettings = $isAdmin
         || $user?->hasPermission('midia.configuracoes.manage')
         || $user?->hasPermission('midia.instagram.configuracoes.manage');
+    $canForms = $isAdmin
+        || $user?->hasPermission('midia.formularios.view')
+        || $user?->hasPermission('midia.formularios.manage');
 
     $items = array_values(array_filter([
         $canFiles ? [
@@ -29,6 +32,12 @@
             'active' => request()->routeIs('midia.instagram.posts.*') || request()->routeIs('midia.whatsapp.*'),
             'brand' => 'instagram',
         ] : null,
+        $canForms ? [
+            'label' => 'Formulários',
+            'icon' => 'bx bx-list-check',
+            'url' => route('midia.formularios.index'),
+            'active' => request()->routeIs('midia.formularios.*'),
+        ] : null,
         $canSettings ? [
             'label' => 'Configurações',
             'icon' => 'bx bx-cog',
@@ -44,7 +53,7 @@
 
 @include('partials.module-nav', [
     'title' => 'Mídia',
-    'subtitle' => 'Arquivos, publicações Instagram e WhatsApp',
+    'subtitle' => 'Arquivos, publicações, formulários e configurações',
     'items' => $items,
-    'columns' => 3,
+    'columns' => 4,
 ])

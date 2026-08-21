@@ -5,6 +5,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\Agenda\PublicEventController;
 use App\Http\Controllers\Ensino\PublicStudyFormController;
+use App\Http\Controllers\Midia\PublicMediaFormController;
 use App\Http\Controllers\Webhooks\MercadoPagoWebhookController;
 use App\Http\Controllers\Webhooks\EvolutionWebhookController;
 use App\Http\Controllers\PublicMemberRegistrationController;
@@ -24,6 +25,12 @@ Route::post('/evento/{slug}/inscricao/reenviar-comprovante', [PublicEventControl
 
 Route::get('/estudo-formulario/{slug}', [PublicStudyFormController::class, 'show'])->name('study.forms.public.show');
 Route::post('/estudo-formulario/{slug}/responder', [PublicStudyFormController::class, 'submit'])->name('study.forms.public.submit');
+
+// Formularios de coleta de dados (modulo Midia), abertos sem login
+Route::get('/formulario/{slug}', [PublicMediaFormController::class, 'show'])->name('formularios.public.show');
+Route::post('/formulario/{slug}', [PublicMediaFormController::class, 'submit'])
+    ->middleware('throttle:10,1')
+    ->name('formularios.public.submit');
 
 // Cadastro público de membro (sem login)
 Route::get('/cadastro-membro/{token}', [PublicMemberRegistrationController::class, 'create'])->name('members.public.create');
