@@ -34,6 +34,7 @@ class FinancialTransaction extends Model
         'parent_transaction_id',
         'fixed_expense_id',
         'document_number',
+        'external_ref',
         'notes',
         'competence_date',
         'created_by',
@@ -152,7 +153,8 @@ class FinancialTransaction extends Model
     public function getFormattedAmountAttribute()
     {
         $sign = $this->type === 'despesa' ? '-' : '';
-        return $sign . 'R$ ' . number_format($this->amount, 2, ',', '.');
+
+        return $sign.'R$ '.number_format($this->amount, 2, ',', '.');
     }
 
     /**
@@ -164,6 +166,7 @@ class FinancialTransaction extends Model
             if ($this->member_id) {
                 return $this->member->name ?? 'Membro não encontrado';
             }
+
             return $this->received_from_other ?? 'Outros';
         } else {
             return $this->contact->name ?? 'Contato não encontrado';
