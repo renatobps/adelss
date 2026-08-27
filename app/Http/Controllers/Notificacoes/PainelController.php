@@ -10,6 +10,7 @@ use App\Services\AuditLogger;
 use App\Services\NotificacaoService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
 
 class PainelController extends Controller
@@ -21,6 +22,9 @@ class PainelController extends Controller
 
         if ($request->filled('status') && array_key_exists($request->status, NotificacaoEnviada::STATUSES)) {
             $query->where('status', $request->status);
+        }
+        if ($request->filled('origem') && Schema::hasColumn('notificacoes_enviadas', 'origem') && array_key_exists($request->origem, NotificacaoEnviada::ORIGENS)) {
+            $query->where('origem', $request->origem);
         }
         if ($request->filled('data_inicio')) {
             $query->whereDate('data_envio', '>=', $request->data_inicio);

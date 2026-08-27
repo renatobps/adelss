@@ -458,10 +458,10 @@ class WhatsAppService
         if (!$this->isConfigurado()) {
             Log::warning('WhatsApp Evolution GO: credenciais não configuradas.');
 
-            return [
+            return $this->finalizarEnvio($numero, $mensagem, [
                 'success' => false,
                 'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e selecione uma instância ativa em Notificações > Configuração WPP.',
-            ];
+            ]);
         }
 
         $numero = self::normalizarNumero($numero);
@@ -475,10 +475,10 @@ class WhatsAppService
 
         $instanceId = $this->resolveInstanceId();
         if ($instanceId === '') {
-            return [
+            return $this->finalizarEnvio($numero, $mensagem, [
                 'success' => false,
                 'error' => 'Nenhuma instância WhatsApp ativa. Selecione uma em Notificações > Configuração WPP.',
-            ];
+            ]);
         }
 
         $instanceToken = $this->resolveInstanceToken($instanceId);
@@ -493,14 +493,27 @@ class WhatsAppService
         $body = $res->json() ?? [];
 
         if ($this->isSuccessfulResponse($res, $body)) {
-            return ['success' => true, 'data' => $body];
+            return $this->finalizarEnvio($numero, $mensagem, ['success' => true, 'data' => $body]);
         }
 
-        return [
+        return $this->finalizarEnvio($numero, $mensagem, [
             'success' => false,
             'error' => $this->resolverMensagemErro($body),
             'status' => $res->status(),
-        ];
+        ]);
+    }
+
+    /**
+     * Grava sucesso e erro no histórico unificado do painel de notificações.
+     *
+     * @param  array{success: bool, data?: mixed, error?: string, status?: int}  $resultado
+     * @return array{success: bool, data?: mixed, error?: string, status?: int}
+     */
+    private function finalizarEnvio(string $numero, string $mensagem, array $resultado, string $tipo = 'custom'): array
+    {
+        app(WhatsAppSendHistory::class)->record($numero, $mensagem, $resultado, $tipo);
+
+        return $resultado;
     }
 
     public function isConfigurado(): bool
@@ -754,10 +767,10 @@ class WhatsAppService
         if (!$this->isConfigurado()) {
             Log::warning('WhatsApp Evolution GO: credenciais não configuradas para enquete.');
 
-            return [
+            return $this->finalizarEnvio($numero, $titulo, [
                 'success' => false,
                 'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e selecione uma instância ativa em Notificações > Configuração WPP.',
-            ];
+            ], 'enquete');
         }
 
         $numero = self::normalizarNumero($numero);
@@ -779,7 +792,7 @@ class WhatsAppService
         }
 
         if (count($buttons) < 2) {
-            return ['success' => false, 'error' => 'Enquetes requerem pelo menos 2 opções.'];
+            return $this->finalizarEnvio($numero, $titulo, ['success' => false, 'error' => 'Enquetes requerem pelo menos 2 opções.'], 'enquete');
         }
         if (count($buttons) > 3) {
             $buttons = array_slice($buttons, 0, 3);
@@ -797,7 +810,7 @@ class WhatsAppService
         $body = $res->json() ?? [];
 
         if ($this->isSuccessfulResponse($res, $body)) {
-            return ['success' => true, 'data' => $body];
+            return $this->finalizarEnvio($numero, trim($titulo.' '.$descricao), ['success' => true, 'data' => $body], 'enquete');
         }
 
         Log::warning('WhatsApp Evolution GO: falha ao enviar enquete com botões', [
@@ -807,11 +820,11 @@ class WhatsAppService
             'enquete_id' => $enqueteId,
         ]);
 
-        return [
+        return $this->finalizarEnvio($numero, trim($titulo.' '.$descricao), [
             'success' => false,
             'error' => $this->resolverMensagemErro($body),
             'status' => $res->status(),
-        ];
+        ], 'enquete');
     }
 
     /**
@@ -926,10 +939,10 @@ class WhatsAppService
         string $legenda = ''
     ): array {
         if (!$this->isConfigurado()) {
-            return [
+            return $this->finalizarEnvio($numero, $legenda !== '' ? $legenda : '[Mídia: '.$tipo.']', [
                 'success' => false,
                 'error' => 'Configure WHATSAPP_API_URL, WHATSAPP_API_KEY e selecione uma instância ativa em Notificações > Configuração WPP.',
-            ];
+            ], $tipo);
         }
 
         $base64 = trim($base64);
@@ -940,7 +953,7 @@ class WhatsAppService
         $base64 = preg_replace('/\s+/', '', $base64) ?? '';
 
         if ($base64 === '' || base64_decode($base64, true) === false) {
-            return ['success' => false, 'error' => 'Conteúdo base64 inválido para envio de mídia.'];
+            return $this->finalizarEnvio($numero, $legenda !== '' ? $legenda : '[Mídia: '.$tipo.']', ['success' => false, 'error' => 'Conteúdo base64 inválido para envio de mídia.'], $tipo);
         }
 
         $destinatario = self::resolverDestinatario($numero);
@@ -963,7 +976,7 @@ class WhatsAppService
         $body = $res->json() ?? [];
 
         if ($this->isSuccessfulResponse($res, $body)) {
-            return ['success' => true, 'data' => $body];
+            return $this->finalizarEnvio($destinatario, $legenda !== '' ? $legenda : '[Mídia: '.$tipo.']', ['success' => true, 'data' => $body], $tipo);
         }
 
         // Fallback: multipart com arquivo binário (quando JSON base64 falhar).
@@ -978,7 +991,7 @@ class WhatsAppService
                 $legenda
             );
             if ($fallback['success'] ?? false) {
-                return $fallback;
+                return $this->finalizarEnvio($destinatario, $legenda !== '' ? $legenda : '[Mídia: '.$tipo.']', $fallback, $tipo);
             }
 
             Log::warning('WhatsApp Evolution GO: falha ao enviar mídia (JSON e multipart)', [
@@ -989,11 +1002,11 @@ class WhatsAppService
                 'multipart_error' => $fallback['error'] ?? null,
             ]);
 
-            return [
+            return $this->finalizarEnvio($destinatario, $legenda !== '' ? $legenda : '[Mídia: '.$tipo.']', [
                 'success' => false,
                 'error' => $this->resolverMensagemErro($body) ?: ($fallback['error'] ?? 'Falha ao enviar mídia'),
                 'status' => $res->status(),
-            ];
+            ], $tipo);
         }
 
         Log::warning('WhatsApp Evolution GO: falha ao enviar mídia', [
@@ -1003,11 +1016,11 @@ class WhatsAppService
             'response' => $body,
         ]);
 
-        return [
+        return $this->finalizarEnvio($destinatario, $legenda !== '' ? $legenda : '[Mídia: '.$tipo.']', [
             'success' => false,
             'error' => $this->resolverMensagemErro($body),
             'status' => $res->status(),
-        ];
+        ], $tipo);
     }
 
     /**

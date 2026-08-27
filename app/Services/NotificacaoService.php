@@ -7,6 +7,7 @@ use App\Models\Member;
 use App\Models\NotificacaoEnviada;
 use App\Models\NotificacaoGrupo;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Schema;
 
 class NotificacaoService
 {
@@ -26,7 +27,6 @@ class NotificacaoService
         }
         $texto = $this->personalizarMensagem($mensagem, $member->name);
         $resultado = $this->whatsappService->enviarMensagem($phone, $texto);
-        $this->registrarEnvio($member->id, $phone, $texto, $resultado);
         return $resultado;
     }
 
@@ -91,7 +91,6 @@ class NotificacaoService
         $membro = $this->encontrarMembroPorTelefone($phone);
         $texto = $this->personalizarMensagem($mensagem, $membro?->name);
         $resultado = $this->whatsappService->enviarMensagem($phone, $texto);
-        $this->registrarEnvio($membro?->id, $phone, $texto, $resultado);
 
         return $resultado;
     }
@@ -153,14 +152,6 @@ class NotificacaoService
                 $legendaPersonalizada
             );
 
-            $this->registrarEnvio(
-                $member->id,
-                $phone,
-                $legendaPersonalizada !== '' ? $legendaPersonalizada : '[Mídia enviada]',
-                $resultado,
-                $midia['tipo']
-            );
-
             if ($resultado['success'] ?? false) {
                 $enviadas++;
             } else {
@@ -208,13 +199,7 @@ class NotificacaoService
             $midia['file_name'],
             $legendaPersonalizada
         );
-        $this->registrarEnvio(
-            $membro?->id,
-            $phone,
-            $legendaPersonalizada !== '' ? $legendaPersonalizada : '[Mídia enviada]',
-            $resultado,
-            $midia['tipo']
-        );
+
         return $resultado;
     }
 
@@ -346,7 +331,7 @@ class NotificacaoService
         $sucesso = (bool) ($resultado['success'] ?? false);
         $payload = $resultado['data'] ?? $resultado;
 
-        NotificacaoEnviada::create([
+        $attrs = [
             'member_id' => $memberId,
             'telefone' => $telefone,
             'tipo_notificacao' => $tipoNotificacao,
@@ -357,7 +342,13 @@ class NotificacaoService
             'resposta_api' => $payload,
             'tentativas' => 1,
             'erro_detalhes' => $this->humanizarErro($resultado['error'] ?? null),
-        ]);
+        ];
+
+        if (Schema::hasColumn('notificacoes_enviadas', 'origem')) {
+            $attrs['origem'] = 'painel';
+        }
+
+        NotificacaoEnviada::create($attrs);
     }
 
     /**

@@ -21,6 +21,18 @@ class NotificacaoEnviada extends Model
         self::STATUS_ERRO => 'Erro',
     ];
 
+    public const ORIGENS = [
+        'painel' => 'Painel',
+        'enquetes' => 'Enquetes',
+        'financeiro' => 'Financeiro',
+        'campanhas' => 'Campanhas',
+        'agenda' => 'Agenda',
+        'cultos' => 'Cultos',
+        'discipulado' => 'Discipulado',
+        'whatsapp_teste' => 'Teste WhatsApp',
+        'sistema' => 'Sistema',
+    ];
+
     protected $table = 'notificacoes_enviadas';
 
     protected $fillable = [
@@ -36,6 +48,7 @@ class NotificacaoEnviada extends Model
         'resposta_api',
         'tentativas',
         'erro_detalhes',
+        'origem',
     ];
 
     protected $casts = [
@@ -49,6 +62,15 @@ class NotificacaoEnviada extends Model
     public function member(): BelongsTo
     {
         return $this->belongsTo(Member::class);
+    }
+
+    public function getOrigemLabelAttribute(): string
+    {
+        if ($this->origem && isset(self::ORIGENS[$this->origem])) {
+            return self::ORIGENS[$this->origem];
+        }
+
+        return self::ORIGENS['sistema'];
     }
 
     public function getStatusLabelAttribute(): string

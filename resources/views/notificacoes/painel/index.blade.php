@@ -196,7 +196,7 @@
 
 @section('content')
 @php
-    $filtroAtivo = request()->filled('status') || request()->filled('data_inicio') || request()->filled('data_fim');
+    $filtroAtivo = request()->filled('status') || request()->filled('origem') || request()->filled('data_inicio') || request()->filled('data_fim');
     $canManageHistorico = $canManageHistorico ?? false;
     $perPage = $perPage ?? 10;
     $tipoMidiaLabel = function (?string $tipo): ?string {
@@ -424,7 +424,7 @@
         <section class="card">
             <header class="card-header">
                 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
-                    <h2 class="card-title mb-0"><i class="bx bx-history me-2"></i>Histórico</h2>
+                    <h2 class="card-title mb-0"><i class="bx bx-history me-2"></i>Histórico do sistema</h2>
                     <div class="d-flex flex-wrap gap-2 align-items-center">
                         @if($canManageHistorico)
                             <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#limparHistoricoModal">
@@ -437,6 +437,12 @@
                                 <option value="">Todos os status</option>
                                 @foreach(\App\Models\NotificacaoEnviada::STATUSES as $key => $label)
                                     <option value="{{ $key }}" @selected(request('status') === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            <select name="origem" class="form-select form-select-sm" style="width:auto;">
+                                <option value="">Todos os módulos</option>
+                                @foreach(\App\Models\NotificacaoEnviada::ORIGENS as $key => $label)
+                                    <option value="{{ $key }}" @selected(request('origem') === $key)>{{ $label }}</option>
                                 @endforeach
                             </select>
                             <input type="date" name="data_inicio" class="form-control form-control-sm" style="width:auto;" value="{{ request('data_inicio') }}">
@@ -468,6 +474,14 @@
                                             @endforeach
                                         </select>
                                     </div>
+                                    <div class="col-12">
+                                        <select name="origem" class="form-select">
+                                            <option value="">Todos os módulos</option>
+                                            @foreach(\App\Models\NotificacaoEnviada::ORIGENS as $key => $label)
+                                                <option value="{{ $key }}" @selected(request('origem') === $key)>{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                     <div class="col-6">
                                         <input type="date" name="data_inicio" class="form-control" value="{{ request('data_inicio') }}" aria-label="Data inicial">
                                     </div>
@@ -490,6 +504,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Destinatário</th>
+                                <th style="width:120px;">Módulo</th>
                                 <th class="text-center" style="width:90px;">Mensagem</th>
                                 <th style="width:140px;">Status</th>
                                 <th style="width:140px;">Data</th>
@@ -510,11 +525,13 @@
                                 @endphp
                                 <tr>
                                     <td class="fw-semibold">{{ $destinatario }}</td>
+                                    <td><span class="badge bg-light text-dark border">{{ $n->origem_label }}</span></td>
                                     <td class="text-center">
                                         <button type="button"
                                                 class="np-msg-btn notificacao-msg-btn"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#mensagemModal"
+                                                data-origem="{{ e($n->origem_label) }}"
                                                 data-destinatario="{{ e($destinatario) }}"
                                                 data-status="{{ e($n->status_label) }}"
                                                 data-data="{{ $n->data_envio?->format('d/m/Y H:i') }}"
@@ -542,7 +559,7 @@
                                     <td class="small text-muted">{{ $n->data_envio?->format('d/m/Y H:i') }}</td>
                                 </tr>
                             @empty
-                                <tr><td colspan="4" class="text-center py-3">Nenhum registro.</td></tr>
+                                <tr><td colspan="5" class="text-center py-3">Nenhum registro.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -563,11 +580,13 @@
                         @endphp
                         <article class="np-history-card">
                             <div class="np-history-card__title mb-1">{{ $destinatario }}</div>
+                            <div class="small text-muted mb-1">{{ $n->origem_label }}</div>
                             <div class="d-flex align-items-center gap-2 mb-1">
                                 <button type="button"
                                         class="np-msg-btn notificacao-msg-btn"
                                         data-bs-toggle="modal"
                                         data-bs-target="#mensagemModal"
+                                        data-origem="{{ e($n->origem_label) }}"
                                         data-destinatario="{{ e($destinatario) }}"
                                         data-status="{{ e($n->status_label) }}"
                                         data-data="{{ $n->data_envio?->format('d/m/Y H:i') }}"
@@ -635,6 +654,7 @@
             <div class="modal-body">
                 <div class="mb-3 small text-muted">
                     <div><strong>Destinatário:</strong> <span id="msgModalDestinatario">—</span></div>
+                    <div><strong>Módulo:</strong> <span id="msgModalOrigem">—</span></div>
                     <div><strong>Status:</strong> <span id="msgModalStatus">—</span></div>
                     <div><strong>Enviada em:</strong> <span id="msgModalData">—</span></div>
                     <div id="msgModalRecebidoWrap" class="d-none"><strong>Recebido em:</strong> <span id="msgModalRecebido">—</span></div>
@@ -726,6 +746,8 @@
         const btn = event.relatedTarget;
         if (!btn) return;
         document.getElementById('msgModalDestinatario').textContent = decodeHtml(btn.getAttribute('data-destinatario')) || '—';
+        const origemEl = document.getElementById('msgModalOrigem');
+        if (origemEl) origemEl.textContent = decodeHtml(btn.getAttribute('data-origem')) || '—';
         document.getElementById('msgModalStatus').textContent = decodeHtml(btn.getAttribute('data-status')) || '—';
         document.getElementById('msgModalData').textContent = btn.getAttribute('data-data') || '—';
         document.getElementById('msgModalTexto').textContent = decodeHtml(btn.getAttribute('data-mensagem')) || '';
