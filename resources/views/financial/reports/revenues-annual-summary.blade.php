@@ -11,114 +11,20 @@
 @endsection
 
 @section('content')
-<!-- Header -->
-<div class="alert alert-info mb-4" style="background-color: #e3f2fd; color: #1976d2; border: none;">
-    <i class="bx bx-info-circle me-2"></i>
-    Visualize seus relatórios financeiros.
-</div>
+<div class="row fr-page">
+    @include('financial.reports.partials.sidebar')
 
-<div class="row">
-    <!-- Menu Lateral -->
-    <div class="col-lg-3 mb-4">
-        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div class="col-12 col-lg-9 fr-main">
+        @include('financial.reports.partials.year-filters', [
+            'action' => route('financial.reports.revenues.annual-summary'),
+        ])
+
+        <div class="card fr-card mb-4">
             <div class="card-body">
-                <h5 class="mb-3" style="border-bottom: 2px solid #007bff; padding-bottom: 10px;">Relatórios</h5>
-                
-                <!-- Fluxo de Caixa -->
-                <div class="mb-4">
-                    <h6 class="text-primary mb-2">Fluxo de caixa</h6>
-                    <div class="d-grid gap-1">
-                        <a href="{{ route('financial.reports.cash-flow.extract') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.cash-flow.extract') ? 'btn-primary' : 'btn-light' }}">
-                            Extrato
-                        </a>
-                        <a href="{{ route('financial.reports.cash-flow.revenues-expenses') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.cash-flow.revenues-expenses') ? 'btn-primary' : 'btn-light' }}">
-                            Receitas / Despesas
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Receitas -->
-                <div class="mb-4">
-                    <h6 class="text-success mb-2">Receitas</h6>
-                    <div class="d-grid gap-1">
-                        <a href="{{ route('financial.reports.revenues.daily-extract') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.revenues.daily-extract') ? 'btn-primary' : 'btn-light' }}">
-                            Extrato diário
-                        </a>
-                        <a href="{{ route('financial.reports.revenues-expenses.by-category') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.revenues-expenses.by-category') ? 'btn-primary' : 'btn-light' }}">
-                            Por categoria
-                        </a>
-                        <a href="{{ route('financial.reports.revenues.annual-summary') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.revenues.annual-summary') ? 'btn-primary' : 'btn-light' }}">
-                            Resumo anual por categoria
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Despesas -->
-                <div class="mb-4">
-                    <h6 class="text-danger mb-2">Despesas</h6>
-                    <div class="d-grid gap-1">
-                        <a href="{{ route('financial.reports.expenses.daily-extract') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.expenses.daily-extract') ? 'btn-primary' : 'btn-light' }}">
-                            Extrato diário
-                        </a>
-                        <a href="{{ route('financial.reports.revenues-expenses.by-category') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.revenues-expenses.by-category') ? 'btn-primary' : 'btn-light' }}">
-                            Por categoria
-                        </a>
-                        <a href="{{ route('financial.reports.expenses.annual-summary') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.expenses.annual-summary') ? 'btn-primary' : 'btn-light' }}">
-                            Resumo anual por categoria
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Conteúdo Principal -->
-    <div class="col-lg-9">
-        <!-- Filtros -->
-        <div class="card mb-4" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <div class="card-body">
-                <form method="GET" action="{{ route('financial.reports.revenues.annual-summary') }}" id="filterForm">
-                    <div class="row align-items-end">
-                        <div class="col-md-3 mb-2">
-                            <label class="form-label">Ano:</label>
-                            <select class="form-select form-select-sm" name="year" onchange="this.form.submit()">
-                                @foreach($years as $y)
-                                    <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Relatório -->
-        <div class="card mb-4" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <div class="card-body">
-                <!-- Cabeçalho do Relatório -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <img src="{{ asset('img/LOG SS preta.png') }}" alt="Logo" style="height: 50px;" onerror="this.style.display='none'">
-                        </div>
-                        <div>
-                            <h5 class="mb-0">ADEL SÃO SEBASTIÃO</h5>
-                            <h6 class="mb-0">Relatório: Receitas - Resumo anual por categoria</h6>
-                            <p class="text-muted mb-0">Ano: {{ $year }}</p>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
-                        <i class="bx bx-printer me-1"></i>Imprimir
-                    </button>
-                </div>
+                @include('financial.reports.partials.report-head', [
+                    'title' => 'Receitas — Resumo anual por categoria',
+                    'subtitle' => 'Ano: ' . $year,
+                ])
 
                 <!-- Gráfico Mensal -->
                 <div class="mb-4">

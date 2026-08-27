@@ -7,8 +7,10 @@ use App\Models\FinancialTransaction;
 use App\Models\FinancialCategory;
 use App\Models\FinancialAccount;
 use App\Models\FinancialCostCenter;
+use App\Services\Financial\CashFlowClosingPdfService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Symfony\Component\HttpFoundation\Response;
 
 class ReportController extends Controller
 {
@@ -236,6 +238,14 @@ class ReportController extends Controller
             'accounts',
             'costCenters'
         ));
+    }
+
+    /**
+     * PDF de fechamento de caixa: extrato pago do período, totais, assinaturas e comprovantes.
+     */
+    public function cashFlowExtractPdf(Request $request, CashFlowClosingPdfService $pdfService): Response
+    {
+        return $pdfService->download($request);
     }
 
     /**

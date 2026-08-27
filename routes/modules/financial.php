@@ -62,6 +62,7 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
 
     // Relatórios
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('reports/cash-flow/extract/pdf', [ReportController::class, 'cashFlowExtractPdf'])->name('reports.cash-flow.extract.pdf');
     Route::get('reports/cash-flow/extract', [ReportController::class, 'cashFlowExtract'])->name('reports.cash-flow.extract');
     Route::get('reports/cash-flow/revenues-expenses', [ReportController::class, 'cashFlowRevenuesExpenses'])->name('reports.cash-flow.revenues-expenses');
     Route::get('reports/revenues/daily-extract', [ReportController::class, 'revenuesDailyExtract'])->name('reports.revenues.daily-extract');

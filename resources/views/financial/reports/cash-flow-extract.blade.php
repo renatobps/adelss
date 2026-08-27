@@ -11,193 +11,22 @@
 @endsection
 
 @section('content')
-<!-- Header -->
-<div class="alert alert-info mb-4" style="background-color: #e3f2fd; color: #1976d2; border: none;">
-    <i class="bx bx-info-circle me-2"></i>
-    Visualize seus relatórios financeiros.
-</div>
+<div class="row fr-page">
+    @include('financial.reports.partials.sidebar')
 
-<div class="row">
-    <!-- Menu Lateral -->
-    <div class="col-lg-3 mb-4">
-        <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <div class="col-12 col-lg-9 fr-main">
+        @include('financial.reports.partials.full-filters', [
+            'action' => route('financial.reports.cash-flow.extract'),
+        ])
+
+        <div class="card fr-card mb-4">
             <div class="card-body">
-                <h5 class="mb-3" style="border-bottom: 2px solid #007bff; padding-bottom: 10px;">Relatórios</h5>
-                
-                <!-- Fluxo de Caixa -->
-                <div class="mb-4">
-                    <h6 class="text-primary mb-2">Fluxo de caixa</h6>
-                    <div class="d-grid gap-1">
-                        <a href="{{ route('financial.reports.cash-flow.extract') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.cash-flow.extract') ? 'btn-primary' : 'btn-light' }}">
-                            Extrato
-                        </a>
-                        <a href="{{ route('financial.reports.cash-flow.revenues-expenses') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.cash-flow.revenues-expenses') ? 'btn-primary' : 'btn-light' }}">
-                            Receitas / Despesas
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Receitas -->
-                <div class="mb-4">
-                    <h6 class="text-success mb-2">Receitas</h6>
-                    <div class="d-grid gap-1">
-                        <a href="{{ route('financial.reports.revenues.daily-extract') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.revenues.daily-extract') ? 'btn-primary' : 'btn-light' }}">
-                            Extrato diário
-                        </a>
-                        <a href="{{ route('financial.reports.revenues-expenses.by-category') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.revenues-expenses.by-category') ? 'btn-primary' : 'btn-light' }}">
-                            Por categoria
-                        </a>
-                        <a href="{{ route('financial.reports.revenues.annual-summary') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.revenues.annual-summary') ? 'btn-primary' : 'btn-light' }}">
-                            Resumo anual por categoria
-                        </a>
-                    </div>
-                </div>
-
-                <!-- Despesas -->
-                <div class="mb-4">
-                    <h6 class="text-danger mb-2">Despesas</h6>
-                    <div class="d-grid gap-1">
-                        <a href="{{ route('financial.reports.expenses.daily-extract') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.expenses.daily-extract') ? 'btn-primary' : 'btn-light' }}">
-                            Extrato diário
-                        </a>
-                        <a href="{{ route('financial.reports.revenues-expenses.by-category') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.revenues-expenses.by-category') ? 'btn-primary' : 'btn-light' }}">
-                            Por categoria
-                        </a>
-                        <a href="{{ route('financial.reports.expenses.annual-summary') }}" 
-                           class="btn btn-sm text-start {{ request()->routeIs('financial.reports.expenses.annual-summary') ? 'btn-primary' : 'btn-light' }}">
-                            Resumo anual por categoria
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Conteúdo Principal -->
-    <div class="col-lg-9">
-        <!-- Filtros -->
-        <div class="card mb-4" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <div class="card-body">
-                <form method="GET" action="{{ route('financial.reports.cash-flow.extract') }}" id="filterForm">
-                    <div class="row align-items-end">
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label small">Período:</label>
-                            <div class="input-group input-group-sm">
-                                <input type="date" class="form-control" name="start_date" value="{{ $startDate ?? now()->startOfMonth()->format('Y-m-d') }}">
-                                <span class="input-group-text">-</span>
-                                <input type="date" class="form-control" name="end_date" value="{{ $endDate ?? now()->endOfMonth()->format('Y-m-d') }}">
-                            </div>
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label small">Tipo:</label>
-                            <select class="form-select form-select-sm" name="type[]" multiple size="3">
-                                @php
-                                    $selectedTypes = is_array(request('type')) ? request('type') : (request('type') ? [request('type')] : []);
-                                @endphp
-                                <option value="receita" {{ in_array('receita', $selectedTypes) ? 'selected' : '' }}>Receita</option>
-                                <option value="despesa" {{ in_array('despesa', $selectedTypes) ? 'selected' : '' }}>Despesa</option>
-                            </select>
-                            <small class="text-muted">Ctrl+Click para múltiplos</small>
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label small">Status:</label>
-                            <select class="form-select form-select-sm" name="status[]" multiple size="4">
-                                @php
-                                    $selectedStatus = is_array(request('status')) ? request('status') : (request('status') ? [request('status')] : []);
-                                @endphp
-                                <option value="recebido" {{ in_array('recebido', $selectedStatus) ? 'selected' : '' }}>Recebido</option>
-                                <option value="pago" {{ in_array('pago', $selectedStatus) ? 'selected' : '' }}>Pago</option>
-                                <option value="a_receber" {{ in_array('a_receber', $selectedStatus) ? 'selected' : '' }}>A receber</option>
-                                <option value="a_pagar" {{ in_array('a_pagar', $selectedStatus) ? 'selected' : '' }}>A pagar</option>
-                            </select>
-                            <small class="text-muted">Ctrl+Click para múltiplos</small>
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label small">Contas:</label>
-                            <select class="form-select form-select-sm" name="account_id">
-                                <option value="">Todas</option>
-                                @foreach($accounts as $account)
-                                    <option value="{{ $account->id }}" {{ request('account_id') == $account->id ? 'selected' : '' }}>
-                                        {{ $account->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label small">Centros de custos:</label>
-                            <select class="form-select form-select-sm" name="cost_center_id">
-                                <option value="">Todos</option>
-                                @foreach($costCenters as $costCenter)
-                                    <option value="{{ $costCenter->id }}" {{ request('cost_center_id') == $costCenter->id ? 'selected' : '' }}>
-                                        {{ $costCenter->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label small">Categorias receitas:</label>
-                            <select class="form-select form-select-sm" name="category_receitas_id">
-                                <option value="">Todas</option>
-                                @foreach($categoriesReceitas as $category)
-                                    <option value="{{ $category->id }}" {{ request('category_receitas_id') == $category->id ? 'selected' : '' }}>
-                                        {{ $category->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col-md-2 mb-2">
-                            <label class="form-label small">Categorias despesas:</label>
-                            <select class="form-select form-select-sm" name="category_despesas_id">
-                                <option value="">Todas</option>
-                                @foreach($categoriesDespesas as $category)
-                                    <option value="{{ $category->id }}" {{ request('category_despesas_id') == $category->id ? 'selected' : '' }}>
-                                        {{ $category->name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-10 text-end">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="bx bx-filter me-1"></i>Aplicar Filtros
-                            </button>
-                            @if(request()->hasAny(['type', 'status', 'category_receitas_id', 'category_despesas_id', 'account_id', 'cost_center_id', 'start_date', 'end_date']))
-                                <a href="{{ route('financial.reports.cash-flow.extract') }}" class="btn btn-default btn-sm">
-                                    <i class="bx bx-x me-1"></i>Limpar
-                                </a>
-                            @endif
-                        </div>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Relatório -->
-        <div class="card mb-4" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <div class="card-body">
-                <!-- Cabeçalho do Relatório -->
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <img src="{{ asset('img/logo.png') }}" alt="Logo" style="height: 50px;" onerror="this.style.display='none'">
-                        </div>
-                        <div>
-                            <h5 class="mb-0">Relatório: Fluxo de caixa - Extrato</h5>
-                            <p class="text-muted mb-0">Período: {{ \Carbon\Carbon::parse($startDate)->format('d/m/Y') }} à {{ \Carbon\Carbon::parse($endDate)->format('d/m/Y') }}</p>
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-primary btn-sm" onclick="window.print()">
-                        <i class="bx bx-printer me-1"></i>Imprimir
-                    </button>
-                </div>
+                @include('financial.reports.partials.report-head', [
+                    'title' => 'Fluxo de caixa — Extrato',
+                    'subtitle' => \Carbon\Carbon::parse($startDate)->format('d/m/Y') . ' a ' . \Carbon\Carbon::parse($endDate)->format('d/m/Y'),
+                    'pdfUrl' => route('financial.reports.cash-flow.extract.pdf', request()->except(['page', 'per_page', 'search', 'sort_by', 'sort_order'])),
+                    'pdfLabel' => 'Gerar PDF do fechamento',
+                ])
 
                 <!-- Gráfico -->
                 <div class="mb-4">
@@ -215,31 +44,20 @@
 
                 <!-- Tabela de Transações -->
                 <div class="mb-4">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <div>
-                            <strong>Transações: {{ $transactions->total() }}</strong>
-                        </div>
-                        <div class="d-flex gap-2 align-items-center">
-                            <select class="form-select form-select-sm" style="width: auto;" onchange="this.form.submit()" form="filterForm" name="per_page">
-                                <option value="50" {{ request('per_page', 100) == 50 ? 'selected' : '' }}>50 resultados por página</option>
-                                <option value="100" {{ request('per_page', 100) == 100 ? 'selected' : '' }}>100 resultados por página</option>
-                                <option value="200" {{ request('per_page', 100) == 200 ? 'selected' : '' }}>200 resultados por página</option>
-                            </select>
-                            <input type="text" class="form-control form-control-sm" placeholder="Pesquisar" name="search" form="filterForm" value="{{ request('search') }}" style="width: 200px;">
-                            <button type="submit" form="filterForm" class="btn btn-sm btn-outline-primary">
-                                <i class="bx bx-search"></i>
-                            </button>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                    Colunas <i class="bx bx-chevron-down"></i>
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="#">Todas</a></li>
-                                    <li><a class="dropdown-item" href="#">Personalizar</a></li>
-                                </ul>
-                            </div>
-                        </div>
+                <div class="fr-table-toolbar">
+                    <strong>Transações: {{ $transactions->total() }}</strong>
+                    <div class="fr-table-toolbar__actions">
+                        <select class="form-select" style="width: auto;" onchange="this.form.submit()" form="filterForm" name="per_page">
+                            <option value="50" @selected(request('per_page', 100) == 50)>50 por página</option>
+                            <option value="100" @selected(request('per_page', 100) == 100)>100 por página</option>
+                            <option value="200" @selected(request('per_page', 100) == 200)>200 por página</option>
+                        </select>
+                        <input type="search" class="form-control" placeholder="Pesquisar" name="search" form="filterForm" value="{{ request('search') }}" style="width: 200px;">
+                        <button type="submit" form="filterForm" class="btn btn-outline-primary" aria-label="Pesquisar">
+                            <i class="bx bx-search"></i>
+                        </button>
                     </div>
+                </div>
 
                     @if($transactions->count() > 0)
                         <div class="table-responsive">
@@ -312,7 +130,7 @@
                 </div>
 
                 <!-- Resumo -->
-                <div class="card" style="background-color: #f8f9fa; border: 2px solid #007bff; border-top: 4px solid #007bff;">
+                <div class="card fr-summary" style="background-color: #f8f9fa; border: 1px solid #cfe8f6; border-top: 4px solid #0088CC;">
                     <div class="card-header bg-primary text-white">
                         <h6 class="card-title mb-0">Resumo</h6>
                     </div>
