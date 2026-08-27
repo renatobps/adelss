@@ -64,6 +64,9 @@
                                                 <a href="{{ route('agenda.eventos.registrations', $event) }}" class="btn btn-sm btn-outline-primary">
                                                     <i class="bx bx-user-check"></i> Inscrições
                                                 </a>
+                                                <a href="{{ route('agenda.eventos.registrations', $event) }}?whatsapp=1" class="btn btn-sm btn-outline-success">
+                                                    <i class="bx bxl-whatsapp"></i> WhatsApp
+                                                </a>
                                                 @if($event->public_slug)
                                                     <a href="{{ route('events.public.show', $event->public_slug) }}" target="_blank" class="btn btn-sm btn-outline-primary">
                                                         <i class="bx bx-link-external"></i> Página do evento

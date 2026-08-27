@@ -126,3 +126,72 @@
         </div>
     </div>
 @endif
+
+@if($canEditRegistrations)
+    {{-- WhatsApp livre (texto + mídia) para inscritos selecionados --}}
+    <div class="modal fade" id="erWhatsappModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+            <form method="post" action="{{ route('agenda.eventos.registrations.whatsapp', $event) }}"
+                  enctype="multipart/form-data" id="erWhatsappForm" class="modal-content">
+                @csrf
+                <div id="erWhatsappIds"></div>
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bx bxl-whatsapp text-success me-1"></i> WhatsApp aos inscritos</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="erWhatsappMensagem">Mensagem / legenda</label>
+                        <textarea name="mensagem" id="erWhatsappMensagem" class="form-control" rows="4" maxlength="4096"
+                                  placeholder="Olá {nome}!&#10;&#10;Passando para lembrar...">{{ old('mensagem') }}</textarea>
+                        <small class="text-muted">Use <code>{nome}</code> para o primeiro nome. Texto ou arquivo — pelo menos um dos dois.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Arquivo de mídia</label>
+                        <div class="er-dropzone" id="erDropzone">
+                            <input type="file" name="arquivo" id="erWhatsappArquivo" class="d-none"
+                                   accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt">
+                            <div class="er-dropzone__idle">
+                                <i class="bx bx-cloud-upload fs-2 text-primary"></i>
+                                <div class="fw-semibold">Arraste um arquivo ou clique para enviar</div>
+                                <div class="small text-muted">Opcional · máx. 20 MB · imagem, vídeo, áudio ou documento</div>
+                            </div>
+                            <div class="er-dropzone__preview">
+                                <div class="er-dropzone__thumb" id="erFileThumb"><i class="bx bx-file"></i></div>
+                                <div class="flex-grow-1 min-w-0">
+                                    <div class="fw-semibold text-truncate" id="erFileName">—</div>
+                                    <div class="small text-muted" id="erFileMeta">—</div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="erFileClear" title="Remover">
+                                    <i class="bx bx-x"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <label class="form-label mb-0">Destinatários <span class="text-muted fw-normal" id="erWhatsappCount">(0)</span></label>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="erWhatsappSelectAll">Selecionar todos</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="erWhatsappClear">Limpar</button>
+                        </div>
+                    </div>
+                    <input type="search" class="form-control form-control-sm mb-2" id="erWhatsappSearch"
+                           placeholder="Filtrar por nome ou telefone...">
+                    <div class="er-whats-list" id="erWhatsappList"></div>
+                    <p class="small text-muted mb-0 mt-2">
+                        Envios espaçados (8–20 s) para proteger o número. Limite de {{ $whatsappBatchLimit }} por vez.
+                        Inscritos sem telefone não aparecem na lista.
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success btn-sm" id="erWhatsappSubmit">
+                        <i class="bx bxl-whatsapp"></i> Enviar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+@endif

@@ -12,6 +12,14 @@
 @endsection
 
 @section('content')
+<div class="d-flex flex-wrap gap-2 mb-3">
+    <a href="{{ route('agenda.eventos.registrations', $event) }}" class="btn btn-outline-primary btn-sm">
+        <i class="bx bx-user-check"></i> Inscrições
+    </a>
+    <a href="{{ route('agenda.eventos.registrations', $event) }}?whatsapp=1" class="btn btn-success btn-sm">
+        <i class="bx bxl-whatsapp"></i> WhatsApp aos inscritos
+    </a>
+</div>
 @if ($errors->any())
     <div class="alert alert-danger" role="alert">
         <strong>Corrija os seguintes pontos:</strong>

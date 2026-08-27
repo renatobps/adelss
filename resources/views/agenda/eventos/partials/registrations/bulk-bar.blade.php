@@ -9,6 +9,9 @@
     <button type="button" class="btn btn-light" data-er-bulk="confirmar">
         <i class="bx bx-check"></i> Confirmar
     </button>
+    <button type="button" class="btn btn-light" data-er-bulk="whatsapp">
+        <i class="bx bxl-whatsapp"></i> WhatsApp
+    </button>
     <button type="button" class="btn btn-light" data-er-bulk="comprovante">
         <i class="bx bxl-whatsapp"></i> Enviar comprovante
     </button>

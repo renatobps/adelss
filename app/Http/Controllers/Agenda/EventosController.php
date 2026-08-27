@@ -47,7 +47,7 @@ class EventosController extends Controller
         $categories = EventCategory::query()
             ->orderBy('name')
             ->get()
-            ->filter(fn (EventCategory $category) => !preg_match('/culto|pgi/i', $category->name));
+            ->filter(fn (EventCategory $category) => ! preg_match('/culto|pgi/i', $category->name));
 
         return view('agenda.eventos.create', compact('categories'));
     }
@@ -100,12 +100,19 @@ class EventosController extends Controller
         $categories = EventCategory::query()
             ->orderBy('name')
             ->get()
-            ->filter(fn (EventCategory $category) => !preg_match('/culto|pgi/i', $category->name));
+            ->filter(fn (EventCategory $category) => ! preg_match('/culto|pgi/i', $category->name));
 
         return view('agenda.eventos.edit', [
             'event' => $event,
             'categories' => $categories,
         ]);
+    }
+
+    public function show(Event $event)
+    {
+        $this->authorize('view', $event);
+
+        return redirect()->route('agenda.eventos.registrations', $event);
     }
 
     public function update(Request $request, Event $event)
@@ -263,6 +270,22 @@ class EventosController extends Controller
         $canEditRegistrations = $user && $user->can('manageRegistrations', $event);
         $canDeleteRegistrations = $user && $user->can('deleteRegistrations', $event);
 
+        $whatsappContacts = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->whereNotNull('phone')
+            ->where('phone', '!=', '')
+            ->orderBy('name')
+            ->get(['id', 'name', 'phone', 'registration_number', 'status'])
+            ->map(fn (EventRegistration $r) => [
+                'id' => $r->id,
+                'nome' => $r->name,
+                'telefone' => $r->phone,
+                'numero' => $r->registration_number ?: '—',
+                'status' => $r->status,
+                'cancelado' => $r->status === EventRegistration::STATUS_CANCELADO,
+            ])
+            ->values();
+
         return view('agenda.eventos.registrations', [
             'event' => $event,
             'registrations' => $registrations,
@@ -274,6 +297,8 @@ class EventosController extends Controller
             'duplicateGroupCount' => $duplicateGroups->count(),
             'canEditRegistrations' => $canEditRegistrations,
             'canDeleteRegistrations' => $canDeleteRegistrations,
+            'whatsappContacts' => $whatsappContacts,
+            'whatsappBatchLimit' => EventRegistrationBatchSender::BATCH_LIMIT,
         ]);
     }
 
@@ -397,6 +422,68 @@ class EventosController extends Controller
         };
     }
 
+    public function sendRegistrationsWhatsapp(Request $request, Event $event, EventRegistrationBatchSender $batchSender)
+    {
+        $this->authorize('manageRegistrations', $event);
+
+        $validated = $request->validate([
+            'mensagem' => ['nullable', 'string', 'max:4096', 'required_without:arquivo'],
+            'arquivo' => ['nullable', 'file', 'max:20480', 'required_without:mensagem'],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ], [
+            'mensagem.required_without' => 'Informe uma mensagem ou anexe um arquivo.',
+            'arquivo.required_without' => 'Informe uma mensagem ou anexe um arquivo.',
+            'arquivo.max' => 'O arquivo não pode ter mais de 20 MB.',
+            'ids.required' => 'Selecione pelo menos um inscrito.',
+        ]);
+
+        $registrations = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->whereIn('id', $validated['ids'])
+            ->orderBy('name')
+            ->get();
+
+        if ($registrations->isEmpty()) {
+            return back()->with('error', 'Nenhuma inscrição válida na seleção.');
+        }
+
+        $resultado = $batchSender->sendCustomMessages(
+            $registrations,
+            (string) ($validated['mensagem'] ?? ''),
+            $request->file('arquivo')
+        );
+
+        AuditLogger::log('agenda', 'inscricoes.whatsapp', "WhatsApp enviado a inscritos de {$event->title}.", [
+            'event_id' => $event->id,
+            'sent' => $resultado['sent'],
+            'failed' => $resultado['failed'],
+            'skipped' => $resultado['skipped'],
+            'aborted' => $resultado['aborted'],
+            'ids' => $registrations->pluck('id')->all(),
+            'com_midia' => $request->hasFile('arquivo'),
+        ]);
+
+        $mensagem = "{$resultado['sent']} mensagem(ns) enviada(s).";
+        if ($resultado['skipped'] > 0) {
+            $mensagem .= " {$resultado['skipped']} ignorado(s) (sem telefone ou fora do lote).";
+        }
+        if ($resultado['failed'] > 0) {
+            $mensagem .= " {$resultado['failed']} falha(s).";
+        }
+        if ($resultado['aborted']) {
+            $mensagem .= ' '.$resultado['aborted'];
+        }
+
+        $flash = $resultado['failed'] > 0 || $resultado['aborted']
+            ? ($resultado['sent'] > 0 ? 'warning' : 'error')
+            : 'success';
+
+        return back()
+            ->with($flash, $mensagem)
+            ->with('envio_erros', array_values(array_slice($resultado['errors'], 0, 10)));
+    }
+
     public function exportRegistrations(Request $request, Event $event)
     {
         $this->authorize('manageRegistrations', $event);
@@ -430,7 +517,7 @@ class EventosController extends Controller
             'busca' => $filters['q'],
         ])->setPaper('a4', 'landscape');
 
-        return $pdf->download('inscricoes-' . (Str::slug($event->title) ?: 'evento') . '.pdf');
+        return $pdf->download('inscricoes-'.(Str::slug($event->title) ?: 'evento').'.pdf');
     }
 
     /**
@@ -561,7 +648,7 @@ class EventosController extends Controller
             $mensagem .= " {$resultado['failed']} falha(s).";
         }
         if ($resultado['aborted']) {
-            $mensagem .= ' ' . $resultado['aborted'];
+            $mensagem .= ' '.$resultado['aborted'];
         }
 
         return back()->with($resultado['failed'] > 0 || $resultado['aborted'] ? 'warning' : 'success', $mensagem);
@@ -580,6 +667,7 @@ class EventosController extends Controller
         foreach ($registrations as $registration) {
             if ($registration->hasConfirmedPayment()) {
                 $bloqueadas[] = $registration->name;
+
                 continue;
             }
             $registration->deleted_by = $request->user()?->id;
@@ -598,7 +686,7 @@ class EventosController extends Controller
 
         $mensagem = "{$excluidas} inscrição(ões) excluída(s).";
         if ($bloqueadas !== []) {
-            $mensagem .= ' Com pagamento confirmado (cancele em vez de excluir): ' . implode(', ', $bloqueadas) . '.';
+            $mensagem .= ' Com pagamento confirmado (cancele em vez de excluir): '.implode(', ', $bloqueadas).'.';
         }
 
         return back()->with($bloqueadas !== [] ? 'warning' : 'success', $mensagem);
@@ -609,11 +697,11 @@ class EventosController extends Controller
      */
     private function streamRegistrationsCsv(Event $event, $registrations)
     {
-        $filename = 'inscricoes-' . (Str::slug($event->title) ?: 'evento') . '-' . now()->format('Y-m-d') . '.csv';
+        $filename = 'inscricoes-'.(Str::slug($event->title) ?: 'evento').'-'.now()->format('Y-m-d').'.csv';
 
         return response()->streamDownload(function () use ($event, $registrations) {
             $out = fopen('php://output', 'w');
-            fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
 
             $header = ['Inscrição', 'Nome', 'Status', 'E-mail', 'Telefone', 'Presença', 'Comprovante', 'Data da inscrição'];
             if ($event->is_paid) {
@@ -628,8 +716,8 @@ class EventosController extends Controller
                     $r->status_label,
                     $r->email ?: '',
                     $r->phone ?: '',
-                    $r->checked_in_at ? 'Presente ' . $r->checked_in_at->format('d/m/Y H:i') : 'Ausente',
-                    $r->receipt_sent_at ? 'Enviado ' . $r->receipt_sent_at->format('d/m/Y H:i') : 'Não enviado',
+                    $r->checked_in_at ? 'Presente '.$r->checked_in_at->format('d/m/Y H:i') : 'Ausente',
+                    $r->receipt_sent_at ? 'Enviado '.$r->receipt_sent_at->format('d/m/Y H:i') : 'Não enviado',
                     $r->created_at?->format('d/m/Y H:i'),
                 ];
                 if ($event->is_paid) {
@@ -700,14 +788,14 @@ class EventosController extends Controller
         $resultado = $receiptService->enviarComprovante($registration);
 
         if ($resultado['success'] ?? false) {
-            return back()->with('success', 'Comprovante enviado por WhatsApp para ' . $registration->name . '.');
+            return back()->with('success', 'Comprovante enviado por WhatsApp para '.$registration->name.'.');
         }
 
         if ($resultado['skipped'] ?? false) {
             return back()->with('error', 'Comprovante não enviado — inscrito sem telefone cadastrado.');
         }
 
-        return back()->with('error', 'Falha ao enviar o comprovante: ' . ($resultado['error'] ?? 'erro desconhecido'));
+        return back()->with('error', 'Falha ao enviar o comprovante: '.($resultado['error'] ?? 'erro desconhecido'));
     }
 
     public function registrationReceiptPdf(Event $event, EventRegistration $registration, EventRegistrationReceiptService $receiptService)
@@ -721,7 +809,7 @@ class EventosController extends Controller
         $pdf = Pdf::loadView('agenda.eventos.pdf.comprovante', $receiptService->pdfViewData($registration))
             ->setPaper('a4');
 
-        $fileName = 'comprovante-' . Str::slug((string) ($registration->registration_number ?: 'inscricao-' . $registration->id)) . '.pdf';
+        $fileName = 'comprovante-'.Str::slug((string) ($registration->registration_number ?: 'inscricao-'.$registration->id)).'.pdf';
 
         return $pdf->download($fileName);
     }
@@ -740,7 +828,7 @@ class EventosController extends Controller
         if ($request->query('format') === 'svg') {
             return response(QrCode::svg($url), 200, [
                 'Content-Type' => 'image/svg+xml',
-                'Content-Disposition' => 'attachment; filename="qrcode-' . $slug . '.svg"',
+                'Content-Disposition' => 'attachment; filename="qrcode-'.$slug.'.svg"',
             ]);
         }
 
@@ -748,7 +836,7 @@ class EventosController extends Controller
 
         return response(QrCode::png($url, 10), 200, [
             'Content-Type' => 'image/png',
-            'Content-Disposition' => $disposition . '; filename="qrcode-' . $slug . '.png"',
+            'Content-Disposition' => $disposition.'; filename="qrcode-'.$slug.'.png"',
         ]);
     }
 
@@ -770,7 +858,7 @@ class EventosController extends Controller
             'publicUrl' => $url,
         ])->setPaper('a4');
 
-        return $pdf->download('cartaz-' . (Str::slug($event->title) ?: 'evento') . '.pdf');
+        return $pdf->download('cartaz-'.(Str::slug($event->title) ?: 'evento').'.pdf');
     }
 
     /**
@@ -817,7 +905,7 @@ class EventosController extends Controller
             ->with('payment')
             ->first();
 
-        if (!$registration) {
+        if (! $registration) {
             return $respond('not_found', 'Inscrição não encontrada.');
         }
 
@@ -826,11 +914,11 @@ class EventosController extends Controller
         }
 
         if ($registration->checked_in_at) {
-            return $respond('already', 'Já utilizado às ' . $registration->checked_in_at->format('H:i') . '.', $registration);
+            return $respond('already', 'Já utilizado às '.$registration->checked_in_at->format('H:i').'.', $registration);
         }
 
-        $paymentPending = $event->is_paid && !$registration->isPaymentApproved();
-        if ($paymentPending && !$request->boolean('force')) {
+        $paymentPending = $event->is_paid && ! $registration->isPaymentApproved();
+        if ($paymentPending && ! $request->boolean('force')) {
             return $respond('pending', 'Pagamento pendente.', $registration);
         }
 
@@ -871,7 +959,7 @@ class EventosController extends Controller
         $registration->load('payment');
         $payment = $registration->payment;
 
-        if (!$payment) {
+        if (! $payment) {
             return back()->with('error', 'Não há pagamento vinculado a esta inscrição.');
         }
 
@@ -893,12 +981,12 @@ class EventosController extends Controller
             return back()->with('error', 'Imagem do QR Code PIX não disponível para esta inscrição.');
         }
 
-        if (!$whatsAppService->isConfigurado()) {
+        if (! $whatsAppService->isConfigurado()) {
             return back()->with('error', 'WhatsApp não configurado. Verifique em Notificações > Configuração WPP.');
         }
 
         $captionImagem = "QR Code PIX - {$event->title}\n"
-            ."Valor: R$ ".number_format((float) ($payment->amount ?? 0), 2, ',', '.');
+            .'Valor: R$ '.number_format((float) ($payment->amount ?? 0), 2, ',', '.');
 
         $resultadoImagem = $whatsAppService->enviarImagemBase64(
             (string) $registration->phone,
@@ -906,7 +994,7 @@ class EventosController extends Controller
             $captionImagem
         );
 
-        if (!($resultadoImagem['success'] ?? false)) {
+        if (! ($resultadoImagem['success'] ?? false)) {
             $erroImagem = (string) ($resultadoImagem['error'] ?? 'Falha ao enviar imagem do QR Code no WhatsApp.');
 
             return back()->with('error', 'Não foi possível enviar o QR Code PIX pelo WhatsApp. '.$erroImagem);
@@ -914,12 +1002,12 @@ class EventosController extends Controller
 
         $mensagem = "Olá, {$registration->name}!\n"
             ."Segue o PIX da inscrição do evento \"{$event->title}\".\n"
-            ."Valor: R$ ".number_format((float) ($payment->amount ?? 0), 2, ',', '.')."\n\n"
+            .'Valor: R$ '.number_format((float) ($payment->amount ?? 0), 2, ',', '.')."\n\n"
             ."Copia e cola PIX:\n{$qrCodeText}";
 
         $resultado = $whatsAppService->enviarMensagem((string) $registration->phone, $mensagem);
 
-        if (!($resultado['success'] ?? false)) {
+        if (! ($resultado['success'] ?? false)) {
             $erro = (string) ($resultado['error'] ?? 'Falha ao enviar mensagem no WhatsApp.');
 
             return back()->with('error', 'Não foi possível enviar o PIX pelo WhatsApp. '.$erro);
@@ -1041,7 +1129,7 @@ class EventosController extends Controller
         }
 
         $end = null;
-        if (!empty($v['end_date'])) {
+        if (! empty($v['end_date'])) {
             if ($allDay) {
                 $end = Carbon::parse($v['end_date'].' 23:59:59');
             } else {
@@ -1155,7 +1243,7 @@ class EventosController extends Controller
             $file = $request->file("schedules.$i.responsible_photo");
             if ($file && $file->isValid()) {
                 $photoPath = $file->store('events/schedules', 'public');
-            } elseif (!empty($row['existing_responsible_photo'])) {
+            } elseif (! empty($row['existing_responsible_photo'])) {
                 $photoPath = $row['existing_responsible_photo'];
             }
             if ($photoPath) {
@@ -1177,7 +1265,7 @@ class EventosController extends Controller
 
         if ($isUpdate && $oldPhotoPaths) {
             foreach ($oldPhotoPaths as $path) {
-                if ($path && !in_array($path, $newPhotoPaths, true)) {
+                if ($path && ! in_array($path, $newPhotoPaths, true)) {
                     Storage::disk('public')->delete($path);
                 }
             }
@@ -1194,14 +1282,14 @@ class EventosController extends Controller
             }
             $type = $row['field_type'] ?? 'text';
             $options = null;
-            if (in_array($type, ['radio', 'select'], true) && !empty($row['options'])) {
+            if (in_array($type, ['radio', 'select'], true) && ! empty($row['options'])) {
                 $options = array_values(array_filter(array_map('trim', explode(',', $row['options']))));
             }
             EventRegistrationField::create([
                 'event_id' => $event->id,
                 'name' => $name,
                 'field_type' => $type,
-                'required' => !empty($row['required']),
+                'required' => ! empty($row['required']),
                 'options' => $options,
                 'sort_order' => $order++,
             ]);
@@ -1229,7 +1317,7 @@ class EventosController extends Controller
             $file = $request->file("speakers.$i.photo");
             if ($file && $file->isValid()) {
                 $photoPath = $file->store('events/speakers', 'public');
-            } elseif (!empty($row['existing_photo'])) {
+            } elseif (! empty($row['existing_photo'])) {
                 $photoPath = $row['existing_photo'];
             }
             if ($photoPath) {
@@ -1246,7 +1334,7 @@ class EventosController extends Controller
 
         if ($isUpdate && $oldPhotoPaths) {
             foreach ($oldPhotoPaths as $path) {
-                if ($path && !in_array($path, $newPhotoPaths, true)) {
+                if ($path && ! in_array($path, $newPhotoPaths, true)) {
                     Storage::disk('public')->delete($path);
                 }
             }

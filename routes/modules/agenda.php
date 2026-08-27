@@ -1,11 +1,10 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Agenda\EventosController;
 use App\Http\Controllers\Agenda\CalendarioController;
-use App\Http\Controllers\Agenda\EventController;
 use App\Http\Controllers\Agenda\EventCategoryController;
-
+use App\Http\Controllers\Agenda\EventController;
+use App\Http\Controllers\Agenda\EventosController;
+use Illuminate\Support\Facades\Route;
 
 // Rotas do módulo de Agenda (admin total, outros só ver)
 Route::prefix('agenda')->name('agenda.')->middleware('module.access:agenda')->group(function () {
@@ -24,7 +23,7 @@ Route::prefix('agenda')->name('agenda.')->middleware('module.access:agenda')->gr
     Route::delete('categories/{category}', [EventCategoryController::class, 'destroy'])->name('categories.destroy');
 
     // Eventos (CRUD + landing pública)
-    Route::resource('eventos', EventosController::class)->parameters(['eventos' => 'event'])->except(['show']);
+    Route::resource('eventos', EventosController::class)->parameters(['eventos' => 'event']);
     Route::post('eventos/{event}/duplicate', [EventosController::class, 'duplicate'])->name('eventos.duplicate');
     Route::get('eventos/{event}/qrcode', [EventosController::class, 'qrcode'])->name('eventos.qrcode');
     Route::get('eventos/{event}/cartaz', [EventosController::class, 'cartaz'])->name('eventos.cartaz');
@@ -34,6 +33,7 @@ Route::prefix('agenda')->name('agenda.')->middleware('module.access:agenda')->gr
     Route::get('eventos/{event}/inscricoes/exportar', [EventosController::class, 'exportRegistrations'])->name('eventos.registrations.export');
     Route::get('eventos/{event}/inscricoes/exportar-pdf', [EventosController::class, 'exportRegistrationsPdf'])->name('eventos.registrations.export-pdf');
     Route::post('eventos/{event}/inscricoes/lote', [EventosController::class, 'bulkRegistrations'])->name('eventos.registrations.bulk');
+    Route::post('eventos/{event}/inscricoes/whatsapp', [EventosController::class, 'sendRegistrationsWhatsapp'])->name('eventos.registrations.whatsapp');
     Route::patch('eventos/{event}/inscricoes/{registration}', [EventosController::class, 'updateRegistrationStatus'])->whereNumber('registration')->name('eventos.registrations.status');
     Route::patch('eventos/{event}/inscricoes/{registration}/dados', [EventosController::class, 'updateRegistrationData'])->whereNumber('registration')->name('eventos.registrations.update');
     Route::delete('eventos/{event}/inscricoes/{registration}', [EventosController::class, 'destroyRegistration'])->whereNumber('registration')->name('eventos.registrations.destroy');
@@ -42,4 +42,4 @@ Route::prefix('agenda')->name('agenda.')->middleware('module.access:agenda')->gr
     Route::post('eventos/{event}/inscricoes/{registration}/reenviar-comprovante', [EventosController::class, 'resendRegistrationReceipt'])->whereNumber('registration')->name('eventos.registrations.resend-receipt');
     Route::get('eventos/{event}/inscricoes/{registration}/comprovante', [EventosController::class, 'registrationReceiptPdf'])->whereNumber('registration')->name('eventos.registrations.receipt-pdf');
     Route::post('eventos/editor-upload', [EventosController::class, 'uploadEditorImage'])->name('eventos.editor-upload');
-    });
+});

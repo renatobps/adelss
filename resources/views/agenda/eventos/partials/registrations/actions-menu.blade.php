@@ -34,6 +34,13 @@
 
             @if($canEditRegistrations)
                 <li>
+                    <button type="button" class="dropdown-item js-er-action" data-er-action="whatsapp"
+                            @disabled(empty($r->phone))
+                            title="{{ empty($r->phone) ? 'Inscrito sem telefone cadastrado' : '' }}">
+                        <i class="bx bxl-whatsapp me-2"></i> Enviar WhatsApp
+                    </button>
+                </li>
+                <li>
                     <form method="post" action="{{ route('agenda.eventos.registrations.resend-receipt', [$event, $r]) }}">
                         @csrf
                         <button type="submit" class="dropdown-item" @disabled(empty($r->phone))

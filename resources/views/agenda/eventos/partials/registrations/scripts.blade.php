@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', function () {
     var listing = document.getElementById('erListing');
     if (!listing) return;
 
+    var openWhatsappModal = null;
+
     var esc = function (value) {
         var div = document.createElement('div');
         div.textContent = value === null || value === undefined || value === '' ? '—' : value;
@@ -139,6 +141,9 @@ document.addEventListener('DOMContentLoaded', function () {
             case 'editar': openEdit(data); break;
             case 'status': openStatus(data, trigger.getAttribute('data-er-status')); break;
             case 'excluir': openDelete(data); break;
+            case 'whatsapp':
+                if (openWhatsappModal) openWhatsappModal([data.id]);
+                break;
         }
     });
 
@@ -231,6 +236,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
+                if (acao === 'whatsapp') {
+                    if (openWhatsappModal) openWhatsappModal(selectedIds().map(Number));
+                    return;
+                }
+
                 submitBulk(acao);
                 return;
             }
@@ -276,8 +286,209 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.execCommand('copy');
             }
             button.textContent = 'Código copiado!';
-            setTimeout(function () { button.textContent = 'Copiar código PIX'; }, 1500);
+            setTimeout(function () {             button.textContent = 'Copiar código PIX'; }, 1500);
         });
     });
+
+    // ---- WhatsApp livre ------------------------------------------------
+    var WHATSAPP_CONTACTS = @json($whatsappContacts ?? []);
+    var WHATSAPP_OLD_IDS = @json(array_values(array_map('intval', (array) old('ids', []))));
+    var AUTO_OPEN_WHATSAPP = {{ request()->boolean('whatsapp') || old('ids') ? 'true' : 'false' }};
+
+    (function initWhatsappModal() {
+        var form = document.getElementById('erWhatsappForm');
+        var listEl = document.getElementById('erWhatsappList');
+        var countEl = document.getElementById('erWhatsappCount');
+        var idsEl = document.getElementById('erWhatsappIds');
+        var searchEl = document.getElementById('erWhatsappSearch');
+        var submitBtn = document.getElementById('erWhatsappSubmit');
+        if (!form || !listEl) return;
+
+        var renderList = function () {
+            listEl.innerHTML = WHATSAPP_CONTACTS.map(function (c) {
+                return '<label class="er-whats-item" data-label="' + esc((c.nome + ' ' + c.telefone).toLowerCase()) + '">'
+                    + '<input type="checkbox" class="form-check-input mt-1 js-er-wa-check" value="' + c.id + '">'
+                    + '<span><span class="er-name">' + esc(c.nome) + '</span>'
+                    + '<span class="er-muted d-block">' + esc(c.numero) + ' · ' + esc(c.telefone)
+                    + (c.cancelado ? ' · cancelado' : '') + '</span></span></label>';
+            }).join('') || '<p class="text-muted small p-3 mb-0">Nenhum inscrito com telefone cadastrado.</p>';
+        };
+
+        var checkedWa = function () {
+            return Array.prototype.filter.call(
+                listEl.querySelectorAll('.js-er-wa-check'),
+                function (input) { return input.checked; }
+            );
+        };
+
+        var refreshCount = function () {
+            var n = checkedWa().length;
+            countEl.textContent = '(' + n + ')';
+            submitBtn.disabled = n === 0;
+        };
+
+        var setChecked = function (ids) {
+            var set = {};
+            (ids || []).forEach(function (id) { set[String(id)] = true; });
+            listEl.querySelectorAll('.js-er-wa-check').forEach(function (input) {
+                input.checked = !!set[input.value];
+            });
+            refreshCount();
+        };
+
+        renderList();
+        listEl.addEventListener('change', refreshCount);
+
+        document.getElementById('erWhatsappSelectAll')?.addEventListener('click', function () {
+            listEl.querySelectorAll('.js-er-wa-check').forEach(function (input) {
+                var row = input.closest('.er-whats-item');
+                if (row && row.classList.contains('is-hidden')) return;
+                input.checked = true;
+            });
+            refreshCount();
+        });
+
+        document.getElementById('erWhatsappClear')?.addEventListener('click', function () {
+            listEl.querySelectorAll('.js-er-wa-check').forEach(function (input) { input.checked = false; });
+            refreshCount();
+        });
+
+        searchEl?.addEventListener('input', function () {
+            var q = (searchEl.value || '').trim().toLowerCase();
+            listEl.querySelectorAll('.er-whats-item').forEach(function (row) {
+                var hay = row.getAttribute('data-label') || '';
+                row.classList.toggle('is-hidden', q !== '' && hay.indexOf(q) === -1);
+            });
+        });
+
+        openWhatsappModal = function (preselectedIds) {
+            var ids = (preselectedIds || []).filter(function (id) {
+                return WHATSAPP_CONTACTS.some(function (c) { return Number(c.id) === Number(id); });
+            });
+            setChecked(ids);
+            if (searchEl) searchEl.value = '';
+            listEl.querySelectorAll('.er-whats-item').forEach(function (row) {
+                row.classList.remove('is-hidden');
+            });
+            modal('erWhatsappModal').show();
+        };
+
+        document.getElementById('erWhatsappOpen')?.addEventListener('click', function () {
+            var selected = selectedIds().map(Number);
+            openWhatsappModal(selected.length ? selected : []);
+        });
+
+        form.addEventListener('submit', function (event) {
+            var ids = checkedWa().map(function (input) { return input.value; });
+            if (!ids.length) {
+                event.preventDefault();
+                return;
+            }
+            var mensagem = (document.getElementById('erWhatsappMensagem')?.value || '').trim();
+            var arquivo = document.getElementById('erWhatsappArquivo')?.files?.[0];
+            if (!mensagem && !arquivo) {
+                event.preventDefault();
+                alert('Informe uma mensagem ou anexe um arquivo.');
+                return;
+            }
+            if (ids.length > 1 && !confirm('Os envios são espaçados para proteger o número — o lote pode levar alguns minutos. Continuar?')) {
+                event.preventDefault();
+                return;
+            }
+            idsEl.innerHTML = '';
+            ids.forEach(function (id) {
+                var input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'ids[]';
+                input.value = id;
+                idsEl.appendChild(input);
+            });
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Enviando...';
+        });
+
+        var drop = document.getElementById('erDropzone');
+        var fileInput = document.getElementById('erWhatsappArquivo');
+        var thumb = document.getElementById('erFileThumb');
+        var nameEl = document.getElementById('erFileName');
+        var metaEl = document.getElementById('erFileMeta');
+        var objectUrl = null;
+
+        var fileIcon = function (file) {
+            if (file.type.startsWith('image/')) return null;
+            if (file.type.startsWith('video/')) return 'bx-video';
+            if (file.type.startsWith('audio/')) return 'bx-music';
+            if (file.type.indexOf('pdf') !== -1) return 'bx-file-blank';
+            return 'bx-file';
+        };
+
+        var showFile = function (file) {
+            if (!file || !drop) return;
+            drop.classList.add('has-file');
+            nameEl.textContent = file.name;
+            metaEl.textContent = (file.size / 1024 / 1024).toFixed(2) + ' MB · ' + (file.type || 'arquivo');
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+            var icon = fileIcon(file);
+            if (!icon) {
+                objectUrl = URL.createObjectURL(file);
+                thumb.innerHTML = '<img alt="Preview">';
+                thumb.querySelector('img').src = objectUrl;
+            } else {
+                thumb.innerHTML = '<i class="bx ' + icon + '"></i>';
+            }
+        };
+
+        var clearFile = function () {
+            if (!drop || !fileInput) return;
+            fileInput.value = '';
+            drop.classList.remove('has-file');
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+            thumb.innerHTML = '<i class="bx bx-file"></i>';
+            nameEl.textContent = '—';
+            metaEl.textContent = '—';
+        };
+
+        drop?.addEventListener('click', function (e) {
+            if (e.target.closest('#erFileClear')) return;
+            fileInput?.click();
+        });
+        document.getElementById('erFileClear')?.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearFile();
+        });
+        fileInput?.addEventListener('change', function () {
+            if (fileInput.files[0]) showFile(fileInput.files[0]);
+            else clearFile();
+        });
+        ['dragenter', 'dragover'].forEach(function (ev) {
+            drop?.addEventListener(ev, function (e) {
+                e.preventDefault();
+                drop.classList.add('is-dragover');
+            });
+        });
+        ['dragleave', 'drop'].forEach(function (ev) {
+            drop?.addEventListener(ev, function (e) {
+                e.preventDefault();
+                drop.classList.remove('is-dragover');
+            });
+        });
+        drop?.addEventListener('drop', function (e) {
+            var file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+            if (!file || !fileInput) return;
+            var dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+            showFile(file);
+        });
+
+        refreshCount();
+
+        if (AUTO_OPEN_WHATSAPP) {
+            openWhatsappModal(WHATSAPP_OLD_IDS.length ? WHATSAPP_OLD_IDS : selectedIds().map(Number));
+        }
+    })();
 });
 </script>

@@ -101,6 +101,11 @@
                         </ul>
                     </div>
                     @if($canEditRegistrations)
+                        <button type="button" class="btn btn-success btn-sm" id="erWhatsappOpen"
+                                @disabled($whatsappContacts->isEmpty())
+                                title="{{ $whatsappContacts->isEmpty() ? 'Nenhum inscrito com telefone cadastrado' : 'Enviar WhatsApp aos inscritos' }}">
+                            <i class="bx bxl-whatsapp"></i> WhatsApp
+                        </button>
                         <a href="{{ route('agenda.eventos.check-in', $event) }}" class="btn btn-success btn-sm">
                             <i class="bx bx-qr-scan"></i> Check-in
                         </a>
@@ -114,6 +119,17 @@
                         <div class="alert alert-{{ $class }}">{{ session($key) }}</div>
                     @endif
                 @endforeach
+
+                @if(session('envio_erros') && count(session('envio_erros')))
+                    <div class="alert alert-warning">
+                        <div class="fw-semibold mb-1">Detalhes das falhas:</div>
+                        <ul class="mb-0 ps-3">
+                            @foreach(session('envio_erros') as $motivo)
+                                <li>{{ $motivo }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
 
                 @if($errors->any())
                     <div class="alert alert-danger">
