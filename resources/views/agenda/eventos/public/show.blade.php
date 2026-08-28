@@ -302,7 +302,7 @@
                 </div>
             @endif
             @if(!$event->registration_enabled)
-                <p class="text-muted mb-0">Inscrições encerradas.</p>
+                <div class="alert alert-secondary mb-0">Inscrições encerradas para este evento.</div>
             @elseif($spotsLeft !== null && $spotsLeft === 0)
                 <p class="text-muted mb-0">Vagas esgotadas.</p>
             @else

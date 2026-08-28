@@ -16,6 +16,7 @@
     <a href="{{ route('agenda.eventos.registrations', $event) }}" class="btn btn-outline-primary btn-sm">
         <i class="bx bx-user-check"></i> Inscrições
     </a>
+    @include('agenda.eventos.partials.toggle-registrations')
     <a href="{{ route('agenda.eventos.registrations', $event) }}?whatsapp=1" class="btn btn-success btn-sm">
         <i class="bx bxl-whatsapp"></i> WhatsApp aos inscritos
     </a>

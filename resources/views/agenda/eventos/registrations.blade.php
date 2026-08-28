@@ -75,8 +75,14 @@
                 <div>
                     <h2 class="card-title mb-0">Inscrições</h2>
                     <p class="text-muted small mb-0 mt-1">{{ $event->title }}</p>
+                    @if($event->registration_enabled)
+                        <span class="badge bg-success mt-1">Inscrições abertas</span>
+                    @else
+                        <span class="badge bg-danger mt-1">Inscrições encerradas</span>
+                    @endif
                 </div>
                 <div class="d-flex flex-wrap gap-2">
+                    @include('agenda.eventos.partials.toggle-registrations')
                     <a href="{{ route('agenda.eventos.index') }}" class="btn btn-default btn-sm"><i class="bx bx-arrow-back"></i> Voltar</a>
                     @if($event->public_slug)
                         <a href="{{ route('events.public.show', $event->public_slug) }}" target="_blank" class="btn btn-outline-primary btn-sm">
@@ -114,6 +120,12 @@
                 </div>
             </header>
             <div class="card-body">
+                @if(!$event->registration_enabled)
+                    <div class="alert alert-warning">
+                        As inscrições estão encerradas. Novos cadastros pela página pública estão bloqueados.
+                        Use <strong>Reabrir inscrições</strong> se quiser voltar a aceitar.
+                    </div>
+                @endif
                 @foreach(['success' => 'success', 'warning' => 'warning', 'error' => 'danger'] as $key => $class)
                     @if(session($key))
                         <div class="alert alert-{{ $class }}">{{ session($key) }}</div>

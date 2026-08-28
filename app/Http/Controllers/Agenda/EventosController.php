@@ -249,6 +249,28 @@ class EventosController extends Controller
         'status' => 'Status',
     ];
 
+    public function toggleRegistrations(Event $event)
+    {
+        $this->authorize('manageRegistrations', $event);
+
+        $event->update(['registration_enabled' => ! $event->registration_enabled]);
+
+        $abertas = (bool) $event->registration_enabled;
+        AuditLogger::log(
+            'agenda',
+            $abertas ? 'inscricoes.reabrir' : 'inscricoes.encerrar',
+            ($abertas ? 'Inscrições reabertas' : 'Inscrições encerradas')." no evento {$event->title}.",
+            ['event_id' => $event->id]
+        );
+
+        return back()->with(
+            'success',
+            $abertas
+                ? 'Inscrições reabertas. A página pública volta a aceitar novos inscritos.'
+                : 'Inscrições encerradas. A página pública não aceita mais novos inscritos.'
+        );
+    }
+
     public function registrations(Request $request, Event $event)
     {
         $this->authorize('manageRegistrations', $event);

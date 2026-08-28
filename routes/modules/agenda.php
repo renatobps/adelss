@@ -30,6 +30,7 @@ Route::prefix('agenda')->name('agenda.')->middleware('module.access:agenda')->gr
     Route::get('eventos/{event}/check-in', [EventosController::class, 'checkIn'])->name('eventos.check-in');
     Route::post('eventos/{event}/check-in/validar', [EventosController::class, 'checkInValidate'])->name('eventos.check-in.validate');
     Route::get('eventos/{event}/inscricoes', [EventosController::class, 'registrations'])->name('eventos.registrations');
+    Route::post('eventos/{event}/inscricoes/encerrar', [EventosController::class, 'toggleRegistrations'])->name('eventos.registrations.toggle');
     Route::get('eventos/{event}/inscricoes/exportar', [EventosController::class, 'exportRegistrations'])->name('eventos.registrations.export');
     Route::get('eventos/{event}/inscricoes/exportar-pdf', [EventosController::class, 'exportRegistrationsPdf'])->name('eventos.registrations.export-pdf');
     Route::post('eventos/{event}/inscricoes/lote', [EventosController::class, 'bulkRegistrations'])->name('eventos.registrations.bulk');

@@ -46,6 +46,9 @@
                                         <div class="col">
                                             <h3 class="h5 mb-1" style="color:#18314d;">
                                                 <a href="{{ route('agenda.eventos.registrations', $event) }}" class="text-reset text-decoration-none">{{ $event->title }}</a>
+                                                @if(!$event->registration_enabled)
+                                                    <span class="badge bg-danger align-middle ms-1" style="font-size:.65rem;">Inscrições encerradas</span>
+                                                @endif
                                             </h3>
                                             <p class="text-muted small mb-0">
                                                 {{ $event->start_date->format('d/m/Y') }}
@@ -64,6 +67,7 @@
                                                 <a href="{{ route('agenda.eventos.registrations', $event) }}" class="btn btn-sm btn-outline-primary">
                                                     <i class="bx bx-user-check"></i> Inscrições
                                                 </a>
+                                                @include('agenda.eventos.partials.toggle-registrations')
                                                 <a href="{{ route('agenda.eventos.registrations', $event) }}?whatsapp=1" class="btn btn-sm btn-outline-success">
                                                     <i class="bx bxl-whatsapp"></i> WhatsApp
                                                 </a>
