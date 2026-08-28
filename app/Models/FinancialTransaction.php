@@ -26,6 +26,7 @@ class FinancialTransaction extends Model
         'received_from_other',
         'contact_id',
         'category_id',
+        'culto_id',
         'account_id',
         'cost_center_id',
         'payment_type',
@@ -70,6 +71,11 @@ class FinancialTransaction extends Model
     public function category()
     {
         return $this->belongsTo(FinancialCategory::class, 'category_id');
+    }
+
+    public function culto()
+    {
+        return $this->belongsTo(Event::class, 'culto_id');
     }
 
     /**
@@ -145,6 +151,22 @@ class FinancialTransaction extends Model
     public function scopeDespesas($query)
     {
         return $query->where('type', 'despesa');
+    }
+
+    public static function displayDescription(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        $clean = preg_replace('/^\[Importação(?:\s+\d{4})?\]\s*/iu', '', $value);
+
+        return trim($clean ?? $value);
+    }
+
+    public function getDescriptionAttribute(?string $value): string
+    {
+        return self::displayDescription($value);
     }
 
     /**

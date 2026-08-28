@@ -1,0 +1,135 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\CashClosing;
+use App\Models\Event;
+use App\Models\FinancialCategory;
+use App\Models\FinancialTransaction;
+use App\Services\Financial\CultoOfferingReportService;
+use App\Services\Financial\WeeklyCashClosingService;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
+
+class FinancialCultoAndWeeklyClosingTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config()->set('database.default', 'sqlite');
+        config()->set('database.connections.sqlite.database', ':memory:');
+
+        Schema::create('event_categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+
+        Schema::create('events', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->dateTime('start_date')->nullable();
+            $table->unsignedBigInteger('category_id')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('financial_categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('slug')->nullable();
+            $table->string('type');
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('financial_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->string('type');
+            $table->date('transaction_date');
+            $table->string('description');
+            $table->decimal('amount', 10, 2);
+            $table->boolean('is_paid')->default(true);
+            $table->string('status')->default('recebido');
+            $table->unsignedBigInteger('category_id')->nullable();
+            $table->unsignedBigInteger('culto_id')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('cash_closings', function (Blueprint $table) {
+            $table->id();
+            $table->date('period_start');
+            $table->date('period_end');
+            $table->decimal('total_receitas', 12, 2);
+            $table->decimal('total_despesas', 12, 2);
+            $table->decimal('saldo', 12, 2);
+            $table->unsignedBigInteger('generated_by')->nullable();
+            $table->timestamp('generated_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function test_relatorio_por_culto_nao_mistura_manha_e_noite(): void
+    {
+        $dizimo = FinancialCategory::create(['name' => 'Dízimo', 'slug' => 'dizimo', 'type' => 'receita']);
+        $oferta = FinancialCategory::create(['name' => 'Oferta', 'slug' => 'oferta', 'type' => 'receita']);
+
+        $manha = Event::create(['title' => 'Culto da manhã', 'start_date' => '2026-08-23 09:00:00']);
+        $noite = Event::create(['title' => 'Culto da noite', 'start_date' => '2026-08-23 19:00:00']);
+
+        $this->tx($dizimo->id, $manha->id, 100, '2026-08-23');
+        $this->tx($oferta->id, $manha->id, 40, '2026-08-23');
+        $this->tx($dizimo->id, $noite->id, 70, '2026-08-23');
+
+        $reportManha = app(CultoOfferingReportService::class)->build($manha);
+        $reportNoite = app(CultoOfferingReportService::class)->build($noite);
+
+        $this->assertEquals(140.0, $reportManha['totalGeral']);
+        $this->assertEquals(100.0, $reportManha['totalDizimos']);
+        $this->assertEquals(40.0, $reportManha['totalOfertas']);
+        $this->assertEquals(70.0, $reportNoite['totalGeral']);
+    }
+
+    public function test_fechamento_semanal_detecta_divergencia_apos_alteracao(): void
+    {
+        $dizimo = FinancialCategory::create(['name' => 'Dízimo', 'slug' => 'dizimo', 'type' => 'receita']);
+        $this->tx($dizimo->id, null, 200, '2026-08-24', 'receita', 'recebido');
+
+        $service = app(WeeklyCashClosingService::class);
+        $week = $service->weekFor('2026-08-26');
+        $this->assertSame('2026-08-24', $week['start']->toDateString());
+        $this->assertSame('2026-08-30', $week['end']->toDateString());
+
+        $live = $service->liveTotals($week['start'], $week['end']);
+        $closing = CashClosing::create([
+            'period_start' => $week['start']->toDateString(),
+            'period_end' => $week['end']->toDateString(),
+            'total_receitas' => $live['total_receitas'],
+            'total_despesas' => $live['total_despesas'],
+            'saldo' => $live['saldo'],
+            'generated_at' => now(),
+        ]);
+
+        $this->assertFalse($service->snapshotHasDiverged($closing, $live));
+
+        FinancialTransaction::query()->first()->update(['amount' => 250]);
+        $liveAfter = $service->liveTotals($week['start'], $week['end']);
+        $this->assertTrue($service->snapshotHasDiverged($closing, $liveAfter));
+    }
+
+    private function tx(int $categoryId, ?int $cultoId, float $amount, string $date, string $type = 'receita', string $status = 'recebido'): FinancialTransaction
+    {
+        return FinancialTransaction::create([
+            'type' => $type,
+            'transaction_date' => $date,
+            'description' => 'Teste',
+            'amount' => $amount,
+            'is_paid' => true,
+            'status' => $status,
+            'category_id' => $categoryId,
+            'culto_id' => $cultoId,
+        ]);
+    }
+}

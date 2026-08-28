@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
+use App\Models\MemberRole;
 use App\Models\Permission;
+use Illuminate\Support\Facades\DB;
 
 class PermissionSeeder extends Seeder
 {
@@ -347,6 +349,15 @@ class PermissionSeeder extends Seeder
                         ['name' => 'Ver', 'key' => 'financial.reports.view'],
                     ],
                 ],
+                [
+                    'name' => 'Fechamento de caixa',
+                    'key' => 'financial.fechamento.manage',
+                    'description' => 'Relatórios de dízimos/ofertas por culto e fechamento semanal',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'financial.fechamento.view'],
+                        ['name' => 'Gerar fechamento', 'key' => 'financial.fechamento.generate'],
+                    ],
+                ],
                 // Campanhas de arrecadação (independentes da contabilidade)
                 [
                     'name' => 'Campanhas',
@@ -414,6 +425,8 @@ class PermissionSeeder extends Seeder
         Permission::where('module', 'Financeiro')
             ->whereNotIn('key', $financialValidKeys)
             ->delete();
+
+        $this->grantFechamentoToTreasurers();
 
         // Módulo Agenda
         $agendaModule = [
@@ -1212,6 +1225,37 @@ class PermissionSeeder extends Seeder
         Permission::where('module', 'Mídia')
             ->whereNotIn('key', $midiaValidKeys)
             ->delete();
+    }
+
+    private function grantFechamentoToTreasurers(): void
+    {
+        $ids = Permission::whereIn('key', [
+            'financial.fechamento.view',
+            'financial.fechamento.generate',
+            'financial.fechamento.manage',
+        ])->pluck('id');
+
+        if ($ids->isEmpty()) {
+            return;
+        }
+
+        $roles = MemberRole::query()
+            ->where('name', 'like', '%Tesoureiro%')
+            ->get();
+
+        foreach ($roles as $role) {
+            $role->permissions()->syncWithoutDetaching($ids->all());
+        }
+
+        $reportViewId = Permission::where('key', 'financial.reports.view')->value('id');
+        if (! $reportViewId) {
+            return;
+        }
+
+        $roleIds = DB::table('permission_role')->where('permission_id', $reportViewId)->pluck('role_id');
+        foreach ($roleIds as $roleId) {
+            MemberRole::query()->find($roleId)?->permissions()->syncWithoutDetaching($ids->all());
+        }
     }
 }
 

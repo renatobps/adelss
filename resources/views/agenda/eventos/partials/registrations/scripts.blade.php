@@ -391,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 alert('Informe uma mensagem ou anexe um arquivo.');
                 return;
             }
-            if (ids.length > 1 && !confirm('Os envios são espaçados para proteger o número — o lote pode levar alguns minutos. Continuar?')) {
+            if (ids.length > 1 && !confirm('Os envios serão feitos em segundo plano, com intervalo para proteger o número. Sucessos e erros aparecem em Notificações. Continuar?')) {
                 event.preventDefault();
                 return;
             }
@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 idsEl.appendChild(input);
             });
             submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Enviando...';
+            submitBtn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Iniciando...';
         });
 
         var drop = document.getElementById('erDropzone');

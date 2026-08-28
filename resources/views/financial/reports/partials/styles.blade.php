@@ -112,6 +112,27 @@
 }
 .fr-filters__period { grid-column: span 2; min-width: 0; }
 .fr-filters__wide { grid-column: span 2; min-width: 0; }
+.fr-period-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .45rem;
+    align-items: center;
+    margin-bottom: .5rem;
+}
+.fr-period-modes .btn,
+.fr-period-shortcuts .btn {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: .35rem .65rem;
+    min-height: 0;
+    line-height: 1.3;
+}
+.fr-period-modes .btn.is-active {
+    background: var(--fr-primary);
+    border-color: var(--fr-primary);
+    color: #fff;
+}
+.fr-period-shortcuts { display: flex; flex-wrap: wrap; gap: .35rem; }
 .fr-filters--compact { grid-template-columns: minmax(140px, 220px); }
 .fr-filters__actions {
     grid-column: 1 / -1;
@@ -225,6 +246,10 @@ body:has(.fr-page) .adelss-module-nav__subtitle { max-width: 40rem; }
 
     .fr-period { grid-template-columns: 1fr; }
     .fr-period__sep { display: none; }
+    .fr-period-toolbar { flex-direction: column; align-items: stretch; }
+    .fr-period-modes { width: 100%; display: flex; }
+    .fr-period-modes .btn { flex: 1; }
+    .fr-period-shortcuts .btn { flex: 1 1 auto; }
 
     .fr-filters__actions { width: 100%; }
     .fr-filters__actions .btn { flex: 1 1 auto; min-height: 2.75rem; }

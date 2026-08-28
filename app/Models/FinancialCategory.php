@@ -37,6 +37,25 @@ class FinancialCategory extends Model
         return $query->where('type', 'despesa');
     }
 
+    public function isDizimoOuOferta(): bool
+    {
+        return self::slugIsDizimoOuOferta($this->slug, $this->name);
+    }
+
+    public static function slugIsDizimoOuOferta(?string $slug, ?string $name = null): bool
+    {
+        $slug = strtolower(trim((string) $slug));
+        if (in_array($slug, ['dizimo', 'oferta'], true)) {
+            return true;
+        }
+
+        $name = mb_strtolower((string) $name);
+
+        return str_contains($name, 'dízimo')
+            || str_contains($name, 'dizimo')
+            || str_contains($name, 'oferta');
+    }
+
     /**
      * Acessor para exibir o tipo formatado
      */

@@ -69,6 +69,7 @@ class WhatsAppSendHistory
                 'CampaignReminderController', 'CampaignController',
                 'NotifyDueCampaignInstallments', 'SendCampaignScheduledMessages' => 'campanhas',
                 'EventRegistrationReceiptService', 'EventRegistrationBatchSender',
+                'SendEventRegistrationWhatsappMessages',
                 'EventosController', 'PublicEventController' => 'agenda',
                 'ConfigController' => 'whatsapp_teste',
                 'CheckPastoralAttendanceAlerts' => 'cultos',

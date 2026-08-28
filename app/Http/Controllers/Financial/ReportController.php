@@ -29,7 +29,8 @@ class ReportController extends Controller
     public function index()
     {
         $this->authorize('financial.view-reports');
-        return view('financial.reports.index');
+
+        return redirect()->route('financial.reports.cash-flow.extract');
     }
 
     /**

@@ -112,6 +112,8 @@ class AppServiceProvider extends ServiceProvider
         $financialModule = FinancialModulePolicy::class;
         Gate::define('financial.view-summary', [$financialModule, 'viewSummary']);
         Gate::define('financial.view-reports', [$financialModule, 'viewReports']);
+        Gate::define('financial.fechamento.view', [$financialModule, 'viewFechamento']);
+        Gate::define('financial.fechamento.generate', [$financialModule, 'generateFechamento']);
         Gate::define('financial.view-automations', [$financialModule, 'viewAutomations']);
         Gate::define('financial.manage-automations', [$financialModule, 'manageAutomations']);
         Gate::define('financial.view-fixed-expenses', [$financialModule, 'viewFixedExpenses']);

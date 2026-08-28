@@ -335,4 +335,33 @@ class Event extends Model
             });
         });
     }
+
+    /**
+     * Cultos da Agenda (título ou categoria contendo "culto").
+     */
+    public function scopeCultosDaAgenda($query)
+    {
+        return $query->where(function ($q) {
+            $q->whereRaw('LOWER(COALESCE(title, "")) LIKE ?', ['%culto%'])
+                ->orWhereHas('category', function ($cq) {
+                    $cq->whereRaw('LOWER(name) LIKE ?', ['%culto%']);
+                });
+        });
+    }
+
+    public static function paraLancamentoFinanceiro(int $dias = 45)
+    {
+        return static::query()
+            ->cultosDaAgenda()
+            ->whereBetween('start_date', [now()->subDays($dias)->startOfDay(), now()->addDays(7)->endOfDay()])
+            ->orderByDesc('start_date')
+            ->get();
+    }
+
+    public function getDisplayNameAttribute(): string
+    {
+        $when = $this->start_date?->format('d/m/Y H:i');
+
+        return trim(($when ? $when.' · ' : '').($this->title ?: 'Culto'));
+    }
 }

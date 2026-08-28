@@ -8,6 +8,9 @@ use App\Http\Controllers\Financial\ContactController;
 use App\Http\Controllers\Financial\CostCenterController;
 use App\Http\Controllers\Financial\TransactionController;
 use App\Http\Controllers\Financial\ReportController;
+use App\Http\Controllers\Financial\ClosingReportController;
+use App\Http\Controllers\Financial\CultoController;
+use App\Http\Controllers\Financial\ReportSignatureController;
 use App\Http\Controllers\Financial\SummaryController;
 use App\Http\Controllers\Financial\AutomationController;
 use App\Http\Controllers\Financial\FixedExpenseController;
@@ -70,6 +73,16 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
     Route::get('reports/expenses/daily-extract', [ReportController::class, 'expensesDailyExtract'])->name('reports.expenses.daily-extract');
     Route::get('reports/expenses/annual-summary', [ReportController::class, 'expensesAnnualSummary'])->name('reports.expenses.annual-summary');
     Route::get('reports/revenues/annual-summary', [ReportController::class, 'revenuesAnnualSummary'])->name('reports.revenues.annual-summary');
+    Route::get('reports/cultos', [ClosingReportController::class, 'cultos'])->name('reports.cultos');
+    Route::get('reports/cultos/{event}/pdf', [ClosingReportController::class, 'cultosPdf'])->name('reports.cultos.pdf');
+    Route::get('reports/fechamento-semanal', [ClosingReportController::class, 'weekly'])->name('reports.weekly-closing');
+    Route::post('reports/fechamento-semanal', [ClosingReportController::class, 'weeklyGenerate'])->name('reports.weekly-closing.generate');
+    Route::get('reports/fechamento-semanal/{cashClosing}/pdf', [ClosingReportController::class, 'weeklyPdf'])->name('reports.weekly-closing.pdf');
+    Route::get('reports/assinaturas', [ReportSignatureController::class, 'edit'])->name('reports.signatures');
+    Route::post('reports/assinaturas', [ReportSignatureController::class, 'update'])->name('reports.signatures.update');
+    Route::delete('reports/assinaturas', [ReportSignatureController::class, 'destroy'])->name('reports.signatures.destroy');
+
+    Route::get('cultos', [CultoController::class, 'index'])->name('cultos.index');
 
     // Categorias
     Route::resource('categories', CategoryController::class)->names([

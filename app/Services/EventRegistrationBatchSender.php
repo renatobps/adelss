@@ -120,7 +120,12 @@ class EventRegistrationBatchSender
         }
 
         $candidates = $registrations->filter(fn (EventRegistration $r) => filled($r->phone));
-        $result['skipped'] = $registrations->count() - $candidates->count();
+        $semTelefone = $registrations->reject(fn (EventRegistration $r) => filled($r->phone));
+        $result['skipped'] = $semTelefone->count();
+
+        foreach ($semTelefone as $registration) {
+            $this->registrarFalha($registration, $mensagem !== '' ? $mensagem : '[sem texto]', 'Sem telefone cadastrado.');
+        }
 
         if ($candidates->isEmpty()) {
             $result['aborted'] = 'Nenhum inscrito selecionado tem telefone cadastrado.';
@@ -214,5 +219,15 @@ class EventRegistrationBatchSender
             'is_pdf_document' => $tipo === 'document' && $mime === 'application/pdf',
             'file_name' => $fileName,
         ];
+    }
+
+    private function registrarFalha(EventRegistration $registration, string $mensagem, string $erro): void
+    {
+        app(WhatsAppSendHistory::class)->record(
+            (string) ($registration->phone ?: 'sem-telefone'),
+            $this->notificacoes->personalizarMensagem($mensagem, $registration->name) ?: $mensagem,
+            ['success' => false, 'error' => $erro],
+            'agenda_evento'
+        );
     }
 }

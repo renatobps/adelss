@@ -44,9 +44,6 @@
         .resumo td { padding: 6px 8px; border: 1px solid #d1d5db; }
         .resumo .lbl { background: #f8fafc; width: 55%; }
         .saldo td { background: #1e3a8a; color: #fff; font-size: 12px; font-weight: bold; }
-        .assinaturas { width: 100%; margin-top: 36px; }
-        .assinaturas td { width: 50%; text-align: center; padding: 0 16px; }
-        .assinaturas .nome { font-weight: bold; font-size: 11px; }
         .nota { font-size: 8px; color: #6b7280; margin-top: 10px; }
         .comp { page-break-before: always; }
         .comp img { max-width: 100%; max-height: 210mm; }
@@ -162,28 +159,7 @@
         </tr>
     </table>
 
-    <table class="assinaturas">
-        <tr>
-            <td>
-                <div class="linha"></div>
-                @if(!empty($pastorNome))
-                    <div class="nome">{{ $pastorNome }}</div>
-                @else
-                    <span class="muted">Nome e assinatura</span><br>
-                @endif
-                Pastor
-            </td>
-            <td>
-                <div class="linha"></div>
-                @if(!empty($tesoureiroNome))
-                    <div class="nome">{{ $tesoureiroNome }}</div>
-                @else
-                    <span class="muted">Nome e assinatura</span><br>
-                @endif
-                Tesoureiro(a)
-            </td>
-        </tr>
-    </table>
+    @include('financial.reports.pdf.partials.signatures')
 
     @if(count($comprovantes) > 0)
         @foreach($comprovantes as $item)

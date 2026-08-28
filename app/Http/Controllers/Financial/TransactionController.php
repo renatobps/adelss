@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Financial;
 
 use App\Http\Controllers\Controller;
+use App\Models\Event;
 use App\Models\FinancialTransaction;
 use App\Models\FinancialTransactionAttachment;
 use App\Models\Member;
@@ -29,7 +30,7 @@ class TransactionController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', FinancialTransaction::class);
-        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter', 'latestPaymentTransaction'])
+        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter', 'latestPaymentTransaction', 'culto'])
             ->orderBy('transaction_date', 'desc');
 
         // Filtros
@@ -51,6 +52,10 @@ class TransactionController extends Controller
 
         if ($request->has('cost_center_id') && $request->cost_center_id) {
             $query->where('cost_center_id', $request->cost_center_id);
+        }
+
+        if ($request->filled('culto_id')) {
+            $query->where('culto_id', $request->integer('culto_id'));
         }
 
         // Filtro de período
@@ -142,6 +147,7 @@ class TransactionController extends Controller
         $costCenters = FinancialCostCenter::orderBy('name')->get();
         $members = Member::orderBy('name')->get(); // Para o modal de receita
         $contacts = FinancialContact::orderBy('name')->get(); // Para o modal de despesa
+        $cultos = Event::paraLancamentoFinanceiro();
         $mercadoPagoPublicKey = (string) config('mercadopago.public_key', '');
 
         return view('financial.transactions.index', compact(
@@ -154,6 +160,7 @@ class TransactionController extends Controller
             'costCenters',
             'members',
             'contacts',
+            'cultos',
             'startDate',
             'endDate',
             'mercadoPagoPublicKey'
@@ -215,6 +222,7 @@ class TransactionController extends Controller
         }
 
         $validated = $request->validate($validationRules, $validationMessages);
+        $validated = $this->applyCultoToReceita($request, $validated);
 
         // Determinar status e tipo
         $validated['status'] = $request->has('is_paid') && $request->is_paid ? 'recebido' : 'a_receber';
@@ -394,7 +402,7 @@ class TransactionController extends Controller
     public function show(FinancialTransaction $transaction)
     {
         $this->authorize('view', $transaction);
-        $transaction->load(['member', 'contact', 'category', 'account', 'costCenter', 'attachments', 'createdBy']);
+        $transaction->load(['member', 'contact', 'category', 'account', 'costCenter', 'attachments', 'createdBy', 'culto']);
 
         $contato = $transaction->type === 'receita'
             ? ($transaction->member?->name ?: ($transaction->received_from_other ?: 'Outros'))
@@ -413,6 +421,7 @@ class TransactionController extends Controller
             'status_label' => $transaction->is_paid ? 'Pago' : ($transaction->type === 'receita' ? 'A receber' : 'A pagar'),
             'contato' => $contato,
             'category' => $transaction->category?->name ?: '—',
+            'culto' => $transaction->culto?->display_name ?: '—',
             'account' => $transaction->account?->name ?: '—',
             'cost_center' => $transaction->costCenter?->name ?: '—',
             'payment_type' => $transaction->payment_type ?: '—',
@@ -448,6 +457,7 @@ class TransactionController extends Controller
             'received_from_other' => $transaction->received_from_other,
             'contact_id' => $transaction->contact_id,
             'category_id' => $transaction->category_id,
+            'culto_id' => $transaction->culto_id,
             'account_id' => $transaction->account_id,
             'cost_center_id' => $transaction->cost_center_id,
             'payment_type' => $transaction->payment_type,
@@ -499,6 +509,12 @@ class TransactionController extends Controller
         }
 
         $validated = $request->validate($rules);
+
+        if ($transaction->type === 'receita') {
+            $validated = $this->applyCultoToReceita($request, $validated);
+        } else {
+            $validated['culto_id'] = null;
+        }
 
         // Determinar status
         $validated['is_paid'] = $request->has('is_paid') && $request->is_paid;
@@ -875,6 +891,26 @@ class TransactionController extends Controller
         $amount = str_replace(',', '.', $amount);
         
         return (float) $amount;
+    }
+
+    private function applyCultoToReceita(Request $request, array $validated): array
+    {
+        $category = ! empty($validated['category_id'])
+            ? FinancialCategory::query()->find($validated['category_id'])
+            : null;
+
+        if ($category && $category->isDizimoOuOferta()) {
+            $request->validate([
+                'culto_id' => 'required|exists:events,id',
+            ], [
+                'culto_id.required' => 'Selecione o culto deste dízimo ou oferta.',
+            ]);
+            $validated['culto_id'] = (int) $request->input('culto_id');
+        } else {
+            $validated['culto_id'] = null;
+        }
+
+        return $validated;
     }
 
     /**

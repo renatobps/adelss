@@ -153,8 +153,8 @@ class CashFlowClosingPdfTest extends TestCase
         $this->assertCount(1, $data['comprovantes']);
         $this->assertSame('image', $data['comprovantes'][0]['kind']);
         $this->assertNotEmpty($data['comprovantes'][0]['imageSrc']);
-        $this->assertSame('João Pastor', $data['pastorNome']);
         $this->assertSame('Maria Tesoureira', $data['tesoureiroNome']);
+        $this->assertArrayNotHasKey('pastorNome', $data);
 
         $response = $service->download($request);
 

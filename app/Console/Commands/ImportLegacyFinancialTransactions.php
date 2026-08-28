@@ -342,8 +342,7 @@ class ImportLegacyFinancialTransactions extends Command
         $date = $this->parseDate($row['data'], $row['line']);
         $amount = number_format($row['valor_cents'] / 100, 2, '.', '');
         $originalDescription = trim((string) $row['descricao']);
-        $description = self::DESCRIPTION_PREFIX.' ';
-        $description .= $originalDescription !== '' ? $originalDescription : $row['categoria'];
+        $description = $originalDescription !== '' ? $originalDescription : $row['categoria'];
         $description = Str::limit($description, 255, '');
 
         $notes = self::DESCRIPTION_PREFIX.' Aba '.$row['mes_aba'];

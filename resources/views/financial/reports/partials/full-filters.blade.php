@@ -1,13 +1,56 @@
+@php
+    $periodStart = \Carbon\Carbon::parse($startDate ?? now()->startOfMonth());
+    $periodEnd = \Carbon\Carbon::parse($endDate ?? now()->endOfMonth());
+    $periodMode = 'custom';
+    if ($periodStart->isSameYear($periodEnd)
+        && $periodStart->month === 1 && $periodStart->day === 1
+        && $periodEnd->month === 12 && $periodEnd->day === 31) {
+        $periodMode = 'year';
+    } elseif ($periodStart->isSameYear($periodEnd)
+        && $periodStart->isSameMonth($periodEnd)
+        && $periodStart->day === 1
+        && $periodEnd->day === $periodStart->daysInMonth) {
+        $periodMode = 'month';
+    }
+    $currentYear = (int) now()->year;
+    $periodYears = range($currentYear - 6, $currentYear + 2);
+    if (! in_array($periodStart->year, $periodYears, true)) {
+        $periodYears[] = $periodStart->year;
+        sort($periodYears);
+    }
+@endphp
 <div class="card fr-card fr-filters-card mb-4">
     <div class="card-body">
         <form method="GET" action="{{ $action }}" id="filterForm">
             <div class="fr-filters">
-                <div class="fr-filters__period">
+                <div class="fr-filters__period" id="frPeriod">
                     <label class="form-label">Período</label>
-                    <div class="fr-period">
-                        <input type="date" class="form-control" name="start_date" value="{{ $startDate ?? now()->startOfMonth()->format('Y-m-d') }}">
+                    <div class="fr-period-toolbar">
+                        <div class="btn-group fr-period-modes" role="group" aria-label="Modo do período">
+                            <button type="button" class="btn btn-default {{ $periodMode === 'custom' ? 'is-active' : '' }}" data-period-mode="custom">Personalizado</button>
+                            <button type="button" class="btn btn-default {{ $periodMode === 'month' ? 'is-active' : '' }}" data-period-mode="month">Mês</button>
+                            <button type="button" class="btn btn-default {{ $periodMode === 'year' ? 'is-active' : '' }}" data-period-mode="year">Ano</button>
+                        </div>
+                        <div class="fr-period-shortcuts">
+                            <button type="button" class="btn btn-default" data-period-shortcut="this-month">Mês atual</button>
+                            <button type="button" class="btn btn-default" data-period-shortcut="last-month">Mês anterior</button>
+                            <button type="button" class="btn btn-default" data-period-shortcut="this-year">Ano atual</button>
+                        </div>
+                    </div>
+                    <div class="fr-period" data-period-panel="custom" @style(['display: none' => $periodMode !== 'custom'])>
+                        <input type="date" class="form-control" id="frStartDate" name="start_date" value="{{ $periodStart->format('Y-m-d') }}">
                         <span class="fr-period__sep">até</span>
-                        <input type="date" class="form-control" name="end_date" value="{{ $endDate ?? now()->endOfMonth()->format('Y-m-d') }}">
+                        <input type="date" class="form-control" id="frEndDate" name="end_date" value="{{ $periodEnd->format('Y-m-d') }}">
+                    </div>
+                    <div data-period-panel="month" @style(['display: none' => $periodMode !== 'month'])>
+                        <input type="month" class="form-control" id="frPeriodMonth" value="{{ $periodStart->format('Y-m') }}" autocomplete="off">
+                    </div>
+                    <div data-period-panel="year" @style(['display: none' => $periodMode !== 'year'])>
+                        <select class="form-select" id="frPeriodYear">
+                            @foreach($periodYears as $y)
+                                <option value="{{ $y }}" @selected($periodStart->year == $y)>{{ $y }}</option>
+                            @endforeach
+                        </select>
                     </div>
                 </div>
                 @include('financial.reports.partials.type-status', [

@@ -1,0 +1,104 @@
+<?php
+
+namespace App\Http\Controllers\Financial;
+
+use App\Http\Controllers\Controller;
+use App\Models\CashClosing;
+use App\Models\Event;
+use App\Services\Financial\CultoOfferingReportService;
+use App\Services\Financial\PdfSignatureService;
+use App\Services\Financial\WeeklyCashClosingService;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+class ClosingReportController extends Controller
+{
+    public function cultos(Request $request, CultoOfferingReportService $service)
+    {
+        $this->authorize('financial.fechamento.view');
+
+        $cultos = Event::query()
+            ->cultosDaAgenda()
+            ->orderByDesc('start_date')
+            ->limit(80)
+            ->get();
+        $culto = $request->filled('culto_id')
+            ? Event::query()->cultosDaAgenda()->find($request->integer('culto_id'))
+            : $cultos->first();
+
+        $report = $culto ? $service->build($culto) : null;
+
+        return view('financial.reports.culto-offerings', compact('cultos', 'culto', 'report'));
+    }
+
+    public function cultosPdf(Event $event, CultoOfferingReportService $service): Response
+    {
+        $this->authorize('financial.fechamento.view');
+
+        return $service->download($event);
+    }
+
+    public function weekly(Request $request, WeeklyCashClosingService $service)
+    {
+        $this->authorize('financial.fechamento.view');
+
+        $week = $service->weekFor($request->input('week_date', now()->toDateString()));
+        $live = $service->liveTotals($week['start'], $week['end']);
+        $diverged = $service->snapshotHasDiverged($live['latest_closing'], $live);
+        $recentClosings = CashClosing::query()->latest('generated_at')->limit(12)->get();
+
+        return view('financial.reports.weekly-closing', [
+            'weekStart' => $week['start'],
+            'weekEnd' => $week['end'],
+            'live' => $live,
+            'diverged' => $diverged,
+            'recentClosings' => $recentClosings,
+            'canGenerate' => auth()->user()?->is_admin || auth()->user()?->can('financial.fechamento.generate'),
+        ]);
+    }
+
+    public function weeklyGenerate(Request $request, WeeklyCashClosingService $service)
+    {
+        $this->authorize('financial.fechamento.generate');
+
+        $week = $service->weekFor($request->input('week_date', now()->toDateString()));
+        $closing = $service->generate($week['start'], $week['end']);
+
+        return redirect()
+            ->route('financial.reports.weekly-closing', ['week_date' => $week['start']->toDateString()])
+            ->with('success', 'Fechamento da semana '.$week['start']->format('d/m').' a '.$week['end']->format('d/m/Y').' gerado.')
+            ->with('download_closing_id', $closing->id);
+    }
+
+    public function weeklyPdf(CashClosing $cashClosing, WeeklyCashClosingService $service, PdfSignatureService $signatures): Response
+    {
+        $this->authorize('financial.fechamento.view');
+
+        $live = $service->liveTotals($cashClosing->period_start, $cashClosing->period_end);
+        $binary = Pdf::loadView('financial.reports.pdf.weekly-closing', [
+            'closing' => $cashClosing,
+            'live' => $live,
+            'generatedBy' => $cashClosing->generatedByUser?->name ?: auth()->user()?->name,
+            'logoPath' => $this->logoPath(),
+        ] + $signatures->forPdf())->setPaper('a4', 'portrait')->output();
+
+        $filename = 'fechamento-semanal-'.$cashClosing->period_start->format('Y-m-d').'.pdf';
+
+        return response($binary, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    private function logoPath(): ?string
+    {
+        foreach ([public_path('img/img/LOG SS AZUL.png'), public_path('img/logo.png')] as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+}

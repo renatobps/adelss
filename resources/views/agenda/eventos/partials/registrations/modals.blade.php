@@ -181,8 +181,9 @@
                            placeholder="Filtrar por nome ou telefone...">
                     <div class="er-whats-list" id="erWhatsappList"></div>
                     <p class="small text-muted mb-0 mt-2">
-                        Envios espaçados (8–20 s) para proteger o número. Limite de {{ $whatsappBatchLimit }} por vez.
-                        Inscritos sem telefone não aparecem na lista.
+                        O envio roda em segundo plano: você volta para as inscrições na hora.
+                        Sucessos e erros ficam em Notificações. Os envios continuam espaçados (8–20 s) para proteger o número.
+                        Limite de {{ $whatsappBatchLimit }} por vez. Inscritos sem telefone não aparecem na lista.
                     </p>
                 </div>
                 <div class="modal-footer">

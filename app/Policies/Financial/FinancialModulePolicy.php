@@ -22,6 +22,21 @@ class FinancialModulePolicy
             || $user->hasPermission('financial.reports.manage');
     }
 
+    public function viewFechamento(User $user): bool
+    {
+        return $user->is_admin
+            || $user->hasPermission('financial.fechamento.view')
+            || $user->hasPermission('financial.fechamento.manage')
+            || $user->hasPermission('financial.fechamento.generate');
+    }
+
+    public function generateFechamento(User $user): bool
+    {
+        return $user->is_admin
+            || $user->hasPermission('financial.fechamento.generate')
+            || $user->hasPermission('financial.fechamento.manage');
+    }
+
     public function viewAutomations(User $user): bool
     {
         return $this->viewSummary($user) || $this->manageAutomations($user);
@@ -67,6 +82,8 @@ class FinancialModulePolicy
             || $user->hasPermission('financial.contacts.manage')
             || $user->hasPermission('financial.cost-centers.manage')
             || $user->hasPermission('financial.reports.manage')
+            || $user->hasPermission('financial.fechamento.view')
+            || $user->hasPermission('financial.fechamento.generate')
             || $user->hasPermission('financial.campanhas.view')
             || $user->hasPermission('financial.campanhas.manage');
     }

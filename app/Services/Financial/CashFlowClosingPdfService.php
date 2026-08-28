@@ -4,14 +4,12 @@ namespace App\Services\Financial;
 
 use App\Models\FinancialAccount;
 use App\Models\FinancialTransaction;
-use App\Models\Member;
 use App\Support\PdfText;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use setasign\Fpdi\Fpdi;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,6 +17,11 @@ use Throwable;
 
 class CashFlowClosingPdfService
 {
+    public function __construct(
+        private readonly PdfSignatureService $signatures,
+    ) {
+    }
+
     public function download(Request $request): Response
     {
         @set_time_limit(180);
@@ -102,99 +105,7 @@ class CashFlowClosingPdfService
             'saldoFinal' => $saldoFinal,
             'generatedAt' => now(),
             'comprovantes' => $this->mapComprovantes($saidas),
-            'pastorNome' => $this->namesForRole(['Pastor%', 'Pastora%', '%Pastor(a)%']),
-            'tesoureiroNome' => $this->tesoureiroNome(),
-        ];
-    }
-
-    /**
-     * Somente o 1º tesoureiro; o cargo 2º Tesoureiro(a) não assina o fechamento.
-     */
-    private function tesoureiroNome(): ?string
-    {
-        $members = $this->membersWithRoleLike(['%Tesoureiro%']);
-        if ($members->isEmpty()) {
-            return null;
-        }
-
-        $first = $members->filter(fn (Member $member) => $this->isFirstTreasurerRole((string) ($member->role->name ?? '')));
-        if ($first->isNotEmpty()) {
-            return $this->formatMemberNames($first);
-        }
-
-        $withoutSecond = $members->reject(fn (Member $member) => $this->isSecondTreasurerRole((string) ($member->role->name ?? '')));
-
-        return $this->formatMemberNames($withoutSecond);
-    }
-
-    private function isFirstTreasurerRole(string $roleName): bool
-    {
-        return (bool) preg_match('/(?:^|[\s])(?:1[ºo°]?|primeiro)\s*tesoureir/iu', $roleName);
-    }
-
-    private function isSecondTreasurerRole(string $roleName): bool
-    {
-        return (bool) preg_match('/(?:^|[\s])(?:2[ºo°]?|segundo)\s*tesoureir/iu', $roleName);
-    }
-
-    /**
-     * Nomes dos membros ativos com o cargo (role) correspondente.
-     *
-     * @param  list<string>  $namePatterns
-     */
-    private function namesForRole(array $namePatterns): ?string
-    {
-        return $this->formatMemberNames($this->membersWithRoleLike($namePatterns));
-    }
-
-    /**
-     * @param  list<string>  $namePatterns
-     * @return Collection<int, Member>
-     */
-    private function membersWithRoleLike(array $namePatterns): Collection
-    {
-        if (! Schema::hasTable('members') || ! Schema::hasTable('member_roles')) {
-            return collect();
-        }
-
-        $query = Member::query()
-            ->with('role')
-            ->whereHas('role', function ($q) use ($namePatterns) {
-                $q->where('is_active', true)
-                    ->where(function ($inner) use ($namePatterns) {
-                        foreach ($namePatterns as $index => $pattern) {
-                            if ($index === 0) {
-                                $inner->where('name', 'like', $pattern);
-                            } else {
-                                $inner->orWhere('name', 'like', $pattern);
-                            }
-                        }
-                    });
-            })
-            ->orderBy('name');
-
-        $members = (clone $query)->where('status', Member::STATUS_ATIVO)->get();
-
-        return $members->isNotEmpty() ? $members : $query->get();
-    }
-
-    /**
-     * @param  Collection<int, Member>  $members
-     */
-    private function formatMemberNames(Collection $members): ?string
-    {
-        if ($members->isEmpty()) {
-            return null;
-        }
-
-        $names = $members
-            ->pluck('name')
-            ->filter()
-            ->map(fn ($name) => PdfText::stripEmoji((string) $name))
-            ->unique()
-            ->values();
-
-        return $names->isEmpty() ? null : $names->implode(' / ');
+        ] + $this->signatures->forPdf();
     }
 
     /**

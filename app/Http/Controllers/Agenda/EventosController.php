@@ -10,6 +10,7 @@ use App\Models\EventRegistrationField;
 use App\Models\EventRegistrationPayment;
 use App\Models\EventScheduleItem;
 use App\Models\EventSpeaker;
+use App\Jobs\SendEventRegistrationWhatsappMessages;
 use App\Services\AuditLogger;
 use App\Services\EventRegistrationBatchSender;
 use App\Services\EventRegistrationDuplicateFinder;
@@ -422,7 +423,7 @@ class EventosController extends Controller
         };
     }
 
-    public function sendRegistrationsWhatsapp(Request $request, Event $event, EventRegistrationBatchSender $batchSender)
+    public function sendRegistrationsWhatsapp(Request $request, Event $event)
     {
         $this->authorize('manageRegistrations', $event);
 
@@ -448,40 +449,35 @@ class EventosController extends Controller
             return back()->with('error', 'Nenhuma inscrição válida na seleção.');
         }
 
-        $resultado = $batchSender->sendCustomMessages(
-            $registrations,
+        $connection = app(WhatsAppService::class)->checkConnectionStatus();
+        if (! ($connection['connected'] ?? false)) {
+            return redirect()
+                ->route('agenda.eventos.registrations', $event)
+                ->with('error', 'WhatsApp desconectado (instância: '.($connection['instance_name'] ?: 'padrão').'). Reconecte em Notificações e tente de novo.');
+        }
+
+        $mediaPath = null;
+        $mediaName = null;
+        $mediaMime = null;
+        if ($request->hasFile('arquivo')) {
+            $arquivo = $request->file('arquivo');
+            $mediaPath = $arquivo->store('tmp/whatsapp-lotes');
+            $mediaName = $arquivo->getClientOriginalName();
+            $mediaMime = $arquivo->getMimeType();
+        }
+
+        SendEventRegistrationWhatsappMessages::dispatch(
+            $event->id,
+            $registrations->pluck('id')->all(),
             (string) ($validated['mensagem'] ?? ''),
-            $request->file('arquivo')
-        );
+            $mediaPath,
+            $mediaName,
+            $mediaMime,
+        )->afterResponse();
 
-        AuditLogger::log('agenda', 'inscricoes.whatsapp', "WhatsApp enviado a inscritos de {$event->title}.", [
-            'event_id' => $event->id,
-            'sent' => $resultado['sent'],
-            'failed' => $resultado['failed'],
-            'skipped' => $resultado['skipped'],
-            'aborted' => $resultado['aborted'],
-            'ids' => $registrations->pluck('id')->all(),
-            'com_midia' => $request->hasFile('arquivo'),
-        ]);
-
-        $mensagem = "{$resultado['sent']} mensagem(ns) enviada(s).";
-        if ($resultado['skipped'] > 0) {
-            $mensagem .= " {$resultado['skipped']} ignorado(s) (sem telefone ou fora do lote).";
-        }
-        if ($resultado['failed'] > 0) {
-            $mensagem .= " {$resultado['failed']} falha(s).";
-        }
-        if ($resultado['aborted']) {
-            $mensagem .= ' '.$resultado['aborted'];
-        }
-
-        $flash = $resultado['failed'] > 0 || $resultado['aborted']
-            ? ($resultado['sent'] > 0 ? 'warning' : 'error')
-            : 'success';
-
-        return back()
-            ->with($flash, $mensagem)
-            ->with('envio_erros', array_values(array_slice($resultado['errors'], 0, 10)));
+        return redirect()
+            ->route('agenda.eventos.registrations', $event)
+            ->with('success', 'Envio iniciado. A página não precisa esperar: sucessos e erros aparecem em Notificações → Painel. Os envios continuam espaçados (8–20 s) para proteger o número.');
     }
 
     public function exportRegistrations(Request $request, Event $event)
