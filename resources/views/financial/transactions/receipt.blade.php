@@ -5,104 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recibo - {{ $transaction->description }}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .receipt-container {
-            max-width: 600px;
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial, Helvetica, sans-serif; padding: 20px; background: #f5f5f5; color: #1e3a5f; }
+        .recibo-card {
+            max-width: 720px;
             margin: 0 auto;
-            background: white;
-            padding: 40px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: #fff;
+            border: 1.5px solid #2b6cb0;
+            border-radius: 14px;
+            padding: 22px 24px;
         }
-        .receipt-header {
+        .org-header {
+            border-bottom: 1px solid #93c5fd;
+            padding-bottom: 12px;
+            margin-bottom: 14px;
+        }
+        .org-header-table { width: 100%; border-collapse: collapse; }
+        .org-logo-cell { width: 88px; vertical-align: middle; padding-right: 12px; }
+        .org-logo { max-width: 76px; max-height: 76px; display: block; }
+        .org-info-cell { vertical-align: middle; }
+        .org-name { font-size: 18px; font-weight: 700; color: #1a365d; margin-bottom: 8px; }
+        .org-meta { width: 100%; border-collapse: collapse; font-size: 11px; color: #2c5282; }
+        .org-addr { width: 56%; vertical-align: top; padding-right: 10px; }
+        .org-right { width: 44%; text-align: right; vertical-align: top; }
+        .meta-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #dbeafe;
+            padding: 8px 12px;
+            margin-bottom: 16px;
+            font-weight: 700;
+            font-size: 13px;
+            color: #1a365d;
+        }
+        .meta-bar .box {
+            background: #fff;
+            border: 1px solid #93c5fd;
+            padding: 4px 12px;
+            min-width: 120px;
             text-align: center;
-            margin-bottom: 30px;
+            font-size: 16px;
         }
-        .logo {
-            max-width: 150px;
-            margin-bottom: 10px;
-        }
-        .company-name {
-            font-size: 18px;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-        hr {
-            border: none;
-            border-top: 1px solid #333;
-            margin: 20px 0;
-        }
-        .receipt-title {
-            text-align: center;
-            font-size: 20px;
-            font-weight: bold;
-            margin: 20px 0;
-            text-transform: uppercase;
-        }
-        .receipt-body {
-            text-align: justify;
-            line-height: 1.8;
-            font-size: 14px;
-            margin: 30px 0;
-        }
-        .receipt-body strong {
-            font-weight: bold;
-        }
-        .signature-line {
-            border-top: 1px solid #333;
-            margin-top: 60px;
-            padding-top: 10px;
-            text-align: center;
-        }
-        .signature-name {
-            font-weight: bold;
-            margin-top: 10px;
-        }
-        .signature-date {
-            margin-top: 5px;
-        }
-        .print-buttons {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .btn {
-            padding: 10px 20px;
-            margin: 0 5px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            text-decoration: none;
-            display: inline-block;
-        }
-        .btn-primary {
-            background-color: #007bff;
-            color: white;
-        }
-        .btn-secondary {
-            background-color: #6c757d;
-            color: white;
-        }
+        .receipt-title { text-align: center; font-size: 20px; font-weight: 700; margin: 8px 0 18px; letter-spacing: .04em; }
+        .receipt-body { text-align: justify; line-height: 1.85; font-size: 14px; margin: 12px 0 8px; color: #1a202c; }
+        .signature-block { margin-top: 40px; text-align: center; }
+        .signature-img { max-height: 56px; max-width: 220px; display: block; margin: 0 auto 4px; }
+        .signature-rule { border-top: 1px solid #1a202c; width: 260px; margin: 4px auto 8px; }
+        .signature-name { font-weight: 700; font-size: 13px; color: #1a202c; }
+        .signature-role { font-size: 12px; color: #6b7c93; margin-top: 2px; }
+        .print-buttons { text-align: center; margin-bottom: 20px; }
+        .btn { padding: 10px 20px; margin: 0 5px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #007bff; color: #fff; }
+        .btn-secondary { background: #6c757d; color: #fff; }
         @media print {
-            .print-buttons {
-                display: none;
-            }
-            body {
-                background-color: white;
-                padding: 0;
-            }
-            .receipt-container {
-                box-shadow: none;
-                padding: 20px;
-            }
+            .print-buttons { display: none; }
+            body { background: #fff; padding: 12mm; }
+            .recibo-card { box-shadow: none; }
         }
     </style>
 </head>
@@ -112,62 +71,39 @@
         <button class="btn btn-secondary" onclick="window.close()">Fechar</button>
     </div>
 
-    <div class="receipt-container">
-        <div class="receipt-header">
-            <div class="logo">
-                <img src="{{ asset('img/img/LOG SS AZUL.png') }}" alt="ADEL" style="max-width: 100px;">
-            </div>
-            <div class="company-name">ADEL SÃO SEBASTIÃO</div>
-        </div>
+    <div class="recibo-card">
+        @include('financial.transactions.partials.receipt-org-header')
 
-        <hr>
+        @php
+            if ($transaction->type === 'receita') {
+                if ($transaction->member) {
+                    $fromName = strtoupper($transaction->member->name);
+                } else {
+                    $fromName = strtoupper($transaction->received_from_other ?? 'OUTROS');
+                }
+                $categoryName = strtoupper($transaction->category ? $transaction->category->name : 'RECEITA');
+            } else {
+                $fromName = 'ASSEMBLEIA DE DEUS DE LUZIÂNIA';
+                $categoryName = strtoupper($transaction->category ? $transaction->category->name : 'DESPESA');
+            }
+            $amount = number_format((float) $transaction->amount, 2, ',', '.');
+            $date = $transaction->transaction_date->format('d/m/Y');
+            $city = 'LUZIÂNIA - GOIÁS';
+            $reciboNumero = str_pad((string) $transaction->id, 6, '0', STR_PAD_LEFT);
+        @endphp
+
+        <div class="meta-bar">
+            <div>RECIBO Nº <span class="box">{{ $reciboNumero }}</span></div>
+            <div>VALOR <span class="box">R$ {{ $amount }}</span></div>
+        </div>
 
         <div class="receipt-title">RECIBO</div>
 
         <div class="receipt-body">
-            @php
-                $isDizimo = $transaction->category && (
-                    stripos($transaction->category->name, 'dizimo') !== false || 
-                    stripos($transaction->category->name, 'dízimo') !== false
-                );
-                
-                if ($transaction->type === 'receita') {
-                    // Para receitas (dízimo ou oferta), mostrar nome do membro
-                    if ($transaction->member) {
-                        $fromName = strtoupper($transaction->member->name);
-                    } else {
-                        $fromName = strtoupper($transaction->received_from_other ?? 'OUTROS');
-                    }
-                    $categoryName = strtoupper($transaction->category ? $transaction->category->name : 'RECEITA');
-                } else {
-                    // Para despesas, sempre mostrar "ADEL SÃO SEBASTIÃO"
-                    $fromName = 'ADEL SÃO SEBASTIÃO';
-                    $categoryName = strtoupper($transaction->category ? $transaction->category->name : 'DESPESA');
-                }
-                
-                $amount = number_format($transaction->amount, 2, ',', '.');
-                $date = $transaction->transaction_date->format('d/m/Y');
-                $city = 'SÃO SEBASTIÃO - DISTRITO FEDERAL';
-            @endphp
-
             Recebi(emos) de <strong>{{ $fromName }}</strong>, a quantia de <strong>R$ {{ $amount }}</strong>, correspondente a "<strong>{{ $categoryName }}</strong>", e para clareza firmo(amos) o presente na cidade de <strong>{{ $city }}</strong> no dia <strong>{{ $date }}</strong>.
         </div>
 
-        <hr>
-
-        <div class="signature-line">
-            <div class="signature-name">ADEL SÃO SEBASTIÃO</div>
-            <div class="signature-date">{{ $date }}</div>
-        </div>
+        @include('financial.transactions.partials.receipt-signature')
     </div>
-
-    <script>
-        // Auto-print quando a página carregar (opcional)
-        // window.onload = function() {
-        //     setTimeout(function() {
-        //         window.print();
-        //     }, 500);
-        // };
-    </script>
 </body>
 </html>

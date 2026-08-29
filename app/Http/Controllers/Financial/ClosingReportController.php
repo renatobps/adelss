@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Financial;
 use App\Http\Controllers\Controller;
 use App\Models\CashClosing;
 use App\Models\Event;
+use App\Models\FinancialTransaction;
 use App\Services\Financial\CultoOfferingReportService;
 use App\Services\Financial\PdfSignatureService;
 use App\Services\Financial\WeeklyCashClosingService;
@@ -29,7 +30,51 @@ class ClosingReportController extends Controller
 
         $report = $culto ? $service->build($culto) : null;
 
-        return view('financial.reports.culto-offerings', compact('cultos', 'culto', 'report'));
+        return view('financial.reports.culto-offerings', [
+            'cultos' => $cultos,
+            'culto' => $culto,
+            'report' => $report,
+            'canGenerate' => auth()->user()?->is_admin || auth()->user()?->can('financial.fechamento.generate'),
+        ]);
+    }
+
+    public function attachToCulto(Request $request, Event $event, CultoOfferingReportService $service)
+    {
+        $this->authorize('financial.fechamento.generate');
+
+        abort_unless($event->isCultoDaAgenda(), 404);
+
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'exists:financial_transactions,id'],
+        ], [
+            'ids.required' => 'Selecione ao menos um dízimo ou oferta para vincular.',
+        ]);
+
+        $count = $service->attachToCulto($event, $validated['ids']);
+
+        return redirect()
+            ->route('financial.reports.cultos', ['culto_id' => $event->id])
+            ->with('success', $count === 1
+                ? '1 lançamento vinculado a este culto.'
+                : $count.' lançamentos vinculados a este culto.');
+    }
+
+    public function detachFromCulto(Event $event, FinancialTransaction $transaction, CultoOfferingReportService $service)
+    {
+        $this->authorize('financial.fechamento.generate');
+
+        abort_unless($event->isCultoDaAgenda(), 404);
+
+        if (! $service->detachFromCulto($event, $transaction)) {
+            return redirect()
+                ->route('financial.reports.cultos', ['culto_id' => $event->id])
+                ->with('error', 'Este lançamento não está vinculado a este culto.');
+        }
+
+        return redirect()
+            ->route('financial.reports.cultos', ['culto_id' => $event->id])
+            ->with('success', 'Lançamento desvinculado deste culto.');
     }
 
     public function cultosPdf(Event $event, CultoOfferingReportService $service): Response

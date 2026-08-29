@@ -15,14 +15,9 @@ class CultoOfferingReportService
 
     public function build(Event $culto): array
     {
-        $lancamentos = FinancialTransaction::query()
+        $lancamentos = $this->dizimosOfertasRecebidos()
             ->with(['member', 'category'])
             ->where('culto_id', $culto->id)
-            ->where('type', 'receita')
-            ->where('status', 'recebido')
-            ->whereHas('category', function ($q) {
-                $q->whereIn('slug', ['dizimo', 'oferta']);
-            })
             ->orderBy('id')
             ->get();
 
@@ -32,6 +27,7 @@ class CultoOfferingReportService
         return [
             'culto' => $culto,
             'lancamentos' => $lancamentos,
+            'pendentes' => $this->pendentes(),
             'totalDizimos' => (float) $dizimos->sum('amount'),
             'totalOfertas' => (float) $ofertas->sum('amount'),
             'totalGeral' => (float) $lancamentos->sum('amount'),
@@ -39,6 +35,44 @@ class CultoOfferingReportService
             'generatedBy' => auth()->user()?->name,
             'logoPath' => $this->logoPath(),
         ] + $this->signatures->forPdf();
+    }
+
+    public function pendentes()
+    {
+        return $this->dizimosOfertasRecebidos()
+            ->with(['member', 'category'])
+            ->whereNull('culto_id')
+            ->orderByDesc('transaction_date')
+            ->orderByDesc('id')
+            ->limit(80)
+            ->get();
+    }
+
+    public function attachToCulto(Event $culto, array $ids): int
+    {
+        return $this->dizimosOfertasRecebidos()
+            ->whereNull('culto_id')
+            ->whereIn('id', $ids)
+            ->update(['culto_id' => $culto->id]);
+    }
+
+    public function detachFromCulto(Event $culto, FinancialTransaction $transaction): bool
+    {
+        if ((int) $transaction->culto_id !== (int) $culto->id) {
+            return false;
+        }
+
+        return $transaction->update(['culto_id' => null]);
+    }
+
+    private function dizimosOfertasRecebidos()
+    {
+        return FinancialTransaction::query()
+            ->where('type', 'receita')
+            ->where('status', 'recebido')
+            ->whereHas('category', function ($q) {
+                $q->whereIn('slug', ['dizimo', 'oferta']);
+            });
     }
 
     public function download(Event $culto): Response

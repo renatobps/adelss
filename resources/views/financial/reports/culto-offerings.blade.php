@@ -31,12 +31,22 @@
             </div>
         </div>
 
+        @if(session('success'))
+            <div class="alert alert-success">{{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div class="alert alert-danger">{{ session('error') }}</div>
+        @endif
+        @if($errors->any())
+            <div class="alert alert-danger">{{ $errors->first() }}</div>
+        @endif
+
         @if($report)
             <div class="card fr-card">
                 <div class="card-body">
                     @include('financial.reports.partials.report-head', [
                         'title' => 'Dízimos e ofertas — '.$culto->display_name,
-                        'subtitle' => 'Somente valores recebidos deste culto',
+                        'subtitle' => 'Valores vinculados a este culto no fechamento',
                         'pdfUrl' => route('financial.reports.cultos.pdf', $culto),
                         'pdfLabel' => 'Baixar PDF',
                     ])
@@ -66,24 +76,87 @@
                         <table class="table table-hover">
                             <thead class="table-light">
                                 <tr>
+                                    <th>Data</th>
                                     <th>Recebido de</th>
                                     <th>Categoria</th>
                                     <th class="text-end">Valor</th>
+                                    @if($canGenerate)
+                                        <th></th>
+                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($report['lancamentos'] as $tx)
                                     <tr>
+                                        <td>{{ $tx->transaction_date?->format('d/m/Y') }}</td>
                                         <td>{{ $tx->source_name }}</td>
                                         <td>{{ $tx->category?->name }}</td>
                                         <td class="text-end">R$ {{ number_format((float) $tx->amount, 2, ',', '.') }}</td>
+                                        @if($canGenerate)
+                                            <td class="text-end">
+                                                <form method="POST" action="{{ route('financial.reports.cultos.detach', [$culto, $tx]) }}" class="d-inline"
+                                                      onsubmit="return confirm('Desvincular este lançamento deste culto?');">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Desvincular</button>
+                                                </form>
+                                            </td>
+                                        @endif
                                     </tr>
                                 @empty
-                                    <tr><td colspan="3" class="text-muted">Nenhum dízimo ou oferta recebido neste culto.</td></tr>
+                                    <tr><td colspan="{{ $canGenerate ? 5 : 4 }}" class="text-muted">Nenhum dízimo ou oferta vinculado a este culto.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+
+            @if($canGenerate)
+                <div class="card fr-card mt-4">
+                    <div class="card-body">
+                        <h5 class="mb-1">Vincular dízimos e ofertas</h5>
+                        <p class="text-muted small mb-3">
+                            Lançamentos sem culto (recebidos em qualquer dia). Marque os que entram neste fechamento.
+                        </p>
+                        @if($report['pendentes']->isEmpty())
+                            <p class="text-muted mb-0">Não há dízimos ou ofertas pendentes de vínculo.</p>
+                        @else
+                            <form method="POST" action="{{ route('financial.reports.cultos.attach', $culto) }}">
+                                @csrf
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 2rem;"></th>
+                                                <th>Data</th>
+                                                <th>Recebido de</th>
+                                                <th>Categoria</th>
+                                                <th class="text-end">Valor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($report['pendentes'] as $tx)
+                                                <tr>
+                                                    <td>
+                                                        <input type="checkbox" class="form-check-input" name="ids[]" value="{{ $tx->id }}">
+                                                    </td>
+                                                    <td>{{ $tx->transaction_date?->format('d/m/Y') }}</td>
+                                                    <td>{{ $tx->source_name }}</td>
+                                                    <td>{{ $tx->category?->name }}</td>
+                                                    <td class="text-end">R$ {{ number_format((float) $tx->amount, 2, ',', '.') }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    Vincular ao culto selecionado
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            @endif
                 </div>
             </div>
         @else

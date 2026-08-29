@@ -349,6 +349,11 @@ class Event extends Model
         });
     }
 
+    public function isCultoDaAgenda(): bool
+    {
+        return static::query()->cultosDaAgenda()->whereKey($this->id)->exists();
+    }
+
     public static function paraLancamentoFinanceiro(int $dias = 45)
     {
         return static::query()

@@ -92,6 +92,22 @@ class FinancialCultoAndWeeklyClosingTest extends TestCase
         $this->assertEquals(70.0, $reportNoite['totalGeral']);
     }
 
+    public function test_vinculo_de_dizimo_ao_culto_so_no_fechamento(): void
+    {
+        $dizimo = FinancialCategory::create(['name' => 'Dízimo', 'slug' => 'dizimo', 'type' => 'receita']);
+        $culto = Event::create(['title' => 'Culto da noite', 'start_date' => '2026-08-23 19:00:00']);
+        $tx = $this->tx($dizimo->id, null, 80, '2026-08-20');
+
+        $service = app(CultoOfferingReportService::class);
+        $this->assertCount(1, $service->pendentes());
+        $this->assertEquals(0.0, $service->build($culto)['totalGeral']);
+
+        $this->assertSame(1, $service->attachToCulto($culto, [$tx->id]));
+        $this->assertSame($culto->id, $tx->fresh()->culto_id);
+        $this->assertEquals(80.0, $service->build($culto)['totalGeral']);
+        $this->assertCount(0, $service->pendentes());
+    }
+
     public function test_fechamento_semanal_detecta_divergencia_apos_alteracao(): void
     {
         $dizimo = FinancialCategory::create(['name' => 'Dízimo', 'slug' => 'dizimo', 'type' => 'receita']);

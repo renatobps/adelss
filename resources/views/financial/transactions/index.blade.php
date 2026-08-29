@@ -162,17 +162,6 @@
                     </select>
                 </div>
                 <div class="col-md-2 mb-2">
-                    <label class="form-label small">Culto:</label>
-                    <select class="form-select form-select-sm" name="culto_id">
-                        <option value="">Todos</option>
-                        @foreach(($cultos ?? []) as $culto)
-                            <option value="{{ $culto->id }}" {{ request('culto_id') == $culto->id ? 'selected' : '' }}>
-                                {{ $culto->display_name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2 mb-2">
                     <label class="form-label small">Categorias:</label>
                     <select class="form-select form-select-sm" name="category_id">
                         <option value="">Todas</option>
@@ -191,7 +180,7 @@
                     <button type="submit" form="filterForm" class="btn btn-primary btn-sm">
                         <i class="bx bx-filter me-1"></i>Aplicar Filtros
                     </button>
-                    @if(request()->hasAny(['type', 'status', 'category_id', 'account_id', 'cost_center_id', 'start_date', 'end_date', 'culto_id']))
+                    @if(request()->hasAny(['type', 'status', 'category_id', 'account_id', 'cost_center_id', 'start_date', 'end_date']))
                         <a href="{{ route('financial.transactions.index') }}" class="btn btn-default btn-sm">
                             <i class="bx bx-x me-1"></i>Limpar
                         </a>
@@ -317,7 +306,7 @@
                                     </li>
                                     <li>
                                         <i class="bx bx-purchase-tag"></i>
-                                        <span>{{ $typeLabel }}{{ $categoryName ? ' · ' . $categoryName : '' }}{{ $transaction->culto ? ' · ' . $transaction->culto->display_name : '' }}</span>
+                                        <span>{{ $typeLabel }}{{ $categoryName ? ' · ' . $categoryName : '' }}</span>
                                     </li>
                                 </ul>
                             </div>
@@ -775,12 +764,6 @@
                                 @endforeach
                             </select>
                         </div>
-                        @include('financial.transactions.partials.culto-field', [
-                            'selectId' => 'receita_culto_id',
-                            'wrapId' => 'receitaCultoWrap',
-                            'formId' => 'receitaCultoNew',
-                            'cultos' => $cultos ?? collect(),
-                        ])
                     </div>
 
                     <div class="row">
@@ -1048,12 +1031,6 @@
                                     @endforeach
                                 </select>
                             </div>
-                            @include('financial.transactions.partials.culto-field', [
-                                'selectId' => 'edit_culto_id',
-                                'wrapId' => 'editCultoWrap',
-                                'formId' => 'editCultoNew',
-                                'cultos' => $cultos ?? collect(),
-                            ])
                         </div>
                     </div>
 
@@ -2162,11 +2139,6 @@
             
             // Filtrar categorias de receita
             filterCategories('edit_category_id', 'receita');
-            var editCulto = document.getElementById('edit_culto_id');
-            if (editCulto) {
-                editCulto.value = transaction.culto_id || '';
-            }
-            syncCultoVisibility('edit_category_id', 'editCultoWrap', 'edit_culto_id');
         } else {
             receitaFields.style.display = 'none';
             despesaFields.style.display = 'block';
@@ -2266,10 +2238,10 @@
                 if (ok && data.success) {
                     alert('Comprovante enviado por WhatsApp com sucesso!');
                 } else {
-                    alert(data.error || 'Não foi possível enviar o comprovante.');
+                    alert(data.error || data.message || 'Não foi possível enviar o comprovante.');
                 }
             })
-            .catch(() => alert('Erro ao enviar comprovante por WhatsApp.'))
+            .catch(() => alert('Erro ao enviar comprovante por WhatsApp. Atualize a página e tente de novo.'))
             .finally(() => { btn.disabled = false; });
         });
     });
@@ -2413,45 +2385,6 @@
             printWindow.print();
         }, 250);
     }
-
-    function categoryNeedsCulto(select) {
-        var opt = select && select.options[select.selectedIndex];
-        return !!(opt && opt.getAttribute('data-dizimo-oferta') === '1');
-    }
-
-    function syncCultoVisibility(categoryId, wrapId, selectId) {
-        var category = document.getElementById(categoryId);
-        var wrap = document.getElementById(wrapId);
-        var select = document.getElementById(selectId);
-        if (!category || !wrap || !select) return;
-        var show = categoryNeedsCulto(category);
-        wrap.classList.toggle('d-none', !show);
-        select.required = show;
-        if (!show) {
-            select.value = '';
-            return;
-        }
-        if (!select.value) {
-            var today = new Date().toISOString().slice(0, 10);
-            var match = Array.prototype.find.call(select.options, function (opt) {
-                return opt.value && opt.getAttribute('data-date') === today;
-            });
-            if (match) select.value = match.value;
-        }
-    }
-
-    function bindCultoField(categoryId, wrapId) {
-        var wrap = document.getElementById(wrapId);
-        var category = document.getElementById(categoryId);
-        if (!wrap || !category) return;
-        category.addEventListener('change', function () {
-            syncCultoVisibility(categoryId, wrapId, wrap.querySelector('.js-culto-select').id);
-        });
-        syncCultoVisibility(categoryId, wrapId, wrap.querySelector('.js-culto-select').id);
-    }
-
-    bindCultoField('receita_category', 'receitaCultoWrap');
-    bindCultoField('edit_category_id', 'editCultoWrap');
 </script>
 @endpush
 @endsection

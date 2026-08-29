@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Financial;
 
 use App\Http\Controllers\Controller;
-use App\Models\Event;
 use App\Models\FinancialTransaction;
 use App\Models\FinancialTransactionAttachment;
 use App\Models\Member;
@@ -11,6 +10,7 @@ use App\Models\FinancialContact;
 use App\Models\FinancialCategory;
 use App\Models\FinancialAccount;
 use App\Models\FinancialCostCenter;
+use App\Services\Financial\PdfSignatureService;
 use App\Services\FinancialNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,7 +30,7 @@ class TransactionController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', FinancialTransaction::class);
-        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter', 'latestPaymentTransaction', 'culto'])
+        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter', 'latestPaymentTransaction'])
             ->orderBy('transaction_date', 'desc');
 
         // Filtros
@@ -52,10 +52,6 @@ class TransactionController extends Controller
 
         if ($request->has('cost_center_id') && $request->cost_center_id) {
             $query->where('cost_center_id', $request->cost_center_id);
-        }
-
-        if ($request->filled('culto_id')) {
-            $query->where('culto_id', $request->integer('culto_id'));
         }
 
         // Filtro de período
@@ -147,7 +143,6 @@ class TransactionController extends Controller
         $costCenters = FinancialCostCenter::orderBy('name')->get();
         $members = Member::orderBy('name')->get(); // Para o modal de receita
         $contacts = FinancialContact::orderBy('name')->get(); // Para o modal de despesa
-        $cultos = Event::paraLancamentoFinanceiro();
         $mercadoPagoPublicKey = (string) config('mercadopago.public_key', '');
 
         return view('financial.transactions.index', compact(
@@ -160,7 +155,6 @@ class TransactionController extends Controller
             'costCenters',
             'members',
             'contacts',
-            'cultos',
             'startDate',
             'endDate',
             'mercadoPagoPublicKey'
@@ -222,7 +216,6 @@ class TransactionController extends Controller
         }
 
         $validated = $request->validate($validationRules, $validationMessages);
-        $validated = $this->applyCultoToReceita($request, $validated);
 
         // Determinar status e tipo
         $validated['status'] = $request->has('is_paid') && $request->is_paid ? 'recebido' : 'a_receber';
@@ -510,12 +503,6 @@ class TransactionController extends Controller
 
         $validated = $request->validate($rules);
 
-        if ($transaction->type === 'receita') {
-            $validated = $this->applyCultoToReceita($request, $validated);
-        } else {
-            $validated['culto_id'] = null;
-        }
-
         // Determinar status
         $validated['is_paid'] = $request->has('is_paid') && $request->is_paid;
         $validated['status'] = $validated['is_paid']
@@ -619,11 +606,18 @@ class TransactionController extends Controller
     /**
      * Display receipt for printing
      */
-    public function receipt(FinancialTransaction $transaction)
+    public function receipt(FinancialTransaction $transaction, PdfSignatureService $signatures)
     {
         $this->authorize('receipt', $transaction);
         $transaction->load(['member', 'contact', 'category']);
-        return view('financial.transactions.receipt', compact('transaction'));
+
+        return view('financial.transactions.receipt', [
+            'transaction' => $transaction,
+            'tesoureiroNome' => $signatures->tesoureiroNome(),
+            'tesoureiroAssinaturaSrc' => $signatures->imageSrc(PdfSignatureService::ROLE_TESOUREIRO),
+            'logoSrc' => asset('img/img/LOG SS AZUL.png'),
+            'logoPath' => public_path('img/img/LOG SS AZUL.png'),
+        ]);
     }
 
     /**
@@ -641,11 +635,27 @@ class TransactionController extends Controller
             ], 422);
         }
 
-        $result = $this->financialNotificationService->enviarComprovanteReceita(
-            $transaction,
-            Auth::id(),
-            true
-        );
+        try {
+            $result = $this->financialNotificationService->enviarComprovanteReceita(
+                $transaction,
+                Auth::id(),
+                true
+            );
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Falha ao enviar comprovante financeiro', [
+                'transaction_id' => $transaction->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Não foi possível enviar o comprovante. '.$e->getMessage(),
+            ], 500);
+        }
+
+        if (! ($result['success'] ?? false) && empty($result['error'])) {
+            $result['error'] = 'Não foi possível enviar o comprovante. Confira o WhatsApp em Notificações → Configuração WPP.';
+        }
 
         return response()->json($result, ($result['success'] ?? false) ? 200 : 422);
     }
@@ -891,26 +901,6 @@ class TransactionController extends Controller
         $amount = str_replace(',', '.', $amount);
         
         return (float) $amount;
-    }
-
-    private function applyCultoToReceita(Request $request, array $validated): array
-    {
-        $category = ! empty($validated['category_id'])
-            ? FinancialCategory::query()->find($validated['category_id'])
-            : null;
-
-        if ($category && $category->isDizimoOuOferta()) {
-            $request->validate([
-                'culto_id' => 'required|exists:events,id',
-            ], [
-                'culto_id.required' => 'Selecione o culto deste dízimo ou oferta.',
-            ]);
-            $validated['culto_id'] = (int) $request->input('culto_id');
-        } else {
-            $validated['culto_id'] = null;
-        }
-
-        return $validated;
     }
 
     /**

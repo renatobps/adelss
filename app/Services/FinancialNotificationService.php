@@ -7,6 +7,7 @@ use App\Models\FinancialCategory;
 use App\Models\FinancialNotificationLog;
 use App\Models\FinancialTransaction;
 use App\Models\Member;
+use App\Services\Financial\PdfSignatureService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -16,7 +17,8 @@ use Illuminate\Support\Facades\Schema;
 class FinancialNotificationService
 {
     public function __construct(
-        private WhatsAppService $whatsappService
+        private WhatsAppService $whatsappService,
+        private PdfSignatureService $signatures,
     ) {}
 
     public function enviarComprovanteReceita(
@@ -26,18 +28,20 @@ class FinancialNotificationService
     ): array {
         $automation = $this->contributionThanksAutomation();
 
-        if ($automation) {
-            if (!$automation->enabled) {
-                return ['success' => false, 'error' => 'Automação de agradecimento desabilitada.'];
+        if (! $force) {
+            if ($automation) {
+                if (! $automation->enabled) {
+                    return ['success' => false, 'error' => 'Automação de agradecimento desabilitada. Use o envio manual ou ative a automação em Financeiro → Automações.'];
+                }
+            } elseif (! config('financial.whatsapp.dizimo_receipt_enabled', true)) {
+                return ['success' => false, 'error' => 'Notificações de comprovante desabilitadas.'];
             }
-        } elseif (!config('financial.whatsapp.dizimo_receipt_enabled', true)) {
-            return ['success' => false, 'error' => 'Notificações de comprovante desabilitadas.'];
         }
 
         $transaction->loadMissing(['member', 'category']);
 
-        if (!$this->deveEnviarComprovante($transaction, $automation)) {
-            return ['success' => false, 'error' => 'Transação não elegível para comprovante.'];
+        if (! $this->deveEnviarComprovante($transaction, $force ? null : $automation)) {
+            return ['success' => false, 'error' => 'Esta receita não é dízimo/oferta pago de um membro. Só esse tipo gera comprovante.'];
         }
 
         $member = $transaction->member;
@@ -517,20 +521,37 @@ class FinancialNotificationService
         $transaction->loadMissing(['member', 'contact', 'category']);
 
         try {
-            $pdf = Pdf::loadView('financial.transactions.receipt-pdf', [
-                'transaction' => $transaction,
-                'logoPath' => public_path('img/img/LOG SS AZUL.png'),
-            ])->setPaper('a4');
-
-            $directory = storage_path('app/temp/receipts');
-            if (!is_dir($directory)) {
-                mkdir($directory, 0755, true);
+            $dir = storage_path('app/temp/receipts');
+            if (! is_dir($dir)) {
+                mkdir($dir, 0755, true);
             }
 
-            $path = $directory . '/recibo-' . $transaction->id . '-' . time() . '.pdf';
+            $logoSource = public_path('img/img/LOG SS AZUL.png');
+            $logoPath = null;
+            if (is_file($logoSource)) {
+                $logoPath = $dir.DIRECTORY_SEPARATOR.'logo-adel.png';
+                if (! is_file($logoPath)) {
+                    @copy($logoSource, $logoPath);
+                }
+                $logoPath = str_replace('\\', '/', $logoPath);
+            }
+
+            $assinaturaPath = $this->signatures->imagePath(PdfSignatureService::ROLE_TESOUREIRO);
+            if ($assinaturaPath) {
+                $assinaturaPath = str_replace('\\', '/', $assinaturaPath);
+            }
+
+            $pdf = Pdf::loadView('financial.transactions.receipt-pdf', [
+                'transaction' => $transaction,
+                'logoPath' => $logoPath,
+                'tesoureiroNome' => $this->signatures->tesoureiroNome(),
+                'tesoureiroAssinaturaSrc' => $assinaturaPath,
+            ])->setPaper('a4');
+
+            $path = $dir.DIRECTORY_SEPARATOR.'recibo-'.$transaction->id.'-'.time().'.pdf';
             $pdf->save($path);
 
-            return $path;
+            return is_file($path) ? $path : null;
         } catch (\Throwable $e) {
             Log::warning('Falha ao gerar PDF de recibo financeiro', [
                 'transaction_id' => $transaction->id,
