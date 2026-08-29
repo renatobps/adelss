@@ -203,6 +203,8 @@ a.er-kpi:hover { transform: translateY(-2px); box-shadow: 0 .35rem .9rem rgba(46
 .er-whats-item .er-muted { line-height: 1.2; }
 
 .er-raffle-modal { overflow: hidden; }
+.er-raffle-scope { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem; }
+.er-raffle-scope .btn { border-radius: 999px; }
 .er-raffle-stage {
     position: relative;
     min-height: 7.5rem;

@@ -287,18 +287,22 @@ class EventosController extends Controller
         $registrations = $this->registrationsQuery($event, $filters, $duplicateIds)
             ->with(['payment', 'checkedInBy'])
             ->paginate($filters['per_page'])
-            ->withQueryString();
+            ->appends(collect($request->query())->except('sorteio')->all());
 
         $user = $request->user();
         $canEditRegistrations = $user && $user->can('manageRegistrations', $event);
         $canDeleteRegistrations = $user && $user->can('deleteRegistrations', $event);
 
-        $raffleNames = EventRegistration::query()
+        $raffleEntries = EventRegistration::query()
             ->where('event_id', $event->id)
             ->emVaga()
             ->orderBy('name')
-            ->pluck('name')
-            ->filter(fn ($name) => trim((string) $name) !== '')
+            ->get(['name', 'checked_in_at'])
+            ->filter(fn (EventRegistration $r) => trim((string) $r->name) !== '')
+            ->map(fn (EventRegistration $r) => [
+                'nome' => $r->name,
+                'presente' => $r->checked_in_at !== null,
+            ])
             ->values();
 
         $whatsappContacts = EventRegistration::query()
@@ -330,7 +334,7 @@ class EventosController extends Controller
             'canDeleteRegistrations' => $canDeleteRegistrations,
             'whatsappContacts' => $whatsappContacts,
             'whatsappBatchLimit' => EventRegistrationBatchSender::BATCH_LIMIT,
-            'raffleNames' => $raffleNames,
+            'raffleEntries' => $raffleEntries,
         ]);
     }
 

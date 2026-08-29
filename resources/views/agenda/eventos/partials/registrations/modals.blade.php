@@ -7,7 +7,18 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body text-center pt-2">
-                <p class="text-muted small mb-3">Entre {{ $raffleNames->count() }} inscrito(s) ativos (pendentes e confirmados).</p>
+                <div class="er-raffle-scope mb-3" role="group" aria-label="Quem entra no sorteio">
+                    <input type="radio" class="btn-check" name="erRaffleScope" id="erRaffleScopeAll" value="todos" checked>
+                    <label class="btn btn-outline-secondary btn-sm" for="erRaffleScopeAll">
+                        Todos <span class="er-muted" id="erRaffleCountAll">({{ $raffleEntries->count() }})</span>
+                    </label>
+                    <input type="radio" class="btn-check" name="erRaffleScope" id="erRaffleScopePresent" value="presentes"
+                           @disabled($raffleEntries->where('presente', true)->isEmpty())>
+                    <label class="btn btn-outline-secondary btn-sm" for="erRaffleScopePresent">
+                        Somente presentes <span class="er-muted" id="erRaffleCountPresent">({{ $raffleEntries->where('presente', true)->count() }})</span>
+                    </label>
+                </div>
+                <p class="text-muted small mb-3" id="erRaffleHint">O sorteio inclui inscritos pendentes e confirmados.</p>
                 <div class="er-raffle-stage" id="erRaffleStage">
                     <div class="er-raffle-glow" aria-hidden="true"></div>
                     <div class="er-raffle-name" id="erRaffleName">Pronto para sortear</div>

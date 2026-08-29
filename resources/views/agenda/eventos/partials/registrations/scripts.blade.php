@@ -1,7 +1,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var RAFFLE_NAMES = @json($raffleNames->values());
-    var AUTO_OPEN_RAFFLE = @json(request()->boolean('sorteio'));
+    var RAFFLE_ENTRIES = @json($raffleEntries->values());
 
     (function initRaffle() {
         var openBtn = document.getElementById('erRaffleOpen');
@@ -9,11 +8,24 @@ document.addEventListener('DOMContentLoaded', function () {
         var nameEl = document.getElementById('erRaffleName');
         var stage = document.getElementById('erRaffleStage');
         var sub = document.getElementById('erRaffleSub');
+        var hint = document.getElementById('erRaffleHint');
         var modalEl = document.getElementById('erRaffleModal');
+        var scopeAll = document.getElementById('erRaffleScopeAll');
+        var scopePresent = document.getElementById('erRaffleScopePresent');
         if (!openBtn || !modalEl || !nameEl || !startBtn) return;
 
         var running = false;
         var timer = null;
+
+        var namesOf = function (entries) {
+            return entries.map(function (item) { return item.nome; });
+        };
+
+        var pool = function () {
+            var presentOnly = scopePresent && scopePresent.checked;
+            if (!presentOnly) return namesOf(RAFFLE_ENTRIES);
+            return namesOf(RAFFLE_ENTRIES.filter(function (item) { return item.presente; }));
+        };
 
         var pickIndex = function (max) {
             if (max <= 1) return 0;
@@ -26,24 +38,49 @@ document.addEventListener('DOMContentLoaded', function () {
             nameEl.textContent = text;
         };
 
+        var refreshHint = function () {
+            var names = pool();
+            var presentOnly = scopePresent && scopePresent.checked;
+            if (hint) {
+                hint.textContent = presentOnly
+                    ? (names.length
+                        ? 'Sorteio entre ' + names.length + ' presente(s) com check-in.'
+                        : 'Ninguém fez check-in ainda. Use “Todos” ou registre a presença.')
+                    : 'Sorteio entre ' + names.length + ' inscrito(s) ativos (pendentes e confirmados).';
+            }
+            startBtn.disabled = running || names.length === 0;
+        };
+
         var stop = function () {
             running = false;
             if (timer) {
                 clearTimeout(timer);
                 timer = null;
             }
-            startBtn.disabled = false;
+            refreshHint();
         };
 
-        var run = function () {
-            if (running || !RAFFLE_NAMES.length) return;
+        var openRaffle = function () {
+            if (!RAFFLE_ENTRIES.length) return;
+            stop();
+            stage.classList.remove('is-spinning', 'is-winner');
+            setName('Pronto para sortear');
+            sub.textContent = 'O nome do ganhador aparece após a animação.';
+            refreshHint();
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        };
+
+        var run = function (event) {
+            if (event) event.stopPropagation();
+            var names = pool();
+            if (running || !names.length) return;
             running = true;
             startBtn.disabled = true;
             stage.classList.remove('is-winner');
             stage.classList.add('is-spinning');
             sub.textContent = 'Sorteando...';
 
-            var winner = RAFFLE_NAMES[pickIndex(RAFFLE_NAMES.length)];
+            var winner = names[pickIndex(names.length)];
             var started = Date.now();
             var duration = 2800;
             var delay = 50;
@@ -58,7 +95,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     stop();
                     return;
                 }
-                setName(RAFFLE_NAMES[pickIndex(RAFFLE_NAMES.length)]);
+                setName(names[pickIndex(names.length)]);
                 delay = Math.min(220, 50 + Math.floor(elapsed / 18));
                 timer = setTimeout(tick, delay);
             };
@@ -66,24 +103,24 @@ document.addEventListener('DOMContentLoaded', function () {
             tick();
         };
 
-        openBtn.addEventListener('click', function () {
-            if (!RAFFLE_NAMES.length) return;
-            stop();
-            stage.classList.remove('is-spinning', 'is-winner');
-            setName('Pronto para sortear');
-            sub.textContent = 'O nome do ganhador aparece após a animação.';
-            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        openBtn.addEventListener('click', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            openRaffle();
         });
 
         startBtn.addEventListener('click', run);
+        scopeAll?.addEventListener('change', refreshHint);
+        scopePresent?.addEventListener('change', refreshHint);
 
         modalEl.addEventListener('hidden.bs.modal', function () {
             stop();
             stage.classList.remove('is-spinning', 'is-winner');
         });
 
-        if (AUTO_OPEN_RAFFLE && RAFFLE_NAMES.length) {
-            openBtn.click();
+        if (window.location.hash === '#sorteio' && RAFFLE_ENTRIES.length) {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+            openRaffle();
         }
     })();
 

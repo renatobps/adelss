@@ -18,7 +18,7 @@
 @php
     $registrationUrl = function (array $overrides = []) use ($event) {
         $params = array_filter(
-            array_merge(request()->query(), $overrides),
+            array_merge(collect(request()->query())->except('sorteio')->all(), $overrides),
             fn ($value) => $value !== null && $value !== ''
         );
 
@@ -107,8 +107,8 @@
                         </ul>
                     </div>
                     <button type="button" class="btn btn-outline-warning btn-sm" id="erRaffleOpen"
-                            @disabled($raffleNames->isEmpty())
-                            title="{{ $raffleNames->isEmpty() ? 'Nenhum inscrito elegível para o sorteio' : 'Sortear um inscrito pelo nome' }}">
+                            @disabled($raffleEntries->isEmpty())
+                            title="{{ $raffleEntries->isEmpty() ? 'Nenhum inscrito elegível para o sorteio' : 'Sortear um inscrito pelo nome' }}">
                         <i class="bx bx-dice-5"></i> Sortear
                     </button>
                     @if($canEditRegistrations)
