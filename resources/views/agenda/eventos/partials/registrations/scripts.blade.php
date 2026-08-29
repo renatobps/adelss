@@ -1,5 +1,92 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    var RAFFLE_NAMES = @json($raffleNames->values());
+    var AUTO_OPEN_RAFFLE = @json(request()->boolean('sorteio'));
+
+    (function initRaffle() {
+        var openBtn = document.getElementById('erRaffleOpen');
+        var startBtn = document.getElementById('erRaffleStart');
+        var nameEl = document.getElementById('erRaffleName');
+        var stage = document.getElementById('erRaffleStage');
+        var sub = document.getElementById('erRaffleSub');
+        var modalEl = document.getElementById('erRaffleModal');
+        if (!openBtn || !modalEl || !nameEl || !startBtn) return;
+
+        var running = false;
+        var timer = null;
+
+        var pickIndex = function (max) {
+            if (max <= 1) return 0;
+            var buf = new Uint32Array(1);
+            crypto.getRandomValues(buf);
+            return buf[0] % max;
+        };
+
+        var setName = function (text) {
+            nameEl.textContent = text;
+        };
+
+        var stop = function () {
+            running = false;
+            if (timer) {
+                clearTimeout(timer);
+                timer = null;
+            }
+            startBtn.disabled = false;
+        };
+
+        var run = function () {
+            if (running || !RAFFLE_NAMES.length) return;
+            running = true;
+            startBtn.disabled = true;
+            stage.classList.remove('is-winner');
+            stage.classList.add('is-spinning');
+            sub.textContent = 'Sorteando...';
+
+            var winner = RAFFLE_NAMES[pickIndex(RAFFLE_NAMES.length)];
+            var started = Date.now();
+            var duration = 2800;
+            var delay = 50;
+
+            var tick = function () {
+                var elapsed = Date.now() - started;
+                if (elapsed >= duration) {
+                    stage.classList.remove('is-spinning');
+                    stage.classList.add('is-winner');
+                    setName(winner);
+                    sub.textContent = 'Ganhador(a) do sorteio';
+                    stop();
+                    return;
+                }
+                setName(RAFFLE_NAMES[pickIndex(RAFFLE_NAMES.length)]);
+                delay = Math.min(220, 50 + Math.floor(elapsed / 18));
+                timer = setTimeout(tick, delay);
+            };
+
+            tick();
+        };
+
+        openBtn.addEventListener('click', function () {
+            if (!RAFFLE_NAMES.length) return;
+            stop();
+            stage.classList.remove('is-spinning', 'is-winner');
+            setName('Pronto para sortear');
+            sub.textContent = 'O nome do ganhador aparece após a animação.';
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        });
+
+        startBtn.addEventListener('click', run);
+
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            stop();
+            stage.classList.remove('is-spinning', 'is-winner');
+        });
+
+        if (AUTO_OPEN_RAFFLE && RAFFLE_NAMES.length) {
+            openBtn.click();
+        }
+    })();
+
     var listing = document.getElementById('erListing');
     if (!listing) return;
 

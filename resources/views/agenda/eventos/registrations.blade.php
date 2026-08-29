@@ -106,6 +106,11 @@
                             </li>
                         </ul>
                     </div>
+                    <button type="button" class="btn btn-outline-warning btn-sm" id="erRaffleOpen"
+                            @disabled($raffleNames->isEmpty())
+                            title="{{ $raffleNames->isEmpty() ? 'Nenhum inscrito elegível para o sorteio' : 'Sortear um inscrito pelo nome' }}">
+                        <i class="bx bx-dice-5"></i> Sortear
+                    </button>
                     @if($canEditRegistrations)
                         <button type="button" class="btn btn-success btn-sm" id="erWhatsappOpen"
                                 @disabled($whatsappContacts->isEmpty())

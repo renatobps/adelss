@@ -201,4 +201,68 @@ a.er-kpi:hover { transform: translateY(-2px); box-shadow: 0 .35rem .9rem rgba(46
 .er-whats-item:last-child { border-bottom: 0; }
 .er-whats-item.is-hidden { display: none; }
 .er-whats-item .er-muted { line-height: 1.2; }
+
+.er-raffle-modal { overflow: hidden; }
+.er-raffle-stage {
+    position: relative;
+    min-height: 7.5rem;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #1a2740 0%, #0f1728 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.4rem 1.1rem;
+    overflow: hidden;
+}
+.er-raffle-glow {
+    position: absolute; inset: -40%;
+    background: radial-gradient(circle, rgba(245,166,35,.28), transparent 55%);
+    opacity: 0;
+    pointer-events: none;
+}
+.er-raffle-stage.is-spinning .er-raffle-glow { opacity: 1; animation: er-raffle-pulse 0.7s ease-in-out infinite; }
+.er-raffle-stage.is-winner .er-raffle-glow { opacity: 1; animation: er-raffle-win 1.1s ease-out; }
+.er-raffle-name {
+    position: relative;
+    z-index: 1;
+    color: #fff;
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: .01em;
+    text-align: center;
+    min-height: 2.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .08s ease, opacity .08s ease, filter .08s ease;
+}
+.er-raffle-stage.is-spinning .er-raffle-name {
+    filter: blur(.4px);
+    animation: er-raffle-flip .12s ease-in-out infinite;
+}
+.er-raffle-stage.is-winner .er-raffle-name {
+    filter: none;
+    color: #ffe08a;
+    animation: er-raffle-pop .45s cubic-bezier(.2, 1.4, .3, 1);
+}
+@keyframes er-raffle-flip {
+    0% { transform: translateY(-8px); opacity: .55; }
+    50% { transform: translateY(8px); opacity: 1; }
+    100% { transform: translateY(-8px); opacity: .55; }
+}
+@keyframes er-raffle-pop {
+    0% { transform: scale(.7); opacity: 0; }
+    70% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+}
+@keyframes er-raffle-pulse {
+    0%, 100% { opacity: .45; transform: scale(1); }
+    50% { opacity: .9; transform: scale(1.08); }
+}
+@keyframes er-raffle-win {
+    0% { opacity: .2; transform: scale(.6); }
+    40% { opacity: 1; transform: scale(1.15); }
+    100% { opacity: .7; transform: scale(1); }
+}
 </style>

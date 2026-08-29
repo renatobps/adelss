@@ -67,6 +67,9 @@
                                                 <a href="{{ route('agenda.eventos.registrations', $event) }}" class="btn btn-sm btn-outline-primary">
                                                     <i class="bx bx-user-check"></i> Inscrições
                                                 </a>
+                                                <a href="{{ route('agenda.eventos.registrations', ['event' => $event, 'sorteio' => 1]) }}" class="btn btn-sm btn-outline-warning">
+                                                    <i class="bx bx-dice-5"></i> Sortear
+                                                </a>
                                                 @include('agenda.eventos.partials.toggle-registrations')
                                                 <a href="{{ route('agenda.eventos.registrations', $event) }}?whatsapp=1" class="btn btn-sm btn-outline-success">
                                                     <i class="bx bxl-whatsapp"></i> WhatsApp

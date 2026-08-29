@@ -1,3 +1,28 @@
+{{-- Sorteio entre inscritos --}}
+<div class="modal fade" id="erRaffleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content er-raffle-modal">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title"><i class="bx bx-dice-5 text-warning me-1"></i> Sorteio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body text-center pt-2">
+                <p class="text-muted small mb-3">Entre {{ $raffleNames->count() }} inscrito(s) ativos (pendentes e confirmados).</p>
+                <div class="er-raffle-stage" id="erRaffleStage">
+                    <div class="er-raffle-glow" aria-hidden="true"></div>
+                    <div class="er-raffle-name" id="erRaffleName">Pronto para sortear</div>
+                </div>
+                <p class="er-raffle-sub small text-muted mt-3 mb-0" id="erRaffleSub">O nome do ganhador aparece após a animação.</p>
+            </div>
+            <div class="modal-footer border-0 justify-content-center pt-0 pb-4">
+                <button type="button" class="btn btn-warning" id="erRaffleStart">
+                    <i class="bx bx-play-circle"></i> Sortear agora
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- Detalhes da inscrição --}}
 <div class="modal fade" id="erDetailsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">

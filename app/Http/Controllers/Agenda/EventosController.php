@@ -293,6 +293,14 @@ class EventosController extends Controller
         $canEditRegistrations = $user && $user->can('manageRegistrations', $event);
         $canDeleteRegistrations = $user && $user->can('deleteRegistrations', $event);
 
+        $raffleNames = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->emVaga()
+            ->orderBy('name')
+            ->pluck('name')
+            ->filter(fn ($name) => trim((string) $name) !== '')
+            ->values();
+
         $whatsappContacts = EventRegistration::query()
             ->where('event_id', $event->id)
             ->whereNotNull('phone')
@@ -322,6 +330,7 @@ class EventosController extends Controller
             'canDeleteRegistrations' => $canDeleteRegistrations,
             'whatsappContacts' => $whatsappContacts,
             'whatsappBatchLimit' => EventRegistrationBatchSender::BATCH_LIMIT,
+            'raffleNames' => $raffleNames,
         ]);
     }
 
