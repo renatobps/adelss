@@ -77,18 +77,18 @@
         @php
             if ($transaction->type === 'receita') {
                 if ($transaction->member) {
-                    $fromName = strtoupper($transaction->member->name);
+                    $fromName = \App\Support\PdfText::upper($transaction->member->name);
                 } else {
-                    $fromName = strtoupper($transaction->received_from_other ?? 'OUTROS');
+                    $fromName = \App\Support\PdfText::upper($transaction->received_from_other ?? 'OUTROS');
                 }
-                $categoryName = strtoupper($transaction->category ? $transaction->category->name : 'RECEITA');
+                $categoryName = \App\Support\PdfText::upper($transaction->category ? $transaction->category->name : 'RECEITA');
             } else {
                 $fromName = 'ASSEMBLEIA DE DEUS DE LUZIÂNIA';
-                $categoryName = strtoupper($transaction->category ? $transaction->category->name : 'DESPESA');
+                $categoryName = \App\Support\PdfText::upper($transaction->category ? $transaction->category->name : 'DESPESA');
             }
             $amount = number_format((float) $transaction->amount, 2, ',', '.');
             $date = $transaction->transaction_date->format('d/m/Y');
-            $city = 'LUZIÂNIA - GOIÁS';
+            $city = 'BRASÍLIA - DF';
             $reciboNumero = str_pad((string) $transaction->id, 6, '0', STR_PAD_LEFT);
         @endphp
 

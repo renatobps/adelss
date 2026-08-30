@@ -27,4 +27,12 @@ class PdfText
         // Colapsa espaços duplicados deixados pela remoção
         return trim(preg_replace('/[ \t]{2,}/', ' ', $clean ?? ''));
     }
+
+    /**
+     * Maiúsculas com UTF-8. strtoupper() deixa ã/ç/í minúsculos no Windows/DomPDF.
+     */
+    public static function upper(?string $text): string
+    {
+        return mb_strtoupper((string) $text, 'UTF-8');
+    }
 }
