@@ -167,11 +167,9 @@ class TransactionController extends Controller
     public function storeReceita(Request $request)
     {
         $this->authorize('createReceita', FinancialTransaction::class);
-        // Validação customizada para "Recebido de"
         $memberId = $request->input('member_id');
-        $receivedFromOther = $request->input('received_from_other');
-        
-        // Preparar dados de validação
+        $requiresDonor = $this->receitaRequiresDonor($request->input('category_id'));
+
         $validationRules = [
             'transaction_date' => 'required|date',
             'description' => 'required|string|max:255',
@@ -199,21 +197,9 @@ class TransactionController extends Controller
             'attachments.*.max' => 'Cada arquivo não pode ter mais de 10MB.',
         ];
 
-        // Validar campo "Recebido de"
-        if ($memberId === 'other') {
-            $validationRules['received_from_other'] = 'required|string|max:255';
-            $validationRules['member_id'] = 'nullable';
-            $validationMessages['received_from_other.required'] = 'Informe de quem foi recebido quando selecionar "Outros".';
-        } elseif ($memberId && is_numeric($memberId)) {
-            $validationRules['member_id'] = 'required|exists:members,id';
-            $validationRules['received_from_other'] = 'nullable|string|max:255';
-            $validationMessages['member_id.required'] = 'Selecione um membro ou escolha "Outros".';
-            $validationMessages['member_id.exists'] = 'O membro selecionado não existe.';
-        } else {
-            return redirect()->back()
-                ->withErrors(['member_id' => 'Selecione um membro ou escolha "Outros".'])
-                ->withInput();
-        }
+        [$donorRules, $donorMessages] = $this->receitaDonorRules($request, $requiresDonor);
+        $validationRules = array_merge($validationRules, $donorRules);
+        $validationMessages = array_merge($validationMessages, $donorMessages);
 
         $validated = $request->validate($validationRules, $validationMessages);
 
@@ -227,6 +213,9 @@ class TransactionController extends Controller
             $validated['member_id'] = null;
         } else {
             $validated['received_from_other'] = null;
+            if (! $memberId) {
+                $validated['member_id'] = null;
+            }
         }
 
         // Criar transação
@@ -494,14 +483,19 @@ class TransactionController extends Controller
             'remove_attachments.*' => 'exists:financial_transaction_attachments,id',
         ];
 
+        $donorMessages = [];
         if ($transaction->type === 'receita') {
-            $rules['member_id'] = 'nullable|required_without:received_from_other|exists:members,id';
-            $rules['received_from_other'] = 'nullable|required_without:member_id|string|max:255';
+            $categoryId = $request->input('category_id', $transaction->category_id);
+            [$donorRules, $donorMessages] = $this->receitaDonorRules(
+                $request,
+                $this->receitaRequiresDonor($categoryId)
+            );
+            $rules = array_merge($rules, $donorRules);
         } else {
             $rules['contact_id'] = 'nullable|exists:financial_contacts,id';
         }
 
-        $validated = $request->validate($rules);
+        $validated = $request->validate($rules, $donorMessages);
 
         // Determinar status
         $validated['is_paid'] = $request->has('is_paid') && $request->is_paid;
@@ -511,7 +505,8 @@ class TransactionController extends Controller
 
         // Garantir que apenas um campo seja preenchido para receita
         if ($transaction->type === 'receita') {
-            if ($validated['member_id'] === 'other' || empty($validated['member_id'])) {
+            $memberId = $request->input('member_id');
+            if ($memberId === 'other' || empty($memberId)) {
                 $validated['member_id'] = null;
             } else {
                 $validated['received_from_other'] = null;
@@ -954,5 +949,53 @@ class TransactionController extends Controller
         }
 
         return $transactions;
+    }
+
+    private function receitaRequiresDonor(mixed $categoryId): bool
+    {
+        if (! $categoryId) {
+            return false;
+        }
+
+        $category = FinancialCategory::query()->find($categoryId);
+
+        return $category?->isDizimo() ?? false;
+    }
+
+    /**
+     * Dízimo exige membro ou "Outros". Oferta e demais categorias não exigem nome.
+     *
+     * @return array{0: array<string, string>, 1: array<string, string>}
+     */
+    private function receitaDonorRules(Request $request, bool $requiresDonor): array
+    {
+        $memberId = $request->input('member_id');
+        $rules = [
+            'member_id' => 'nullable',
+            'received_from_other' => 'nullable|string|max:255',
+        ];
+        $messages = [
+            'member_id.required' => 'Para dízimo, selecione de quem foi recebido ou escolha "Outros".',
+            'member_id.exists' => 'O membro selecionado não existe.',
+            'received_from_other.required' => 'Informe de quem foi recebido quando selecionar "Outros".',
+        ];
+
+        if ($memberId === 'other') {
+            $rules['received_from_other'] = 'required|string|max:255';
+
+            return [$rules, $messages];
+        }
+
+        if ($memberId && is_numeric($memberId)) {
+            $rules['member_id'] = 'required|exists:members,id';
+
+            return [$rules, $messages];
+        }
+
+        if ($requiresDonor) {
+            $rules['member_id'] = 'required';
+        }
+
+        return [$rules, $messages];
     }
 }

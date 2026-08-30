@@ -728,9 +728,11 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="receita_received_from" class="form-label">Recebido de <span class="text-danger">*</span></label>
+                            <label for="receita_received_from" class="form-label">
+                                Recebido de <span class="text-danger receita-donor-required d-none" id="receita_donor_required">*</span>
+                            </label>
                             <select class="form-select @error('member_id') is-invalid @enderror" 
-                                    id="receita_received_from" name="member_id" required>
+                                    id="receita_received_from" name="member_id">
                                 <option value="">Selecione</option>
                                 <option value="other">Outros</option>
                                 @foreach($members as $member)
@@ -757,6 +759,7 @@
                                 @foreach($categories->where('type', 'receita') as $category)
                                     <option value="{{ $category->id }}"
                                             data-slug="{{ $category->slug }}"
+                                            data-dizimo="{{ $category->isDizimo() ? '1' : '0' }}"
                                             data-dizimo-oferta="{{ $category->isDizimoOuOferta() ? '1' : '0' }}"
                                             {{ old('category_id') == $category->id ? 'selected' : '' }}>
                                         {{ $category->name }}
@@ -1006,7 +1009,9 @@
                     <div id="edit_receita_fields" style="display: none;">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="edit_member_id" class="form-label">Recebido de <span class="text-danger">*</span></label>
+                                <label for="edit_member_id" class="form-label">
+                                    Recebido de <span class="text-danger receita-donor-required d-none" id="edit_donor_required">*</span>
+                                </label>
                                 <select class="form-select" id="edit_member_id" name="member_id">
                                     <option value="">Selecione</option>
                                     <option value="other">Outros</option>
@@ -1025,6 +1030,7 @@
                                     @foreach($categories as $category)
                                         <option value="{{ $category->id }}" data-type="{{ $category->type }}"
                                                 data-slug="{{ $category->slug }}"
+                                                data-dizimo="{{ $category->isDizimo() ? '1' : '0' }}"
                                                 data-dizimo-oferta="{{ $category->isDizimoOuOferta() ? '1' : '0' }}">
                                             {{ $category->name }}
                                         </option>
@@ -1859,6 +1865,30 @@
     });
 
     // Toggle campo "Outros" no modal de receita
+    function categoryIsDizimo(select) {
+        const option = select?.selectedOptions?.[0];
+        if (!option || !option.value) return false;
+        if (option.dataset.dizimo === '1') return true;
+        const slug = (option.dataset.slug || '').toLowerCase();
+        if (slug === 'dizimo') return true;
+        const name = (option.textContent || '').toLowerCase();
+        return name.includes('dízimo') || name.includes('dizimo');
+    }
+
+    function syncReceitaDonorRequired(categorySelect, memberSelect, requiredMark, otherField) {
+        const required = categoryIsDizimo(categorySelect);
+        requiredMark?.classList.toggle('d-none', !required);
+        if (!memberSelect) return;
+        if (required) {
+            memberSelect.setAttribute('required', 'required');
+        } else {
+            memberSelect.removeAttribute('required');
+        }
+        if (otherField && memberSelect.value !== 'other') {
+            otherField.removeAttribute('required');
+        }
+    }
+
     document.getElementById('receita_received_from')?.addEventListener('change', function() {
         const otherField = document.getElementById('receita_other_name');
         
@@ -1881,11 +1911,12 @@
     document.getElementById('receitaForm')?.addEventListener('submit', function(e) {
         const receivedFrom = document.getElementById('receita_received_from');
         const otherField = document.getElementById('receita_other_name');
-        const memberIdOriginal = document.getElementById('receita_member_id_original');
+        const categorySelect = document.getElementById('receita_category');
+        const requiresDonor = categoryIsDizimo(categorySelect);
         
-        if (!receivedFrom.value || receivedFrom.value === '') {
+        if (requiresDonor && (!receivedFrom.value || receivedFrom.value === '')) {
             e.preventDefault();
-            alert('Selecione um membro ou escolha "Outros".');
+            alert('Para dízimo, selecione de quem foi recebido ou escolha "Outros".');
             receivedFrom.focus();
             return false;
         }
@@ -1897,15 +1928,34 @@
                 otherField.focus();
                 return false;
             }
-            // Quando for "outros", enviar member_id vazio
             receivedFrom.removeAttribute('name');
             receivedFrom.setAttribute('name', 'member_id_hidden');
-        } else {
-            // Quando for membro específico, garantir que received_from_other esteja vazio
-            if (otherField) {
-                otherField.removeAttribute('name');
-            }
+        } else if (otherField) {
+            otherField.removeAttribute('name');
         }
+    });
+
+    document.getElementById('receita_category')?.addEventListener('change', function() {
+        syncReceitaDonorRequired(
+            this,
+            document.getElementById('receita_received_from'),
+            document.getElementById('receita_donor_required'),
+            document.getElementById('receita_other_name')
+        );
+    });
+    syncReceitaDonorRequired(
+        document.getElementById('receita_category'),
+        document.getElementById('receita_received_from'),
+        document.getElementById('receita_donor_required'),
+        document.getElementById('receita_other_name')
+    );
+    document.querySelector('#edit_receita_fields select[name="category_id"]')?.addEventListener('change', function() {
+        syncReceitaDonorRequired(
+            this,
+            document.getElementById('edit_member_id'),
+            document.getElementById('edit_donor_required'),
+            document.getElementById('edit_other_name')
+        );
     });
 
     // Selecionar todos os checkboxes
@@ -2139,6 +2189,12 @@
             
             // Filtrar categorias de receita
             filterCategories('edit_category_id', 'receita');
+            syncReceitaDonorRequired(
+                document.querySelector('#edit_receita_fields select[name="category_id"]'),
+                document.getElementById('edit_member_id'),
+                document.getElementById('edit_donor_required'),
+                document.getElementById('edit_other_name')
+            );
         } else {
             receitaFields.style.display = 'none';
             despesaFields.style.display = 'block';
