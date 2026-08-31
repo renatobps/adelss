@@ -31,43 +31,16 @@ class TransactionController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', FinancialTransaction::class);
-        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter', 'latestPaymentTransaction'])
-            ->orderBy('transaction_date', 'desc');
 
-        // Filtros
-        if ($request->has('type') && $request->type) {
-            $query->where('type', $request->type);
-        }
-
-        if ($request->has('status') && $request->status) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('category_id') && $request->category_id) {
-            $query->where('category_id', $request->category_id);
-        }
-
-        if ($request->has('account_id') && $request->account_id) {
-            $query->where('account_id', $request->account_id);
-        }
-
-        if ($request->has('cost_center_id') && $request->cost_center_id) {
-            $query->where('cost_center_id', $request->cost_center_id);
-        }
-
-        // Filtro de período
         $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->endOfMonth()->format('Y-m-d'));
-        
-        $query->whereBetween('transaction_date', [$startDate, $endDate]);
 
-        // Busca
-        if ($request->has('search') && $request->search) {
-            $query->where('description', 'like', '%' . $request->search . '%');
-        }
+        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter', 'latestPaymentTransaction'])
+            ->orderBy('transaction_date', 'desc');
+        $this->applyListingFilters($query, $request, $startDate, $endDate);
 
         $perPage = $request->input('per_page', 100);
-        $transactions = $query->paginate($perPage);
+        $transactions = $query->paginate($perPage)->withQueryString();
 
         // Dados para o gráfico mensal (por dia do mês)
         $start = Carbon::parse($startDate);
@@ -139,6 +112,8 @@ class TransactionController extends Controller
 
         // Dados para filtros
         $categories = FinancialCategory::orderBy('name')->get();
+        $categoriesReceitas = $categories->where('type', 'receita')->values();
+        $categoriesDespesas = $categories->where('type', 'despesa')->values();
         $accounts = FinancialAccount::orderBy('name')->get();
         $accountsActive = $accounts->where('is_active', true)->values();
         $costCenters = FinancialCostCenter::orderBy('name')->get();
@@ -151,6 +126,8 @@ class TransactionController extends Controller
             'chartData',
             'summary',
             'categories',
+            'categoriesReceitas',
+            'categoriesDespesas',
             'accounts',
             'accountsActive',
             'costCenters',
@@ -248,13 +225,17 @@ class TransactionController extends Controller
             }
         }
 
-        $message = $request->input('save_action') === 'new' 
-            ? 'Receita criada com sucesso! Continuar adicionando?'
-            : 'Receita criada com sucesso!';
+        $message = 'Receita criada com sucesso!';
         $message .= $whatsappMessage ?? '';
 
-        return redirect()->route('financial.transactions.index')
+        $redirect = redirect()->route('financial.transactions.index')
             ->with('success', $message);
+
+        if ($request->input('save_action') === 'new') {
+            $redirect->with('continue_adding', 'receita');
+        }
+
+        return $redirect;
     }
 
     /**
@@ -263,12 +244,12 @@ class TransactionController extends Controller
     public function storeDespesa(Request $request)
     {
         $this->authorize('createDespesa', FinancialTransaction::class);
-        $validated = $request->validate([
+
+        $validationRules = [
             'transaction_date' => 'required|date',
             'description' => 'required|string|max:255',
             'amount' => 'required|numeric|min:0.01',
             'is_paid' => 'boolean',
-            'contact_id' => 'nullable|exists:financial_contacts,id',
             'category_id' => 'nullable|exists:financial_categories,id',
             'account_id' => 'nullable|exists:financial_accounts,id',
             'cost_center_id' => 'nullable|exists:financial_cost_centers,id',
@@ -280,7 +261,8 @@ class TransactionController extends Controller
             'due_date' => 'nullable|date',
             'attachments' => 'nullable|array|max:5',
             'attachments.*' => 'file|max:10240', // 10MB
-        ], [
+        ];
+        $validationMessages = [
             'transaction_date.required' => 'A data é obrigatória.',
             'description.required' => 'A descrição é obrigatória.',
             'amount.required' => 'O valor é obrigatório.',
@@ -290,7 +272,15 @@ class TransactionController extends Controller
             'installments_count.max' => 'O parcelamento pode ter no máximo 60 parcelas.',
             'attachments.max' => 'Máximo de 5 arquivos permitidos.',
             'attachments.*.max' => 'Cada arquivo não pode ter mais de 10MB.',
-        ]);
+        ];
+
+        [$payeeRules, $payeeMessages] = $this->despesaPayeeRules($request);
+        $validated = $request->validate(
+            array_merge($validationRules, $payeeRules),
+            array_merge($validationMessages, $payeeMessages)
+        );
+
+        $this->applyDespesaPayee($request, $validated);
 
         $paymentType = $validated['payment_type'] ?? 'unico';
         $installmentsCount = $paymentType === 'parcelado'
@@ -336,7 +326,7 @@ class TransactionController extends Controller
 
         $whatsappMessage = null;
         if (!$transaction->is_paid) {
-            $transaction->load(['contact', 'category']);
+            $transaction->load(['member', 'contact', 'category']);
             $result = $this->financialNotificationService->notificarDespesaAPagar($transaction, Auth::id());
             if ($result['success'] ?? false) {
                 $whatsappMessage = ' Tesoureiro(s) notificado(s) por WhatsApp.';
@@ -345,22 +335,22 @@ class TransactionController extends Controller
             }
         }
 
-        $message = $request->input('save_action') === 'new'
-            ? 'Despesa criada com sucesso! Continuar adicionando?'
-            : 'Despesa criada com sucesso!';
+        $message = 'Despesa criada com sucesso!';
 
         if ($installmentsCount > 1) {
-            $message = str_replace(
-                'Despesa criada com sucesso!',
-                "Despesa parcelada com sucesso! {$installmentsCount} parcelas criadas.",
-                $message
-            );
+            $message = "Despesa parcelada com sucesso! {$installmentsCount} parcelas criadas.";
         }
 
         $message .= $whatsappMessage ?? '';
 
-        return redirect()->route('financial.transactions.index')
+        $redirect = redirect()->route('financial.transactions.index')
             ->with('success', $message);
+
+        if ($request->input('save_action') === 'new') {
+            $redirect->with('continue_adding', 'despesa');
+        }
+
+        return $redirect;
     }
 
     /**
@@ -387,9 +377,7 @@ class TransactionController extends Controller
         $this->authorize('view', $transaction);
         $transaction->load(['member', 'contact', 'category', 'account', 'costCenter', 'attachments', 'createdBy', 'culto']);
 
-        $contato = $transaction->type === 'receita'
-            ? ($transaction->member?->name ?: ($transaction->received_from_other ?: 'Outros'))
-            : ($transaction->contact?->name ?: '—');
+        $contato = $transaction->source_name;
 
         return response()->json([
             'id' => $transaction->id,
@@ -493,7 +481,9 @@ class TransactionController extends Controller
             );
             $rules = array_merge($rules, $donorRules);
         } else {
-            $rules['contact_id'] = 'nullable|exists:financial_contacts,id';
+            [$payeeRules, $payeeMessages] = $this->despesaPayeeRules($request, $transaction);
+            $rules = array_merge($rules, $payeeRules);
+            $donorMessages = $payeeMessages;
         }
 
         $validated = $request->validate($rules, $donorMessages);
@@ -512,6 +502,8 @@ class TransactionController extends Controller
             } else {
                 $validated['received_from_other'] = null;
             }
+        } else {
+            $this->applyDespesaPayee($request, $validated);
         }
 
         // Remover anexos marcados para exclusão
@@ -701,35 +693,9 @@ class TransactionController extends Controller
         $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter'])
             ->orderBy('transaction_date', 'desc');
 
-        // Aplicar mesmos filtros da index
-        if ($request->has('type') && $request->type) {
-            $query->where('type', $request->type);
-        }
-
-        if ($request->has('status') && $request->status) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('category_id') && $request->category_id) {
-            $query->where('category_id', $request->category_id);
-        }
-
-        if ($request->has('account_id') && $request->account_id) {
-            $query->where('account_id', $request->account_id);
-        }
-
-        if ($request->has('cost_center_id') && $request->cost_center_id) {
-            $query->where('cost_center_id', $request->cost_center_id);
-        }
-
         $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->endOfMonth()->format('Y-m-d'));
-        
-        $query->whereBetween('transaction_date', [$startDate, $endDate]);
-
-        if ($request->has('search') && $request->search) {
-            $query->where('description', 'like', '%' . $request->search . '%');
-        }
+        $this->applyListingFilters($query, $request, $startDate, $endDate);
 
         $transactions = $query->get();
 
@@ -766,9 +732,7 @@ class TransactionController extends Controller
 
             // Dados
             foreach ($transactions as $transaction) {
-                $sourceName = $transaction->type === 'receita' 
-                    ? ($transaction->member ? $transaction->member->name : ($transaction->received_from_other ?? 'Outros'))
-                    : ($transaction->contact ? $transaction->contact->name : '-');
+                $sourceName = $transaction->source_name ?: '-';
 
                 fputcsv($file, [
                     $transaction->transaction_date->format('d/m/Y'),
@@ -954,6 +918,60 @@ class TransactionController extends Controller
         return $transactions;
     }
 
+    private function applyListingFilters($query, Request $request, string $startDate, string $endDate): void
+    {
+        $query->whereBetween('transaction_date', [$startDate, $endDate]);
+
+        $type = $request->input('type', []);
+        if (! empty($type)) {
+            $query->whereIn('type', is_array($type) ? $type : [$type]);
+        }
+
+        $status = $request->input('status', []);
+        if (! empty($status)) {
+            $query->whereIn('status', is_array($status) ? $status : [$status]);
+        }
+
+        if ($request->filled('account_id')) {
+            $query->where('account_id', $request->input('account_id'));
+        }
+
+        if ($request->filled('cost_center_id')) {
+            $query->where('cost_center_id', $request->input('cost_center_id'));
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->input('category_id'));
+        }
+
+        $categoryReceitasId = $request->input('category_receitas_id');
+        $categoryDespesasId = $request->input('category_despesas_id');
+        if ($categoryReceitasId || $categoryDespesasId) {
+            $query->where(function ($q) use ($categoryReceitasId, $categoryDespesasId) {
+                if ($categoryReceitasId && $categoryDespesasId) {
+                    $q->where(function ($subQ) use ($categoryReceitasId) {
+                        $subQ->where('type', 'receita')->where('category_id', $categoryReceitasId);
+                    })->orWhere(function ($subQ) use ($categoryDespesasId) {
+                        $subQ->where('type', 'despesa')->where('category_id', $categoryDespesasId);
+                    });
+                } elseif ($categoryReceitasId) {
+                    $q->where(function ($subQ) use ($categoryReceitasId) {
+                        $subQ->where('type', 'receita')->where('category_id', $categoryReceitasId);
+                    })->orWhere('type', 'despesa');
+                } else {
+                    $q->where('type', 'receita')
+                        ->orWhere(function ($subQ) use ($categoryDespesasId) {
+                            $subQ->where('type', 'despesa')->where('category_id', $categoryDespesasId);
+                        });
+                }
+            });
+        }
+
+        if ($request->filled('search')) {
+            $query->where('description', 'like', '%'.$request->input('search').'%');
+        }
+    }
+
     private function receitaRequiresDonor(mixed $categoryId): bool
     {
         if (! $categoryId) {
@@ -1000,5 +1018,69 @@ class TransactionController extends Controller
         }
 
         return [$rules, $messages];
+    }
+
+    /**
+     * Pago à: membro da lista, ou “Outros” com nome livre.
+     * Pagamento a membro exige recibo assinado anexado.
+     *
+     * @return array{0: array<string, string>, 1: array<string, string>}
+     */
+    private function despesaPayeeRules(Request $request, ?FinancialTransaction $transaction = null): array
+    {
+        $memberId = $request->input('member_id');
+        $rules = [
+            'member_id' => 'nullable',
+            'received_from_other' => 'nullable|string|max:255',
+        ];
+        $messages = [
+            'member_id.exists' => 'O membro selecionado não existe.',
+            'received_from_other.required' => 'Informe a quem foi pago quando selecionar "Outros".',
+            'attachments.required' => 'Anexe o recibo de pagamento assinado pela pessoa que recebeu.',
+            'attachments.min' => 'Anexe o recibo de pagamento assinado pela pessoa que recebeu.',
+        ];
+
+        if ($memberId === 'other') {
+            $rules['received_from_other'] = 'required|string|max:255';
+
+            return [$rules, $messages];
+        }
+
+        if ($memberId && is_numeric($memberId)) {
+            $rules['member_id'] = 'required|exists:members,id';
+
+            $remaining = 0;
+            if ($transaction) {
+                $removing = count(array_filter((array) $request->input('remove_attachments', [])));
+                $remaining = max(0, $transaction->attachments()->count() - $removing);
+            }
+            $newCount = $request->hasFile('attachments') ? count($request->file('attachments')) : 0;
+
+            if (($remaining + $newCount) < 1) {
+                $rules['attachments'] = 'required|array|min:1|max:5';
+            }
+
+            return [$rules, $messages];
+        }
+
+        return [$rules, $messages];
+    }
+
+    private function applyDespesaPayee(Request $request, array &$validated): void
+    {
+        $memberId = $request->input('member_id');
+        $validated['contact_id'] = null;
+
+        if ($memberId === 'other') {
+            $validated['member_id'] = null;
+
+            return;
+        }
+
+        $validated['received_from_other'] = null;
+
+        if (! $memberId || ! is_numeric($memberId)) {
+            $validated['member_id'] = null;
+        }
     }
 }

@@ -118,4 +118,30 @@ class ImportLegacyFinancialTransactionsTest extends TestCase
 
         $this->assertSame(3, FinancialTransaction::count());
     }
+
+    public function test_importacao_2024_grava_contato_em_recebido_de(): void
+    {
+        $path = sys_get_temp_dir().DIRECTORY_SEPARATOR.'financial_import_2024_test.csv';
+        file_put_contents($path, implode("\n", [
+            'mes_aba,data,descricao,valor,tipo,categoria,status_import,member_id,received_from_other',
+            'MAI24,2024-05-01,dízimo,275.00,receita,Dízimo,OK,,Davi Evangelista',
+            'MAI24,2024-05-04,sede,120.00,despesa,SEDE,OK,,',
+        ])."\n");
+
+        try {
+            $this->artisan('financial:import-legacy', [
+                'caminho' => $path,
+                '--ano' => 2024,
+            ])->assertSuccessful();
+
+            $this->assertSame(2, FinancialTransaction::count());
+            $receita = FinancialTransaction::where('type', 'receita')->first();
+            $this->assertSame('Davi Evangelista', $receita->received_from_other);
+            $this->assertSame('legacy2024:MAI24:1', $receita->external_ref);
+        } finally {
+            if (is_file($path)) {
+                unlink($path);
+            }
+        }
+    }
 }

@@ -45,8 +45,10 @@
             <div class="card fr-card">
                 <div class="card-body">
                     @include('financial.reports.partials.report-head', [
-                        'title' => 'Dízimos e ofertas — '.$culto->display_name,
-                        'subtitle' => 'Valores vinculados a este culto no fechamento',
+                        'title' => 'Movimento do dia — '.$culto->display_name,
+                        'subtitle' => $culto->start_date
+                            ? 'Entradas e saídas pagas em '.$culto->start_date->format('d/m/Y')
+                            : 'Entradas e saídas do dia do culto',
                         'pdfUrl' => route('financial.reports.cultos.pdf', $culto),
                         'pdfLabel' => 'Baixar PDF',
                     ])
@@ -54,57 +56,84 @@
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
                             <div class="border rounded p-3">
-                                <div class="small text-muted">Dízimos</div>
-                                <strong>R$ {{ number_format($report['totalDizimos'], 2, ',', '.') }}</strong>
+                                <div class="small text-muted">Entradas</div>
+                                <strong class="text-primary">R$ {{ number_format($report['totalEntradas'], 2, ',', '.') }}</strong>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="border rounded p-3">
-                                <div class="small text-muted">Ofertas</div>
-                                <strong>R$ {{ number_format($report['totalOfertas'], 2, ',', '.') }}</strong>
+                                <div class="small text-muted">Saídas</div>
+                                <strong class="text-danger">R$ {{ number_format($report['totalSaidas'], 2, ',', '.') }}</strong>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="border rounded p-3">
-                                <div class="small text-muted">Total geral</div>
-                                <strong>R$ {{ number_format($report['totalGeral'], 2, ',', '.') }}</strong>
+                                <div class="small text-muted">Saldo do dia</div>
+                                <strong>R$ {{ number_format($report['saldoDia'], 2, ',', '.') }}</strong>
                             </div>
                         </div>
                     </div>
 
+                    <h6 class="text-primary text-uppercase mb-2">Entradas (receitas)</h6>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Recebido de</th>
+                                    <th>Categoria</th>
+                                    <th class="text-end">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($report['entradas'] as $tx)
+                                    <tr>
+                                        <td>{{ $tx->transaction_date?->format('d/m/Y') }}</td>
+                                        <td>{{ $tx->description }}</td>
+                                        <td>{{ $tx->source_name }}</td>
+                                        <td>{{ $tx->category?->name }}</td>
+                                        <td class="text-end text-primary">R$ {{ number_format((float) $tx->amount, 2, ',', '.') }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="5" class="text-muted">Nenhuma entrada paga neste dia.</td></tr>
+                                @endforelse
+                                <tr class="fw-semibold">
+                                    <td colspan="4">Total de entradas</td>
+                                    <td class="text-end text-primary">R$ {{ number_format($report['totalEntradas'], 2, ',', '.') }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h6 class="text-danger text-uppercase mb-2">Saídas (despesas)</h6>
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead class="table-light">
                                 <tr>
                                     <th>Data</th>
-                                    <th>Recebido de</th>
+                                    <th>Descrição</th>
+                                    <th>Pago à</th>
                                     <th>Categoria</th>
                                     <th class="text-end">Valor</th>
-                                    @if($canGenerate)
-                                        <th></th>
-                                    @endif
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse($report['lancamentos'] as $tx)
+                                @forelse($report['saidas'] as $tx)
                                     <tr>
                                         <td>{{ $tx->transaction_date?->format('d/m/Y') }}</td>
+                                        <td>{{ $tx->description }}</td>
                                         <td>{{ $tx->source_name }}</td>
                                         <td>{{ $tx->category?->name }}</td>
-                                        <td class="text-end">R$ {{ number_format((float) $tx->amount, 2, ',', '.') }}</td>
-                                        @if($canGenerate)
-                                            <td class="text-end">
-                                                <form method="POST" action="{{ route('financial.reports.cultos.detach', [$culto, $tx]) }}" class="d-inline"
-                                                      onsubmit="return confirm('Desvincular este lançamento deste culto?');">
-                                                    @csrf
-                                                    <button type="submit" class="btn btn-sm btn-outline-secondary">Desvincular</button>
-                                                </form>
-                                            </td>
-                                        @endif
+                                        <td class="text-end text-danger">R$ {{ number_format((float) $tx->amount, 2, ',', '.') }}</td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="{{ $canGenerate ? 5 : 4 }}" class="text-muted">Nenhum dízimo ou oferta vinculado a este culto.</td></tr>
+                                    <tr><td colspan="5" class="text-muted">Nenhuma saída paga neste dia.</td></tr>
                                 @endforelse
+                                <tr class="fw-semibold">
+                                    <td colspan="4">Total de saídas</td>
+                                    <td class="text-end text-danger">R$ {{ number_format($report['totalSaidas'], 2, ',', '.') }}</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -157,8 +186,6 @@
                     </div>
                 </div>
             @endif
-                </div>
-            </div>
         @else
             <div class="card fr-card">
                 <div class="card-body text-muted">Nenhum culto da Agenda encontrado. Cadastre o culto em Agenda para gerar este relatório.</div>

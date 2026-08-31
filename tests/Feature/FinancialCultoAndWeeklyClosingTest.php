@@ -71,7 +71,45 @@ class FinancialCultoAndWeeklyClosingTest extends TestCase
         });
     }
 
-    public function test_relatorio_por_culto_nao_mistura_manha_e_noite(): void
+    public function test_lista_de_cultos_do_relatorio_vai_de_hoje_ate_2016(): void
+    {
+        \Carbon\Carbon::setTestNow('2026-08-21 15:00:00');
+
+        Event::create(['title' => 'Culto 2027', 'start_date' => '2027-01-10 19:00:00']);
+        Event::create(['title' => 'Culto amanhã', 'start_date' => '2026-08-22 19:00:00']);
+        Event::create(['title' => 'Culto de hoje', 'start_date' => '2026-08-21 19:00:00']);
+        Event::create(['title' => 'Culto em janeiro', 'start_date' => '2026-01-01 09:00:00']);
+        Event::create(['title' => 'Culto 2016', 'start_date' => '2016-01-01 09:00:00']);
+        Event::create(['title' => 'Culto 2015', 'start_date' => '2015-12-31 19:00:00']);
+
+        $titulos = Event::query()->paraRelatorioFinanceiro()->pluck('title')->all();
+
+        $this->assertSame(['Culto de hoje', 'Culto em janeiro', 'Culto 2016'], $titulos);
+
+        \Carbon\Carbon::setTestNow();
+    }
+
+    public function test_relatorio_do_culto_lista_entradas_e_saidas_do_mesmo_dia(): void
+    {
+        $dizimo = FinancialCategory::create(['name' => 'Dízimo', 'slug' => 'dizimo', 'type' => 'receita']);
+        $luz = FinancialCategory::create(['name' => 'Luz', 'slug' => 'luz', 'type' => 'despesa']);
+
+        $culto = Event::create(['title' => 'Culto da noite', 'start_date' => '2026-08-21 19:00:00']);
+
+        $this->tx($dizimo->id, null, 100, '2026-08-21');
+        $this->tx($luz->id, null, 30, '2026-08-21', 'despesa', 'pago');
+        $this->tx($dizimo->id, null, 50, '2026-08-20');
+
+        $report = app(CultoOfferingReportService::class)->build($culto);
+
+        $this->assertCount(1, $report['entradas']);
+        $this->assertCount(1, $report['saidas']);
+        $this->assertEquals(100.0, $report['totalEntradas']);
+        $this->assertEquals(30.0, $report['totalSaidas']);
+        $this->assertEquals(70.0, $report['saldoDia']);
+    }
+
+    public function test_cultos_no_mesmo_dia_compartilham_o_movimento(): void
     {
         $dizimo = FinancialCategory::create(['name' => 'Dízimo', 'slug' => 'dizimo', 'type' => 'receita']);
         $oferta = FinancialCategory::create(['name' => 'Oferta', 'slug' => 'oferta', 'type' => 'receita']);
@@ -86,10 +124,10 @@ class FinancialCultoAndWeeklyClosingTest extends TestCase
         $reportManha = app(CultoOfferingReportService::class)->build($manha);
         $reportNoite = app(CultoOfferingReportService::class)->build($noite);
 
-        $this->assertEquals(140.0, $reportManha['totalGeral']);
-        $this->assertEquals(100.0, $reportManha['totalDizimos']);
+        $this->assertEquals(210.0, $reportManha['totalEntradas']);
+        $this->assertEquals(210.0, $reportNoite['totalEntradas']);
+        $this->assertEquals(170.0, $reportManha['totalDizimos']);
         $this->assertEquals(40.0, $reportManha['totalOfertas']);
-        $this->assertEquals(70.0, $reportNoite['totalGeral']);
     }
 
     public function test_vinculo_de_dizimo_ao_culto_so_no_fechamento(): void
@@ -100,11 +138,10 @@ class FinancialCultoAndWeeklyClosingTest extends TestCase
 
         $service = app(CultoOfferingReportService::class);
         $this->assertCount(1, $service->pendentes());
-        $this->assertEquals(0.0, $service->build($culto)['totalGeral']);
+        $this->assertEquals(0.0, $service->build($culto)['totalEntradas']);
 
         $this->assertSame(1, $service->attachToCulto($culto, [$tx->id]));
         $this->assertSame($culto->id, $tx->fresh()->culto_id);
-        $this->assertEquals(80.0, $service->build($culto)['totalGeral']);
         $this->assertCount(0, $service->pendentes());
     }
 

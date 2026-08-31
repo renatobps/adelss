@@ -20,12 +20,10 @@ class ClosingReportController extends Controller
         $this->authorize('financial.fechamento.view');
 
         $cultos = Event::query()
-            ->cultosDaAgenda()
-            ->orderByDesc('start_date')
-            ->limit(80)
+            ->paraRelatorioFinanceiro()
             ->get();
         $culto = $request->filled('culto_id')
-            ? Event::query()->cultosDaAgenda()->find($request->integer('culto_id'))
+            ? Event::query()->paraRelatorioFinanceiro()->find($request->integer('culto_id'))
             : $cultos->first();
 
         $report = $culto ? $service->build($culto) : null;

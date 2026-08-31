@@ -15,22 +15,37 @@ class CultoOfferingReportService
 
     public function build(Event $culto): array
     {
-        $lancamentos = $this->dizimosOfertasRecebidos()
-            ->with(['member', 'category'])
-            ->where('culto_id', $culto->id)
+        $dia = $culto->start_date?->toDateString();
+
+        $doDia = FinancialTransaction::query()
+            ->with(['member', 'contact', 'category'])
+            ->where('is_paid', true)
+            ->when($dia, fn ($q) => $q->whereDate('transaction_date', $dia))
+            ->when(! $dia, fn ($q) => $q->whereRaw('0 = 1'))
+            ->orderBy('transaction_date')
             ->orderBy('id')
             ->get();
 
-        $dizimos = $lancamentos->filter(fn ($tx) => strtolower((string) $tx->category?->slug) === 'dizimo');
-        $ofertas = $lancamentos->filter(fn ($tx) => strtolower((string) $tx->category?->slug) === 'oferta');
+        $entradas = $doDia->where('type', 'receita')->values();
+        $saidas = $doDia->where('type', 'despesa')->values();
+        $dizimos = $entradas->filter(fn ($tx) => strtolower((string) $tx->category?->slug) === 'dizimo');
+        $ofertas = $entradas->filter(fn ($tx) => strtolower((string) $tx->category?->slug) === 'oferta');
+        $totalEntradas = (float) $entradas->sum('amount');
+        $totalSaidas = (float) $saidas->sum('amount');
 
         return [
             'culto' => $culto,
-            'lancamentos' => $lancamentos,
+            'dia' => $dia,
+            'entradas' => $entradas,
+            'saidas' => $saidas,
+            'lancamentos' => $entradas,
             'pendentes' => $this->pendentes(),
             'totalDizimos' => (float) $dizimos->sum('amount'),
             'totalOfertas' => (float) $ofertas->sum('amount'),
-            'totalGeral' => (float) $lancamentos->sum('amount'),
+            'totalEntradas' => $totalEntradas,
+            'totalSaidas' => $totalSaidas,
+            'totalGeral' => $totalEntradas,
+            'saldoDia' => $totalEntradas - $totalSaidas,
             'generatedAt' => now(),
             'generatedBy' => auth()->user()?->name,
             'logoPath' => $this->logoPath(),

@@ -90,12 +90,19 @@ class CashFlowClosingPdfService
 
         $account = $accountId ? FinancialAccount::query()->find($accountId) : null;
 
+        $headerPath = is_file(public_path('images/cabecalho-cdel.jpg'))
+            ? public_path('images/cabecalho-cdel.jpg')
+            : public_path('images/cabecalho-cdel.png');
+        $headerSrc = is_file($headerPath)
+            ? 'data:'.(str_ends_with($headerPath, '.png') ? 'image/png' : 'image/jpeg').';base64,'.base64_encode((string) file_get_contents($headerPath))
+            : null;
         $logoPath = $this->resolveLogoPath();
 
         return [
             'start' => $start,
             'end' => $end,
             'account' => $account,
+            'headerSrc' => $headerSrc,
             'logoPath' => $logoPath,
             'entradas' => $entradas,
             'saidas' => $saidas,

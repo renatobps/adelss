@@ -16,6 +16,8 @@ class ReportSignatureController extends Controller
         return view('financial.reports.signatures', [
             'tesoureiroNome' => $signatures->tesoureiroNome(),
             'tesoureiroAssinaturaSrc' => $signatures->imageSrc(PdfSignatureService::ROLE_TESOUREIRO),
+            'pastorNome' => $signatures->pastorNome(),
+            'pastorAssinaturaSrc' => $signatures->imageSrc(PdfSignatureService::ROLE_PASTOR),
         ]);
     }
 
@@ -24,7 +26,10 @@ class ReportSignatureController extends Controller
         $this->authorize('financial.view-reports');
 
         $validated = $request->validate([
-            'role' => ['required', Rule::in([PdfSignatureService::ROLE_TESOUREIRO])],
+            'role' => ['required', Rule::in([
+                PdfSignatureService::ROLE_TESOUREIRO,
+                PdfSignatureService::ROLE_PASTOR,
+            ])],
             'assinatura' => ['required', 'image', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ], [
             'assinatura.required' => 'Selecione a imagem da assinatura.',
@@ -34,9 +39,13 @@ class ReportSignatureController extends Controller
 
         $signatures->store($validated['role'], $request->file('assinatura'));
 
+        $label = $validated['role'] === PdfSignatureService::ROLE_PASTOR
+            ? 'pastor dirigente'
+            : '1º tesoureiro';
+
         return redirect()
             ->route('financial.reports.signatures')
-            ->with('success', 'Assinatura do 1º tesoureiro salva. Os próximos PDFs já saem assinados.');
+            ->with('success', "Assinatura do {$label} salva. Os próximos PDFs já saem assinados.");
     }
 
     public function destroy(Request $request, PdfSignatureService $signatures)
@@ -44,7 +53,10 @@ class ReportSignatureController extends Controller
         $this->authorize('financial.view-reports');
 
         $validated = $request->validate([
-            'role' => ['required', Rule::in([PdfSignatureService::ROLE_TESOUREIRO])],
+            'role' => ['required', Rule::in([
+                PdfSignatureService::ROLE_TESOUREIRO,
+                PdfSignatureService::ROLE_PASTOR,
+            ])],
         ]);
 
         $signatures->delete($validated['role']);

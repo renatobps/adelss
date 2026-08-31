@@ -1,16 +1,16 @@
 @once
 @push('styles')
 <style>
-.fr-page {
+.fr-page,
+.fr-filters-card {
     --fr-text: #2E353E;
     --fr-muted: #5c6570;
     --fr-border: #E4E8ED;
     --fr-primary: #0088CC;
     --fr-bg: #FFFFFF;
-    min-width: 0;
 }
 
-.fr-page > [class*="col-"] { min-width: 0; }
+.fr-page { min-width: 0; }
 
 .fr-page,
 .fr-page .form-label,
@@ -119,6 +119,12 @@
     align-items: center;
     margin-bottom: .5rem;
 }
+.fr-period-modes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem;
+    min-width: 0;
+}
 .fr-period-modes .btn,
 .fr-period-shortcuts .btn {
     font-size: 0.75rem;
@@ -126,10 +132,14 @@
     padding: .35rem .65rem;
     min-height: 0;
     line-height: 1.3;
+    white-space: nowrap;
+    flex: 0 0 auto;
 }
 .fr-period-modes .btn.is-active {
-    background: var(--fr-primary);
-    border-color: var(--fr-primary);
+    background: #0088CC;
+    background: var(--fr-primary, #0088CC);
+    border-color: #0088CC;
+    border-color: var(--fr-primary, #0088CC);
     color: #fff;
 }
 .fr-period-shortcuts { display: flex; flex-wrap: wrap; gap: .35rem; }
@@ -247,8 +257,8 @@ body:has(.fr-page) .adelss-module-nav__subtitle { max-width: 40rem; }
     .fr-period { grid-template-columns: 1fr; }
     .fr-period__sep { display: none; }
     .fr-period-toolbar { flex-direction: column; align-items: stretch; }
-    .fr-period-modes { width: 100%; display: flex; }
-    .fr-period-modes .btn { flex: 1; }
+    .fr-period-modes { width: 100%; display: flex; flex-wrap: wrap; }
+    .fr-period-modes .btn { flex: 0 0 auto; }
     .fr-period-shortcuts .btn { flex: 1 1 auto; }
 
     .fr-filters__actions { width: 100%; }

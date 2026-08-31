@@ -10,6 +10,7 @@
 @endsection
 
 @section('content')
+<div class="fr-page">
 @php
     $user = Auth::user();
     $isAdmin = $user?->is_admin ?? false;
@@ -23,13 +24,15 @@
     $whatsappReceiptEnabled = config('financial.whatsapp.dizimo_receipt_enabled', true);
 @endphp
 
+@include('financial.reports.partials.styles')
+
 <!-- Header -->
 <div class="alert alert-info mb-4" style="background-color: #e3f2fd; color: #1976d2; border: none;">
     <i class="bx bx-info-circle me-2"></i>
     Gerencie suas transações financeiras.
 </div>
 
-@if(session('success'))
+@if(session('success') && !session('continue_adding'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">
         <i class="bx bx-check-circle me-2"></i>{{ session('success') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -109,103 +112,25 @@
 </div>
 
 <!-- Filtros e Ações -->
-<div class="card mb-4" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-    <div class="card-body">
-        <form method="GET" action="{{ route('financial.transactions.index') }}" id="filterForm">
-            <div class="row align-items-end">
-                <div class="col-md-2 mb-2">
-                    <label class="form-label small">Período:</label>
-                    <div class="input-group input-group-sm">
-                        <input type="date" class="form-control" name="start_date" value="{{ $startDate ?? now()->startOfMonth()->format('Y-m-d') }}">
-                        <span class="input-group-text">-</span>
-                        <input type="date" class="form-control" name="end_date" value="{{ $endDate ?? now()->endOfMonth()->format('Y-m-d') }}">
-                    </div>
-                </div>
-                <div class="col-md-2 mb-2">
-                    <label class="form-label small">Tipo:</label>
-                    <select class="form-select form-select-sm" name="type">
-                        <option value="">Todos</option>
-                        <option value="receita" {{ request('type') == 'receita' ? 'selected' : '' }}>Receitas</option>
-                        <option value="despesa" {{ request('type') == 'despesa' ? 'selected' : '' }}>Despesas</option>
-                    </select>
-                </div>
-                <div class="col-md-2 mb-2">
-                    <label class="form-label small">Status:</label>
-                    <select class="form-select form-select-sm" name="status">
-                        <option value="">Todos</option>
-                        <option value="recebido" {{ request('status') == 'recebido' ? 'selected' : '' }}>Recebido</option>
-                        <option value="pago" {{ request('status') == 'pago' ? 'selected' : '' }}>Pago</option>
-                        <option value="a_receber" {{ request('status') == 'a_receber' ? 'selected' : '' }}>A receber</option>
-                        <option value="a_pagar" {{ request('status') == 'a_pagar' ? 'selected' : '' }}>A pagar</option>
-                    </select>
-                </div>
-                <div class="col-md-2 mb-2">
-                    <label class="form-label small">Contas:</label>
-                    <select class="form-select form-select-sm" name="account_id">
-                        <option value="">Todas</option>
-                        @foreach($accounts as $account)
-                            <option value="{{ $account->id }}" {{ request('account_id') == $account->id ? 'selected' : '' }}>
-                                {{ $account->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2 mb-2">
-                    <label class="form-label small">Centros de custos:</label>
-                    <select class="form-select form-select-sm" name="cost_center_id">
-                        <option value="">Todos</option>
-                        @foreach($costCenters as $costCenter)
-                            <option value="{{ $costCenter->id }}" {{ request('cost_center_id') == $costCenter->id ? 'selected' : '' }}>
-                                {{ $costCenter->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2 mb-2">
-                    <label class="form-label small">Categorias:</label>
-                    <select class="form-select form-select-sm" name="category_id">
-                        <option value="">Todas</option>
-                        @foreach($categories as $category)
-                            <option value="{{ $category->id }}" {{ request('category_id') == $category->id ? 'selected' : '' }}>
-                                {{ $category->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-        </form>
-        <div class="row g-2 mt-3">
-            <div class="col-12 col-md-6">
-                <div class="d-flex flex-wrap gap-2">
-                    <button type="submit" form="filterForm" class="btn btn-primary btn-sm">
-                        <i class="bx bx-filter me-1"></i>Aplicar Filtros
-                    </button>
-                    @if(request()->hasAny(['type', 'status', 'category_id', 'account_id', 'cost_center_id', 'start_date', 'end_date']))
-                        <a href="{{ route('financial.transactions.index') }}" class="btn btn-default btn-sm">
-                            <i class="bx bx-x me-1"></i>Limpar
-                        </a>
-                    @endif
-                </div>
-            </div>
-            <div class="col-12 col-md-6">
-                <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
-                        <i class="bx bx-upload me-1"></i>Importar
-                    </button>
-                    @if($canCreateReceitas)
-                    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createReceitaModal">
-                        <i class="bx bx-plus me-1"></i> Adicionar receita
-                    </button>
-                    @endif
-                    @if($canCreateDespesas)
-                    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#createDespesaModal">
-                        <i class="bx bx-plus me-1"></i> Adicionar despesa
-                    </button>
-                    @endif
-                </div>
-            </div>
-        </div>
-    </div>
+@include('financial.reports.partials.full-filters', [
+    'action' => route('financial.transactions.index'),
+    'categoriesReceitas' => $categoriesReceitas,
+    'categoriesDespesas' => $categoriesDespesas,
+])
+<div class="d-flex flex-wrap gap-2 justify-content-md-end mb-4">
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#importModal">
+        <i class="bx bx-upload me-1"></i>Importar
+    </button>
+    @if($canCreateReceitas)
+    <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#createReceitaModal">
+        <i class="bx bx-plus me-1"></i> Adicionar receita
+    </button>
+    @endif
+    @if($canCreateDespesas)
+    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#createDespesaModal">
+        <i class="bx bx-plus me-1"></i> Adicionar despesa
+    </button>
+    @endif
 </div>
 
 <!-- Tabela de Transações -->
@@ -1024,8 +949,8 @@
                                        placeholder="Digite o nome (quando selecionar 'Outros')">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="edit_category_id" class="form-label">Categoria</label>
-                                <select class="form-select" id="edit_category_id" name="category_id">
+                                <label for="edit_receita_category_id" class="form-label">Categoria</label>
+                                <select class="form-select" id="edit_receita_category_id" name="category_id">
                                     <option value="">Selecione</option>
                                     @foreach($categories as $category)
                                         <option value="{{ $category->id }}" data-type="{{ $category->type }}"
@@ -1044,17 +969,21 @@
                     <div id="edit_despesa_fields" style="display: none;">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="edit_contact_id" class="form-label">Pago à</label>
-                                <select class="form-select" id="edit_contact_id" name="contact_id">
+                                <label for="edit_payee_id" class="form-label">Pago à</label>
+                                <select class="form-select" id="edit_payee_id" name="member_id">
                                     <option value="">Selecione</option>
-                                    @foreach($contacts as $contact)
-                                        <option value="{{ $contact->id }}">{{ $contact->name }}</option>
+                                    <option value="other">Outros</option>
+                                    @foreach($members as $member)
+                                        <option value="{{ $member->id }}">{{ $member->name }}</option>
                                     @endforeach
                                 </select>
+                                <input type="text" class="form-control mt-2 d-none"
+                                       id="edit_payee_other_name" name="received_from_other"
+                                       placeholder="Nome de quem recebeu (quando não for membro)">
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label for="edit_category_id" class="form-label">Categoria</label>
-                                <select class="form-select" id="edit_category_id" name="category_id">
+                                <label for="edit_despesa_category_id" class="form-label">Categoria</label>
+                                <select class="form-select" id="edit_despesa_category_id" name="category_id">
                                     <option value="">Selecione</option>
                                     @foreach($categories as $category)
                                         <option value="{{ $category->id }}" data-type="{{ $category->type }}">
@@ -1128,7 +1057,13 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Arquivos <span id="edit_file_count">0</span>/5</label>
+                        <label class="form-label">
+                            Arquivos <span id="edit_file_count">0</span>/5
+                            <span class="text-danger d-none" id="edit_receipt_required">* Recibo assinado obrigatório</span>
+                        </label>
+                        <div class="alert alert-warning py-2 small d-none" id="edit_receipt_hint">
+                            Pagamento a membro exige o recibo de pagamento assinado por quem recebeu (foto ou PDF).
+                        </div>
                         <div class="d-flex flex-wrap gap-2 mb-2">
                             <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('edit_attachments_upload').click()">
                                 <i class="bx bx-upload me-1"></i>Anexar arquivo
@@ -1209,15 +1144,26 @@
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label for="despesa_contact" class="form-label">Pago à</label>
-                            <select class="form-select" id="despesa_contact" name="contact_id">
+                            <label for="despesa_payee" class="form-label">Pago à</label>
+                            <select class="form-select @error('member_id') is-invalid @enderror" id="despesa_payee" name="member_id">
                                 <option value="">Selecione</option>
-                                @foreach($contacts as $contact)
-                                    <option value="{{ $contact->id }}" {{ old('contact_id') == $contact->id ? 'selected' : '' }}>
-                                        {{ $contact->name }}
+                                <option value="other" {{ old('member_id') === 'other' ? 'selected' : '' }}>Outros</option>
+                                @foreach($members as $member)
+                                    <option value="{{ $member->id }}" {{ (string) old('member_id') === (string) $member->id ? 'selected' : '' }}>
+                                        {{ $member->name }}
                                     </option>
                                 @endforeach
                             </select>
+                            <input type="text" class="form-control mt-2 {{ old('member_id') === 'other' ? '' : 'd-none' }}"
+                                   id="despesa_other_name" name="received_from_other"
+                                   placeholder="Nome de quem recebeu (quando não for membro)"
+                                   value="{{ old('received_from_other') }}">
+                            @error('member_id')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
+                            @error('received_from_other')
+                                <div class="invalid-feedback d-block">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="despesa_category" class="form-label">Categoria</label>
@@ -1303,7 +1249,13 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Arquivos <span id="despesa_file_count">0</span>/5</label>
+                        <label class="form-label">
+                            Arquivos <span id="despesa_file_count">0</span>/5
+                            <span class="text-danger d-none" id="despesa_receipt_required">* Recibo assinado obrigatório</span>
+                        </label>
+                        <div class="alert alert-warning py-2 small d-none" id="despesa_receipt_hint">
+                            Pagamento a membro exige o recibo de pagamento assinado por quem recebeu (foto ou PDF).
+                        </div>
                         <div class="d-flex flex-wrap gap-2 mb-2">
                             <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('despesa_attachments_upload').click()">
                                 <i class="bx bx-upload me-1"></i>Anexar arquivo
@@ -1456,11 +1408,52 @@
     </div>
 </div>
 
+@if(session('continue_adding'))
+<div class="modal fade" id="continueAddingModal" tabindex="-1" aria-labelledby="continueAddingModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="continueAddingModalLabel">
+                    <i class="bx bx-check-circle me-2"></i>Salvo com sucesso
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">{{ session('success') }}</p>
+                <p class="mb-0 fw-semibold">Continuar adicionando {{ session('continue_adding') === 'despesa' ? 'despesas' : 'receitas' }}?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Não</button>
+                <button type="button" class="btn btn-primary" id="continueAddingYesBtn">Sim</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
+
+</div>
+
 @push('scripts')
 @if(!empty($mercadoPagoPublicKey))
 <script src="https://sdk.mercadopago.com/js/v2"></script>
 @endif
 <script>
+
+    const continueAddingType = @json(session('continue_adding'));
+    const continueAddingModalEl = document.getElementById('continueAddingModal');
+    if (continueAddingModalEl && continueAddingType) {
+        const continueAddingModal = new bootstrap.Modal(continueAddingModalEl);
+        continueAddingModal.show();
+        document.getElementById('continueAddingYesBtn')?.addEventListener('click', function () {
+            continueAddingModal.hide();
+            const targetId = continueAddingType === 'despesa' ? 'createDespesaModal' : 'createReceitaModal';
+            const nextModalEl = document.getElementById(targetId);
+            if (!nextModalEl) return;
+            continueAddingModalEl.addEventListener('hidden.bs.modal', function () {
+                bootstrap.Modal.getOrCreateInstance(nextModalEl).show();
+            }, { once: true });
+        });
+    }
 
     const mercadoPagoPublicKey = @json($mercadoPagoPublicKey ?? '');
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
@@ -1864,7 +1857,6 @@
         countId: 'edit_file_count',
     });
 
-    // Toggle campo "Outros" no modal de receita
     function categoryIsDizimo(select) {
         const option = select?.selectedOptions?.[0];
         if (!option || !option.value) return false;
@@ -1873,6 +1865,28 @@
         if (slug === 'dizimo') return true;
         const name = (option.textContent || '').toLowerCase();
         return name.includes('dízimo') || name.includes('dizimo');
+    }
+
+    function setDisabledFormControls(container, disabled) {
+        container?.querySelectorAll('select, input, textarea').forEach(function(el) {
+            el.disabled = disabled;
+        });
+    }
+
+    function syncDespesaPayeeUi(select, otherField, requiredId, hintId) {
+        const isMember = select && select.value && select.value !== 'other';
+        const isOther = select?.value === 'other';
+        document.getElementById(requiredId)?.classList.toggle('d-none', !isMember);
+        document.getElementById(hintId)?.classList.toggle('d-none', !isMember);
+        if (!otherField) return;
+        if (isOther) {
+            otherField.classList.remove('d-none');
+            otherField.setAttribute('required', 'required');
+        } else {
+            otherField.classList.add('d-none');
+            otherField.removeAttribute('required');
+            otherField.value = '';
+        }
     }
 
     function syncReceitaDonorRequired(categorySelect, memberSelect, requiredMark, otherField) {
@@ -1907,6 +1921,30 @@
         }
     });
 
+    document.getElementById('despesa_payee')?.addEventListener('change', function() {
+        syncDespesaPayeeUi(
+            this,
+            document.getElementById('despesa_other_name'),
+            'despesa_receipt_required',
+            'despesa_receipt_hint'
+        );
+    });
+    syncDespesaPayeeUi(
+        document.getElementById('despesa_payee'),
+        document.getElementById('despesa_other_name'),
+        'despesa_receipt_required',
+        'despesa_receipt_hint'
+    );
+
+    document.getElementById('edit_payee_id')?.addEventListener('change', function() {
+        syncDespesaPayeeUi(
+            this,
+            document.getElementById('edit_payee_other_name'),
+            'edit_receipt_required',
+            'edit_receipt_hint'
+        );
+    });
+
     // Validação antes de enviar o formulário de receita
     document.getElementById('receitaForm')?.addEventListener('submit', function(e) {
         const receivedFrom = document.getElementById('receita_received_from');
@@ -1935,6 +1973,54 @@
         }
     });
 
+    document.getElementById('despesaForm')?.addEventListener('submit', function(e) {
+        const payee = document.getElementById('despesa_payee');
+        const otherField = document.getElementById('despesa_other_name');
+
+        if (payee?.value === 'other') {
+            if (!otherField?.value?.trim()) {
+                e.preventDefault();
+                alert('Informe a quem foi pago quando selecionar "Outros".');
+                otherField?.focus();
+                return false;
+            }
+            payee.removeAttribute('name');
+            payee.setAttribute('name', 'member_id_hidden');
+        } else if (otherField && payee?.value !== 'other') {
+            otherField.removeAttribute('name');
+        }
+
+        if (payee?.value && payee.value !== 'other' && despesaAttachmentManager.getTotalCount() < 1) {
+            e.preventDefault();
+            alert('Anexe o recibo de pagamento assinado pela pessoa que recebeu.');
+            return false;
+        }
+    });
+
+    document.getElementById('editTransactionForm')?.addEventListener('submit', function(e) {
+        const payee = document.getElementById('edit_payee_id');
+        if (payee?.disabled) {
+            return;
+        }
+        const otherField = document.getElementById('edit_payee_other_name');
+        if (payee?.value === 'other') {
+            if (!otherField?.value?.trim()) {
+                e.preventDefault();
+                alert('Informe a quem foi pago quando selecionar "Outros".');
+                otherField?.focus();
+                return false;
+            }
+            payee.removeAttribute('name');
+            payee.setAttribute('name', 'member_id_hidden');
+        }
+
+        if (payee?.value && payee.value !== 'other' && editAttachmentManager.getTotalCount() < 1) {
+            e.preventDefault();
+            alert('Anexe o recibo de pagamento assinado pela pessoa que recebeu.');
+            return false;
+        }
+    });
+
     document.getElementById('receita_category')?.addEventListener('change', function() {
         syncReceitaDonorRequired(
             this,
@@ -1949,7 +2035,7 @@
         document.getElementById('receita_donor_required'),
         document.getElementById('receita_other_name')
     );
-    document.querySelector('#edit_receita_fields select[name="category_id"]')?.addEventListener('change', function() {
+    document.getElementById('edit_receita_category_id')?.addEventListener('change', function() {
         syncReceitaDonorRequired(
             this,
             document.getElementById('edit_member_id'),
@@ -2137,7 +2223,6 @@
         document.getElementById('edit_description').value = transaction.description || '';
         document.getElementById('edit_amount').value = transaction.amount || '';
         document.getElementById('edit_is_paid').checked = transaction.is_paid || false;
-        document.getElementById('edit_category_id').value = transaction.category_id || '';
         document.getElementById('edit_account_id').value = transaction.account_id || '';
         document.getElementById('edit_cost_center_id').value = transaction.cost_center_id || '';
         document.getElementById('edit_payment_type').value = transaction.payment_type || 'unico';
@@ -2188,9 +2273,10 @@
             }
             
             // Filtrar categorias de receita
-            filterCategories('edit_category_id', 'receita');
+            filterCategories('edit_receita_category_id', 'receita');
+            document.getElementById('edit_receita_category_id').value = transaction.category_id || '';
             syncReceitaDonorRequired(
-                document.querySelector('#edit_receita_fields select[name="category_id"]'),
+                document.getElementById('edit_receita_category_id'),
                 document.getElementById('edit_member_id'),
                 document.getElementById('edit_donor_required'),
                 document.getElementById('edit_other_name')
@@ -2199,12 +2285,30 @@
             receitaFields.style.display = 'none';
             despesaFields.style.display = 'block';
             
-            // Preencher campo "Pago à"
-            document.getElementById('edit_contact_id').value = transaction.contact_id || '';
-            
-            // Filtrar categorias de despesa
-            filterCategories('edit_category_id', 'despesa');
+            const payeeSelect = document.getElementById('edit_payee_id');
+            const payeeOther = document.getElementById('edit_payee_other_name');
+
+            if (transaction.member_id) {
+                payeeSelect.value = transaction.member_id;
+                payeeOther.classList.add('d-none');
+                payeeOther.value = '';
+            } else if (transaction.received_from_other) {
+                payeeSelect.value = 'other';
+                payeeOther.classList.remove('d-none');
+                payeeOther.value = transaction.received_from_other;
+            } else {
+                payeeSelect.value = '';
+                payeeOther.classList.add('d-none');
+                payeeOther.value = '';
+            }
+
+            filterCategories('edit_despesa_category_id', 'despesa');
+            document.getElementById('edit_despesa_category_id').value = transaction.category_id || '';
+            syncDespesaPayeeUi(payeeSelect, payeeOther, 'edit_receipt_required', 'edit_receipt_hint');
         }
+
+        setDisabledFormControls(receitaFields, transaction.type !== 'receita');
+        setDisabledFormControls(despesaFields, transaction.type !== 'despesa');
         
         // Limpar preview de arquivos
         editAttachmentManager.resetNewFiles();

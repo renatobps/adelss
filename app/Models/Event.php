@@ -349,6 +349,17 @@ class Event extends Model
         });
     }
 
+    /**
+     * Cultos já ocorridos ou de hoje, desde 01/01/2016 (sem datas futuras).
+     */
+    public function scopeParaRelatorioFinanceiro($query)
+    {
+        return $query->cultosDaAgenda()
+            ->whereDate('start_date', '<=', now()->toDateString())
+            ->whereDate('start_date', '>=', '2016-01-01')
+            ->orderByDesc('start_date');
+    }
+
     public function isCultoDaAgenda(): bool
     {
         return static::query()->cultosDaAgenda()->whereKey($this->id)->exists();

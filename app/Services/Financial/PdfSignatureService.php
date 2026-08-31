@@ -20,13 +20,15 @@ class PdfSignatureService
     private const DIR = 'financial/signatures';
 
     /**
-     * @return array{tesoureiroNome:?string,tesoureiroAssinaturaSrc:?string}
+     * @return array{tesoureiroNome:?string,tesoureiroAssinaturaSrc:?string,pastorNome:?string,pastorAssinaturaSrc:?string}
      */
     public function forPdf(): array
     {
         return [
             'tesoureiroNome' => $this->tesoureiroNome(),
             'tesoureiroAssinaturaSrc' => $this->imageSrc(self::ROLE_TESOUREIRO),
+            'pastorNome' => $this->pastorNome(),
+            'pastorAssinaturaSrc' => $this->imageSrc(self::ROLE_PASTOR),
         ];
     }
 

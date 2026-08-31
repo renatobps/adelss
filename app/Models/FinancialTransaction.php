@@ -184,14 +184,18 @@ class FinancialTransaction extends Model
      */
     public function getSourceNameAttribute()
     {
-        if ($this->type === 'receita') {
-            if ($this->member_id) {
-                return $this->member->name ?? 'Membro não encontrado';
-            }
-
-            return $this->received_from_other ?? 'Outros';
-        } else {
-            return $this->contact->name ?? 'Contato não encontrado';
+        if ($this->member_id) {
+            return $this->member->name ?? 'Membro não encontrado';
         }
+
+        if (filled($this->received_from_other)) {
+            return $this->received_from_other;
+        }
+
+        if ($this->type === 'despesa') {
+            return $this->contact->name ?? '—';
+        }
+
+        return 'Outros';
     }
 }

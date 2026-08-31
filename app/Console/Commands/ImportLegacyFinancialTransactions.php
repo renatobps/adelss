@@ -18,25 +18,45 @@ class ImportLegacyFinancialTransactions extends Command
 {
     protected $signature = 'financial:import-legacy
                             {caminho? : Caminho do CSV}
+                            {--ano=2025 : Ano da carga (2023, 2024, 2025 ou 2026)}
                             {--dry-run : Processa e mostra o resumo sem gravar no banco}';
 
-    protected $description = 'Importa a carga histórica financeira de 2025 a partir do CSV normalizado';
+    protected $description = 'Importa a carga histórica financeira (2023 a 2026) a partir do CSV normalizado';
 
-    private const DESCRIPTION_PREFIX = '[Importação 2025]';
+    private int $year = 2025;
 
-    private const RECEIVED_FROM_OTHER_LABEL = 'Importação 2025';
+    private string $descriptionPrefix = '[Importação 2025]';
 
-    private const EXPECTED_RECEITAS_CENTS = 7351263;
+    private string $receivedFromLabel = 'Importação 2025';
 
-    private const EXPECTED_DESPESAS_CENTS = 7348241;
+    private string $refPrefix = 'legacy2025:';
+
+    private string $logPath = '';
+
+    private bool $useCsvReceivedFrom = false;
+
+    private ?int $expectedReceitasCents = 7351263;
+
+    private ?int $expectedDespesasCents = 7348241;
 
     public function handle(): int
     {
+        try {
+            $this->applyYearConfig();
+        } catch (Throwable $e) {
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
+        }
+
         $path = $this->resolvePath();
         $dryRun = (bool) $this->option('dry-run');
 
         if (! is_file($path)) {
             $this->error("Arquivo CSV não encontrado: {$path}");
+            if ($this->year === 2023) {
+                $this->line('A planilha 2023.xlsx atual só tem o cabeçalho, sem lançamentos. Exporte de novo com os dados e avise para gerar o CSV.');
+            }
 
             return self::FAILURE;
         }
@@ -85,7 +105,60 @@ class ImportLegacyFinancialTransactions extends Command
                 : base_path($argument);
         }
 
-        return storage_path('imports/financial_import_2025.csv');
+        return storage_path('imports/financial_import_'.$this->year.'.csv');
+    }
+
+    private function applyYearConfig(): void
+    {
+        $year = (int) rtrim((string) $this->option('ano'), '.');
+        $this->year = $year;
+        $this->logPath = storage_path('logs/import-financeiro-'.$year.'.log');
+
+        if ($year === 2023) {
+            $this->descriptionPrefix = '[Importação 2023]';
+            $this->receivedFromLabel = 'Importação 2023';
+            $this->refPrefix = 'legacy2023:';
+            $this->useCsvReceivedFrom = true;
+            $this->expectedReceitasCents = null;
+            $this->expectedDespesasCents = null;
+
+            return;
+        }
+
+        if ($year === 2024) {
+            $this->descriptionPrefix = '[Importação 2024]';
+            $this->receivedFromLabel = 'Importação 2024';
+            $this->refPrefix = 'legacy2024:';
+            $this->useCsvReceivedFrom = true;
+            $this->expectedReceitasCents = 1422421;
+            $this->expectedDespesasCents = 1121508;
+
+            return;
+        }
+
+        if ($year === 2025) {
+            $this->descriptionPrefix = '[Importação 2025]';
+            $this->receivedFromLabel = 'Importação 2025';
+            $this->refPrefix = 'legacy2025:';
+            $this->useCsvReceivedFrom = false;
+            $this->expectedReceitasCents = 7351263;
+            $this->expectedDespesasCents = 7348241;
+
+            return;
+        }
+
+        if ($year === 2026) {
+            $this->descriptionPrefix = '[Importação 2026]';
+            $this->receivedFromLabel = 'Importação 2026';
+            $this->refPrefix = 'legacy2026:';
+            $this->useCsvReceivedFrom = true;
+            $this->expectedReceitasCents = 3631342;
+            $this->expectedDespesasCents = 4822783;
+
+            return;
+        }
+
+        throw new RuntimeException('Ano não suportado. Use --ano=2023, --ano=2024, --ano=2025 ou --ano=2026.');
     }
 
     private function isAbsolutePath(string $path): bool
@@ -166,7 +239,8 @@ class ImportLegacyFinancialTransactions extends Command
                     'tipo' => $tipo,
                     'categoria' => $assoc['categoria'],
                     'status_import' => Str::upper($assoc['status_import']),
-                    'external_ref' => 'legacy2025:'.$mesAba.':'.$dataIndex,
+                    'received_from_other' => trim((string) ($assoc['received_from_other'] ?? '')),
+                    'external_ref' => $this->refPrefix.$mesAba.':'.$dataIndex,
                 ];
             }
 
@@ -330,7 +404,7 @@ class ImportLegacyFinancialTransactions extends Command
             'slug' => Str::slug($name) ?: 'categoria',
             'type' => $type,
             'sends_receipt' => $sendsReceipt,
-            'description' => 'Criada automaticamente na importação histórica de 2025.',
+            'description' => 'Criada automaticamente na importação histórica de '.$this->year.'.',
         ]);
     }
 
@@ -345,12 +419,19 @@ class ImportLegacyFinancialTransactions extends Command
         $description = $originalDescription !== '' ? $originalDescription : $row['categoria'];
         $description = Str::limit($description, 255, '');
 
-        $notes = self::DESCRIPTION_PREFIX.' Aba '.$row['mes_aba'];
+        $notes = $this->descriptionPrefix.' Aba '.$row['mes_aba'];
         if ($originalDescription !== '') {
             $notes .= ' — '.$originalDescription;
         }
 
         $isReceita = $row['tipo'] === 'receita';
+        $receivedFrom = null;
+        if ($isReceita) {
+            $fromCsv = trim((string) ($row['received_from_other'] ?? ''));
+            $receivedFrom = $this->useCsvReceivedFrom && $fromCsv !== ''
+                ? Str::limit($fromCsv, 255, '')
+                : $this->receivedFromLabel;
+        }
 
         FinancialTransaction::create([
             'type' => $row['tipo'],
@@ -362,7 +443,7 @@ class ImportLegacyFinancialTransactions extends Command
             'is_paid' => true,
             'status' => $isReceita ? 'recebido' : 'pago',
             'member_id' => null,
-            'received_from_other' => $isReceita ? self::RECEIVED_FROM_OTHER_LABEL : null,
+            'received_from_other' => $receivedFrom,
             'category_id' => $categoryId,
             'payment_type' => 'unico',
             'external_ref' => $row['external_ref'],
@@ -392,7 +473,7 @@ class ImportLegacyFinancialTransactions extends Command
     private function renderReport(string $path, bool $dryRun, array $result): void
     {
         $this->newLine();
-        $this->info('Importação financeira legado 2025');
+        $this->info('Importação financeira legado '.$this->year);
         $this->line('Arquivo: '.$path);
         $this->line($dryRun ? 'Modo: DRY-RUN (nada foi gravado no banco)' : 'Modo: GRAVAÇÃO');
         $this->newLine();
@@ -416,7 +497,7 @@ class ImportLegacyFinancialTransactions extends Command
         $totalExpenses = $importedExpenses + $skippedExpenses;
         $importedRevenues = $result['revenue_cents'];
         $importedBalance = $importedRevenues - $importedExpenses;
-        $planilhaBalance = self::EXPECTED_RECEITAS_CENTS - self::EXPECTED_DESPESAS_CENTS;
+        $planilhaBalance = ($this->expectedReceitasCents ?? 0) - ($this->expectedDespesasCents ?? 0);
 
         $this->newLine();
         $this->info($dryRun ? 'Totais a importar (somente linhas OK)' : 'Totais importados (linhas OK, novas + já existentes)');
@@ -429,36 +510,40 @@ class ImportLegacyFinancialTransactions extends Command
             ]
         );
 
-        $receitasOk = $importedRevenues === self::EXPECTED_RECEITAS_CENTS;
-        $despesasOk = $totalExpenses === self::EXPECTED_DESPESAS_CENTS;
+        if ($this->expectedReceitasCents !== null && $this->expectedDespesasCents !== null) {
+            $receitasOk = $importedRevenues === $this->expectedReceitasCents;
+            $despesasOk = $totalExpenses === $this->expectedDespesasCents;
 
-        $this->newLine();
-        $this->info('Conferência com a planilha original');
-        $this->table(
-            ['', 'Planilha', 'Deste arquivo', 'Status'],
-            [
+            $this->newLine();
+            $this->info('Conferência com a planilha original');
+            $this->table(
+                ['', 'Planilha', 'Deste arquivo', 'Status'],
                 [
-                    'Receitas',
-                    $this->formatMoney(self::EXPECTED_RECEITAS_CENTS),
-                    $this->formatMoney($importedRevenues),
-                    $receitasOk ? 'OK' : 'DIVERGE',
-                ],
-                [
-                    'Despesas (OK + REVISAR)',
-                    $this->formatMoney(self::EXPECTED_DESPESAS_CENTS),
-                    $this->formatMoney($importedExpenses).' + '.$this->formatMoney($skippedExpenses).' = '.$this->formatMoney($totalExpenses),
-                    $despesasOk ? 'OK' : 'DIVERGE',
-                ],
-                [
-                    'Saldo (com pendências)',
-                    $this->formatMoney($planilhaBalance),
-                    $this->formatMoney($importedRevenues - $totalExpenses),
-                    ($importedRevenues - $totalExpenses) === $planilhaBalance ? 'OK' : 'DIVERGE',
-                ],
-            ]
-        );
+                    [
+                        'Receitas',
+                        $this->formatMoney($this->expectedReceitasCents),
+                        $this->formatMoney($importedRevenues),
+                        $receitasOk ? 'OK' : 'DIVERGE',
+                    ],
+                    [
+                        'Despesas (OK + REVISAR)',
+                        $this->formatMoney($this->expectedDespesasCents),
+                        $this->formatMoney($importedExpenses).' + '.$this->formatMoney($skippedExpenses).' = '.$this->formatMoney($totalExpenses),
+                        $despesasOk ? 'OK' : 'DIVERGE',
+                    ],
+                    [
+                        'Saldo (com pendências)',
+                        $this->formatMoney($planilhaBalance),
+                        $this->formatMoney($importedRevenues - $totalExpenses),
+                        ($importedRevenues - $totalExpenses) === $planilhaBalance ? 'OK' : 'DIVERGE',
+                    ],
+                ]
+            );
+        }
 
-        $this->line('As 17 linhas REVISAR não entram no saldo importado até receberem categoria (tela de Transações ou CSV corrigido).');
+        if ($result['skipped_review'] > 0) {
+            $this->line('As linhas REVISAR não entram no saldo importado até receberem categoria (tela de Transações ou CSV corrigido).');
+        }
 
         if ($result['categories_to_create'] !== []) {
             $this->newLine();
@@ -492,7 +577,7 @@ class ImportLegacyFinancialTransactions extends Command
     private function writeLog(bool $dryRun, array $result): void
     {
         $lines = [
-            'Importação financeira legado 2025 — '.now()->toDateTimeString(),
+            'Importação financeira legado '.$this->year.' — '.now()->toDateTimeString(),
             'Modo: '.($dryRun ? 'DRY-RUN' : 'GRAVAÇÃO'),
             'Processadas: '.$result['processed'],
             'OK: '.$result['ok'],
@@ -519,9 +604,9 @@ class ImportLegacyFinancialTransactions extends Command
             );
         }
 
-        File::put(storage_path('logs/import-financeiro-2025.log'), implode(PHP_EOL, $lines).PHP_EOL);
+        File::put($this->logPath, implode(PHP_EOL, $lines).PHP_EOL);
         $this->newLine();
-        $this->line('Relatório salvo em storage/logs/import-financeiro-2025.log');
+        $this->line('Relatório salvo em '.$this->logPath);
     }
 
     private function formatMoney(int $cents): string

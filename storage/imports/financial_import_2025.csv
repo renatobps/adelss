@@ -1,0 +1,619 @@
+﻿mes_aba,data,descricao,valor,tipo,categoria,status_import,member_id,received_from_other
+JAN25,2025-01-01,,650.0,receita,Dízimo,OK,,true
+JAN25,2025-01-03,,3400.0,despesa,Material de Construção,OK,,
+JAN25,2025-01-05,Dízimo,119.0,receita,Dízimo,OK,,true
+JAN25,2025-01-05,,150.0,receita,Dízimo,OK,,true
+JAN25,2025-01-05,,15.0,receita,Oferta,OK,,true
+JAN25,2025-01-05,Oferta,55.3,receita,Oferta,OK,,true
+JAN25,2025-01-07,dízimo,450.0,receita,Dízimo,OK,,true
+JAN25,2025-01-07,dízimo,324.5,receita,Dízimo,OK,,true
+JAN25,2025-01-07,,163.0,receita,Dízimo,OK,,true
+JAN25,2025-01-07,,65.0,receita,Dízimo,OK,,true
+JAN25,2025-01-07,,100.0,receita,Dízimo,OK,,true
+JAN25,2025-01-07,,324.5,receita,Dízimo,OK,,true
+JAN25,2025-01-07,,127.02,receita,Dízimo,OK,,true
+JAN25,2025-01-07,,151.0,receita,Dízimo,OK,,true
+JAN25,2025-01-08,dízimo,278.0,receita,Dízimo,OK,,true
+JAN25,2025-01-08,dízimo,213.0,receita,Dízimo,OK,,true
+JAN25,2025-01-08,Dízimo,105.0,receita,Dízimo,OK,,true
+JAN25,2025-01-08,,190.0,receita,Dízimo,OK,,true
+JAN25,2025-01-08,Oferta,22.85,receita,Oferta,OK,,true
+JAN25,2025-01-08,dízimo,165.0,receita,Dízimo,OK,,true
+JAN25,2025-01-09,,213.0,receita,Dízimo,OK,,true
+JAN25,2025-01-10,,70.0,receita,Dízimo,OK,,true
+JAN25,2025-01-11,,15.0,receita,Dízimo,OK,,true
+JAN25,2025-01-12,copo descartáveis,10.0,despesa,,REVISAR,,
+JAN25,2025-01-12,dízimo,240.0,receita,Dízimo,OK,,true
+JAN25,2025-01-12,dízimo,152.0,receita,Dízimo,OK,,true
+JAN25,2025-01-12,dízimo,155.0,receita,Dízimo,OK,,true
+JAN25,2025-01-12,dízimo,170.0,receita,Dízimo,OK,,true
+JAN25,2025-01-12,dízimo,120.0,receita,Dízimo,OK,,true
+JAN25,2025-01-12,,213.0,receita,Oferta,OK,,true
+JAN25,2025-01-12,,20.0,receita,Oferta,OK,,true
+JAN25,2025-01-12,oferta,170.55,receita,Oferta,OK,,true
+JAN25,2025-01-13,,240.0,receita,Dízimo,OK,,true
+JAN25,2025-01-15,,400.0,despesa,Zeladoria,OK,,
+JAN25,2025-01-15,,2000.0,despesa,Mão de obra,OK,,
+JAN25,2025-01-15,dízimo,119.9,receita,Dízimo,OK,,true
+JAN25,2025-01-15,Oferta,55.85,receita,Oferta,OK,,true
+JAN25,2025-01-16,,35.0,receita,Dízimo,OK,,true
+JAN25,2025-01-18,,50.0,despesa,Mão de obra,OK,,
+JAN25,2025-01-18,,40.0,receita,Dízimo,OK,,true
+JAN25,2025-01-19,,241.0,receita,Dízimo,OK,,true
+JAN25,2025-01-19,dízimo,130.0,receita,Dízimo,OK,,true
+JAN25,2025-01-19,dízimo,250.0,receita,Dízimo,OK,,true
+JAN25,2025-01-19,oferta,37.0,receita,Oferta,OK,,true
+JAN25,2025-01-19,dízimo,150.0,receita,Dízimo,OK,,true
+JAN25,2025-01-20,,44.5,receita,Dízimo,OK,,true
+JAN25,2025-01-22,,64.0,despesa,Conta de água,OK,,
+JAN25,2025-01-22,Oferta,165.9,receita,Oferta,OK,,true
+JAN25,2025-01-23,,29.3,despesa,Equipamentos,OK,,
+JAN25,2025-01-24,,20.0,receita,Dízimo,OK,,true
+JAN25,2025-01-24,,140.0,receita,Dízimo,OK,,true
+JAN25,2025-01-26,Pilhas,43.78,despesa,Utilidades,OK,,
+JAN25,2025-01-26,dízimo,130.0,receita,Dízimo,OK,,true
+JAN25,2025-01-26,dízimo,1326.0,receita,Dízimo,OK,,true
+JAN25,2025-01-26,,80.0,receita,Oferta,OK,,true
+JAN25,2025-01-26,oferta,85.6,receita,Oferta,OK,,true
+JAN25,2025-01-27,Mão de obra piso da igreja,1563.65,despesa,Mão de obra,OK,,
+JAN25,2025-01-28,,152.0,receita,Dízimo,OK,,true
+JAN25,2025-01-28,,15.89,receita,Oferta,OK,,true
+JAN25,2025-01-29,Dízimo,45.0,receita,Dízimo,OK,,true
+JAN25,2025-01-29,,510.0,receita,Dízimo,OK,,true
+JAN25,2025-01-29,Oferta,134.0,receita,Oferta,OK,,true
+JAN25,2025-01-30,,252.15,receita,Dízimo,OK,,true
+JAN25,2025-01-31,,3075.78,despesa,Prebenda Pastoral,OK,,
+JAN25,2025-01-31,,70.0,receita,Dízimo,OK,,true
+JAN25,2025-01-31,dízimo,150.0,receita,Dízimo,OK,,true
+JAN25,2025-01-31,dízimo,770.0,receita,Dízimo,OK,,true
+JAN25,2025-01-31,dízimo,40.0,receita,Dízimo,OK,,true
+FEV25,2025-02-02,Gasolina (Luziânia),105.0,despesa,Combustível,OK,,
+FEV25,2025-02-02,dízimo,125.0,receita,Dízimo,OK,,true
+FEV25,2025-02-02,dízimo,152.0,receita,Dízimo,OK,,true
+FEV25,2025-02-02,,40.0,receita,Dízimo,OK,,true
+FEV25,2025-02-02,,60.0,receita,Dízimo,OK,,true
+FEV25,2025-02-02,dízimo,365.0,receita,Dízimo,OK,,true
+FEV25,2025-02-02,oferta,116.15,receita,Oferta,OK,,true
+FEV25,2025-02-03,,150.0,receita,Dízimo,OK,,true
+FEV25,2025-02-04,,103.54,despesa,Internet,OK,,
+FEV25,2025-02-05,Oferta para o Pr. Alexandre Rodrigues,300.0,despesa,Pregador da noite (convidado),OK,,
+FEV25,2025-02-05,Oferta,28.85,receita,Oferta,OK,,true
+FEV25,2025-02-06,,127.07,receita,Dízimo,OK,,true
+FEV25,2025-02-06,,90.0,receita,Dízimo,OK,,true
+FEV25,2025-02-06,,180.0,receita,Dízimo,OK,,true
+FEV25,2025-02-06,,148.0,receita,Dízimo,OK,,true
+FEV25,2025-02-06,Dízimo,180.0,receita,Dízimo,OK,,true
+FEV25,2025-02-06,,117.51,receita,Dízimo,OK,,true
+FEV25,2025-02-06,,160.0,receita,Dízimo,OK,,true
+FEV25,2025-02-06,,170.0,receita,Dízimo,OK,,true
+FEV25,2025-02-07,,140.0,receita,Dízimo,OK,,true
+FEV25,2025-02-09,,20.0,receita,Dízimo,OK,,true
+FEV25,2025-02-09,Dízimo,20.0,receita,Dízimo,OK,,true
+FEV25,2025-02-09,Dízimo,117.51,receita,Dízimo,OK,,true
+FEV25,2025-02-09,Dízimo,250.0,receita,Dízimo,OK,,true
+FEV25,2025-02-09,Dízimo,150.0,receita,Dízimo,OK,,true
+FEV25,2025-02-09,Dízimo,150.0,receita,Dízimo,OK,,true
+FEV25,2025-02-09,oferta,226.05,receita,Oferta,OK,,true
+FEV25,2025-02-09,Dízimo,289.0,receita,Dízimo,OK,,true
+FEV25,2025-02-09,Dízimo,115.0,receita,Dízimo,OK,,true
+FEV25,2025-02-09,Dízimo,170.0,receita,Dízimo,OK,,true
+FEV25,2025-02-10,Oferta,500.0,despesa,Cantor(a) convidado,OK,,
+FEV25,2025-02-10,Oferta,600.0,despesa,Pregador da noite (convidado),OK,,
+FEV25,2025-02-10,,500.0,receita,Dízimo,OK,,true
+FEV25,2025-02-11,,3400.0,despesa,Material de Construção,OK,,
+FEV25,2025-02-12,,300.0,despesa,Cantor(a) convidado,OK,,
+FEV25,2025-02-12,Oferta,20.45,receita,Oferta,OK,,true
+FEV25,2025-02-14,,400.0,despesa,Zeladoria,OK,,
+FEV25,2025-02-14,,720.0,receita,Dízimo,OK,,true
+FEV25,2025-02-15,,80.24,receita,Dízimo,OK,,true
+FEV25,2025-02-16,,24.37,despesa,Material de Limpeza,OK,,
+FEV25,2025-02-16,Dízimo,124.0,receita,Dízimo,OK,,true
+FEV25,2025-02-16,Oferta,73.0,receita,Oferta,OK,,true
+FEV25,2025-02-18,Pagamento mês de fevereiro - App,75.0,despesa,App da igreja,OK,,
+FEV25,2025-02-19,Oferta,8.05,receita,Oferta,OK,,true
+FEV25,2025-02-21,Bateria 9v,21.99,despesa,Equipamentos,OK,,
+FEV25,2025-02-21,,200.0,receita,Dízimo,OK,,true
+FEV25,2025-02-21,,200.0,receita,Dízimo,OK,,true
+FEV25,2025-02-22,,25.0,receita,Dízimo,OK,,true
+FEV25,2025-02-23,,200.0,despesa,Pregador da noite (convidado),OK,,
+FEV25,2025-02-23,,100.0,receita,Dízimo,OK,,true
+FEV25,2025-02-23,dízimo,140.0,receita,Dízimo,OK,,true
+FEV25,2025-02-23,Oferta (Vigília),17.6,receita,Oferta,OK,,true
+FEV25,2025-02-23,dízimo,135.0,receita,Dízimo,OK,,true
+FEV25,2025-02-23,oferta,39.0,receita,Oferta,OK,,true
+FEV25,2025-02-26,4 Galões de água,32.0,despesa,Água,OK,,
+FEV25,2025-02-26,Oferta,39.0,receita,Oferta,OK,,true
+FEV25,2025-02-28,,1883.54,despesa,Prebenda Pastoral,OK,,
+FEV25,2025-02-28,Gasolina (Luziânia),100.0,despesa,Combustível,OK,,
+MAR25,2025-03-01,Gasolina (Luziânia),90.0,despesa,Combustível,OK,,
+MAR25,2025-03-01,OLEO DIESEL,100.0,despesa,Combustível,OK,,
+MAR25,2025-03-02,dízimo,139.0,receita,Dízimo,OK,,true
+MAR25,2025-03-02,dízimo,55.0,receita,Dízimo,OK,,true
+MAR25,2025-03-02,dízimo,150.0,receita,Dízimo,OK,,true
+MAR25,2025-03-02,dízimo,100.0,receita,Dízimo,OK,,true
+MAR25,2025-03-02,dízimo,152.0,receita,Dízimo,OK,,true
+MAR25,2025-03-02,oferta,79.2,receita,Oferta,OK,,true
+MAR25,2025-03-03,Gasolina (Luziânia),100.0,despesa,Combustível,OK,,
+MAR25,2025-03-03,Café da manhã,80.74,despesa,Alimentos,OK,,
+MAR25,2025-03-05,Dízimo,70.0,receita,Dízimo,OK,,true
+MAR25,2025-03-05,,45.05,receita,Oferta,OK,,true
+MAR25,2025-03-06,,320.0,receita,Dízimo,OK,,true
+MAR25,2025-03-06,,276.23,receita,Dízimo,OK,,true
+MAR25,2025-03-06,,250.0,receita,Dízimo,OK,,true
+MAR25,2025-03-06,,175.0,receita,Dízimo,OK,,true
+MAR25,2025-03-07,,103.54,despesa,Internet,OK,,
+MAR25,2025-03-07,,160.0,receita,Dízimo,OK,,true
+MAR25,2025-03-08,Gasolina,50.0,despesa,Combustível,OK,,
+MAR25,2025-03-08,,150.0,receita,Dízimo,OK,,true
+MAR25,2025-03-08,,5.0,receita,Dízimo,OK,,true
+MAR25,2025-03-08,,70.6,receita,Dízimo,OK,,true
+MAR25,2025-03-08,,300.0,receita,Dízimo,OK,,true
+MAR25,2025-03-08,Oferta,71.6,receita,Oferta,OK,,true
+MAR25,2025-03-09,Gasolina,100.0,despesa,Combustível,OK,,
+MAR25,2025-03-09,Dízimo,150.0,receita,Dízimo,OK,,true
+MAR25,2025-03-09,Dízimo,179.0,receita,Dízimo,OK,,true
+MAR25,2025-03-09,,81.0,receita,Oferta,OK,,true
+MAR25,2025-03-12,Zeladoria,250.0,despesa,Zeladoria,OK,,
+MAR25,2025-03-12,Dízimo,250.0,receita,Dízimo,OK,,true
+MAR25,2025-03-12,Oferta,7.7,receita,Oferta,OK,,true
+MAR25,2025-03-16,Zeladoria,110.0,despesa,Zeladoria,OK,,
+MAR25,2025-03-16,Bateria 9v,19.9,despesa,Equipamentos,OK,,
+MAR25,2025-03-16,Dízimo,174.0,receita,Dízimo,OK,,true
+MAR25,2025-03-16,Oferta,80.5,receita,Oferta,OK,,true
+MAR25,2025-03-17,Material de limpeza,26.75,despesa,Material de Limpeza,OK,,
+MAR25,2025-03-17,Dízimo,290.0,receita,Dízimo,OK,,true
+MAR25,2025-03-19,Dízimo,40.0,receita,Dízimo,OK,,true
+MAR25,2025-03-19,Oferta,61.15,receita,Oferta,OK,,true
+MAR25,2025-03-23,Bombons visitantes,54.19,despesa,Utilidades,OK,,
+MAR25,2025-03-23,Copos descartavéis,11.1,despesa,Utilidades,OK,,
+MAR25,2025-03-23,Dízimo,180.0,receita,Dízimo,OK,,true
+MAR25,2025-03-23,Dízimo,184.0,receita,Dízimo,OK,,true
+MAR25,2025-03-23,Oferta,295.1,receita,Oferta,OK,,true
+MAR25,2025-03-24,,75.0,despesa,App da igreja,OK,,
+MAR25,2025-03-24,,350.0,despesa,Mão de obra,OK,,
+MAR25,2025-03-26,Oferta,7.0,receita,Oferta,OK,,true
+MAR25,2025-03-27,internet,103.01,despesa,Internet,OK,,
+MAR25,2025-03-29,Dízimo,25.0,receita,Dízimo,OK,,true
+MAR25,2025-03-29,Dízimo,20.0,receita,Dízimo,OK,,true
+MAR25,2025-03-30,Copos,7.69,despesa,Utilidades,OK,,
+MAR25,2025-03-30,,300.0,despesa,,REVISAR,,
+MAR25,2025-03-30,Dízimo,167.0,receita,Dízimo,OK,,true
+MAR25,2025-03-30,Dízimo,238.0,receita,Dízimo,OK,,true
+MAR25,2025-03-30,Oferta (Pix),17.0,receita,Oferta,OK,,true
+MAR25,2025-03-30,Oferta,321.5,receita,Oferta,OK,,true
+MAR25,2025-03-31,Compras do mês de Abril,260.81,despesa,Utilidades,OK,,
+MAR25,2025-03-31,Dízimo,700.0,receita,Dízimo,OK,,true
+MAR25,2025-03-31,Dízimo,740.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-02,Dízimo,276.23,receita,Dízimo,OK,,true
+ABRI25,2025-04-02,Dízimo,120.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-02,Oferta,34.05,receita,Oferta,OK,,true
+ABRI25,2025-04-03,Dízimo,160.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-04,Dízimo,180.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-04,Dízimo,213.75,receita,Dízimo,OK,,true
+ABRI25,2025-04-06,Zeladoria,360.0,despesa,Zeladoria,OK,,
+ABRI25,2025-04-06,Dízimo,164.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-06,Dízimo,150.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-06,Dízimo,200.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-06,Dízimo,250.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-06,Oferta,143.8,receita,Oferta,OK,,true
+ABRI25,2025-04-07,,350.0,despesa,Mão de obra,OK,,
+ABRI25,2025-04-07,Cadeado,18.9,despesa,Utilidades,OK,,
+ABRI25,2025-04-07,Fechadura,68.0,despesa,Utilidades,OK,,
+ABRI25,2025-04-07,Cópia de chave,112.0,despesa,Utilidades,OK,,
+ABRI25,2025-04-07,Cópia de chave,30.0,despesa,Utilidades,OK,,
+ABRI25,2025-04-07,Santa Ceia (4 caixas),196.0,despesa,,REVISAR,,
+ABRI25,2025-04-07,Presente do Pr. Presidente,300.0,despesa,,REVISAR,,
+ABRI25,2025-04-07,Dízimo,261.59,receita,Dízimo,OK,,true
+ABRI25,2025-04-07,Dízimo,329.1,receita,Dízimo,OK,,true
+ABRI25,2025-04-09,Oferta,12.5,receita,Oferta,OK,,true
+ABRI25,2025-04-13,Dízimo,186.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-13,Oferta,24.7,receita,Oferta,OK,,true
+ABRI25,2025-04-14,,350.0,despesa,Mão de obra,OK,,
+ABRI25,2025-04-16,Conserto Violão,141.0,despesa,Utilidades,OK,,
+ABRI25,2025-04-16,Dízimo,80.24,receita,Dízimo,OK,,true
+ABRI25,2025-04-16,Oferta,6.15,receita,Oferta,OK,,true
+ABRI25,2025-04-20,Dízimo,150.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-20,Dízimo,190.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-20,Oferta,70.0,receita,Oferta,OK,,true
+ABRI25,2025-04-23,Dízimo,100.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-23,Oferta,33.0,receita,Oferta,OK,,true
+ABRI25,2025-04-25,Dízimo,228.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-26,Dízimo,140.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-27,Dízimo,100.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-27,Dízimo,160.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-27,Oferta,109.65,receita,Oferta,OK,,true
+ABRI25,2025-04-28,App,75.0,despesa,App da igreja,OK,,
+ABRI25,2025-04-28,Dízimo,740.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-30,,2032.98,despesa,Prebenda Pastoral,OK,,
+ABRI25,2025-04-30,,1616.92,despesa,Prebenda Pastoral,OK,,
+ABRI25,2025-04-30,Dízimo,170.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-30,Dízimo,320.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-30,Dízimo,80.0,receita,Dízimo,OK,,true
+ABRI25,2025-04-30,Oferta,7.0,receita,Oferta,OK,,true
+MAI25,2025-05-01,Dízimo,214.1,receita,Dízimo,OK,,true
+MAI25,2025-05-03,Dízimo,276.23,receita,Dízimo,OK,,true
+MAI25,2025-05-04,,25.0,receita,Dízimo,OK,,true
+MAI25,2025-05-04,Dízimo,164.0,receita,Dízimo,OK,,true
+MAI25,2025-05-04,Dízimo,70.0,receita,Dízimo,OK,,true
+MAI25,2025-05-04,,30.0,receita,Oferta,OK,,true
+MAI25,2025-05-04,Oferta,87.25,receita,Oferta,OK,,true
+MAI25,2025-05-05,Encardenadora,327.24,despesa,Equipamentos,OK,,
+MAI25,2025-05-05,Internet,99.9,despesa,Internet,OK,,
+MAI25,2025-05-05,,350.0,despesa,,REVISAR,,
+MAI25,2025-05-05,Dízimo,240.0,receita,Dízimo,OK,,true
+MAI25,2025-05-05,Dízimo,160.0,receita,Dízimo,OK,,true
+MAI25,2025-05-05,Dízimo,100.0,receita,Dízimo,OK,,true
+MAI25,2025-05-05,Dízimo,150.0,receita,Dízimo,OK,,true
+MAI25,2025-05-06,Dízimo,200.0,receita,Dízimo,OK,,true
+MAI25,2025-05-06,Dízimo,180.0,receita,Dízimo,OK,,true
+MAI25,2025-05-08,Água,48.0,despesa,Água,OK,,
+MAI25,2025-05-09,Dízimo,326.3,receita,Dízimo,OK,,true
+MAI25,2025-05-10,Despesas da aula de canto,200.0,despesa,,REVISAR,,
+MAI25,2025-05-11,Dízimo,152.0,receita,Dízimo,OK,,true
+MAI25,2025-05-11,Dízimo,245.0,receita,Dízimo,OK,,true
+MAI25,2025-05-11,Dízimo,150.0,receita,Dízimo,OK,,true
+MAI25,2025-05-11,Dízimo,250.0,receita,Dízimo,OK,,true
+MAI25,2025-05-11,Dízimo,125.0,receita,Dízimo,OK,,true
+MAI25,2025-05-11,Dízimo,400.0,receita,Dízimo,OK,,true
+MAI25,2025-05-11,Oferta (pix),5.0,receita,Oferta,OK,,true
+MAI25,2025-05-11,Oferta,78.0,receita,Oferta,OK,,true
+MAI25,2025-05-11,Dízimo,167.0,receita,Dízimo,OK,,true
+MAI25,2025-05-12,Zeladoria,380.0,despesa,Zeladoria,OK,,
+MAI25,2025-05-13,Pedido dos cálices,147.0,despesa,Utilidades,OK,,
+MAI25,2025-05-13,Dízimo,192.0,receita,Dízimo,OK,,true
+MAI25,2025-05-14,Oferta,2.0,receita,Oferta,OK,,true
+MAI25,2025-05-18,Dízimo,200.0,receita,Dízimo,OK,,true
+MAI25,2025-05-18,Dízimo,154.0,receita,Dízimo,OK,,true
+MAI25,2025-05-18,Oferta,205.35,receita,Oferta,OK,,true
+MAI25,2025-05-21,Oferta,23.8,receita,Oferta,OK,,true
+MAI25,2025-05-22,Dízimo,40.0,receita,Dízimo,OK,,true
+MAI25,2025-05-25,Aluguel das mesas(reunião de obreiros),84.0,despesa,,REVISAR,,
+MAI25,2025-05-25,Dízimo,180.0,receita,Dízimo,OK,,true
+MAI25,2025-05-25,Dízimo,40.0,receita,Dízimo,OK,,true
+MAI25,2025-05-25,Dízimo,107.09,receita,Dízimo,OK,,true
+MAI25,2025-05-25,Oferta,62.0,receita,Oferta,OK,,true
+MAI25,2025-05-27,gasolina,250.0,despesa,Combustível,OK,,
+MAI25,2025-05-27,Dízimo,228.0,receita,Dízimo,OK,,true
+MAI25,2025-05-28,App,75.0,despesa,App da igreja,OK,,
+MAI25,2025-05-28,Oferta,9.85,receita,Oferta,OK,,true
+MAI25,2025-05-30,Dízimo,25.0,receita,Dízimo,OK,,true
+MAI25,2025-05-30,Dízimo,300.0,receita,Dízimo,OK,,true
+MAI25,2025-05-31,,1669.19,despesa,Prebenda Pastoral,OK,,
+JUN25,2025-06-01,Dízimo,61.0,receita,Dízimo,OK,,true
+JUN25,2025-06-01,Dízimo,155.0,receita,Dízimo,OK,,true
+JUN25,2025-06-01,Oferta,86.0,receita,Oferta,OK,,true
+JUN25,2025-06-03,Dízimo,150.0,receita,Dízimo,OK,,true
+JUN25,2025-06-04,Dízimo,80.0,receita,Dízimo,OK,,true
+JUN25,2025-06-04,Oferta,53.0,receita,Oferta,OK,,true
+JUN25,2025-06-05,Gasolina,100.0,despesa,Combustível,OK,,
+JUN25,2025-06-05,Dízimo,306.0,receita,Dízimo,OK,,true
+JUN25,2025-06-05,Dízimo,80.24,receita,Dízimo,OK,,true
+JUN25,2025-06-05,Dízimo,376.23,receita,Dízimo,OK,,true
+JUN25,2025-06-06,Cartazes,176.0,despesa,Utilidades,OK,,
+JUN25,2025-06-07,Painel,37.0,despesa,Utilidades,OK,,
+JUN25,2025-06-07,Jantar dos casais,382.34,despesa,Alimentos,OK,,
+JUN25,2025-06-08,Dízimo,200.0,receita,Dízimo,OK,,true
+JUN25,2025-06-08,Dízimo,160.0,receita,Dízimo,OK,,true
+JUN25,2025-06-08,Dízimo,152.0,receita,Dízimo,OK,,true
+JUN25,2025-06-08,Dízimo,60.0,receita,Dízimo,OK,,true
+JUN25,2025-06-08,Dízimo,205.0,receita,Dízimo,OK,,true
+JUN25,2025-06-08,Oferta,107.85,receita,Oferta,OK,,true
+JUN25,2025-06-09,Zeladoria,400.0,despesa,Zeladoria,OK,,
+JUN25,2025-06-09,,928.0,despesa,,REVISAR,,
+JUN25,2025-06-09,Dízimo,750.0,receita,Dízimo,OK,,true
+JUN25,2025-06-10,,800.0,despesa,,REVISAR,,
+JUN25,2025-06-15,Dízimo,100.0,receita,Dízimo,OK,,true
+JUN25,2025-06-15,Dízimo,160.0,receita,Dízimo,OK,,true
+JUN25,2025-06-18,Oferta,62.0,receita,Oferta,OK,,true
+JUN25,2025-06-19,Dízimo,1000.0,receita,Dízimo,OK,,true
+JUN25,2025-06-21,Dízimo,60.0,receita,Dízimo,OK,,true
+JUN25,2025-06-22,Dízimo,150.0,receita,Dízimo,OK,,true
+JUN25,2025-06-22,Dízimo,180.0,receita,Dízimo,OK,,true
+JUN25,2025-06-22,Dízimo,160.0,receita,Dízimo,OK,,true
+JUN25,2025-06-22,Dízimo,370.0,receita,Dízimo,OK,,true
+JUN25,2025-06-22,Oferta,84.0,receita,Oferta,OK,,true
+JUN25,2025-06-24,Dízimo,70.0,receita,Dízimo,OK,,true
+JUN25,2025-06-25,Internet,103.0,despesa,Internet,OK,,
+JUN25,2025-06-25,,700.0,despesa,,REVISAR,,
+JUN25,2025-06-25,Dízimo,152.0,receita,Dízimo,OK,,true
+JUN25,2025-06-25,Dízimo,10.0,receita,Dízimo,OK,,true
+JUN25,2025-06-26,Compras para igreja,404.0,despesa,Utilidades,OK,,
+JUN25,2025-06-27,Dízimo,600.0,receita,Dízimo,OK,,true
+JUN25,2025-06-28,Dízimo,80.0,receita,Dízimo,OK,,true
+JUN25,2025-06-29,Dízimo,160.0,receita,Dízimo,OK,,true
+JUN25,2025-06-29,Oferta,70.1,receita,Oferta,OK,,true
+JUN25,2025-06-30,,1935.12,despesa,Prebenda Pastoral,OK,,
+JUN25,2025-06-30,,700.0,despesa,,REVISAR,,
+JUL25,2025-07-02,Oferta,4.0,receita,Oferta,OK,,true
+JUL25,2025-07-03,Dízimo,41.0,receita,Dízimo,OK,,true
+JUL25,2025-07-04,Dízimo,180.0,receita,Dízimo,OK,,true
+JUL25,2025-07-04,Dízimo,180.0,receita,Dízimo,OK,,true
+JUL25,2025-07-05,Dízimo,330.0,receita,Dízimo,OK,,true
+JUL25,2025-07-05,Dízimo,25.0,receita,Dízimo,OK,,true
+JUL25,2025-07-05,Dízimo,42.2,receita,Dízimo,OK,,true
+JUL25,2025-07-05,Dízimo,273.23,receita,Dízimo,OK,,true
+JUL25,2025-07-06,Zeladoria,360.0,despesa,Zeladoria,OK,,
+JUL25,2025-07-06,Dízimo,145.0,receita,Dízimo,OK,,true
+JUL25,2025-07-06,Dízimo,340.0,receita,Dízimo,OK,,true
+JUL25,2025-07-06,Dízimo,150.0,receita,Dízimo,OK,,true
+JUL25,2025-07-06,Dízimo,150.0,receita,Dízimo,OK,,true
+JUL25,2025-07-06,Dízimo,1100.0,receita,Dízimo,OK,,true
+JUL25,2025-07-06,Oferta,66.9,receita,Oferta,OK,,true
+JUL25,2025-07-07,Gasolina,300.0,despesa,Combustível,OK,,
+JUL25,2025-07-07,,600.0,despesa,,REVISAR,,
+JUL25,2025-07-07,Dízimo,200.0,receita,Dízimo,OK,,true
+JUL25,2025-07-09,App,75.0,despesa,App da igreja,OK,,
+JUL25,2025-07-09,Oferta,7.5,receita,Oferta,OK,,true
+JUL25,2025-07-10,Dízimo,148.39,receita,Dízimo,OK,,true
+JUL25,2025-07-13,,130.0,despesa,Combustível,OK,,
+JUL25,2025-07-13,Cesta Pr. Rodrigo,40.24,despesa,Alimentos,OK,,
+JUL25,2025-07-13,Cesta Pr. Rodrigo,22.33,despesa,Alimentos,OK,,
+JUL25,2025-07-13,Cesta Pr. Rodrigo,11.78,despesa,Alimentos,OK,,
+JUL25,2025-07-13,Dízimo,250.0,receita,Dízimo,OK,,true
+JUL25,2025-07-13,Dízimo,185.0,receita,Dízimo,OK,,true
+JUL25,2025-07-13,Dízimo,164.0,receita,Dízimo,OK,,true
+JUL25,2025-07-13,Dízimo,150.0,receita,Dízimo,OK,,true
+JUL25,2025-07-13,Oferta,54.2,receita,Oferta,OK,,true
+JUL25,2025-07-14,,200.0,despesa,,REVISAR,,
+JUL25,2025-07-16,gasolina,100.0,despesa,Combustível,OK,,
+JUL25,2025-07-16,Oferta,4.35,receita,Oferta,OK,,true
+JUL25,2025-07-20,Dízimo,160.0,receita,Dízimo,OK,,true
+JUL25,2025-07-20,Oferta,61.0,receita,Oferta,OK,,true
+JUL25,2025-07-20,Oferta(Pix),60.0,receita,Oferta,OK,,true
+JUL25,2025-07-23,Oferta,21.85,receita,Oferta,OK,,true
+JUL25,2025-07-23,Oferta (Pix),8.0,receita,Oferta,OK,,true
+JUL25,2025-07-26,Mão de obra,200.0,despesa,Mão de obra,OK,,
+JUL25,2025-07-26,,200.0,despesa,Materiais Escritório,OK,,
+JUL25,2025-07-27,material de construção,219.9,despesa,Material de Construção,OK,,
+JUL25,2025-07-27,Dízimo,10.0,receita,Dízimo,OK,,true
+JUL25,2025-07-27,Dízimo,78.0,receita,Dízimo,OK,,true
+JUL25,2025-07-27,Dízimo,155.0,receita,Dízimo,OK,,true
+JUL25,2025-07-27,Oferta,22.0,receita,Oferta,OK,,true
+JUL25,2025-07-27,Oferta (pix),20.0,receita,Oferta,OK,,true
+JUL25,2025-07-28,Gasolina,100.0,despesa,Combustível,OK,,
+JUL25,2025-07-28,,304.0,despesa,Utilidades,OK,,
+JUL25,2025-07-28,Materiais de construção,31.0,despesa,Material de Construção,OK,,
+JUL25,2025-07-30,Dízimo,42.0,receita,Dízimo,OK,,true
+JUL25,2025-07-31,,1469.58,despesa,Prebenda Pastoral,OK,,
+JUL25,2025-07-31,Dízimo,70.0,receita,Dízimo,OK,,true
+AGO25,2025-08-01,Gasolina,85.0,despesa,Combustível,OK,,
+AGO25,2025-08-01,Materiais de construção,33.8,despesa,Material de Construção,OK,,
+AGO25,2025-08-01,Materiais de construção,70.0,despesa,Material de Construção,OK,,
+AGO25,2025-08-01,Materiais de construção,50.0,despesa,Material de Construção,OK,,
+AGO25,2025-08-03,Dízimo,160.0,receita,Dízimo,OK,,true
+AGO25,2025-08-03,Dízimo,50.0,receita,Dízimo,OK,,true
+AGO25,2025-08-03,Dízimo,320.0,receita,Dízimo,OK,,true
+AGO25,2025-08-03,Oferta (pix),20.0,receita,Oferta,OK,,true
+AGO25,2025-08-03,Oferta,48.65,receita,Oferta,OK,,true
+AGO25,2025-08-05,Calices da Santa Ceia,196.0,despesa,Utilidades,OK,,
+AGO25,2025-08-05,Dízimo,150.0,receita,Dízimo,OK,,true
+AGO25,2025-08-06,Cálices Santa Ceia,99.0,despesa,Utilidades,OK,,
+AGO25,2025-08-06,Dízimo,200.0,receita,Dízimo,OK,,true
+AGO25,2025-08-06,Dízimo,180.0,receita,Dízimo,OK,,true
+AGO25,2025-08-06,Dízimo,276.23,receita,Dízimo,OK,,true
+AGO25,2025-08-06,Dízimo,326.5,receita,Dízimo,OK,,true
+AGO25,2025-08-06,Dízimo,180.0,receita,Dízimo,OK,,true
+AGO25,2025-08-06,Oferta,17.8,receita,Oferta,OK,,true
+AGO25,2025-08-10,Zeladoria,50.0,despesa,Zeladoria,OK,,
+AGO25,2025-08-10,,500.0,despesa,,REVISAR,,
+AGO25,2025-08-10,Dízimo,310.0,receita,Dízimo,OK,,true
+AGO25,2025-08-10,Dízimo,150.0,receita,Dízimo,OK,,true
+AGO25,2025-08-10,Dízimo,185.0,receita,Dízimo,OK,,true
+AGO25,2025-08-10,Dízimo,160.0,receita,Dízimo,OK,,true
+AGO25,2025-08-10,Dízimo,152.0,receita,Dízimo,OK,,true
+AGO25,2025-08-10,Dízimo,250.0,receita,Dízimo,OK,,true
+AGO25,2025-08-13,Oferta,10.0,receita,Oferta,OK,,true
+AGO25,2025-08-17,Oferta,54.15,receita,Oferta,OK,,true
+AGO25,2025-08-17,Dízimo,160.0,receita,Dízimo,OK,,true
+AGO25,2025-08-18,Dízimo,152.0,receita,Dízimo,OK,,true
+AGO25,2025-08-24,Dízimo,160.0,receita,Dízimo,OK,,true
+AGO25,2025-08-24,Oferta,54.5,receita,Oferta,OK,,true
+AGO25,2025-08-27,Dízimo,400.0,receita,Dízimo,OK,,true
+AGO25,2025-08-29,Materiais de construção,520.0,despesa,Material de Construção,OK,,
+AGO25,2025-08-29,Dízimo,45.0,receita,Dízimo,OK,,true
+AGO25,2025-08-29,Dízimo,80.0,receita,Dízimo,OK,,true
+AGO25,2025-08-31,,1323.54,despesa,Prebenda Pastoral,OK,,
+AGO25,2025-08-31,Dízimo,160.0,receita,Dízimo,OK,,true
+SET25,2025-09-02,Dízimo,276.0,receita,Dízimo,OK,,true
+SET25,2025-09-03,Gasolina,100.0,despesa,Combustível,OK,,
+SET25,2025-09-03,Dízimo,100.0,receita,Dízimo,OK,,true
+SET25,2025-09-03,Dízimo,80.0,receita,Dízimo,OK,,true
+SET25,2025-09-03,Oferta,5.0,receita,Oferta,OK,,true
+SET25,2025-09-04,Dízimo,520.0,receita,Dízimo,OK,,true
+SET25,2025-09-05,,400.0,despesa,Utilidades,OK,,
+SET25,2025-09-05,Dízimo,175.0,receita,Dízimo,OK,,true
+SET25,2025-09-05,Dízimo,200.0,receita,Dízimo,OK,,true
+SET25,2025-09-05,Dízimo,180.0,receita,Dízimo,OK,,true
+SET25,2025-09-05,Dízimo,324.0,receita,Dízimo,OK,,true
+SET25,2025-09-05,Dízimo,160.0,receita,Dízimo,OK,,true
+SET25,2025-09-06,Cálices 2cx,108.5,despesa,Utilidades,OK,,
+SET25,2025-09-07,Dízimo,100.0,receita,Dízimo,OK,,true
+SET25,2025-09-07,Dízimo,152.0,receita,Dízimo,OK,,true
+SET25,2025-09-07,Dízimo,164.0,receita,Dízimo,OK,,true
+SET25,2025-09-07,Dízima,340.0,receita,Dízimo,OK,,true
+SET25,2025-09-07,Dízimo,250.0,receita,Dízimo,OK,,true
+SET25,2025-09-07,Oferta,52.0,receita,Oferta,OK,,true
+SET25,2025-09-08,Zeladoria,360.0,despesa,Zeladoria,OK,,
+SET25,2025-09-10,Materiais de construção,897.0,despesa,Material de Construção,OK,,
+SET25,2025-09-10,Dízimo,290.0,receita,Dízimo,OK,,true
+SET25,2025-09-11,,139.0,despesa,Utilidades,OK,,
+SET25,2025-09-14,Dízimo,325.0,receita,Dízimo,OK,,true
+SET25,2025-09-14,Dízimo,167.0,receita,Dízimo,OK,,true
+SET25,2025-09-14,Dízimo,150.0,receita,Dízimo,OK,,true
+SET25,2025-09-14,Oferta,82.35,receita,Oferta,OK,,true
+SET25,2025-09-18,Dízimo,152.0,receita,Dízimo,OK,,true
+SET25,2025-09-21,Dízimo,160.0,receita,Dízimo,OK,,true
+SET25,2025-09-21,Dízimo,50.0,receita,Dízimo,OK,,true
+SET25,2025-09-21,Oferta,101.0,receita,Oferta,OK,,true
+SET25,2025-09-22,,68.99,despesa,Outros,OK,,
+SET25,2025-09-22,,100.0,despesa,Combustível,OK,,
+SET25,2025-09-22,Dízimo,156.0,receita,Dízimo,OK,,true
+SET25,2025-09-23,Cordas + bateria violão,50.0,despesa,Equipamentos,OK,,
+SET25,2025-09-24,,50.0,despesa,Combustível,OK,,
+SET25,2025-09-25,Enuves,75.0,despesa,App da igreja,OK,,
+SET25,2025-09-25,Oferta,80.0,despesa,Pregador da noite (convidado),OK,,
+SET25,2025-09-26,,50.0,despesa,Combustível,OK,,
+SET25,2025-09-26,Internet,103.0,despesa,Internet,OK,,
+SET25,2025-09-26,Dízimo,200.0,receita,Dízimo,OK,,true
+SET25,2025-09-28,Dízimo,160.0,receita,Dízimo,OK,,true
+SET25,2025-09-29,,72.0,despesa,Combustível,OK,,
+SET25,2025-09-30,,300.0,despesa,Pregador da noite (convidado),OK,,
+SET25,2025-09-30,,1591.0,despesa,Prebenda Pastoral,OK,,
+SET25,2025-09-30,Dízimo,80.0,receita,Dízimo,OK,,true
+SET25,2025-09-30,Dízimo,152.0,receita,Dízimo,OK,,true
+OUT25,2025-10-01,Dízimo,50.0,receita,Dízimo,OK,,true
+OUT25,2025-10-01,Oferta,48.0,receita,Oferta,OK,,true
+OUT25,2025-10-02,,110.0,despesa,Gás,OK,,
+OUT25,2025-10-05,Zeladoria,360.0,despesa,Zeladoria,OK,,
+OUT25,2025-10-05,Gasolina,50.0,despesa,Combustível,OK,,
+OUT25,2025-10-05,Dízimo,55.0,receita,Dízimo,OK,,true
+OUT25,2025-10-05,Dízimo,266.2,receita,Dízimo,OK,,true
+OUT25,2025-10-05,Dízimo,340.0,receita,Dízimo,OK,,true
+OUT25,2025-10-05,Dízimo,80.24,receita,Dízimo,OK,,true
+OUT25,2025-10-05,Oferta,215.5,receita,Dízimo,OK,,true
+OUT25,2025-10-05,Dízimo,100.0,receita,Dízimo,OK,,true
+OUT25,2025-10-05,Dízimo,152.0,receita,Dízimo,OK,,true
+OUT25,2025-10-05,Dízimo,150.0,receita,Dízimo,OK,,true
+OUT25,2025-10-05,Dízimo,160.0,receita,Dízimo,OK,,true
+OUT25,2025-10-05,Dízimo,70.0,receita,Dízimo,OK,,true
+OUT25,2025-10-06,Conserto dos retornos,300.0,despesa,Instrumentos & Acessórios,OK,,
+OUT25,2025-10-06,,424.0,despesa,Utilidades,OK,,
+OUT25,2025-10-07,Dízimo,230.0,receita,Dízimo,OK,,true
+OUT25,2025-10-07,Dízimo,167.0,receita,Dízimo,OK,,true
+OUT25,2025-10-08,Dízimo,260.0,receita,Dízimo,OK,,true
+OUT25,2025-10-09,Gasolina,80.0,despesa,Combustível,OK,,
+OUT25,2025-10-09,Materiais de construção,2116.0,despesa,Material de Construção,OK,,
+OUT25,2025-10-10,,489.0,despesa,Material de Construção,OK,,
+OUT25,2025-10-10,Dízimo,229.0,receita,Dízimo,OK,,true
+OUT25,2025-10-12,dízimo,200.0,receita,Dízimo,OK,,true
+OUT25,2025-10-12,Dízimo,250.0,receita,Dízimo,OK,,true
+OUT25,2025-10-12,Dízimo,117.0,receita,Dízimo,OK,,true
+OUT25,2025-10-12,Dízimo,160.0,receita,Dízimo,OK,,true
+OUT25,2025-10-12,Oferta,56.0,receita,Oferta,OK,,true
+OUT25,2025-10-13,,233.0,despesa,Utilidades,OK,,
+OUT25,2025-10-13,Festa das crianças,180.0,despesa,,REVISAR,,
+OUT25,2025-10-20,gasolina,33.92,despesa,Combustível,OK,,
+OUT25,2025-10-20,Gasolina,86.99,despesa,Combustível,OK,,
+OUT25,2025-10-20,Aluguel betoneira,260.0,despesa,Material de Construção,OK,,
+OUT25,2025-10-20,material de construção,260.0,despesa,Material de Construção,OK,,
+OUT25,2025-10-20,Material de construção,68.0,despesa,Material de Construção,OK,,
+OUT25,2025-10-20,Compras do mês,251.49,despesa,Material de Limpeza,OK,,
+OUT25,2025-10-22,Refeição,104.04,despesa,,REVISAR,,
+OUT25,2025-10-25,Água,32.0,despesa,Água,OK,,
+OUT25,2025-10-25,Refeição,127.62,despesa,Alimentos,OK,,
+OUT25,2025-10-26,Dízimo,100.0,receita,Dízimo,OK,,true
+OUT25,2025-10-26,Dízimo,160.0,receita,Dízimo,OK,,true
+OUT25,2025-10-26,Oferta,61.0,receita,Oferta,OK,,true
+OUT25,2025-10-27,Material de construção,370.0,despesa,Material de Construção,OK,,
+OUT25,2025-10-27,Dízimo,218.44,receita,Dízimo,OK,,true
+OUT25,2025-10-28,Gasolina,50.0,despesa,Combustível,OK,,
+OUT25,2025-10-28,Material de construção,100.0,despesa,Material de Construção,OK,,
+OUT25,2025-10-28,Material de construção,229.0,despesa,Material de Construção,OK,,
+OUT25,2025-10-28,Dízimo,152.0,receita,Dízimo,OK,,true
+OUT25,2025-10-31,,1145.21,despesa,Prebenda Pastoral,OK,,
+OUT25,2025-10-31,,800.0,despesa,Mão de obra,OK,,
+OUT25,2025-10-31,,1520.0,despesa,Mão de obra,OK,,
+OUT25,2025-10-31,,2116.0,despesa,Material de Construção,OK,,
+OUT25,2025-10-31,,280.0,despesa,,REVISAR,,
+NOV25,2025-11-01,Dízimo,80.0,receita,Dízimo,OK,,true
+NOV25,2025-11-02,Dízimo,250.0,receita,Dízimo,OK,,true
+NOV25,2025-11-02,Dízimo,160.0,receita,Dízimo,OK,,true
+NOV25,2025-11-02,Oferta,58.0,receita,Oferta,OK,,true
+NOV25,2025-11-03,App Enuves,75.0,despesa,App da igreja,OK,,
+NOV25,2025-11-03,Aluguel betoneira,460.0,despesa,Material de Construção,OK,,
+NOV25,2025-11-03,Dízimo,340.0,receita,Dízimo,OK,,true
+NOV25,2025-11-04,Materiais,73.0,despesa,Material de Construção,OK,,
+NOV25,2025-11-05,Dízimo,200.0,receita,Dízimo,OK,,true
+NOV25,2025-11-05,Dízimo,190.0,receita,Dízimo,OK,,true
+NOV25,2025-11-05,Dízimo,262.2,receita,Dízimo,OK,,true
+NOV25,2025-11-06,Água,62.0,despesa,Água,OK,,
+NOV25,2025-11-06,Zeladoria,360.0,despesa,Zeladoria,OK,,
+NOV25,2025-11-06,Gasolina,100.0,despesa,Combustível,OK,,
+NOV25,2025-11-06,Material de construção,43.74,despesa,Material de Construção,OK,,
+NOV25,2025-11-06,Material de construção,6.0,despesa,Material de Construção,OK,,
+NOV25,2025-11-06,Internet,103.67,despesa,Internet,OK,,
+NOV25,2025-11-06,Material de construção,113.0,despesa,Material de Construção,OK,,
+NOV25,2025-11-06,Dîzimo,200.0,receita,Dízimo,OK,,true
+NOV25,2025-11-06,Dízimo,160.0,receita,Dízimo,OK,,true
+NOV25,2025-11-06,Dízimo,291.2,receita,Dízimo,OK,,true
+NOV25,2025-11-06,Dízimo,260.0,receita,Dízimo,OK,,true
+NOV25,2025-11-07,Gasolina,100.0,despesa,Combustível,OK,,
+NOV25,2025-11-07,Dízimo,80.24,receita,Dízimo,OK,,true
+NOV25,2025-11-08,Material de construção,39.99,despesa,Material de Construção,OK,,
+NOV25,2025-11-08,Material de construção,135.0,despesa,Material de Construção,OK,,
+NOV25,2025-11-09,Compras para a festividade das irmãs,54.19,despesa,Utilidades,OK,,
+NOV25,2025-11-09,Dízimo,295.0,receita,Dízimo,OK,,true
+NOV25,2025-11-09,Dízimo,152.0,receita,Dízimo,OK,,true
+NOV25,2025-11-09,Dizimo,150.0,receita,Dízimo,OK,,true
+NOV25,2025-11-09,Dízimo,250.0,receita,Dízimo,OK,,true
+NOV25,2025-11-10,Dízimo,250.0,receita,Dízimo,OK,,true
+NOV25,2025-11-12,Dízimo,141.0,receita,Dízimo,OK,,true
+NOV25,2025-11-15,Água,32.0,despesa,Água,OK,,
+NOV25,2025-11-15,Dízimo,180.0,receita,Dízimo,OK,,true
+NOV25,2025-11-15,Dízimo,420.0,receita,Dízimo,OK,,true
+NOV25,2025-11-15,Dízimo,160.0,receita,Dízimo,OK,,true
+NOV25,2025-11-20,Prebenda Pastoral,1968.9,despesa,Prebenda Pastoral,OK,,
+NOV25,2025-11-22,Gasolina,100.0,despesa,Pregador da noite (convidado),OK,,
+NOV25,2025-11-23,Dízimo,100.0,receita,Dízimo,OK,,true
+NOV25,2025-11-23,Dízimo,100.0,receita,Dízimo,OK,,true
+NOV25,2025-11-23,Dízimo,160.0,receita,Dízimo,OK,,true
+NOV25,2025-11-24,Dízimo,320.0,receita,Dízimo,OK,,true
+NOV25,2025-11-25,Congresso,900.0,despesa,Outros,OK,,
+NOV25,2025-11-25,Dízimo,110.0,receita,Dízimo,OK,,true
+NOV25,2025-11-25,Dízimo,152.0,receita,Dízimo,OK,,true
+NOV25,2025-11-26,Água,48.0,despesa,Água,OK,,
+NOV25,2025-11-28,Internet,103.0,despesa,Internet,OK,,
+NOV25,2025-11-28,Dízimo,200.0,receita,Dízimo,OK,,true
+NOV25,2025-11-28,Dízimo,80.0,receita,Dízimo,OK,,true
+NOV25,2025-11-28,Dízimo,500.0,receita,Dízimo,OK,,true
+NOV25,2025-11-29,gasolina,100.0,despesa,Combustível,OK,,
+NOV25,2025-11-29,Dízimo,80.0,receita,Dízimo,OK,,true
+NOV25,2025-11-29,Dízimo,72.0,receita,Dízimo,OK,,true
+NOV25,2025-11-30,Água,24.0,despesa,Água,OK,,
+NOV25,2025-11-30,Pilhas + extensão,100.0,despesa,Utilidades,OK,,
+NOV25,2025-11-30,Prebenda Pastoral,1969.09,despesa,Prebenda Pastoral,OK,,
+NOV25,2025-11-30,Dízimo,160.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-01,gasolina,94.42,despesa,Combustível,OK,,
+DEZ25,2025-12-01,Dízimo,340.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-03,Dízimo,310.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-03,Dízimo,80.24,receita,Dízimo,OK,,true
+DEZ25,2025-12-03,Dízimo,429.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-04,App,75.0,despesa,App da igreja,OK,,
+DEZ25,2025-12-05,Dízimo,168.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-05,Dízimo,210.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-05,Dízimo,190.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-05,Dízimo,343.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-07,Dízimo,152.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-07,Dízimo,250.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-07,Dízimo,135.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-07,Dízimo,150.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-07,Oferta,27.0,receita,Oferta,OK,,true
+DEZ25,2025-12-08,Zeladoria,360.0,despesa,Zeladoria,OK,,
+DEZ25,2025-12-08,Dízimo,460.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-09,Pedaleira 1/4,323.0,despesa,Instrumentos & Acessórios,OK,,
+DEZ25,2025-12-09,Dízimo,190.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-09,Dizimo,190.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-12,Dízimo,98.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-14,Dízimo,400.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-14,Dízimo,160.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-14,Oferta,60.0,receita,Oferta,OK,,true
+DEZ25,2025-12-16,Prebenda Pastoral,2156.6,despesa,Prebenda Pastoral,OK,,
+DEZ25,2025-12-17,Dízimo,190.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-18,Dízimo,170.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-18,Dízimo,55.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-19,extensor HDMI,109.0,despesa,Equipamentos,OK,,
+DEZ25,2025-12-19,Dízimo,1100.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-21,Dízimo,165.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-21,Dízimo,100.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-21,Dízimo,75.9,receita,Dízimo,OK,,true
+DEZ25,2025-12-21,Oferta,57.75,receita,Oferta,OK,,true
+DEZ25,2025-12-23,gasolina,100.0,despesa,Combustível,OK,,
+DEZ25,2025-12-23,Dízimo,80.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-23,Dízimo,350.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-23,Dízimo,152.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-23,Dízimo,126.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-24,Gasolina,100.0,despesa,Combustível,OK,,
+DEZ25,2025-12-28,Dízimo,160.0,receita,Dízimo,OK,,true
+DEZ25,2025-12-28,Oferta,68.15,receita,Oferta,OK,,true
+DEZ25,2025-12-29,Onternet,103.0,despesa,Internet,OK,,
+DEZ25,2025-12-31,Prebenda Pastoral,2157.61,despesa,Prebenda Pastoral,OK,,

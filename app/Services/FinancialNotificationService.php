@@ -102,7 +102,7 @@ class FinancialNotificationService
             return ['success' => false, 'error' => 'Alertas de despesa desabilitados.'];
         }
 
-        $transaction->loadMissing(['contact', 'category']);
+        $transaction->loadMissing(['member', 'contact', 'category']);
 
         if ($transaction->type !== 'despesa' || $transaction->is_paid || $transaction->status !== 'a_pagar') {
             return ['success' => false, 'error' => 'Despesa não está pendente de pagamento.'];
@@ -232,7 +232,7 @@ class FinancialNotificationService
             ->whereNotNull('due_date')
             ->whereDate('due_date', $targetDate)
             ->when($minAmount > 0, fn ($q) => $q->where('amount', '>=', $minAmount))
-            ->with(['contact', 'category'])
+            ->with(['member', 'contact', 'category'])
             ->orderBy('due_date')
             ->get();
 
@@ -667,7 +667,7 @@ class FinancialNotificationService
         $vencimento = $transaction->due_date
             ? $transaction->due_date->format('d/m/Y')
             : 'não informado';
-        $fornecedor = $transaction->contact?->name ?? 'não informado';
+        $fornecedor = $transaction->source_name ?: 'não informado';
 
         return implode("\n", [
             '💰 *ADEL São Sebastião — Despesa a pagar*',
@@ -685,7 +685,7 @@ class FinancialNotificationService
     {
         $valor = number_format((float) $transaction->amount, 2, ',', '.');
         $vencimento = $transaction->due_date?->format('d/m/Y') ?? '-';
-        $fornecedor = $transaction->contact?->name ?? 'não informado';
+        $fornecedor = $transaction->source_name ?: 'não informado';
 
         return implode("\n", [
             '⏰ *ADEL São Sebastião — Despesa vencendo*',

@@ -26,7 +26,7 @@
                 <div class="fr-filters__period" id="frPeriod">
                     <label class="form-label">Período</label>
                     <div class="fr-period-toolbar">
-                        <div class="btn-group fr-period-modes" role="group" aria-label="Modo do período">
+                        <div class="fr-period-modes" role="group" aria-label="Modo do período">
                             <button type="button" class="btn btn-default {{ $periodMode === 'custom' ? 'is-active' : '' }}" data-period-mode="custom">Personalizado</button>
                             <button type="button" class="btn btn-default {{ $periodMode === 'month' ? 'is-active' : '' }}" data-period-mode="month">Mês</button>
                             <button type="button" class="btn btn-default {{ $periodMode === 'year' ? 'is-active' : '' }}" data-period-mode="year">Ano</button>
@@ -43,6 +43,7 @@
                         <input type="date" class="form-control" id="frEndDate" name="end_date" value="{{ $periodEnd->format('Y-m-d') }}">
                     </div>
                     <div data-period-panel="month" @style(['display: none' => $periodMode !== 'month'])>
+                        <label class="form-label" for="frPeriodMonth">Mês</label>
                         <input type="month" class="form-control" id="frPeriodMonth" value="{{ $periodStart->format('Y-m') }}" autocomplete="off">
                     </div>
                     <div data-period-panel="year" @style(['display: none' => $periodMode !== 'year'])>
@@ -113,3 +114,4 @@
         </form>
     </div>
 </div>
+@include('financial.reports.partials.filter-scripts')

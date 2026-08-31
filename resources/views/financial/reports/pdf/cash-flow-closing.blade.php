@@ -8,16 +8,15 @@
     <meta charset="UTF-8">
     <title>Fechamento de caixa — {{ $start->translatedFormat('F Y') }}</title>
     <style>
-        @page { margin: 18mm 14mm 18mm 14mm; }
+        @page { margin: 5mm 14mm 18mm 14mm; }
         body {
             font-family: DejaVu Sans, sans-serif;
             font-size: 10px;
             color: #1f2937;
             margin: 0;
         }
-        .header { border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; margin-bottom: 14px; }
-        .header h1 { margin: 0; font-size: 15px; color: #1e3a8a; }
-        .header p { margin: 3px 0 0; font-size: 9px; color: #4b5563; }
+        .header { margin: 0 0 10px; }
+        .header img { width: 100%; height: auto; display: block; }
         h2 {
             font-size: 11px;
             text-transform: uppercase;
@@ -38,13 +37,25 @@
             text-transform: uppercase;
             text-align: left;
         }
-        .num { text-align: right; white-space: nowrap; }
-        .total-row td { background: #f1f5f9; font-weight: bold; }
+        h2.receita { color: #1d4ed8; border-bottom-color: #93c5fd; }
+        h2.despesa { color: #b91c1c; border-bottom-color: #fca5a5; }
+        table.dados.receita th { background: #dbeafe; color: #1e3a8a; }
+        table.dados.despesa th { background: #fee2e2; color: #991b1b; }
+        .valor-receita { color: #1d4ed8; font-weight: bold; }
+        .valor-despesa { color: #b91c1c; font-weight: bold; }
+        .total-row.receita td { background: #eff6ff; color: #1d4ed8; }
+        .total-row.despesa td { background: #fef2f2; color: #b91c1c; }
         .resumo { width: 100%; border-collapse: collapse; margin-top: 6px; }
         .resumo td { padding: 6px 8px; border: 1px solid #d1d5db; }
         .resumo .lbl { background: #f8fafc; width: 55%; }
+        .resumo .row-receita td { color: #1d4ed8; font-weight: bold; background: #eff6ff; }
+        .resumo .row-despesa td { color: #b91c1c; font-weight: bold; background: #fef2f2; }
         .saldo td { background: #1e3a8a; color: #fff; font-size: 12px; font-weight: bold; }
-        .nota { font-size: 8px; color: #6b7280; margin-top: 10px; }
+        .assinaturas { width: 100%; margin-top: 36px; border-collapse: collapse; }
+        .assinaturas td { width: 50%; text-align: center; padding: 18px 18px 8px; vertical-align: bottom; }
+        .assinaturas .linha { border-top: 1px solid #111; margin: 42px auto 8px; width: 78%; }
+        .assinaturas .nome { font-size: 10px; font-weight: bold; }
+        .assinaturas .assinatura-img { max-height: 48px; max-width: 180px; display: block; margin: 0 auto 4px; }
         .comp { page-break-before: always; }
         .comp img { max-width: 100%; max-height: 210mm; }
         .comp-meta { font-size: 9px; margin-bottom: 8px; }
@@ -53,39 +64,18 @@
 </head>
 <body>
     <div class="header">
-        <table width="100%" style="border-collapse: collapse;">
-            <tr>
-                <td>
-                    <h1>Fechamento de caixa — Extrato mensal</h1>
-                    <p>ADEL SÃO SEBASTIÃO</p>
-                    <p>
-                        Período: {{ $start->format('d/m/Y') }} a {{ $end->format('d/m/Y') }}
-                        @if($account)
-                            • Conta: {{ PdfText::stripEmoji($account->name) }}
-                        @endif
-                    </p>
-                    <p>Gerado em {{ $generatedAt->format('d/m/Y H:i') }}</p>
-                </td>
-                <td style="text-align: right; width: 90px;">
-                    @if(!empty($logoPath) && is_file($logoPath))
-                        <img src="{{ $logoPath }}" alt="Logo" style="max-height: 48px;">
-                    @endif
-                </td>
-            </tr>
-        </table>
+        @if(!empty($headerSrc))
+            <img src="{{ $headerSrc }}" alt="ADEL — Assembleia de Deus de Luziânia">
+        @endif
     </div>
 
-    <p class="nota">Este relatório considera apenas lançamentos <strong>recebidos e pagos</strong> no período (fechamento de caixa). Pendências a receber/a pagar não entram no saldo.</p>
-
-    <h2>Entradas (receitas)</h2>
-    <table class="dados">
+    <h2 class="receita">Entradas (receitas)</h2>
+    <table class="dados receita">
         <thead>
             <tr>
-                <th style="width: 18mm;">Data</th>
+                <th style="width: 22mm;">Data</th>
                 <th>Descrição</th>
-                <th>Categoria</th>
-                <th>Origem</th>
-                <th class="num" style="width: 28mm;">Valor</th>
+                <th class="num" style="width: 32mm;">Valor</th>
             </tr>
         </thead>
         <tbody>
@@ -93,30 +83,25 @@
                 <tr>
                     <td>{{ $tx->transaction_date?->format('d/m/Y') }}</td>
                     <td>{{ PdfText::stripEmoji($tx->description) }}</td>
-                    <td>{{ PdfText::stripEmoji($tx->category->name ?? '—') }}</td>
-                    <td>{{ PdfText::stripEmoji($tx->source_name) }}</td>
-                    <td class="num">{{ $fmt($tx->amount) }}</td>
+                    <td class="num valor-receita">{{ $fmt($tx->amount) }}</td>
                 </tr>
             @empty
-                <tr><td colspan="5">Nenhuma entrada paga neste período.</td></tr>
+                <tr><td colspan="3">Nenhuma entrada paga neste período.</td></tr>
             @endforelse
-            <tr class="total-row">
-                <td colspan="4">Total de entradas</td>
+            <tr class="total-row receita">
+                <td colspan="2">Total de entradas</td>
                 <td class="num">{{ $fmt($totalEntradas) }}</td>
             </tr>
         </tbody>
     </table>
 
-    <h2>Saídas (despesas)</h2>
-    <table class="dados">
+    <h2 class="despesa">Saídas (despesas)</h2>
+    <table class="dados despesa">
         <thead>
             <tr>
-                <th style="width: 18mm;">Data</th>
+                <th style="width: 22mm;">Data</th>
                 <th>Descrição</th>
-                <th>Categoria</th>
-                <th>Fornecedor / favorecido</th>
-                <th class="num" style="width: 22mm;">Anexos</th>
-                <th class="num" style="width: 28mm;">Valor</th>
+                <th class="num" style="width: 32mm;">Valor</th>
             </tr>
         </thead>
         <tbody>
@@ -124,16 +109,13 @@
                 <tr>
                     <td>{{ $tx->transaction_date?->format('d/m/Y') }}</td>
                     <td>{{ PdfText::stripEmoji($tx->description) }}</td>
-                    <td>{{ PdfText::stripEmoji($tx->category->name ?? '—') }}</td>
-                    <td>{{ PdfText::stripEmoji($tx->source_name) }}</td>
-                    <td class="num">{{ $tx->attachments->count() }}</td>
-                    <td class="num">{{ $fmt($tx->amount) }}</td>
+                    <td class="num valor-despesa">{{ $fmt($tx->amount) }}</td>
                 </tr>
             @empty
-                <tr><td colspan="6">Nenhuma saída paga neste período.</td></tr>
+                <tr><td colspan="3">Nenhuma saída paga neste período.</td></tr>
             @endforelse
-            <tr class="total-row">
-                <td colspan="5">Total de saídas</td>
+            <tr class="total-row despesa">
+                <td colspan="2">Total de saídas</td>
                 <td class="num">{{ $fmt($totalSaidas) }}</td>
             </tr>
         </tbody>
@@ -145,11 +127,11 @@
             <td class="lbl">Saldo anterior (até {{ $start->copy()->subDay()->format('d/m/Y') }})</td>
             <td class="num">{{ $fmt($saldoAnterior) }}</td>
         </tr>
-        <tr>
+        <tr class="row-receita">
             <td class="lbl">(+) Total de entradas</td>
             <td class="num">{{ $fmt($totalEntradas) }}</td>
         </tr>
-        <tr>
+        <tr class="row-despesa">
             <td class="lbl">(−) Total de saídas</td>
             <td class="num">{{ $fmt($totalSaidas) }}</td>
         </tr>
@@ -159,7 +141,43 @@
         </tr>
     </table>
 
-    @include('financial.reports.pdf.partials.signatures')
+    <table class="assinaturas">
+        <tr>
+            <td>
+                @if(!empty($pastorAssinaturaSrc))
+                    <img src="{{ $pastorAssinaturaSrc }}" class="assinatura-img" alt="Assinatura do pastor dirigente">
+                @else
+                    <div class="linha"></div>
+                @endif
+                @if(!empty($pastorNome))
+                    <div class="nome">{{ $pastorNome }}</div>
+                @endif
+                <div class="cargo">Pastor Dirigente</div>
+            </td>
+            <td>
+                @if(!empty($tesoureiroAssinaturaSrc))
+                    <img src="{{ $tesoureiroAssinaturaSrc }}" class="assinatura-img" alt="Assinatura do tesoureiro da congregação">
+                @else
+                    <div class="linha"></div>
+                @endif
+                @if(!empty($tesoureiroNome))
+                    <div class="nome">{{ $tesoureiroNome }}</div>
+                @endif
+                <div class="cargo">Tesoureiro (a) Congregação</div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="linha"></div>
+                <div class="nome">Sebastião Tavares da Silva</div>
+                <div class="cargo">Pr. Presidente</div>
+            </td>
+            <td>
+                <div class="linha"></div>
+                <div class="cargo">Tesoureiro (a) ADEL</div>
+            </td>
+        </tr>
+    </table>
 
     @if(count($comprovantes) > 0)
         @foreach($comprovantes as $item)
