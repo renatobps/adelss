@@ -11,22 +11,17 @@
 <div class="org-header">
     <table class="org-header-table">
         <tr>
-            <td class="org-logo-cell">
+            <td class="org-left">
                 @if(!empty($logoSrc))
-                    <img src="{{ $logoSrc }}" class="org-logo" alt="">
+                    <img src="{{ $logoSrc }}" class="org-logo" alt="CDEL">
                 @endif
-            </td>
-            <td class="org-info-cell">
                 <div class="org-name">{{ $orgName }}</div>
-                <table class="org-meta">
-                    <tr>
-                        <td class="org-addr">Sede: {{ $orgAddress }}</td>
-                        <td class="org-right">
-                            Presidente: {{ $orgPresident }}<br>
-                            CNPJ: {{ $orgCnpj }} &nbsp; Tel. {{ $orgPhone }}
-                        </td>
-                    </tr>
-                </table>
+                <div class="org-addr">Sede: {{ $orgAddress }}</div>
+            </td>
+            <td class="org-right">
+                Presidente: {{ $orgPresident }}<br>
+                CNPJ: {{ $orgCnpj }}<br>
+                Tel. {{ $orgPhone }}
             </td>
         </tr>
     </table>

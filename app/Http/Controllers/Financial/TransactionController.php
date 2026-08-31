@@ -12,6 +12,7 @@ use App\Models\FinancialAccount;
 use App\Models\FinancialCostCenter;
 use App\Services\Financial\PdfSignatureService;
 use App\Services\FinancialNotificationService;
+use App\Support\FinancialReceiptLogo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -610,8 +611,10 @@ class TransactionController extends Controller
             'transaction' => $transaction,
             'tesoureiroNome' => $signatures->tesoureiroNome(),
             'tesoureiroAssinaturaSrc' => $signatures->imageSrc(PdfSignatureService::ROLE_TESOUREIRO),
-            'logoSrc' => asset('img/img/LOG SS AZUL.png'),
-            'logoPath' => public_path('img/img/LOG SS AZUL.png'),
+            'logoSrc' => FinancialReceiptLogo::htmlSrc(),
+            'logoPath' => FinancialReceiptLogo::absolutePath(),
+            'fundoSrc' => FinancialReceiptLogo::backgroundHtmlSrc(),
+            'fundoPath' => FinancialReceiptLogo::backgroundAbsolutePath(),
         ]);
     }
 

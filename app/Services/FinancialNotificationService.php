@@ -8,6 +8,7 @@ use App\Models\FinancialNotificationLog;
 use App\Models\FinancialTransaction;
 use App\Models\Member;
 use App\Services\Financial\PdfSignatureService;
+use App\Support\FinancialReceiptLogo;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -526,14 +527,14 @@ class FinancialNotificationService
                 mkdir($dir, 0755, true);
             }
 
-            $logoSource = public_path('img/img/LOG SS AZUL.png');
-            $logoPath = null;
-            if (is_file($logoSource)) {
-                $logoPath = $dir.DIRECTORY_SEPARATOR.'logo-adel.png';
-                if (! is_file($logoPath)) {
-                    @copy($logoSource, $logoPath);
+            $fundoSource = FinancialReceiptLogo::backgroundAbsolutePath();
+            $fundoPath = null;
+            if ($fundoSource) {
+                $fundoPath = $dir.DIRECTORY_SEPARATOR.'recibo-fundo.png';
+                if (! is_file($fundoPath) || filemtime($fundoPath) < filemtime($fundoSource)) {
+                    @copy($fundoSource, $fundoPath);
                 }
-                $logoPath = str_replace('\\', '/', $logoPath);
+                $fundoPath = str_replace('\\', '/', $fundoPath);
             }
 
             $assinaturaPath = $this->signatures->imagePath(PdfSignatureService::ROLE_TESOUREIRO);
@@ -543,10 +544,10 @@ class FinancialNotificationService
 
             $pdf = Pdf::loadView('financial.transactions.receipt-pdf', [
                 'transaction' => $transaction,
-                'logoPath' => $logoPath,
+                'fundoPath' => $fundoPath,
                 'tesoureiroNome' => $this->signatures->tesoureiroNome(),
                 'tesoureiroAssinaturaSrc' => $assinaturaPath,
-            ])->setPaper('a4');
+            ])->setPaper(FinancialReceiptLogo::pdfPaper());
 
             $path = $dir.DIRECTORY_SEPARATOR.'recibo-'.$transaction->id.'-'.time().'.pdf';
             $pdf->save($path);

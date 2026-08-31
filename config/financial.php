@@ -13,4 +13,12 @@ return [
         // Dias de antecedência do lembrete de parcela de campanha a vencer
         'due_reminder_days_ahead' => (int) env('CAMPAIGN_PARCELA_LEMBRETE_DIAS', 3),
     ],
+
+    'receipt' => [
+        // Relativo a public/. Troque o arquivo para uma arte em alta resolução sem alterar o template.
+        'logo' => env('FINANCIAL_RECEIPT_LOGO', 'images/logo-cdel.png'),
+        'background' => env('FINANCIAL_RECEIPT_BACKGROUND', 'images/recibo-fundo.png'),
+        'width_px' => 1447,
+        'height_px' => 1087,
+    ],
 ];
