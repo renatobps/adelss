@@ -140,7 +140,37 @@
             <div>
                 <strong>Resultados: {{ $transactions->total() }} transações</strong>
             </div>
+            @php
+                $txView = request('view') === 'cards' ? 'cards' : 'table';
+                $sortKey = in_array(request('sort'), ['date', 'description', 'amount'], true) ? request('sort') : 'date';
+                $sortDir = request('sort_dir') === 'asc' ? 'asc' : 'desc';
+                $sortIcon = function (string $column) use ($sortKey, $sortDir) {
+                    if ($sortKey !== $column) {
+                        return 'bx-sort';
+                    }
+                    return $sortDir === 'asc' ? 'bx-sort-up' : 'bx-sort-down';
+                };
+                $sortUrl = function (string $column) use ($sortKey, $sortDir) {
+                    $nextDir = ($sortKey === $column && $sortDir === 'desc') ? 'asc' : 'desc';
+                    return request()->fullUrlWithQuery(['sort' => $column, 'sort_dir' => $nextDir]);
+                };
+            @endphp
+            <input type="hidden" name="sort" form="filterForm" value="{{ $sortKey }}">
+            <input type="hidden" name="sort_dir" form="filterForm" value="{{ $sortDir }}">
+            <input type="hidden" name="view" form="filterForm" value="{{ $txView }}">
             <div class="financial-tx-toolbar">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Modo de exibição">
+                    <a href="{{ request()->fullUrlWithQuery(['view' => 'table']) }}"
+                       class="btn btn-outline-secondary {{ $txView === 'table' ? 'active' : '' }}"
+                       title="Tabela">
+                        <i class="bx bx-table"></i>
+                    </a>
+                    <a href="{{ request()->fullUrlWithQuery(['view' => 'cards']) }}"
+                       class="btn btn-outline-secondary {{ $txView === 'cards' ? 'active' : '' }}"
+                       title="Cartões">
+                        <i class="bx bx-list-ul"></i>
+                    </a>
+                </div>
                 <select class="form-select form-select-sm financial-tx-toolbar__perpage" onchange="this.form.submit()" form="filterForm" name="per_page">
                     <option value="50" {{ request('per_page', 100) == 50 ? 'selected' : '' }}>50 resultados por página</option>
                     <option value="100" {{ request('per_page', 100) == 100 ? 'selected' : '' }}>100 resultados por página</option>
@@ -172,6 +202,66 @@
         </div>
 
         @if($transactions->count() > 0)
+            @if($txView === 'table')
+            <div class="table-responsive financial-tx-table-wrap">
+                <table class="table table-hover align-middle financial-tx-table mb-0">
+                    <thead>
+                        <tr>
+                            <th>
+                                <a href="{{ $sortUrl('date') }}" class="financial-tx-sort {{ $sortKey === 'date' ? 'is-active' : '' }}">
+                                    Data <i class="bx {{ $sortIcon('date') }}"></i>
+                                </a>
+                            </th>
+                            <th>
+                                <a href="{{ $sortUrl('description') }}" class="financial-tx-sort {{ $sortKey === 'description' ? 'is-active' : '' }}">
+                                    Descrição <i class="bx {{ $sortIcon('description') }}"></i>
+                                </a>
+                            </th>
+                            <th>Categoria</th>
+                            <th class="text-end">
+                                <a href="{{ $sortUrl('amount') }}" class="financial-tx-sort {{ $sortKey === 'amount' ? 'is-active' : '' }}">
+                                    Valor <i class="bx {{ $sortIcon('amount') }}"></i>
+                                </a>
+                            </th>
+                            <th class="text-end">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($transactions as $transaction)
+                            @php
+                                $isReceita = $transaction->type === 'receita';
+                                $canEdit = ($isReceita && $canEditReceitas) || (!$isReceita && $canEditDespesas);
+                                $canDelete = ($isReceita && $canDeleteReceitas) || (!$isReceita && $canDeleteDespesas);
+                                $dateLabel = optional($transaction->transaction_date)->format('d/m/Y') ?: '—';
+                                $typeLabel = $isReceita ? 'Receita' : 'Despesa';
+                                $amountPrefix = $isReceita ? '+' : '-';
+                                $amountLabel = $amountPrefix.'R$ '.number_format((float) $transaction->amount, 2, ',', '.');
+                            @endphp
+                            <tr class="{{ $isReceita ? 'is-receita' : 'is-despesa' }}"
+                                data-description="{{ $transaction->description }}"
+                                data-status="{{ $typeLabel }}"
+                                data-meta="{{ $dateLabel }} | {{ $typeLabel }}"
+                                data-amount="{{ $amountLabel }}">
+                                <td class="text-nowrap">{{ $dateLabel }}</td>
+                                <td>
+                                    <a href="#"
+                                       class="edit-description financial-tx-table__title"
+                                       data-transaction-id="{{ $transaction->id }}"
+                                       data-description="{{ $transaction->description }}">
+                                        {{ $transaction->description }}
+                                    </a>
+                                </td>
+                                <td>{{ $typeLabel }}</td>
+                                <td class="text-end text-nowrap fw-semibold {{ $isReceita ? 'text-success' : 'text-danger' }}">{{ $amountLabel }}</td>
+                                <td class="text-end">
+                                    @include('financial.transactions.partials.list-actions', ['compact' => true])
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+            @else
             <div class="financial-tx-list">
                 @foreach($transactions as $transaction)
                     @php
@@ -179,12 +269,10 @@
                         $canEdit = ($isReceita && $canEditReceitas) || (!$isReceita && $canEditDespesas);
                         $canDelete = ($isReceita && $canDeleteReceitas) || (!$isReceita && $canDeleteDespesas);
                         $statusLabel = $transaction->is_paid
-                            ? ($isReceita ? 'Pago' : 'Pago')
+                            ? 'Pago'
                             : ($isReceita ? 'A receber' : 'A pagar');
                         $statusClass = $transaction->is_paid ? 'is-paid' : 'is-pending';
-                        $dateTime = $transaction->created_at
-                            ? $transaction->created_at->format('d/m/Y \à\s H:i')
-                            : $transaction->transaction_date->format('d/m/Y');
+                        $dateTime = optional($transaction->transaction_date)->format('d/m/Y') ?: '—';
                         $accountName = $transaction->account?->name ?: 'Sem conta';
                         $typeLabel = $isReceita ? 'Receita' : 'Despesa';
                         $categoryName = $transaction->category?->name;
@@ -241,80 +329,12 @@
                             <div class="financial-tx-card__amount {{ $isReceita ? 'text-success' : 'text-danger' }}">
                                 {{ $amountPrefix }}R$ {{ number_format((float) $transaction->amount, 2, ',', '.') }}
                             </div>
-
-                            <div class="financial-tx-card__actions">
-                                <button type="button"
-                                        class="financial-tx-card__action view-transaction-details"
-                                        data-transaction-id="{{ $transaction->id }}"
-                                        title="Detalhes">
-                                    <i class="bx bx-show"></i>
-                                    <span>Detalhes</span>
-                                </button>
-
-                                @if($canEdit)
-                                <button type="button"
-                                        class="financial-tx-card__action edit-transaction"
-                                        data-transaction-id="{{ $transaction->id }}"
-                                        title="Editar">
-                                    <i class="bx bx-edit-alt"></i>
-                                    <span>Editar</span>
-                                </button>
-                                @endif
-
-                                <button type="button"
-                                        class="financial-tx-card__action print-receipt"
-                                        data-transaction-id="{{ $transaction->id }}"
-                                        title="Exibir recibo">
-                                    <i class="bx bx-receipt"></i>
-                                    <span>Recibo</span>
-                                </button>
-
-                                @if($canViewReceitas && $isReceita && $transaction->is_paid && $transaction->member_id)
-                                <button type="button"
-                                        class="financial-tx-card__action send-receipt-whatsapp"
-                                        data-transaction-id="{{ $transaction->id }}"
-                                        title="Enviar comprovante por WhatsApp">
-                                    <i class="bx bxl-whatsapp"></i>
-                                </button>
-                                @endif
-
-                                @if($canCreateReceitas || $canCreateDespesas)
-                                <button type="button"
-                                        class="financial-tx-card__action duplicate-transaction"
-                                        data-transaction-id="{{ $transaction->id }}"
-                                        title="Duplicar">
-                                    <i class="bx bx-copy"></i>
-                                </button>
-                                @endif
-
-                                @if($isReceita && !$transaction->is_paid)
-                                <button type="button"
-                                        class="financial-tx-card__action mp-open-checkout"
-                                        data-transaction-id="{{ $transaction->id }}"
-                                        data-transaction-description="{{ $transaction->description }}"
-                                        data-transaction-amount="{{ number_format((float) $transaction->amount, 2, '.', '') }}"
-                                        title="Receber com Mercado Pago">
-                                    <i class="bx bx-credit-card"></i>
-                                </button>
-                                @endif
-
-                                @if($canDelete)
-                                <form action="{{ route('financial.transactions.destroy', $transaction) }}"
-                                      method="POST"
-                                      class="d-inline"
-                                      onsubmit="return confirm('Tem certeza que deseja remover esta transação?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="financial-tx-card__action is-danger" title="Excluir">
-                                        <i class="bx bx-trash"></i>
-                                    </button>
-                                </form>
-                                @endif
-                            </div>
+                            @include('financial.transactions.partials.list-actions', ['compact' => false])
                         </div>
                     </article>
                 @endforeach
             </div>
+            @endif
 
             <div class="mt-3">
                 {{ $transactions->appends(request()->query())->links() }}
@@ -465,43 +485,35 @@
         white-space: nowrap;
     }
 
-    .financial-tx-card__actions {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: flex-end;
-        align-items: center;
-        gap: 0.35rem 0.65rem;
-    }
-
-    .financial-tx-card__action {
+    .financial-tx-actions__btn {
         display: inline-flex;
         align-items: center;
-        gap: 0.3rem;
-        padding: 0.2rem 0.15rem;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
         border: 0;
+        border-radius: 0.45rem;
         background: transparent;
-        color: #4b5563;
-        font-size: 0.86rem;
-        font-weight: 500;
+        color: #6b7280;
+        font-size: 1.35rem;
         line-height: 1;
         cursor: pointer;
-        text-decoration: none;
     }
 
-    .financial-tx-card__action i {
-        font-size: 1.05rem;
+    .financial-tx-actions__btn:hover,
+    .financial-tx-actions__btn[aria-expanded="true"] {
+        background: #f3f4f6;
+        color: #111827;
     }
 
-    .financial-tx-card__action:hover {
-        color: #2563eb;
-    }
-
-    .financial-tx-card__action.is-danger {
-        color: #dc3545;
-    }
-
-    .financial-tx-card__action.is-danger:hover {
-        color: #b02a37;
+    .financial-tx-actions .dropdown-item {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
     }
 
     .financial-tx-toolbar {
@@ -519,15 +531,54 @@
         width: 200px;
     }
 
+    .financial-tx-table-wrap {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.5rem;
+        overflow: auto;
+    }
+
+    .financial-tx-table thead th {
+        white-space: nowrap;
+        background: #f8fafc;
+        font-size: 0.82rem;
+        color: #4b5563;
+        border-bottom-width: 1px;
+    }
+
+    .financial-tx-sort {
+        color: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .financial-tx-sort:hover,
+    .financial-tx-sort.is-active {
+        color: #2563eb;
+    }
+
+    .financial-tx-table__title {
+        color: #111827;
+        font-weight: 600;
+        text-decoration: none;
+    }
+
+    .financial-tx-table__title:hover {
+        color: #2563eb;
+    }
+
+    .financial-tx-table th:last-child,
+    .financial-tx-table td:last-child {
+        width: 48px;
+        white-space: nowrap;
+    }
+
     @media (max-width: 767.98px) {
         .financial-tx-card__side {
             width: 100%;
             align-items: flex-start;
             min-width: 0;
-        }
-
-        .financial-tx-card__actions {
-            justify-content: flex-start;
         }
 
         /* Larguras fixas aqui somavam mais que a tela e faziam a página
@@ -2505,22 +2556,30 @@
     function printTransactions() {
         const printWindow = window.open('', '_blank');
         const list = document.querySelector('.financial-tx-list');
+        const tableRows = document.querySelectorAll('.financial-tx-table tbody tr');
 
-        if (!list) {
+        if (!list && !tableRows.length) {
             alert('Nenhuma transação para imprimir.');
             return;
         }
 
         const nowFormatted = new Date().toLocaleString('pt-BR');
-        const rows = Array.from(list.querySelectorAll('.financial-tx-card')).map(function(card) {
-            const title = (card.querySelector('.financial-tx-card__title')?.textContent || '').trim();
-            const amount = (card.querySelector('.financial-tx-card__amount')?.textContent || '').trim();
-            const meta = Array.from(card.querySelectorAll('.financial-tx-card__meta li')).map(function(li) {
-                return (li.textContent || '').trim();
-            }).join(' | ');
-            const status = (card.querySelector('.financial-tx-card__badge')?.textContent || '').trim();
-            return '<tr><td>' + title + '</td><td>' + status + '</td><td>' + meta + '</td><td>' + amount + '</td></tr>';
-        }).join('');
+        let rows = '';
+        if (tableRows.length) {
+            rows = Array.from(tableRows).map(function(tr) {
+                return '<tr><td>' + (tr.dataset.description || '') + '</td><td>' + (tr.dataset.status || '') + '</td><td>' + (tr.dataset.meta || '') + '</td><td>' + (tr.dataset.amount || '') + '</td></tr>';
+            }).join('');
+        } else {
+            rows = Array.from(list.querySelectorAll('.financial-tx-card')).map(function(card) {
+                const title = (card.querySelector('.financial-tx-card__title')?.textContent || '').trim();
+                const amount = (card.querySelector('.financial-tx-card__amount')?.textContent || '').trim();
+                const meta = Array.from(card.querySelectorAll('.financial-tx-card__meta li')).map(function(li) {
+                    return (li.textContent || '').trim();
+                }).join(' | ');
+                const status = (card.querySelector('.financial-tx-card__badge')?.textContent || '').trim();
+                return '<tr><td>' + title + '</td><td>' + status + '</td><td>' + meta + '</td><td>' + amount + '</td></tr>';
+            }).join('');
+        }
 
         printWindow.document.write('<!DOCTYPE html><html><head><title>Transações - ' + nowFormatted + '</title><style>');
         printWindow.document.write('body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }');

@@ -35,9 +35,9 @@ class TransactionController extends Controller
         $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->endOfMonth()->format('Y-m-d'));
 
-        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter', 'latestPaymentTransaction'])
-            ->orderBy('transaction_date', 'desc');
+        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter', 'latestPaymentTransaction']);
         $this->applyListingFilters($query, $request, $startDate, $endDate);
+        $this->applyListingSort($query, $request);
 
         $perPage = $request->input('per_page', 100);
         $transactions = $query->paginate($perPage)->withQueryString();
@@ -690,12 +690,12 @@ class TransactionController extends Controller
     public function export(Request $request)
     {
         $this->authorize('export', FinancialTransaction::class);
-        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter'])
-            ->orderBy('transaction_date', 'desc');
+        $query = FinancialTransaction::with(['member', 'contact', 'category', 'account', 'costCenter']);
 
         $startDate = $request->input('start_date', now()->startOfMonth()->format('Y-m-d'));
         $endDate = $request->input('end_date', now()->endOfMonth()->format('Y-m-d'));
         $this->applyListingFilters($query, $request, $startDate, $endDate);
+        $this->applyListingSort($query, $request);
 
         $transactions = $query->get();
 
@@ -970,6 +970,20 @@ class TransactionController extends Controller
         if ($request->filled('search')) {
             $query->where('description', 'like', '%'.$request->input('search').'%');
         }
+    }
+
+    private function applyListingSort($query, Request $request): void
+    {
+        $sort = $request->input('sort', 'date');
+        $dir = strtolower((string) $request->input('sort_dir', 'desc')) === 'asc' ? 'asc' : 'desc';
+        $columns = [
+            'date' => 'transaction_date',
+            'description' => 'description',
+            'amount' => 'amount',
+        ];
+        $column = $columns[$sort] ?? 'transaction_date';
+
+        $query->orderBy($column, $dir)->orderBy('id', $dir);
     }
 
     private function receitaRequiresDonor(mixed $categoryId): bool
