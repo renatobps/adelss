@@ -212,6 +212,7 @@
                                     Data <i class="bx {{ $sortIcon('date') }}"></i>
                                 </a>
                             </th>
+                            <th>Nome</th>
                             <th>
                                 <a href="{{ $sortUrl('description') }}" class="financial-tx-sort {{ $sortKey === 'description' ? 'is-active' : '' }}">
                                     Descrição <i class="bx {{ $sortIcon('description') }}"></i>
@@ -234,15 +235,17 @@
                                 $canDelete = ($isReceita && $canDeleteReceitas) || (!$isReceita && $canDeleteDespesas);
                                 $dateLabel = optional($transaction->transaction_date)->format('d/m/Y') ?: '—';
                                 $typeLabel = $isReceita ? 'Receita' : 'Despesa';
+                                $personName = $transaction->listingPersonName();
                                 $amountPrefix = $isReceita ? '+' : '-';
                                 $amountLabel = $amountPrefix.'R$ '.number_format((float) $transaction->amount, 2, ',', '.');
                             @endphp
                             <tr class="{{ $isReceita ? 'is-receita' : 'is-despesa' }}"
                                 data-description="{{ $transaction->description }}"
                                 data-status="{{ $typeLabel }}"
-                                data-meta="{{ $dateLabel }} | {{ $typeLabel }}"
+                                data-meta="{{ $dateLabel }} | {{ $personName }} | {{ $typeLabel }}"
                                 data-amount="{{ $amountLabel }}">
                                 <td class="text-nowrap">{{ $dateLabel }}</td>
+                                <td>{{ $personName }}</td>
                                 <td>
                                     <a href="#"
                                        class="edit-description financial-tx-table__title"
@@ -276,6 +279,7 @@
                         $accountName = $transaction->account?->name ?: 'Sem conta';
                         $typeLabel = $isReceita ? 'Receita' : 'Despesa';
                         $categoryName = $transaction->category?->name;
+                        $personName = $transaction->listingPersonName();
                         $amountPrefix = $isReceita ? '+' : '-';
                         $latestPayment = $transaction->latestPaymentTransaction;
                     @endphp
@@ -317,6 +321,12 @@
                                         <i class="bx bx-wallet"></i>
                                         <span>{{ $accountName }}</span>
                                     </li>
+                                    @if($personName !== '')
+                                    <li>
+                                        <i class="bx bx-user"></i>
+                                        <span>{{ $personName }}</span>
+                                    </li>
+                                    @endif
                                     <li>
                                         <i class="bx bx-purchase-tag"></i>
                                         <span>{{ $typeLabel }}{{ $categoryName ? ' · ' . $categoryName : '' }}</span>

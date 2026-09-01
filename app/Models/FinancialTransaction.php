@@ -198,4 +198,24 @@ class FinancialTransaction extends Model
 
         return 'Outros';
     }
+
+    /**
+     * Nome na listagem: dizimista na receita, favorecido na despesa (vazio se não houver).
+     */
+    public function listingPersonName(): string
+    {
+        if ($this->member?->name) {
+            return $this->member->name;
+        }
+
+        if (filled($this->received_from_other)) {
+            return (string) $this->received_from_other;
+        }
+
+        if ($this->type === 'despesa' && $this->contact?->name) {
+            return $this->contact->name;
+        }
+
+        return '';
+    }
 }
