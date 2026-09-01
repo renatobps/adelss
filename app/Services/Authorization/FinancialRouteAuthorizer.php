@@ -75,6 +75,20 @@ class FinancialRouteAuthorizer
                 : $denyAccess('Acesso negado. Você não tem permissão para gerenciar despesas fixas.');
         }
 
+        if (str_starts_with($routeName ?? '', 'financial.correction')) {
+            if ($routeName === 'financial.correction.index') {
+                return $this->transactionPolicy->viewAny($user)
+                    ? null
+                    : $denyAccess('Acesso negado. Você não tem permissão para visualizar transações.');
+            }
+
+            $transaction = $this->resolveTransaction($request);
+
+            return $transaction && $this->transactionPolicy->update($user, $transaction)
+                ? null
+                : $denyAccess('Acesso negado. Você não tem permissão para editar esta transação.');
+        }
+
         if (str_starts_with($routeName ?? '', 'financial.transactions')) {
             return $this->authorizeTransactionRoute($request, $user, $routeName, $action, $denyAccess);
         }

@@ -24,6 +24,12 @@
             'url' => route('financial.transactions.index'),
             'active' => request()->routeIs('financial.transactions.*'),
         ] : null,
+        $canViewTransactions ? [
+            'label' => 'Correção',
+            'icon' => 'bx bx-wrench',
+            'url' => route('financial.correction.index'),
+            'active' => request()->routeIs('financial.correction.*'),
+        ] : null,
         $canViewDespesas ? [
             'label' => 'Despesas Fixas',
             'icon' => 'bx bx-refresh',

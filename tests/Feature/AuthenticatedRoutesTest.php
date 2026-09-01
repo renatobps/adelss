@@ -94,6 +94,7 @@ class AuthenticatedRoutesTest extends TestCase
             'members' => ['/members'],
             'financial summary' => ['/financial/summary'],
             'financial transactions' => ['/financial/transactions'],
+            'financial correction' => ['/financial/correction'],
             'pgis' => ['/pgis'],
             'agenda calendario' => ['/agenda/calendario'],
             'moriah ministerio' => ['/moriah/ministerio'],

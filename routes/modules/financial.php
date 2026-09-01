@@ -6,6 +6,7 @@ use App\Http\Controllers\Financial\AccountController;
 use App\Http\Controllers\Financial\CheckoutController;
 use App\Http\Controllers\Financial\ContactController;
 use App\Http\Controllers\Financial\CostCenterController;
+use App\Http\Controllers\Financial\CorrectionController;
 use App\Http\Controllers\Financial\TransactionController;
 use App\Http\Controllers\Financial\ReportController;
 use App\Http\Controllers\Financial\ClosingReportController;
@@ -40,6 +41,11 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
     Route::post('automations/{automation}/test-treasurer', [AutomationController::class, 'sendTreasurerTest'])->name('automations.test-treasurer');
     Route::post('automations/{automation}/send-smart-summary', [AutomationController::class, 'sendSmartSummaryNow'])->name('automations.send-smart-summary');
     Route::put('automations/{automation}', [AutomationController::class, 'update'])->name('automations.update');
+
+    Route::get('correction', [CorrectionController::class, 'index'])->name('correction.index');
+    Route::patch('correction/{transaction}/name', [CorrectionController::class, 'updateName'])->name('correction.update-name');
+    Route::patch('correction/{transaction}/description', [CorrectionController::class, 'updateDescription'])->name('correction.update-description');
+    Route::patch('correction/{transaction}/amount', [CorrectionController::class, 'updateAmount'])->name('correction.update-amount');
 
     // Transações
     Route::get('transactions', [TransactionController::class, 'index'])->name('transactions.index');
