@@ -1172,6 +1172,61 @@ class ReportController extends Controller
     }
 
     /**
+     * Fluxo de caixa — entrada, saída e saldo de cada mês do ano.
+     */
+    public function annualCashFlow(Request $request)
+    {
+        $year = (int) $request->input('year', now()->year);
+
+        $transactions = FinancialTransaction::query()
+            ->whereYear('transaction_date', $year)
+            ->where('is_paid', true)
+            ->get(['type', 'transaction_date', 'amount']);
+
+        $byMonth = [];
+        $running = 0.0;
+        $totalEntrada = 0.0;
+        $totalSaida = 0.0;
+
+        for ($month = 1; $month <= 12; $month++) {
+            $monthStart = Carbon::create($year, $month, 1)->startOfMonth();
+            $monthEnd = Carbon::create($year, $month, 1)->endOfMonth();
+
+            $ofMonth = $transactions->filter(function ($transaction) use ($monthStart, $monthEnd) {
+                return $transaction->transaction_date
+                    && $transaction->transaction_date->gte($monthStart)
+                    && $transaction->transaction_date->lte($monthEnd);
+            });
+
+            $entrada = (float) $ofMonth->where('type', 'receita')->sum('amount');
+            $saida = (float) $ofMonth->where('type', 'despesa')->sum('amount');
+            $saldoMes = $entrada - $saida;
+            $running += $saldoMes;
+            $totalEntrada += $entrada;
+            $totalSaida += $saida;
+
+            $byMonth[] = [
+                'month' => $month,
+                'month_name' => ucfirst($monthStart->locale('pt_BR')->translatedFormat('F')),
+                'entrada' => $entrada,
+                'saida' => $saida,
+                'saldo' => $saldoMes,
+                'saldo_acumulado' => $running,
+            ];
+        }
+
+        $years = range(now()->year - 10, now()->year);
+
+        return view('financial.reports.cash-flow-annual', compact(
+            'year',
+            'byMonth',
+            'totalEntrada',
+            'totalSaida',
+            'years'
+        ));
+    }
+
+    /**
      * Calcular saldo até uma data específica
      */
     private function calculateBalance($untilDate)

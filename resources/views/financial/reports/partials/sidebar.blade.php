@@ -14,6 +14,8 @@
                 <div class="fr-nav-group__label text-primary">Fluxo de caixa</div>
                 <a href="{{ route('financial.reports.cash-flow.extract') }}"
                    class="fr-nav-link {{ request()->routeIs('financial.reports.cash-flow.extract') ? 'is-active' : '' }}">Extrato</a>
+                <a href="{{ route('financial.reports.cash-flow.annual') }}"
+                   class="fr-nav-link {{ request()->routeIs('financial.reports.cash-flow.annual') ? 'is-active' : '' }}">Resumo anual</a>
             </div>
 
             @if(auth()->user()?->can('financial.fechamento.view'))
