@@ -19,6 +19,7 @@ class ImportLegacyFinancialTransactions extends Command
     protected $signature = 'financial:import-legacy
                             {caminho? : Caminho do CSV}
                             {--ano=2025 : Ano da carga (2023, 2024, 2025 ou 2026)}
+                            {--replace : Remove lançamentos anteriores deste ano (mesmo prefixo) antes de importar}
                             {--dry-run : Processa e mostra o resumo sem gravar no banco}';
 
     protected $description = 'Importa a carga histórica financeira (2023 a 2026) a partir do CSV normalizado';
@@ -76,12 +77,13 @@ class ImportLegacyFinancialTransactions extends Command
         }
 
         $createdBy = User::query()->orderBy('id')->value('id');
+        $replace = (bool) $this->option('replace');
 
         try {
             $result = $dryRun
-                ? $this->process($rows, $createdBy, true)
-                : DB::transaction(function () use ($rows, $createdBy) {
-                    return $this->process($rows, $createdBy, false);
+                ? $this->process($rows, $createdBy, true, $replace)
+                : DB::transaction(function () use ($rows, $createdBy, $replace) {
+                    return $this->process($rows, $createdBy, false, $replace);
                 });
         } catch (Throwable $e) {
             $this->error('Importação abortada e revertida: '.$e->getMessage());
@@ -130,8 +132,8 @@ class ImportLegacyFinancialTransactions extends Command
             $this->receivedFromLabel = 'Importação 2024';
             $this->refPrefix = 'legacy2024:';
             $this->useCsvReceivedFrom = true;
-            $this->expectedReceitasCents = 1422421;
-            $this->expectedDespesasCents = 1121508;
+            $this->expectedReceitasCents = 12240849;
+            $this->expectedDespesasCents = 12240849;
 
             return;
         }
@@ -280,8 +282,17 @@ class ImportLegacyFinancialTransactions extends Command
      * @param  list<array<string, mixed>>  $rows
      * @return array<string, mixed>
      */
-    private function process(array $rows, ?int $createdBy, bool $dryRun): array
+    private function process(array $rows, ?int $createdBy, bool $dryRun, bool $replace = false): array
     {
+        $replaced = 0;
+        if ($replace) {
+            $replacedQuery = FinancialTransaction::withTrashed()->where('external_ref', 'like', $this->refPrefix.'%');
+            $replaced = (clone $replacedQuery)->count();
+            if (! $dryRun && $replaced > 0) {
+                $replacedQuery->forceDelete();
+            }
+        }
+
         $categoriesByKey = $this->loadCategoryIndex();
         $existingRefs = FinancialTransaction::withTrashed()
             ->whereNotNull('external_ref')
@@ -371,6 +382,7 @@ class ImportLegacyFinancialTransactions extends Command
             'expense_cents' => $expenseCents,
             'skipped_expense_cents' => $skippedExpenseCents,
             'pending' => $pending,
+            'replaced' => $replaced,
         ];
     }
 
@@ -425,12 +437,12 @@ class ImportLegacyFinancialTransactions extends Command
         }
 
         $isReceita = $row['tipo'] === 'receita';
+        $fromCsv = trim((string) ($row['received_from_other'] ?? ''));
         $receivedFrom = null;
-        if ($isReceita) {
-            $fromCsv = trim((string) ($row['received_from_other'] ?? ''));
-            $receivedFrom = $this->useCsvReceivedFrom && $fromCsv !== ''
-                ? Str::limit($fromCsv, 255, '')
-                : $this->receivedFromLabel;
+        if ($this->useCsvReceivedFrom && $fromCsv !== '') {
+            $receivedFrom = Str::limit($fromCsv, 255, '');
+        } elseif ($isReceita) {
+            $receivedFrom = $this->receivedFromLabel;
         }
 
         FinancialTransaction::create([
@@ -487,6 +499,7 @@ class ImportLegacyFinancialTransactions extends Command
                 ['Linhas OK', $result['ok']],
                 ['Linhas REVISAR (puladas)', $result['skipped_review']],
                 [$importedLabel, $result['imported']],
+                ['Substituídos (--replace)', $result['replaced'] ?? 0],
                 ['Já existentes (idempotência)', $result['already_existed']],
                 [$dryRun ? 'Categorias a criar' : 'Categorias criadas', $result['categories_created']],
             ]

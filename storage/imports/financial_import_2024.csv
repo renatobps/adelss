@@ -1,8 +1,293 @@
 ﻿mes_aba,data,descricao,valor,tipo,categoria,status_import,member_id,received_from_other
+JAN24,2024-01-03,Oferta,11.85,receita,Oferta,OK,,
+JAN24,2024-01-03,Dizimo,200.00,receita,Dízimo,OK,,Mila Gabriela Carvalho dos Santos
+JAN24,2024-01-03,Dizimo,92.86,receita,Dízimo,OK,,Patrícia Felix Silva
+JAN24,2024-01-03,Desinfetante 5L,15.00,despesa,Material de Limpeza,OK,,Jaciara de Oliveira Tapirema da Silva
+JAN24,2024-01-03,Caneta Secretária,6.50,despesa,Materiais Escritório,OK,,Millene da Silva Mendes
+JAN24,2024-01-04,Lanche das Crianças,109.20,despesa,Alimentos,OK,,Edvane Correia Santos Machado
+JAN24,2024-01-04,Vidros,410.73,despesa,Material de Construção,OK,,
+JAN24,2024-01-05,Dízimo,136.00,receita,Dízimo,OK,,Marinalva Soares Ribeiro
+JAN24,2024-01-05,Dízimo,180.00,receita,Dízimo,OK,,
+JAN24,2024-01-06,Pratinhos e talheres crianças,97.56,despesa,Utilidades,OK,,Edvane Correia Santos Machado
+JAN24,2024-01-07,Oferta,77.50,receita,Oferta,OK,,
+JAN24,2024-01-07,dizimo,92.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JAN24,2024-01-07,Dizimo,30.60,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+JAN24,2024-01-07,Dizimo,1200.00,receita,Dízimo,OK,,João Severo Mendonça
+JAN24,2024-01-07,Dízimo,132.00,receita,Dízimo,OK,,
+JAN24,2024-01-07,Dizimo,150.00,receita,Dízimo,OK,,Maria Aparecida da Silva Soares
+JAN24,2024-01-07,Dízimo,60.00,receita,Dízimo,OK,,Davi Evangelista
+JAN24,2024-01-07,Dízimo,324.00,receita,Dízimo,OK,,Rebeca Vitória
+JAN24,2024-01-07,Mao de obra,70.00,despesa,Mão de obra,OK,,Marcos Guerra dos Santos
+JAN24,2024-01-08,Dízimo,225.00,receita,Dízimo,OK,,
+JAN24,2024-01-08,Dízimo,130.00,receita,Dízimo,OK,,
+JAN24,2024-01-09,Dízimo,268.20,receita,Dízimo,OK,,Cleomar Machado Costa
+JAN24,2024-01-10,Oferta,22.00,receita,Oferta,OK,,
+JAN24,2024-01-10,Dizimo,230.00,receita,Dízimo,OK,,Elaine Cristina de Jesus Braga
+JAN24,2024-01-11,Internet,101.95,despesa,Internet,OK,,LINKNET
+JAN24,2024-01-11,Vidros,397.81,despesa,Material de Construção,OK,,
+JAN24,2024-01-11,Matérias para construção,280.00,despesa,Material de Construção,OK,,
+JAN24,2024-01-13,Dízimo,103.00,receita,Dízimo,OK,,Paula Cristina
+JAN24,2024-01-14,oferta,140.50,receita,Oferta,OK,,
+JAN24,2024-01-14,dízimo,160.00,receita,Dízimo,OK,,Maria da guia De Azevedo Pereira
+JAN24,2024-01-14,dizimo,114.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JAN24,2024-01-14,dizimo,131.80,receita,Dízimo,OK,,Cleia da Silva Custódio
+JAN24,2024-01-14,dízimo,60.00,receita,Dízimo,OK,,Davi Evangelista
+JAN24,2024-01-14,Dizimo,23.00,receita,Dízimo,OK,,Patrícia Felix Silva
+JAN24,2024-01-14,Dizimo,30.00,receita,Dízimo,OK,,Mila Gabriela Carvalho dos Santos
+JAN24,2024-01-15,Som,4500.00,despesa,Equipamentos,OK,,Fama Som
+JAN24,2024-01-17,Oferta,29.25,receita,Oferta,OK,,Igreja
+JAN24,2024-01-17,Disco Corte,37.00,despesa,Material de Construção,OK,,Igreja
+JAN24,2024-01-17,Gás e Água,145.00,despesa,Utilidades,OK,,Marcia Gás
+JAN24,2024-01-20,Dizimo,125.00,receita,Dízimo,OK,,Marcos Guerra dos Santos
+JAN24,2024-01-21,Oferta,67.45,receita,Oferta,OK,,Igreja
+JAN24,2024-01-21,Dízimo,100.00,receita,Dízimo,OK,,
+JAN24,2024-01-21,Dizimo,104.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JAN24,2024-01-21,Dízimo,100.00,receita,Dízimo,OK,,Davi Evangelista
+JAN24,2024-01-21,Sacolas visitantes,31.98,despesa,Materiais Escritório,OK,,Maysa Maylle Da Silva Cavalcante
+JAN24,2024-01-21,Mao de obra,270.00,despesa,Mão de obra,OK,,Lucas Rosa Felix Pereira
+JAN24,2024-01-22,Dízimo,201.00,receita,Dízimo,OK,,
+JAN24,2024-01-22,Dízimo,50.00,receita,Dízimo,OK,,Maycon Silva Aguiar
+JAN24,2024-01-24,oferta,8.70,receita,Oferta,OK,,Igreja
+JAN24,2024-01-24,Dizimo,67.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+JAN24,2024-01-26,Dízimo,142.00,receita,Dízimo,OK,,
+JAN24,2024-01-26,Dízimo,150.00,receita,Dízimo,OK,,
+JAN24,2024-01-27,Dizimo,20.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+JAN24,2024-01-27,Limpeza,76.22,despesa,Material de Limpeza,OK,,
+JAN24,2024-01-28,Oferta,55.25,receita,Oferta,OK,,Igreja
+JAN24,2024-01-28,Dizimo,50.00,receita,Dízimo,OK,,Marcos Guerra dos Santos
+JAN24,2024-01-28,Dizimo,106.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JAN24,2024-01-28,Dizimo,300.00,receita,Dízimo,OK,,Gilson Ferreira da Cruz
+JAN24,2024-01-28,Dizimo,36.00,receita,Dízimo,OK,,Davi Evangelista
+JAN24,2024-01-29,Dizimo,600.00,receita,Dízimo,OK,,Bruna de Souza Andrade
+JAN24,2024-01-30,Dizimo,60.00,receita,Dízimo,OK,,Edvane Correia Santos Machado
+JAN24,2024-01-30,Gasolia,100.00,despesa,Combustível,OK,,Rodrigo Barbosa da Silva
+JAN24,2024-01-31,Oferta,6.85,receita,Oferta,OK,,Igreja
+JAN24,2024-01-31,Dizimo,3000.00,receita,Dízimo,OK,,Clelia Soares Lemos
+JAN24,2024-01-31,Dizimo,187.88,receita,Dízimo,OK,,Liliane Virginia Mendes
+JAN24,2024-01-31,Dizimo,75.00,receita,Dízimo,OK,,Rita do Desterro Pereira de Moura
+JAN24,2024-01-31,Dizimo,140.00,receita,Dízimo,OK,,Jaciara de Oliveira Tapirema da Silva
+JAN24,2024-01-31,Dizimo,3381.34,receita,Dízimo,OK,,Ana Carolina Evangelista
+JAN24,2024-01-31,Dizimo,434.00,receita,Dízimo,OK,,Gilbran Ferreira da Silva
+JAN24,2024-01-31,Dizimo,50.00,receita,Dízimo,OK,,Luciene Lopes dos Santos
+JAN24,2024-01-31,Dizimo,142.00,receita,Dízimo,OK,,Maria Margareth Ribeiro
+JAN24,2024-01-31,Dizimo,20.00,receita,Dízimo,OK,,Nathalia Azevedo
+JAN24,2024-01-31,Combustivel Luziania,100.00,despesa,Combustível,OK,,Rodrigo Barbosa da Silva
+JAN24,2024-01-31,Prebenda Pastor Rodrigo Barbosa,1000.00,despesa,Prebenda Pastoral,OK,,Rodrigo Barbosa da Silva
+FEV24,2024-02-01,Dizimo,180.00,receita,Dízimo,OK,,
+FEV24,2024-02-01,Dizimo,200.00,receita,Dízimo,OK,,Soraia de Oliveira
+FEV24,2024-02-01,dizimo,200.00,receita,Dízimo,OK,,Tiago Serra
+FEV24,2024-02-02,Campanha Catedral,500.00,despesa,SEDE,OK,,Sede
+FEV24,2024-02-02,Adiantamento Relatorio,1500.00,despesa,SEDE,OK,,Sede
+FEV24,2024-02-03,Alimentos,140.58,despesa,Alimentos,OK,,Edvane Correia Santos Machado
+FEV24,2024-02-03,Combustivel,100.00,despesa,Combustível,OK,,Gilbran Ferreira da Silva
+FEV24,2024-02-04,Oferta,66.00,receita,Oferta,OK,,Igreja
+FEV24,2024-02-04,Dizimo,113.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+FEV24,2024-02-04,Dizimo,320.00,receita,Dízimo,OK,,Marinês Conceição da Silva
+FEV24,2024-02-04,Dizimo,100.00,receita,Dízimo,OK,,Adricia Sampaio Alves
+FEV24,2024-02-04,Dizimo,147.00,receita,Dízimo,OK,,Cleia da Silva Custódio
+FEV24,2024-02-04,Mao de obra,120.00,despesa,Mão de obra,OK,,Lucas Rosa Felix Pereira
+FEV24,2024-02-05,Dizimo,30.00,receita,Dízimo,OK,,Mila Gabriela Carvalho dos Santos
+FEV24,2024-02-05,Obra,115.71,despesa,Mão de obra,OK,,
+FEV24,2024-02-05,Alimentos,43.70,despesa,Mão de obra,OK,,Mercado
+FEV24,2024-02-06,Material obra,50.00,despesa,Mão de obra,OK,,Sangao
+FEV24,2024-02-06,Combustivel,100.00,despesa,Combustível,OK,,Rodrigo Barbosa da Silva
+FEV24,2024-02-07,Oferta,6.80,receita,Oferta,OK,,Igreja
+FEV24,2024-02-07,Dizimo,392.00,receita,Dízimo,OK,,Maria da guia De Azevedo Pereira
+FEV24,2024-02-07,Dizimo,40.00,receita,Dízimo,OK,,Sonia Maria Sousa
+FEV24,2024-02-07,Dízimo,17.00,receita,Dízimo,OK,,Davi Evangelista
+FEV24,2024-02-07,Dízimo,145.00,receita,Dízimo,OK,,Clelia Soares Lemos
+FEV24,2024-02-08,Dizimo,142.00,receita,Dízimo,OK,,sonia candida Rodrigues
+FEV24,2024-02-08,dizimo,148.00,receita,Dízimo,OK,,Marinalva Soares Ribeiro
+FEV24,2024-02-09,Dizimo,277.40,receita,Dízimo,OK,,Cleomar Machado Costa
+FEV24,2024-02-10,dizimo,210.00,receita,Dízimo,OK,,Genesio de Sousa Santos
+FEV24,2024-02-11,oferta,114.60,receita,Oferta,OK,,Igreja
+FEV24,2024-02-11,dizimo,150.00,receita,Dízimo,OK,,Maria Aparecida da Silva Soares
+FEV24,2024-02-11,dizimo,200.00,receita,Dízimo,OK,,Gilson Ferreira da Cruz
+FEV24,2024-02-11,dizimo,170.00,receita,Dízimo,OK,,Genoveva Pereira
+FEV24,2024-02-11,dizimo,99.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+FEV24,2024-02-11,Dizimo,250.00,receita,Dízimo,OK,,Elaine Cristina de Jesus Braga
+FEV24,2024-02-11,limpeza,74.82,despesa,Material de Limpeza,OK,,Patrícia Felix Silva
+FEV24,2024-02-12,dizimo,30.00,receita,Dízimo,OK,,
+FEV24,2024-02-12,dizimo,16.00,receita,Dízimo,OK,,Patrícia Felix Silva
+FEV24,2024-02-13,Instrumentos Novos,2500.00,despesa,Equipamentos,OK,,Fama Som
+FEV24,2024-02-14,Oferta,38.00,receita,Oferta,OK,,Igreja
+FEV24,2024-02-14,dizimo,340.00,receita,Dízimo,OK,,
+FEV24,2024-02-14,Dizimo,83.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+FEV24,2024-02-15,Pagamento som,4500.00,despesa,Equipamentos,OK,,Fama Som
+FEV24,2024-02-16,dizimo,109.00,receita,Dízimo,OK,,Paula Cristina
+FEV24,2024-02-17,Dizimo,170.00,receita,Dízimo,OK,,João Severo Mendonça
+FEV24,2024-02-18,oferta,52.00,receita,Oferta,OK,,Igreja
+FEV24,2024-02-18,dízimo,50.00,receita,Dízimo,OK,,Marcos Guerra dos Santos
+FEV24,2024-02-18,dízimo,102.00,receita,Dízimo,OK,,
+FEV24,2024-02-18,Dizimo,200.00,receita,Dízimo,OK,,Maicon Lopes
+FEV24,2024-02-18,Dizimo,85.00,receita,Dízimo,OK,,Nathalia Azevedo
+FEV24,2024-02-18,Dizimo,224.00,receita,Dízimo,OK,,Rebeca Vitória
+FEV24,2024-02-19,Dizimo,15.00,receita,Dízimo,OK,,Mila Gabriela Carvalho dos Santos
+FEV24,2024-02-20,Ferragens Igreja,1214.10,despesa,Material de Construção,OK,,Ferro e Aço 3 Irmaos
+FEV24,2024-02-20,Agua e gas,130.00,despesa,Utilidades,OK,,Lucas Rosa Felix Pereira
+FEV24,2024-02-21,Oferta,13.45,receita,Oferta,OK,,Igreja
+FEV24,2024-02-22,Utilidades,53.34,despesa,Materiais Escritório,OK,,Millene da Silva Mendes
+FEV24,2024-02-22,Copias chaves,20.00,despesa,Utilidades,OK,,Chaveiro
+FEV24,2024-02-23,utilidades,4.99,despesa,Materiais Escritório,OK,,Millene da Silva Mendes
+FEV24,2024-02-24,utilidades,143.30,despesa,Materiais Escritório,OK,,Millene da Silva Mendes
+FEV24,2024-02-24,utilidades,153.55,despesa,Utilidades,OK,,Edvane Correia Santos Machado
+FEV24,2024-02-25,ofertas,103.05,receita,Oferta,OK,,Igreja
+FEV24,2024-02-25,dizimo,50.00,receita,Dízimo,OK,,Luciene Lopes dos Santos
+FEV24,2024-02-25,dízimo,93.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+FEV24,2024-02-25,dízimo,50.00,receita,Dízimo,OK,,Gilson Ferreira da Cruz
+FEV24,2024-02-25,Dizimo,78.00,receita,Dízimo,OK,,Marcos Guerra dos Santos
+FEV24,2024-02-25,Dizimo,117.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+FEV24,2024-02-25,limpeza,110.53,despesa,Material de Limpeza,OK,,Patrícia Felix Silva
+FEV24,2024-02-26,Dizimo,142.00,receita,Dízimo,OK,,Antonio da Conceição Rodrigues Gomes
+FEV24,2024-02-26,Dizimo,1000.00,receita,Dízimo,OK,,Bruna de Souza Andrade
+FEV24,2024-02-26,Dizimo,223.28,receita,Dízimo,OK,,Carlos Eduardo dos Santos Costa
+FEV24,2024-02-27,Dizimo,250.00,receita,Dízimo,OK,,Gilbran Ferreira da Silva
+FEV24,2024-02-28,Oferta,62.00,receita,Oferta,OK,,Igreja
+FEV24,2024-02-28,Dizimo,60.00,receita,Dízimo,OK,,Edvane Correia Santos Machado
+FEV24,2024-02-28,Limpeza,10.00,despesa,Material de Limpeza,OK,,Gilbran Ferreira da Silva
+FEV24,2024-02-29,Dizimo,2726.00,receita,Dízimo,OK,,Ana Carolina Evangelista
+FEV24,2024-02-29,Dizimo,110.00,receita,Dízimo,OK,,Rita do Desterro Pereira de Moura
+FEV24,2024-02-29,Dizimo,130.00,receita,Dízimo,OK,,Jaciara de Oliveira Tapirema da Silva
+FEV24,2024-02-29,Manutenção som,350.00,despesa,Equipamentos,OK,,Renato Bento Pereira de Souza
+FEV24,2024-02-29,Ferragens,1732.83,despesa,Material de Construção,OK,,Ferro e Aço 3 Irmaos
+FEV24,2024-02-29,enuves,59.00,despesa,Serviço em nuvem,OK,,Enuves
+FEV24,2024-02-29,Prebenda,1000.00,despesa,Prebenda Pastoral,OK,,Rodrigo Barbosa da Silva
+MAR24,2024-03-01,Dizimo,190.00,receita,Dízimo,OK,,Soraia de Oliveira
+MAR24,2024-03-01,dízimo,282.40,receita,Dízimo,OK,,Cleia da Silva Custódio
+MAR24,2024-03-01,Lanche Criancas,101.69,despesa,Alimentos,OK,,Edvane Correia Santos Machado
+MAR24,2024-03-02,dizimo,142.00,receita,Dízimo,OK,,Maria Margareth Ribeiro
+MAR24,2024-03-02,dízimo,99.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+MAR24,2024-03-02,Combistivel,100.00,despesa,Combustível,OK,,Gilbran Ferreira da Silva
+MAR24,2024-03-03,ofertas,160.20,receita,Oferta,OK,,Igreja
+MAR24,2024-03-03,dízimo,40.00,receita,Dízimo,OK,,Sonia Maria Sousa
+MAR24,2024-03-03,dízimo,15.00,receita,Dízimo,OK,,
+MAR24,2024-03-03,dízimo,73.00,receita,Dízimo,OK,,Marcos Guerra dos Santos
+MAR24,2024-03-03,dízimo,170.00,receita,Dízimo,OK,,Maria Raimunda da Conceição
+MAR24,2024-03-04,Agua ADEL,40.00,despesa,Alimentos,OK,,Marcia Gás
+MAR24,2024-03-06,oferta,18.20,receita,Oferta,OK,,Igreja
+MAR24,2024-03-06,dízimo,146.00,receita,Dízimo,OK,,Marinalva Soares Ribeiro
+MAR24,2024-03-06,dízimo,280.00,receita,Dízimo,OK,,Thiago da Cruz Xavier
+MAR24,2024-03-07,dízimo,150.00,receita,Dízimo,OK,,sonia candida Rodrigues
+MAR24,2024-03-07,dízimo,278.00,receita,Dízimo,OK,,Cleomar Machado Costa
+MAR24,2024-03-07,dízimo,40.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+MAR24,2024-03-08,dízimo,268.00,receita,Dízimo,OK,,Weslei Silvério de Sousa
+MAR24,2024-03-10,oferta,125.30,receita,Oferta,OK,,Igreja
+MAR24,2024-03-10,dizimo,250.00,receita,Dízimo,OK,,Elaine Cristina de Jesus Braga
+MAR24,2024-03-10,dízimo,126.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+MAR24,2024-03-10,dízimo,100.00,receita,Dízimo,OK,,Adricia Sampaio Alves
+MAR24,2024-03-10,dízimo,150.00,receita,Dízimo,OK,,Maria Aparecida da Silva Soares
+MAR24,2024-03-10,dízimo,220.00,receita,Dízimo,OK,,Genesio de Sousa Santos
+MAR24,2024-03-11,Materiais para concerto da bomba,16.80,despesa,Mão de obra,OK,,Lucas Rosa Felix Pereira
+MAR24,2024-03-12,dízimo,420.00,receita,Dízimo,OK,,Bruna de Souza Andrade
+MAR24,2024-03-12,dízimo,241.00,receita,Dízimo,OK,,Rebeca Vitória
+MAR24,2024-03-13,oferta,4.00,receita,Oferta,OK,,Igreja
+MAR24,2024-03-13,dizimo,336.50,receita,Dízimo,OK,,Lucas Rosa Felix Pereira
+MAR24,2024-03-13,dizimo,310.00,receita,Dízimo,OK,,João Severo Mendonça
+MAR24,2024-03-13,Baquetas,50.00,despesa,Equipamentos,OK,,Renato Bento Pereira de Souza
+MAR24,2024-03-14,Internet (pago com juros),102.15,despesa,Internet,OK,,LINKNET
+MAR24,2024-03-15,Som Adel,4768.00,despesa,Equipamentos,OK,,Fama Som
+MAR24,2024-03-15,Ferragens,1656.67,despesa,Mão de obra,OK,,Ferro e Aço 3 Irmaos
+MAR24,2024-03-15,Ferragens,1183.33,despesa,Mão de obra,OK,,Ferro e Aço 3 Irmaos
+MAR24,2024-03-17,oferta,117.60,receita,Oferta,OK,,Igreja
+MAR24,2024-03-17,dizimo,977.25,receita,Dízimo,OK,,Maria Janieli Mesquita Nascimento
+MAR24,2024-03-17,dízimo,96.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+MAR24,2024-03-17,dizimo,155.00,receita,Dízimo,OK,,Genoveva Pereira
+MAR24,2024-03-17,Agua ADEL,30.00,despesa,Alimentos,OK,,Marcia Gás
+MAR24,2024-03-20,oferta,20.65,receita,Oferta,OK,,Igreja
+MAR24,2024-03-22,refeição das crianças,14.51,despesa,Alimentos,OK,,Open frios
+MAR24,2024-03-22,alimentos,20.24,despesa,Alimentos,OK,,Open frios
+MAR24,2024-03-22,Descartáveis,80.05,despesa,Utilidades,OK,,Open frios
+MAR24,2024-03-23,dízimo,175.00,receita,Dízimo,OK,,Patrícia Felix Silva
+MAR24,2024-03-24,oferta,36.00,receita,Oferta,OK,,Igreja
+MAR24,2024-03-24,oferta,20.00,receita,Oferta,OK,,Igreja
+MAR24,2024-03-24,dízimo,300.00,receita,Dízimo,OK,,
+MAR24,2024-03-24,Dízimo,96.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+MAR24,2024-03-25,dízimo,142.00,receita,Dízimo,OK,,Antonio da Conceição Rodrigues Gomes
+MAR24,2024-03-27,oferta,5.20,receita,Oferta,OK,,Igreja
+MAR24,2024-03-28,dízimo,72.00,receita,Dízimo,OK,,Rita do Desterro Pereira de Moura
+MAR24,2024-03-28,lanche crianças,15.29,despesa,Alimentos,OK,,Open frios
+MAR24,2024-03-29,dízimo,28.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+MAR24,2024-03-31,dízimo,70.00,receita,Dízimo,OK,,Marcos Guerra dos Santos
+MAR24,2024-03-31,oferta,84.10,receita,Oferta,OK,,Igreja
+MAR24,2024-03-31,dízimo,50.00,receita,Dízimo,OK,,Zenilde Oliveira
+MAR24,2024-03-31,dízimo,90.00,receita,Dízimo,OK,,Wender Cezario Rodrigues
+MAR24,2024-03-31,dizimo,130.00,receita,Dízimo,OK,,Jaciara de Oliveira Tapirema da Silva
+MAR24,2024-03-31,dízimo,395.00,receita,Dízimo,OK,,Gilbran Ferreira da Silva
+MAR24,2024-03-31,dizimo,94.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+ABR24,2024-04-01,água,30.00,despesa,Alimentos,OK,,Marcia Gás
+ABR24,2024-04-01,aplicativo enuves,59.00,despesa,Serviço em nuvem,OK,,Enuves
+ABR24,2024-04-02,Dízimo,170.00,receita,Dízimo,OK,,Maria Raimunda da Conceição
+ABR24,2024-04-03,oferta,7.05,receita,Oferta,OK,,Igreja
+ABR24,2024-04-03,dízimo,110.00,receita,Dízimo,OK,,Ana Carolina Evangelista
+ABR24,2024-04-04,Dízimo,50.00,receita,Dízimo,OK,,Sonia Maria Sousa
+ABR24,2024-04-04,dízimo,140.00,receita,Dízimo,OK,,Adriana Araújo Vieira
+ABR24,2024-04-04,dízimo,700.00,receita,Dízimo,OK,,Maria Bárbara Gomes da Silva
+ABR24,2024-04-05,dízimo,166.00,receita,Dízimo,OK,,Soraia de Oliveira
+ABR24,2024-04-05,dízimo,162.90,receita,Dízimo,OK,,Marinalva Soares Ribeiro
+ABR24,2024-04-06,oferta,188.05,receita,Oferta,OK,,Igreja
+ABR24,2024-04-06,Dizimo,151.00,receita,Dízimo,OK,,Maria Aparecida da Silva Soares
+ABR24,2024-04-06,Dízimo,142.00,receita,Dízimo,OK,,Maria Margareth Ribeiro
+ABR24,2024-04-06,dizimo,250.00,receita,Dízimo,OK,,Elaine Cristina de Jesus Braga
+ABR24,2024-04-06,dízimo,22.00,receita,Dízimo,OK,,Ana Carolina Evangelista
+ABR24,2024-04-06,dízimo,130.00,receita,Dízimo,OK,,Ana Carolina Evangelista
+ABR24,2024-04-06,janta das crianças,115.96,despesa,Alimentos,OK,,Open frios
+ABR24,2024-04-06,janta das crianças,82.26,despesa,Alimentos,OK,,supermercado
+ABR24,2024-04-06,pregador da noite,300.00,despesa,Pregador da noite (convidado),OK,,
+ABR24,2024-04-07,oferta,221.05,receita,Oferta,OK,,Igreja
+ABR24,2024-04-07,oferta,3.00,receita,Oferta,OK,,Igreja
+ABR24,2024-04-07,dízimo,310.00,receita,Dízimo,OK,,João Severo Mendonça
+ABR24,2024-04-07,dízimo,282.40,receita,Dízimo,OK,,Cleia da Silva Custódio
+ABR24,2024-04-07,dízimo,145.40,receita,Dízimo,OK,,Lucas Rosa Felix Pereira
+ABR24,2024-04-07,dízimo,129.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+ABR24,2024-04-07,dízimo,300.00,receita,Dízimo,OK,,Maria da guia De Azevedo Pereira
+ABR24,2024-04-07,presente (pastor presidente),300.00,despesa,Utilidades,OK,,Rodrigo Barbosa da Silva
+ABR24,2024-04-07,gasolina,160.00,despesa,Combustível,OK,,Rodrigo Barbosa da Silva
+ABR24,2024-04-08,dizimo,100.00,receita,Dízimo,OK,,Carlos Eduardo dos Santos Costa
+ABR24,2024-04-08,dizimo,212.00,receita,Dízimo,OK,,Gabriel Rodrigues de souza
+ABR24,2024-04-08,dízimo,100.00,receita,Dízimo,OK,,Wender Cezario Rodrigues
+ABR24,2024-04-08,dízimo,278.50,receita,Dízimo,OK,,Cleomar Machado Costa
+ABR24,2024-04-10,oferta,15.00,receita,Oferta,OK,,Igreja
+ABR24,2024-04-10,oferta,50.00,receita,Oferta,OK,,Igreja
+ABR24,2024-04-10,dízimo,90.00,receita,Dízimo,OK,,Ana Carolina Evangelista
+ABR24,2024-04-10,Fama Áudio e vídeo,4768.00,despesa,Equipamentos,OK,,Fama Som
+ABR24,2024-04-11,dízimo,420.00,receita,Dízimo,OK,,Bruna de Souza Andrade
+ABR24,2024-04-11,Dízimo,322.00,receita,Dízimo,OK,,Thiago da Cruz Xavier
+ABR24,2024-04-13,dízimo,50.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+ABR24,2024-04-14,oferta,85.80,receita,Oferta,OK,,Igreja
+ABR24,2024-04-14,oferta,4.70,receita,Oferta,OK,,Igreja
+ABR24,2024-04-14,dízimo,111.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+ABR24,2024-04-14,dízimo,150.00,receita,Dízimo,OK,,Ana Carolina Evangelista
+ABR24,2024-04-14,copos descartáveis,17.07,despesa,Alimentos,OK,,Mercado
+ABR24,2024-04-15,dízimo,100.00,receita,Dízimo,OK,,Millene da Silva Mendes
+ABR24,2024-04-15,dízimo,104.00,receita,Dízimo,OK,,Paula Cristina
+ABR24,2024-04-16,Internet,102.28,despesa,Internet,OK,,
+ABR24,2024-04-17,oferta,18.50,receita,Oferta,OK,,Igreja
+ABR24,2024-04-19,água,40.00,despesa,Alimentos,OK,,Marcia Gás
+ABR24,2024-04-20,dízimo,150.00,receita,Dízimo,OK,,Adricia Sampaio Alves
+ABR24,2024-04-21,oferta,76.80,receita,Oferta,OK,,Igreja
+ABR24,2024-04-21,dízimo,110.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+ABR24,2024-04-21,dízimo,70.00,receita,Dízimo,OK,,Ana Carolina Evangelista
+ABR24,2024-04-22,dízimo,107.20,receita,Dízimo,OK,,Patrícia Felix Silva
+ABR24,2024-04-22,bombons e sacos de lanbracinha,47.48,despesa,Utilidades,OK,,comercial de embalagem
+ABR24,2024-04-23,Ferro e aço,1221.22,despesa,Material de Construção,OK,,Ferro e Aço 3 Irmaos
+ABR24,2024-04-24,oferta,30.50,receita,Oferta,OK,,Igreja
+ABR24,2024-04-24,dízimo,180.00,receita,Dízimo,OK,,Genesio de Sousa Santos
+ABR24,2024-04-28,oferta,116.85,receita,Oferta,OK,,Igreja
+ABR24,2024-04-28,Dízimo,300.00,receita,Dízimo,OK,,Marinês Conceição da Silva
+ABR24,2024-04-28,dízimo,102.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+ABR24,2024-04-28,dízimo,50.00,receita,Dízimo,OK,,Ana Carolina Evangelista
+ABR24,2024-04-28,dízimo,100.00,receita,Dízimo,OK,,Genoveva Pereira
+ABR24,2024-04-28,dízimo,241.00,receita,Dízimo,OK,,Rebeca Vitória
+ABR24,2024-04-28,Dízimo,180.00,receita,Dízimo,OK,,Maicon Lopes
+ABR24,2024-04-28,dízimo,85.20,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+ABR24,2024-04-28,dízimo,24.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+ABR24,2024-04-29,água,30.00,despesa,Alimentos,OK,,Marcia Gás
+ABR24,2024-04-30,dízimo,300.00,receita,Dízimo,OK,,Gilbran Ferreira da Silva
+ABR24,2024-04-30,repasse da sede,2875.21,despesa,SEDE,OK,,Sede
 MAI24,2024-05-01,oferta,41.60,receita,Oferta,OK,,Igreja
 MAI24,2024-05-01,dízimo,275.00,receita,Dízimo,OK,,Davi Evangelista
 MAI24,2024-05-03,dizimo,20.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
-MAI24,2024-05-04,3 caixa calices,120.00,despesa,SEDE,OK,,
+MAI24,2024-05-04,3 caixa calices,120.00,despesa,SEDE,OK,,Sede
 MAI24,2024-05-05,oferta,112.20,receita,Oferta,OK,,Igreja
 MAI24,2024-05-05,dízimo,250.00,receita,Dízimo,OK,,Elaine Cristina de Jesus Braga
 MAI24,2024-05-05,dízimo,410.00,receita,Dízimo,OK,,João severo Mendonça
@@ -11,7 +296,7 @@ MAI24,2024-05-05,dízimo,302.40,receita,Dízimo,OK,,Cleia da Silva Custódio
 MAI24,2024-05-05,dízimo,113.00,receita,Dízimo,OK,,José Marcos Félix Pereira
 MAI24,2024-05-05,dízimo,140.00,receita,Dízimo,OK,,Jaciara de Oliveira Tapirema da Silva
 MAI24,2024-05-05,dízimo,410.00,receita,Dízimo,OK,,Maria da guia De Azevedo Pereira
-MAI24,2024-05-05,sede,226.70,despesa,SEDE,OK,,
+MAI24,2024-05-05,sede,226.70,despesa,SEDE,OK,,Sede
 MAI24,2024-05-06,dízimo,24.50,receita,Dízimo,OK,,Ana Carolina Evangelista
 MAI24,2024-05-06,dizimo,20.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
 MAI24,2024-05-08,oferta,17.00,receita,Oferta,OK,,Igreja
@@ -19,7 +304,7 @@ MAI24,2024-05-08,dízimo,130.00,receita,Dízimo,OK,,Wender Cezario Rodrigues
 MAI24,2024-05-08,dízimo,278.00,receita,Dízimo,OK,,Cleomar Machado Costa
 MAI24,2024-05-09,dizimo,30.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
 MAI24,2024-05-09,dízimo,48.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
-MAI24,2024-05-09,material de construção,1765.92,despesa,Material de Construção,OK,,
+MAI24,2024-05-09,material de construção,1765.92,despesa,Material de Construção,OK,,Ferro e Aço 3 Irmaos
 MAI24,2024-05-12,oferta,106.75,receita,Oferta,OK,,Igreja
 MAI24,2024-05-12,dízimo,92.00,receita,Dízimo,OK,,Ana Carolina Evangelista
 MAI24,2024-05-12,dízimo,140.00,receita,Dízimo,OK,,Adriana Araújo Vieira
@@ -28,22 +313,22 @@ MAI24,2024-05-12,dízimo,116.00,receita,Dízimo,OK,,José Marcos Félix Pereira
 MAI24,2024-05-12,dízimo,200.00,receita,Dízimo,OK,,Maria Aparecida da Silva Soares
 MAI24,2024-05-13,dízimo,300.00,receita,Dízimo,OK,,Thiago da Cruz Xavier
 MAI24,2024-05-13,dízimo,139.00,receita,Dízimo,OK,,Cleomar Machado Costa
-MAI24,2024-05-13,água,30.00,despesa,Alimentos,OK,,
-MAI24,2024-05-13,aplicativo,59.00,despesa,Utilidades,OK,,
+MAI24,2024-05-13,água,30.00,despesa,Alimentos,OK,,Marcia Gás
+MAI24,2024-05-13,aplicativo,59.00,despesa,Utilidades,OK,,Enuves
 MAI24,2024-05-15,oferta,59.00,receita,Oferta,OK,,Igreja
 MAI24,2024-05-15,dízimo,170.00,receita,Dízimo,OK,,Genoveva Pereira
 MAI24,2024-05-15,dizimo,21.00,receita,Dízimo,OK,,Sonia Maria Sousa
 MAI24,2024-05-15,dízimo,200.00,receita,Dízimo,OK,,Soraia de Oliveira
 MAI24,2024-05-15,dízimo,150.00,receita,Dízimo,OK,,Genesio de Sousa Santos
-MAI24,2024-05-16,alimentos e limpeza,155.89,despesa,Alimentos,OK,,
+MAI24,2024-05-16,alimentos e limpeza,155.89,despesa,Alimentos,OK,,Open frios
 MAI24,2024-05-18,dizimo,35.00,receita,Dízimo,OK,,Edvane Correia Santos Machado
-MAI24,2024-05-19,oferta,285.55,receita,Oferta,OK,,Pessoa excluída ID: igrejas
+MAI24,2024-05-19,oferta,285.55,receita,Oferta,OK,,
 MAI24,2024-05-19,dizimo,70.00,receita,Dízimo,OK,,Zenilde Oliveira
 MAI24,2024-05-19,dizimo,300.00,receita,Dízimo,OK,,Marinês Conceição da Silva
 MAI24,2024-05-19,dízimo,108.00,receita,Dízimo,OK,,José Marcos Félix Pereira
 MAI24,2024-05-20,dízimo,35.00,receita,Dízimo,OK,,Mila Gabriela Carvalho dos Santos
 MAI24,2024-05-20,Internet,102.55,despesa,Internet,OK,,
-MAI24,2024-05-20,fama áudio vídeos,2500.00,despesa,Equipamentos,OK,,
+MAI24,2024-05-20,fama áudio vídeos,2500.00,despesa,Equipamentos,OK,,Fama Som
 MAI24,2024-05-22,oferta,60.00,receita,Oferta,OK,,Igreja
 MAI24,2024-05-23,dízimo,2302.00,receita,Dízimo,OK,,Ana Carolina Evangelista
 MAI24,2024-05-26,oferta,259.85,receita,Oferta,OK,,Igreja
@@ -51,12 +336,12 @@ MAI24,2024-05-26,dízimo,15.00,receita,Dízimo,OK,,Sonia Maria Sousa
 MAI24,2024-05-26,dízimo,108.00,receita,Dízimo,OK,,José Marcos Félix Pereira
 MAI24,2024-05-26,dízimo,120.00,receita,Dízimo,OK,,Luciene Lopes dos Santos
 MAI24,2024-05-27,dízimo,115.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
-MAI24,2024-05-27,reunião,2385.72,despesa,Alimentos,OK,,
+MAI24,2024-05-27,reunião,2385.72,despesa,Alimentos,OK,,supermercado
 MAI24,2024-05-29,oferta,24.05,receita,Oferta,OK,,Igreja
 MAI24,2024-05-29,dizimo,140.00,receita,Dízimo,OK,,Jaciara de Oliveira Tapirema da Silva
 MAI24,2024-05-29,dízimo,345.00,receita,Dízimo,OK,,Gilbran Ferreira da Silva
 MAI24,2024-05-30,dizimo,10.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
-MAI24,2024-05-30,sede,1545.12,despesa,SEDE,OK,,
+MAI24,2024-05-30,sede,1545.12,despesa,SEDE,OK,,Sede
 JUN24,2024-06-01,oferta,60.50,receita,Oferta,OK,,Igreja
 JUN24,2024-06-02,oferta,277.65,receita,Oferta,OK,,Igreja
 JUN24,2024-06-02,dízimo,10.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
@@ -72,7 +357,7 @@ JUN24,2024-06-05,dizimo,280.00,receita,Dízimo,OK,,Thiago da Cruz Xavier
 JUN24,2024-06-06,dizimo,150.00,receita,Dízimo,OK,,Maria Raimunda da Conceição
 JUN24,2024-06-06,dízimo,294.76,receita,Dízimo,OK,,Carlos Eduardo dos Santos Costa
 JUN24,2024-06-06,dízimo,30.00,receita,Dízimo,OK,,Sonia Maria Sousa
-JUN24,2024-06-06,água,7.00,despesa,Alimentos,OK,,
+JUN24,2024-06-06,água,7.00,despesa,Alimentos,OK,,Marcia Gás
 JUN24,2024-06-07,dízimo,400.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
 JUN24,2024-06-07,dízimo,238.50,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
 JUN24,2024-06-09,oferta,56.50,receita,Oferta,OK,,Igreja
@@ -82,8 +367,8 @@ JUN24,2024-06-09,dízimo,121.00,receita,Dízimo,OK,,José Marcos Félix Pereira
 JUN24,2024-06-09,dízimo,120.00,receita,Dízimo,OK,,Adricia Sampaio Alves
 JUN24,2024-06-09,dízimo,130.00,receita,Dízimo,OK,,Maria luisa Barbosa Dos Santos
 JUN24,2024-06-09,dízimo,220.00,receita,Dízimo,OK,,Genesio de Sousa Santos
-JUN24,2024-06-09,lanche das crianças,160.11,despesa,Alimentos,OK,,
-JUN24,2024-06-09,copo descartáveis,11.80,despesa,Alimentos,OK,,
+JUN24,2024-06-09,lanche das crianças,160.11,despesa,Alimentos,OK,,supermercado
+JUN24,2024-06-09,copo descartáveis,11.80,despesa,Alimentos,OK,,supermercado
 JUN24,2024-06-10,dízimo,30.00,receita,Dízimo,OK,,Sonia Maria Sousa
 JUN24,2024-06-10,dízimo,280.00,receita,Dízimo,OK,,Cleomar Machado Costa
 JUN24,2024-06-11,dizimo,60.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
@@ -94,8 +379,482 @@ JUN24,2024-06-12,oferta,6.00,receita,Oferta,OK,,Igreja
 JUN24,2024-06-12,dizimo,15.00,receita,Dízimo,OK,,maria de nazaré
 JUN24,2024-06-12,,245.00,receita,Dízimo,OK,,Davi Evangelista
 JUN24,2024-06-12,dizimo,138.00,receita,Dízimo,OK,,Cleomar Machado Costa
-JUN24,2024-06-12,,175.32,despesa,Material de Limpeza,OK,,
+JUN24,2024-06-12,,175.32,despesa,Material de Limpeza,OK,,Mercado
 JUN24,2024-06-12,,106.95,despesa,Material de Construção,OK,,
-JUN24,2024-06-12,,50.00,despesa,Combustível,OK,,
+JUN24,2024-06-12,,50.00,despesa,Combustível,OK,,gasolina
 JUN24,2024-06-13,dízimo,280.00,receita,Dízimo,OK,,Adriana Araújo Vieira
 JUN24,2024-06-13,dízimo,102.00,receita,Dízimo,OK,,Paula Cristina
+JUN24,2024-06-13,dízimo,4.00,receita,Dízimo,OK,,maria de nazaré
+JUN24,2024-06-13,dizimo,210.00,receita,Dízimo,OK,,Clelia Soares Lemos
+JUN24,2024-06-13,,85.00,despesa,Material de Limpeza,OK,,
+JUN24,2024-06-13,,5187.58,despesa,Equipamentos,OK,,Fama Som
+JUN24,2024-06-13,utilidades,32.82,despesa,Utilidades,OK,,
+JUN24,2024-06-15,dizimo,14.00,receita,Dízimo,OK,,maria de nazaré
+JUN24,2024-06-16,oferta,77.35,receita,Oferta,OK,,Igreja
+JUN24,2024-06-16,oferta,10.00,receita,Oferta,OK,,Igreja
+JUN24,2024-06-16,dizimo,230.00,receita,Dízimo,OK,,LUCIANO BONFIM SANTOS
+JUN24,2024-06-16,dizimo,121.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JUN24,2024-06-16,dizimo,25.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+JUN24,2024-06-16,dizimo,20.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+JUN24,2024-06-16,dízimo,540.00,receita,Dízimo,OK,,Maria da guia De Azevedo Pereira
+JUN24,2024-06-16,dízimo,250.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
+JUN24,2024-06-16,dizimo,250.00,receita,Dízimo,OK,,Elaine Cristina de Jesus Braga
+JUN24,2024-06-20,,13.85,receita,Oferta,OK,,
+JUN24,2024-06-20,,100.00,receita,Dízimo,OK,,João Severo Mendonça
+JUN24,2024-06-23,oferta,63.10,receita,Oferta,OK,,Igreja
+JUN24,2024-06-23,dizimo,20.00,receita,Dízimo,OK,,Gilson Ferreira da Cruz
+JUN24,2024-06-23,dizimo,98.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JUN24,2024-06-23,dizimo,100.00,receita,Dízimo,OK,,Zenilde Oliveira
+JUN24,2024-06-23,dízimo,170.00,receita,Dízimo,OK,,Genoveva Pereira
+JUN24,2024-06-23,dizimo,120.00,receita,Dízimo,OK,,wender c Rodrigues
+JUN24,2024-06-23,água,13.98,despesa,Alimentos,OK,,Mercado
+JUN24,2024-06-24,dizimo,50.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+JUN24,2024-06-24,dizimo,130.00,receita,Dízimo,OK,,Roseane
+JUN24,2024-06-24,,59.90,despesa,App da igreja,OK,,app
+JUN24,2024-06-25,,102.88,despesa,Internet,OK,,internet
+JUN24,2024-06-26,oferta,5.50,receita,Oferta,OK,,Igreja
+JUN24,2024-06-26,dizimo,142.00,receita,Dízimo,OK,,Antonio da Conceição Rodrigues Gomes
+JUN24,2024-06-26,dizimo,12.00,receita,Dízimo,OK,,maria de nazaré
+JUN24,2024-06-28,,80.00,receita,Dízimo,OK,,Rita do Desterro Pereira de Moura
+JUN24,2024-06-29,dizimo,70.00,receita,Dízimo,OK,,Edvane Correia Santos Machado
+JUN24,2024-06-30,oferta,148.90,receita,Oferta,OK,,Igreja
+JUN24,2024-06-30,dízimo,1000.00,receita,Dízimo,OK,,Maria Bárbara Gomes da Silva
+JUN24,2024-06-30,dizimo,30.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+JUN24,2024-06-30,dizimo,156.00,receita,Dízimo,OK,,Genoveva Pereira
+JUN24,2024-06-30,dizimo,250.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+JUN24,2024-06-30,dizimo,42.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JUN24,2024-06-30,dizimo,200.00,receita,Dízimo,OK,,Soraia de Oliveira
+JUN24,2024-06-30,sede,3646.47,despesa,SEDE,OK,,Sede
+JUN24,2024-06-30,,100.00,despesa,Combustível,OK,,
+JUL24,2024-07-03,oferta,8.00,receita,Oferta,OK,,Igreja
+JUL24,2024-07-06,oferta,68.25,receita,Oferta,OK,,Igreja
+JUL24,2024-07-06,,1522.00,receita,Dízimo,OK,,Alayr Evangelista Junior costa
+JUL24,2024-07-06,dizimo,70.00,receita,Dízimo,OK,,Edvane Correia Santos Machado
+JUL24,2024-07-06,dízimo,150.00,receita,Dízimo,OK,,Cleia da Silva Custódio
+JUL24,2024-07-06,dizimo,270.00,receita,Dízimo,OK,,Thiago da Cruz Xavier
+JUL24,2024-07-06,dízimo,170.00,receita,Dízimo,OK,,Maria Raimunda da Conceição
+JUL24,2024-07-06,dizimo,166.00,receita,Dízimo,OK,,Marinalva Soares Ribeiro
+JUL24,2024-07-06,dízimo,278.00,receita,Dízimo,OK,,Cleomar Machado Costa
+JUL24,2024-07-06,dizimo,180.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
+JUL24,2024-07-06,dízimo,16.00,receita,Dízimo,OK,,maria de nazaré
+JUL24,2024-07-06,dízimo,554.00,receita,Dízimo,OK,,Maria da guia De Azevedo Pereira
+JUL24,2024-07-06,dízimo,50.00,receita,Dízimo,OK,,
+JUL24,2024-07-06,dizimo,99.64,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+JUL24,2024-07-06,dízimo,145.00,receita,Dízimo,OK,,Clelia Soares Lemos
+JUL24,2024-07-06,dizimo,346.00,receita,Dízimo,OK,,Carlos Eduardo dos Santos Costa
+JUL24,2024-07-06,dizimo,352.00,receita,Dízimo,OK,,Lucas Rosa Felix Pereira
+JUL24,2024-07-06,dizimo,32.00,receita,Dízimo,OK,,
+JUL24,2024-07-06,,1761.03,despesa,Equipamentos,OK,,Fama Som
+JUL24,2024-07-06,,83.87,despesa,Material de Construção,OK,,
+JUL24,2024-07-06,,50.00,despesa,Combustível,OK,,
+JUL24,2024-07-07,oferta,67.25,receita,Oferta,OK,,Igreja
+JUL24,2024-07-07,dizimo,261.00,receita,Dízimo,OK,,Cleia da Silva Custódio
+JUL24,2024-07-07,dizimo,230.00,receita,Dízimo,OK,,Adricia Sampaio Alves
+JUL24,2024-07-07,dizimo,200.00,receita,Dízimo,OK,,LUCIANO BONFIM SANTOS
+JUL24,2024-07-07,dizimo,250.00,receita,Dízimo,OK,,Elaine Cristina de Jesus Braga
+JUL24,2024-07-07,dizimo,142.00,receita,Dízimo,OK,,Maria Margareth Ribeiro
+JUL24,2024-07-07,dizimo,200.00,receita,Dízimo,OK,,Felipe alves dos Santos
+JUL24,2024-07-07,dizimo,39.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JUL24,2024-07-07,dízimo,300.00,receita,Dízimo,OK,,Marinês Conceição da Silva
+JUL24,2024-07-07,janta das crianças,170.00,despesa,Alimentos,OK,,supermercado
+JUL24,2024-07-08,dízimo,241.00,receita,Dízimo,OK,,Rebeca Vitória
+JUL24,2024-07-08,,2000.00,despesa,SEDE,OK,,Sede
+JUL24,2024-07-08,,340.00,despesa,Utilidades,OK,,
+JUL24,2024-07-10,oferta,0.60,receita,Oferta,OK,,Igreja
+JUL24,2024-07-10,dizimo,160.00,receita,Dízimo,OK,,Maria Aparecida da Silva Soares
+JUL24,2024-07-11,dízimo,130.00,receita,Dízimo,OK,,Maria luisa Barbosa Dos Santos
+JUL24,2024-07-13,dízimo,252.00,receita,Dízimo,OK,,Adriana Araújo Vieira
+JUL24,2024-07-14,oferta,66.75,receita,Oferta,OK,,Igreja
+JUL24,2024-07-14,dizimo,93.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JUL24,2024-07-14,dizimo,300.00,receita,Dízimo,OK,,João Severo Mendonça
+JUL24,2024-07-18,dízimo,170.00,receita,Dízimo,OK,,Genoveva Pereira
+JUL24,2024-07-21,oferta,112.00,receita,Oferta,OK,,Igreja
+JUL24,2024-07-21,dízimo,75.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JUL24,2024-07-21,dízimo,30.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+JUL24,2024-07-23,,410.00,despesa,Material de Construção,OK,,
+JUL24,2024-07-23,,100.00,despesa,Mão de obra,OK,,
+JUL24,2024-07-23,,100.00,despesa,Combustível,OK,,
+JUL24,2024-07-28,oferta,85.20,receita,Oferta,OK,,Igreja
+JUL24,2024-07-28,dízimo,20.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+JUL24,2024-07-28,dízimo,142.00,receita,Dízimo,OK,,Antonio da Conceição Rodrigues Gomes
+JUL24,2024-07-28,dízimo,52.00,receita,Dízimo,OK,,Gilson Ferreira da Cruz
+JUL24,2024-07-28,dízimo,200.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
+JUL24,2024-07-28,dízimo,5.00,receita,Dízimo,OK,,maria de nazaré
+JUL24,2024-07-28,dizimo,90.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+JUL24,2024-07-28,dizimo,330.56,receita,Dízimo,OK,,Liliane Virginia Mendes
+JUL24,2024-07-30,dizimo,450.00,receita,Dízimo,OK,,Gilbran Ferreira da Silva
+JUL24,2024-07-31,dizimo,130.00,receita,Dízimo,OK,,Jaciara de Oliveira Tapirema da Silva
+JUL24,2024-07-31,,2790.37,despesa,Prebenda Pastoral,OK,,
+AGO24,2024-08-01,dízimo,35.00,receita,Dízimo,OK,,Edvane Correia Santos Machado
+AGO24,2024-08-03,oferta,25.00,receita,Oferta,OK,,Igreja
+AGO24,2024-08-03,dizimo,100.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+AGO24,2024-08-03,dizimo,400.00,receita,Dízimo,OK,,Marinês Conceição da Silva
+AGO24,2024-08-03,dizimo,262.00,receita,Dízimo,OK,,Cleia da Silva Custódio
+AGO24,2024-08-03,dizimo,227.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+AGO24,2024-08-03,dízimo,142.00,receita,Dízimo,OK,,Maria Margareth Ribeiro
+AGO24,2024-08-03,dizimo,200.00,receita,Dízimo,OK,,João Severo Mendonça
+AGO24,2024-08-04,oferta,61.45,receita,Oferta,OK,,Igreja
+AGO24,2024-08-04,dizimo,112.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+AGO24,2024-08-05,,720.00,receita,Dízimo,OK,,Bruna De Souza Andrade
+AGO24,2024-08-05,,42.00,receita,Oferta,OK,,Marília Martins de Oliveira Souza
+AGO24,2024-08-05,,70.00,receita,Dízimo,OK,,Rita do Desterro Pereira de Moura
+AGO24,2024-08-05,,52.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+AGO24,2024-08-05,,4.00,receita,Dízimo,OK,,maria de nazaré
+AGO24,2024-08-05,,241.00,receita,Dízimo,OK,,Rebeca Vitória
+AGO24,2024-08-05,,4.00,receita,Dízimo,OK,,maria de nazaré
+AGO24,2024-08-05,,150.00,receita,Dízimo,OK,,Paula Cristina
+AGO24,2024-08-05,,290.00,receita,Dízimo,OK,,Alayr Evangelista Junior costa
+AGO24,2024-08-05,,35.00,receita,Dízimo,OK,,Edvane Correia Santos Machado
+AGO24,2024-08-05,Santa Ceia,180.00,despesa,Santa Ceia,OK,,
+AGO24,2024-08-05,,103.61,despesa,Internet,OK,,
+AGO24,2024-08-05,,1744.51,despesa,Equipamentos,OK,,Fama Som
+AGO24,2024-08-05,,2000.00,despesa,Equipamentos,OK,,Fama Som
+AGO24,2024-08-05,,100.00,despesa,Combustível,OK,,
+AGO24,2024-08-05,,75.00,despesa,App da igreja,OK,,
+AGO24,2024-08-06,dizimo,20.00,receita,Dízimo,OK,,Mila Gabriela Carvalho dos Santos
+AGO24,2024-08-06,dízimo,425.00,receita,Dízimo,OK,,Maria da guia Pereira
+AGO24,2024-08-07,dizimo,278.00,receita,Dízimo,OK,,Cleomar Machado Costa
+AGO24,2024-08-07,dízimo,376.00,receita,Dízimo,OK,,Carlos Eduardo dos Santos Costa
+AGO24,2024-08-07,,37.99,despesa,Material de Limpeza,OK,,
+AGO24,2024-08-07,,150.00,despesa,Combustível,OK,,
+AGO24,2024-08-08,dízimo,130.00,receita,Dízimo,OK,,Clelia Soares Lemos
+AGO24,2024-08-09,dízimo,546.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
+AGO24,2024-08-11,oferta,94.50,receita,Oferta,OK,,Igreja
+AGO24,2024-08-11,dizimo,150.00,receita,Dízimo,OK,,Adricia Sampaio Alves
+AGO24,2024-08-11,dizimo,97.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+AGO24,2024-08-11,dizimo,350.00,receita,Dízimo,OK,,Gilson Ferreira da Cruz
+AGO24,2024-08-11,dizimo,150.00,receita,Dízimo,OK,,Maria Aparecida da Silva Soares
+AGO24,2024-08-11,dízimo,170.00,receita,Dízimo,OK,,LUCIANO BONFIM SANTOS
+AGO24,2024-08-11,dizimo,250.00,receita,Dízimo,OK,,Elaine Cristina de Jesus Braga
+AGO24,2024-08-12,dizimo,330.00,receita,Dízimo,OK,,Thiago da Cruz Xavier
+AGO24,2024-08-14,oferta,3.00,receita,Oferta,OK,,
+AGO24,2024-08-14,dízimo,140.00,receita,Dízimo,OK,,Adriana Araújo Vieira
+AGO24,2024-08-14,,380.72,despesa,Equipamentos,OK,,Fama Som
+AGO24,2024-08-14,,60.00,despesa,Utilidades,OK,,
+AGO24,2024-08-14,,50.00,despesa,Combustível,OK,,
+AGO24,2024-08-15,,340.00,despesa,Utilidades,OK,,
+AGO24,2024-08-18,oferta,84.80,receita,Oferta,OK,,
+AGO24,2024-08-18,,35.00,receita,Dízimo,OK,,Edvane Correia Santos Machado
+AGO24,2024-08-18,,290.00,receita,Dízimo,OK,,Alayr Evangelista Junior costa
+AGO24,2024-08-18,dizimo,112.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+AGO24,2024-08-21,oferta,11.00,receita,Oferta,OK,,Igreja
+AGO24,2024-08-21,dízimo,5.00,receita,Dízimo,OK,,Gilson Ferreira da Cruz
+AGO24,2024-08-22,dízimo,260.00,receita,Dízimo,OK,,Lucas Rosa Felix Pereira
+AGO24,2024-08-23,dízimo,70.00,receita,Dízimo,OK,,Millene da Silva Mendes
+AGO24,2024-08-25,oferta,66.45,receita,Oferta,OK,,Igreja
+AGO24,2024-08-25,dízimo,200.00,receita,Dízimo,OK,,Felipe alves dos Santos
+AGO24,2024-08-25,dizimo,122.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+AGO24,2024-08-25,dízimo,50.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
+AGO24,2024-08-26,,102.95,despesa,Internet,OK,,
+AGO24,2024-08-28,oferta,56.00,receita,Oferta,OK,,Igreja
+AGO24,2024-08-28,dízimo,175.00,receita,Dízimo,OK,,Genoveva Pereira
+AGO24,2024-08-28,água,20.00,despesa,Alimentos,OK,,Marcia Gás
+AGO24,2024-08-30,,70.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+AGO24,2024-08-30,,80.00,receita,Dízimo,OK,,Rita do Desterro Pereira de Moura
+AGO24,2024-08-30,,155.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+AGO24,2024-08-30,dízimo,405.00,receita,Dízimo,OK,,Gilbran Ferreira da Silva
+AGO24,2024-08-31,oferta,59.31,receita,Oferta,OK,,Igreja
+AGO24,2024-08-31,dízimo,140.00,receita,Dízimo,OK,,Jaciara de Oliveira Tapirema da Silva
+AGO24,2024-08-31,dízimo,180.00,receita,Dízimo,OK,,Soraia de Oliveira
+AGO24,2024-08-31,dízimo,283.75,receita,Dízimo,OK,,Liliane Virginia Mendes
+AGO24,2024-08-31,,2781.66,despesa,Prebenda Pastoral,OK,,
+SET24,2024-09-01,oferta,262.00,receita,Oferta,OK,,Igreja
+SET24,2024-09-01,dízimo,115.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+SET24,2024-09-01,dízimo,320.00,receita,Dízimo,OK,,Marinês Conceição da Silva
+SET24,2024-09-01,dízimo,200.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
+SET24,2024-09-01,dízimo,142.00,receita,Dízimo,OK,,Maria Margareth Ribeiro
+SET24,2024-09-01,dízimo,35.00,receita,Dízimo,OK,,Edvane Correia Santos Machado
+SET24,2024-09-02,dízimo,140.00,receita,Dízimo,OK,,Jaciara de Oliveira Tapirema da Silva
+SET24,2024-09-02,dízimo,20.00,receita,Dízimo,OK,,Mila Gabriela Carvalho dos Santos
+SET24,2024-09-03,,283.75,receita,Dízimo,OK,,Liliane Virginia Mendes
+SET24,2024-09-03,,60.00,despesa,Conta de água,OK,,
+SET24,2024-09-03,,400.00,despesa,Pregador da noite (convidado),OK,,
+SET24,2024-09-03,,75.00,despesa,App da igreja,OK,,
+SET24,2024-09-04,oferta,11.25,receita,Oferta,OK,,Igreja
+SET24,2024-09-04,,100.00,receita,Dízimo,OK,,Maycon Silva Aguiar
+SET24,2024-09-04,,180.00,receita,Dízimo,OK,,Soraia de Oliveira
+SET24,2024-09-04,,40.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+SET24,2024-09-04,dízimo,290.00,receita,Dízimo,OK,,Thiago da Cruz Xavier
+SET24,2024-09-05,zeladoria,500.00,despesa,Mão de obra,OK,,Lucilene dos Santos Rosa Pereira
+SET24,2024-09-06,dízimo,190.00,receita,Dízimo,OK,,Gabriel Rodrigues de souza
+SET24,2024-09-06,dízimo,121.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+SET24,2024-09-07,Dízimo,250.00,receita,Dízimo,OK,,Elaine Cristina de Jesus Braga
+SET24,2024-09-07,dízimo,355.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
+SET24,2024-09-08,oferta,44.75,receita,Oferta,OK,,Igreja
+SET24,2024-09-08,dízimo,114.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+SET24,2024-09-08,dízimo,150.00,receita,Dízimo,OK,,Maria Aparecida da Silva Soares
+SET24,2024-09-08,dízimo,355.00,receita,Dízimo,OK,,Carlos Eduardo dos Santos Costa
+SET24,2024-09-08,dízimo,100.00,receita,Dízimo,OK,,Zenilde Oliveira
+SET24,2024-09-08,dízimo,278.00,receita,Dízimo,OK,,Cleomar Machado Costa
+SET24,2024-09-08,água,14.00,despesa,Conta de água,OK,,
+SET24,2024-09-09,dízimo,170.00,receita,Dízimo,OK,,LUCIANO BONFIM SANTOS
+SET24,2024-09-10,dízimo,41.00,receita,Dízimo,OK,,Patrícia Felix Silva
+SET24,2024-09-10,dízimo,206.00,receita,Dízimo,OK,,Lucas Rosa Felix Pereira
+SET24,2024-09-10,,37.90,despesa,Material de Construção,OK,,
+SET24,2024-09-10,,340.00,despesa,Utilidades,OK,,
+SET24,2024-09-12,trasporte,400.00,despesa,Combustível,OK,,trasporte
+SET24,2024-09-12,,600.00,despesa,Materiais Escritório,OK,,
+SET24,2024-09-14,água,60.00,despesa,Alimentos,OK,,Marcia Gás
+SET24,2024-09-15,oferta,66.00,receita,Oferta,OK,,Igreja
+SET24,2024-09-15,dizimo,262.00,receita,Dízimo,OK,,Cleia da Silva Custódio
+SET24,2024-09-15,dízimo,160.00,receita,Dízimo,OK,,Genoveva Pereira
+SET24,2024-09-15,dízimo,107.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+SET24,2024-09-15,dízimo,110.00,receita,Dízimo,OK,,Joselia Maria
+SET24,2024-09-15,secretaria,52.88,despesa,Materiais Escritório,OK,,
+SET24,2024-09-15,utilidades,59.43,despesa,Utilidades,OK,,Mercado
+SET24,2024-09-16,dízimo,150.00,receita,Dízimo,OK,,Clelia Soares Lemos
+SET24,2024-09-16,dízimo,104.00,receita,Dízimo,OK,,Paula Cristina
+SET24,2024-09-18,oferta,4.50,receita,Oferta,OK,,Igreja
+SET24,2024-09-18,dízimo,1000.00,receita,Dízimo,OK,,Maria Bárbara Gomes da Silva
+SET24,2024-09-18,secretaria,49.90,despesa,Materiais Escritório,OK,,
+SET24,2024-09-19,,102.48,despesa,Internet,OK,,
+SET24,2024-09-19,,1100.00,despesa,SEDE,OK,,
+SET24,2024-09-22,oferta,66.25,receita,Oferta,OK,,Igreja
+SET24,2024-09-22,dízimo,95.00,receita,Dízimo,OK,,João severo Mendonça
+SET24,2024-09-22,dizimo,170.00,receita,Dízimo,OK,,Clelia Soares Lemos
+SET24,2024-09-23,,200.00,despesa,Combustível,OK,,
+SET24,2024-09-23,,270.00,despesa,Pregador da noite (convidado),OK,,
+SET24,2024-09-24,,289.00,despesa,Material de Construção,OK,,
+SET24,2024-09-24,,400.00,despesa,Combustível,OK,,
+SET24,2024-09-25,oferta,112.10,receita,Oferta,OK,,Igreja
+SET24,2024-09-25,dízimo,410.00,receita,Dízimo,OK,,Gilbran Ferreira da Silva
+SET24,2024-09-25,dízimo,142.00,receita,Dízimo,OK,,Antonio da Conceição Rodrigues Gomes
+SET24,2024-09-26,dizimo,720.00,receita,Dízimo,OK,,Bruna De Souza Andrade
+SET24,2024-09-27,limpeza,25.46,despesa,Material de Limpeza,OK,,Open frios
+SET24,2024-09-27,materiais de construção,326.00,despesa,Material de Construção,OK,,
+SET24,2024-09-27,utilidades,24.00,despesa,Utilidades,OK,,
+SET24,2024-09-28,oferta (varões),14.75,receita,Oferta,OK,,Igreja
+SET24,2024-09-28,água,105.00,despesa,Alimentos,OK,,Marcia Gás
+SET24,2024-09-29,oferta,48.80,receita,Oferta,OK,,Igreja
+SET24,2024-09-29,dízimo,120.00,receita,Dízimo,OK,,Adricia Sampaio Alves
+SET24,2024-09-29,dízimo,200.00,receita,Dízimo,OK,,Felipe alves dos Santos
+SET24,2024-09-29,água,14.00,despesa,Conta de água,OK,,
+SET24,2024-09-29,água,14.00,despesa,Alimentos,OK,,Marcia Gás
+SET24,2024-09-30,dízimo,201.00,receita,Dízimo,OK,,Alayr Evangelista Junior costa
+SET24,2024-09-30,dízimo,60.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+SET24,2024-09-30,dízimo,201.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
+SET24,2024-09-30,dizimo,80.00,receita,Dízimo,OK,,Rita do Desterro Pereira de Moura
+SET24,2024-09-30,dízimo,60.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+SET24,2024-09-30,,102.88,despesa,Internet,OK,,
+SET24,2024-09-30,,2500.00,despesa,Equipamentos,OK,,Fama Som
+OUT24,2024-10-02,oferta,15.35,receita,Oferta,OK,,Igreja
+OUT24,2024-10-02,dízimo,100.00,receita,Dízimo,OK,,
+OUT24,2024-10-04,dízimo,150.00,receita,Dízimo,OK,,Maycon Silva Aguiar
+OUT24,2024-10-04,dízimo,121.58,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+OUT24,2024-10-05,dízimo,261.00,receita,Dízimo,OK,,Cleia da Silva Custódio
+OUT24,2024-10-05,oferta,27.30,receita,Oferta,OK,,Igreja
+OUT24,2024-10-05,dízimo,350.00,receita,Dízimo,OK,,Marinês Conceição da Silva
+OUT24,2024-10-05,dízimo,255.00,receita,Dízimo,OK,,Carlos Eduardo dos Santos Costa
+OUT24,2024-10-05,dízimo,199.00,receita,Dízimo,OK,,Alayr Evangelista Junior costa
+OUT24,2024-10-05,água,20.00,despesa,Alimentos,OK,,Marcia Gás
+OUT24,2024-10-05,copos descartáveis,18.97,despesa,Utilidades,OK,,Mercado
+OUT24,2024-10-06,dízimo,22.50,receita,Dízimo,OK,,Joselia Maria
+OUT24,2024-10-06,oferta,105.00,receita,Oferta,OK,,Igreja
+OUT24,2024-10-06,dízimo,150.00,receita,Dízimo,OK,,Maria Aparecida da Silva Soares
+OUT24,2024-10-06,dízimo,142.00,receita,Dízimo,OK,,Maria Margareth Ribeiro
+OUT24,2024-10-06,dízimo,123.00,receita,Dízimo,OK,,
+OUT24,2024-10-06,dízimo,190.00,receita,Dízimo,OK,,LUCIANO BONFIM SANTOS
+OUT24,2024-10-06,dízimo,250.00,receita,Dízimo,OK,,Elaine Cristina de Jesus Braga
+OUT24,2024-10-06,dízimo,193.00,receita,Dízimo,OK,,Lucas Rosa Felix Pereira
+OUT24,2024-10-06,Fama Som,2000.00,despesa,Equipamentos,OK,,Fama Som
+OUT24,2024-10-07,dízimo,265.50,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
+OUT24,2024-10-07,dízimo,255.00,receita,Dízimo,OK,,Carlos Eduardo dos Santos Costa
+OUT24,2024-10-07,dízimo,180.00,receita,Dízimo,OK,,Soraia de Oliveira
+OUT24,2024-10-07,dízimo,161.00,receita,Dízimo,OK,,Marinalva Soares Ribeiro
+OUT24,2024-10-07,dízimo,650.00,receita,Dízimo,OK,,Thiago da Cruz Xavier
+OUT24,2024-10-08,dízimo,35.00,receita,Dízimo,OK,,Edvane Correia Santos Machado
+OUT24,2024-10-08,dízimo,18.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+OUT24,2024-10-08,dízimo,230.00,receita,Dízimo,OK,,Davi Evangelista
+OUT24,2024-10-09,dízimo,241.00,receita,Dízimo,OK,,Rebeca Vitória
+OUT24,2024-10-10,dízimo,609.57,receita,Dízimo,OK,,Maria da guia De Azevedo Pereira
+OUT24,2024-10-10,,2492.38,despesa,Equipamentos,OK,,Fama Som
+OUT24,2024-10-11,,555.00,despesa,Equipamentos,OK,,Fama Som
+OUT24,2024-10-11,,440.00,despesa,Mão de obra,OK,,
+OUT24,2024-10-13,dízimo,40.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+OUT24,2024-10-13,oferta,89.40,receita,Oferta,OK,,Igreja
+OUT24,2024-10-13,oferta (pix),125.24,receita,Oferta,OK,,Igreja
+OUT24,2024-10-13,dízimo,170.00,receita,Dízimo,OK,,Genoveva Pereira
+OUT24,2024-10-13,dízimo,245.00,receita,Dízimo,OK,,
+OUT24,2024-10-13,dízimo,121.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+OUT24,2024-10-13,zeladoria,400.00,despesa,Zeladoria,OK,,Lucilene dos Santos Rosa Pereira
+OUT24,2024-10-14,,400.00,despesa,Zeladoria,OK,,
+OUT24,2024-10-16,oferta,10.00,receita,Oferta,OK,,Igreja
+OUT24,2024-10-17,dízimo,102.00,receita,Dízimo,OK,,Paula Cristina
+OUT24,2024-10-18,dizimo,3500.00,receita,Dízimo,OK,,
+OUT24,2024-10-18,gasolina pastor,100.00,despesa,Combustível,OK,,
+OUT24,2024-10-20,oferta (pix),5.00,receita,Oferta,OK,,Igreja
+OUT24,2024-10-20,oferta,86.45,receita,Oferta,OK,,Igreja
+OUT24,2024-10-20,dízimo,70.00,receita,Dízimo,OK,,Luciene Lopes dos Santos
+OUT24,2024-10-20,dízimo,50.00,receita,Dízimo,OK,,Zenilde Oliveira
+OUT24,2024-10-20,dízimo,114.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+OUT24,2024-10-20,dízimo,120.00,receita,Dízimo,OK,,Adricia Sampaio Alves
+OUT24,2024-10-21,dízimo,355.00,receita,Dízimo,OK,,Alayr Evangelista Junior costa
+OUT24,2024-10-21,dízimo,70.00,receita,Dízimo,OK,,Luciene Lopes dos Santos
+OUT24,2024-10-23,dízimo,500.00,receita,Dízimo,OK,,Maria Bárbara Gomes da Silva
+OUT24,2024-10-23,,1100.00,despesa,Combustível,OK,,
+OUT24,2024-10-23,,2993.14,despesa,Prebenda Pastoral,OK,,
+OUT24,2024-10-25,dízimo,307.00,receita,Dízimo,OK,,Renato Bento Pereira de Souza
+OUT24,2024-10-26,dízimo,510.00,receita,Dízimo,OK,,Junior/Ana Carolina Evangelista
+OUT24,2024-10-27,dízimo,35.00,receita,Dízimo,OK,,Joselia Maria
+OUT24,2024-10-27,dízimo,140.00,receita,Dízimo,OK,,Elizeu silva
+OUT24,2024-10-27,dízimo,115.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+OUT24,2024-10-27,oferta,55.30,receita,Oferta,OK,,Igreja
+OUT24,2024-10-27,dízimo,540.00,receita,Dízimo,OK,,Gilbran Ferreira da Silva
+OUT24,2024-10-27,pilha para microfone,33.78,despesa,Equipamentos,OK,,
+OUT24,2024-10-29,dízimo,90.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+OUT24,2024-10-31,dízimo,200.00,receita,Dízimo,OK,,Felipe alves dos Santos
+OUT24,2024-10-31,dízimo,90.00,receita,Dízimo,OK,,Rita do Desterro Pereira de Moura
+OUT24,2024-10-31,,3911.38,despesa,Prebenda Pastoral,OK,,
+OUT24,2024-10-31,,75.00,despesa,App da igreja,OK,,
+NOV24,2024-11-01,,75.00,despesa,App da igreja,OK,,
+NOV24,2024-11-02,oferta,32.00,receita,Oferta,OK,,Igreja
+NOV24,2024-11-02,dízimo,70.40,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+NOV24,2024-11-03,oferta (pix),20.00,receita,Oferta,OK,,Igreja
+NOV24,2024-11-03,ofertas (pix),13.00,receita,Oferta,OK,,Igreja
+NOV24,2024-11-03,oferta,50.25,receita,Oferta,OK,,Igreja
+NOV24,2024-11-03,dizimo,142.00,receita,Dízimo,OK,,Maria Margareth Ribeiro
+NOV24,2024-11-03,dízimo,365.00,receita,Dízimo,OK,,Marinês Conceição da Silva
+NOV24,2024-11-03,dízimo,113.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+NOV24,2024-11-04,dízimo,170.00,receita,Dízimo,OK,,Maria Raimunda da Conceição
+NOV24,2024-11-04,dízimo,200.00,receita,Dízimo,OK,,Soraia de Oliveira
+NOV24,2024-11-04,dízimo,241.00,receita,Dízimo,OK,,Rebeca Vitória
+NOV24,2024-11-06,dízimo,121.58,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+NOV24,2024-11-07,dízimo,163.00,receita,Dízimo,OK,,Marinalva Soares Ribeiro
+NOV24,2024-11-08,dízimo,245.00,receita,Dízimo,OK,,Alayr Evangelista Junior costa
+NOV24,2024-11-08,dízimo,210.00,receita,Dízimo,OK,,Thiago da Cruz Xavier
+NOV24,2024-11-09,dizimo,262.00,receita,Dízimo,OK,,Cleia da Silva Custódio
+NOV24,2024-11-10,oferta,48.10,receita,Oferta,OK,,
+NOV24,2024-11-10,oferta pix,20.00,receita,Oferta,OK,,
+NOV24,2024-11-10,dízimo,160.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+NOV24,2024-11-10,dízimo,160.00,receita,Dízimo,OK,,Maria Aparecida da Silva Soares
+NOV24,2024-11-10,dízimo,112.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+NOV24,2024-11-10,dizimo,250.00,receita,Dízimo,OK,,Elaine Cristina
+NOV24,2024-11-10,,2951.35,despesa,Prebenda Pastoral,OK,,
+NOV24,2024-11-10,,1695.84,despesa,Prebenda Pastoral,OK,,
+NOV24,2024-11-11,dízimo,120.00,receita,Dízimo,OK,,Maycon Silva Aguiar
+NOV24,2024-11-12,dizimo,3000.00,receita,Dízimo,OK,,
+NOV24,2024-11-12,dízimo,250.00,receita,Dízimo,OK,,Davi Evangelista
+NOV24,2024-11-12,dízimo,200.00,receita,Dízimo,OK,,Gabriel Rodrigues de souza
+NOV24,2024-11-14,dízimo,114.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+NOV24,2024-11-14,,400.00,despesa,Zeladoria,OK,,
+NOV24,2024-11-17,oferta,110.20,receita,Oferta,OK,,Igreja
+NOV24,2024-11-17,dizimo,210.00,receita,Dízimo,OK,,Lucas Rosa Felix Pereira
+NOV24,2024-11-17,dízimo,109.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+NOV24,2024-11-18,dízimo,114.00,receita,Dízimo,OK,,Paula Cristina
+NOV24,2024-11-19,dízimo,470.00,receita,Dízimo,OK,,Bruna Andrade
+NOV24,2024-11-19,dízimo,280.00,receita,Dízimo,OK,,Adriana Araújo Vieira
+NOV24,2024-11-21,,48.99,despesa,App da igreja,OK,,
+NOV24,2024-11-23,dízimo,160.00,receita,Dízimo,OK,,Genoveva Pereira
+NOV24,2024-11-23,água,16.00,despesa,Alimentos,OK,,
+NOV24,2024-11-24,dizimo,490.00,receita,Dízimo,OK,,Gilbran Ferreira da Silva
+NOV24,2024-11-24,dízimo,117.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+NOV24,2024-11-24,dízimo,50.00,receita,Dízimo,OK,,
+NOV24,2024-11-24,pilha,26.50,despesa,Utilidades,OK,,Igreja
+NOV24,2024-11-25,dízimo,100.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+NOV24,2024-11-26,dízimo,430.00,receita,Dízimo,OK,,Renato Bento Pereira de Souza
+NOV24,2024-11-26,dízimo,142.00,receita,Dízimo,OK,,Antonio da Conceição Rodrigues Gomes
+NOV24,2024-11-28,borracharia,85.00,despesa,Combustível,OK,,
+NOV24,2024-11-29,dízimo,70.00,receita,Dízimo,OK,,Rita do Desterro Pereira de Moura
+NOV24,2024-11-30,dízimo,200.00,receita,Dízimo,OK,,Felipe alves dos Santos
+NOV24,2024-11-30,,102.88,despesa,Internet,OK,,
+DEZ24,2024-12-01,dízimo,50.00,receita,Dízimo,OK,,Maria da guia De Azevedo Pereira
+DEZ24,2024-12-01,oferta,80.20,receita,Oferta,OK,,Igreja
+DEZ24,2024-12-01,oferta (pix),10.00,receita,Oferta,OK,,
+DEZ24,2024-12-01,,7.80,receita,Oferta,OK,,Arthur Gilberto
+DEZ24,2024-12-01,,10.00,receita,Oferta,OK,,
+DEZ24,2024-12-01,dízimo,60.00,receita,Dízimo,OK,,
+DEZ24,2024-12-01,,66.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+DEZ24,2024-12-01,dízimo,115.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+DEZ24,2024-12-01,bombom,53.59,despesa,Alimentos,OK,,Mercado
+DEZ24,2024-12-02,,170.00,receita,Dízimo,OK,,Paula Cristina
+DEZ24,2024-12-02,,650.00,receita,Dízimo,OK,,Maria Bárbara Gomes da Silva
+DEZ24,2024-12-02,,75.00,despesa,App da igreja,OK,,
+DEZ24,2024-12-04,,160.00,receita,Dízimo,OK,,Soraia de Oliveira
+DEZ24,2024-12-04,dízimo,399.80,receita,Dízimo,OK,,Cleia da Silva Custódio
+DEZ24,2024-12-04,,3500.00,despesa,Material de Construção,OK,,
+DEZ24,2024-12-05,,156.61,receita,Dízimo,OK,,thaynara mendes
+DEZ24,2024-12-06,,163.00,receita,Dízimo,OK,,Marinalva Soares Ribeiro
+DEZ24,2024-12-06,dizimo,283.00,receita,Dízimo,OK,,Maria da guia De Azevedo Pereira
+DEZ24,2024-12-06,,121.58,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+DEZ24,2024-12-06,,20.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+DEZ24,2024-12-06,,295.00,receita,Dízimo,OK,,Ana Carolina Evangelista
+DEZ24,2024-12-08,oferta (pix),10.00,receita,Oferta,OK,,Igreja
+DEZ24,2024-12-08,,3.00,receita,Oferta,OK,,Arthur Gilberto
+DEZ24,2024-12-08,,10.00,receita,Oferta,OK,,Maicon Lopes
+DEZ24,2024-12-08,,20.00,receita,Oferta,OK,,Adriana Araújo Vieira
+DEZ24,2024-12-08,,10.00,receita,Oferta,OK,,Maria Aparecida da Silva Soares
+DEZ24,2024-12-08,,10.00,receita,Oferta,OK,,Lucas Rosa Felix Pereira
+DEZ24,2024-12-08,,10.00,receita,Oferta,OK,,Elaine Cristina
+DEZ24,2024-12-08,,10.00,receita,Oferta,OK,,Evandro Rodrigues Lima
+DEZ24,2024-12-08,,50.00,receita,Oferta,OK,,Liliane Virginia Mendes
+DEZ24,2024-12-08,,20.00,receita,Oferta,OK,,Cleomar Machado Costa
+DEZ24,2024-12-08,,10.00,receita,Oferta,OK,,Francisca Lucielly da Silva Cavalcante
+DEZ24,2024-12-08,,10.00,receita,Oferta,OK,,Maria da guia Pereira
+DEZ24,2024-12-08,,50.00,receita,Oferta,OK,,Ezequiel Serra da Silva
+DEZ24,2024-12-08,,10.00,receita,Oferta,OK,,JOÃO BARBOSA DE MOURA NETO MOURA
+DEZ24,2024-12-08,,50.00,receita,Oferta,OK,,Marcos Guerra dos Santos
+DEZ24,2024-12-08,,10.00,receita,Oferta,OK,,Maria Bárbara Gomes da Silva
+DEZ24,2024-12-08,,20.00,receita,Oferta,OK,,Evandro Rodrigues Lima
+DEZ24,2024-12-08,oferta,120.00,receita,Oferta,OK,,Igreja
+DEZ24,2024-12-08,dízimo,370.00,receita,Dízimo,OK,,Elaine Cristina
+DEZ24,2024-12-08,,251.00,receita,Dízimo,OK,,Rebeca Vitória
+DEZ24,2024-12-08,,430.00,receita,Dízimo,OK,,tiago da cruz xavie
+DEZ24,2024-12-08,dízimo,150.00,receita,Dízimo,OK,,Maria Margareth Ribeiro
+DEZ24,2024-12-08,dízimo,120.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+DEZ24,2024-12-08,dizimo,50.00,receita,Dízimo,OK,,João Severo Mendonça
+DEZ24,2024-12-08,dízimo,142.00,receita,Dízimo,OK,,Maria Margareth Ribeiro
+DEZ24,2024-12-08,dízimo,400.00,receita,Dízimo,OK,,Marinês Conceição da Silva
+DEZ24,2024-12-08,dízimo,50.00,receita,Dízimo,OK,,Mila Gabriela Carvalho dos Santos
+DEZ24,2024-12-08,água,16.00,despesa,Alimentos,OK,,
+DEZ24,2024-12-10,,376.00,receita,Dízimo,OK,,Renato Bento Pereira de Souza
+DEZ24,2024-12-10,,160.00,receita,Dízimo,OK,,Clelia Soares Lemos
+DEZ24,2024-12-10,,140.00,receita,Dízimo,OK,,Adriana Araújo Vieira
+DEZ24,2024-12-10,,278.00,receita,Dízimo,OK,,Cleomar Machado Costa
+DEZ24,2024-12-10,,9500.00,despesa,Mão de obra,OK,,
+DEZ24,2024-12-11,oferta,8.00,receita,Oferta,OK,,
+DEZ24,2024-12-11,,200.00,receita,Oferta,OK,,
+DEZ24,2024-12-13,,200.00,receita,Dízimo,OK,,Gabriel Rodrigues de souza
+DEZ24,2024-12-14,,40.00,receita,Oferta,OK,,
+DEZ24,2024-12-14,,37.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+DEZ24,2024-12-15,oferta (pix),10.00,receita,Oferta,OK,,Igreja
+DEZ24,2024-12-15,oferta,212.50,receita,Oferta,OK,,Igreja
+DEZ24,2024-12-15,dízimo,60.00,receita,Dízimo,OK,,Joselia Maria
+DEZ24,2024-12-15,dízimo,200.00,receita,Dízimo,OK,,Lucas Rosa Felix Pereira
+DEZ24,2024-12-15,dízimo,170.00,receita,Dízimo,OK,,Genoveva Pereira
+DEZ24,2024-12-15,dízimo,116.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+DEZ24,2024-12-15,mercado (pago a cleia),55.00,despesa,Material de Limpeza,OK,,Mercado
+DEZ24,2024-12-15,zeladoria,400.00,despesa,Zeladoria,OK,,Lucilene dos Santos Rosa Pereira
+DEZ24,2024-12-16,,104.00,receita,Dízimo,OK,,Paula Cristina
+DEZ24,2024-12-17,dízimo,337.00,receita,Dízimo,OK,,Cleia da Silva Custódio
+DEZ24,2024-12-18,,120.00,receita,Dízimo,OK,,Ana Carolina Evangelista
+DEZ24,2024-12-20,,40.00,receita,Oferta,OK,,Leonardo Vinicius de Oliveira Azevedo
+DEZ24,2024-12-21,dízimo,760.00,receita,Dízimo,OK,,
+DEZ24,2024-12-22,oferta,86.25,receita,Oferta,OK,,Igreja
+DEZ24,2024-12-22,dízimo,100.00,receita,Dízimo,OK,,Zenilde Oliveira
+DEZ24,2024-12-22,dízimo,125.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+DEZ24,2024-12-22,,80.00,receita,Dízimo,OK,,Rita do Desterro Pereira de Moura
+DEZ24,2024-12-22,,64.50,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+DEZ24,2024-12-22,,39.00,receita,Dízimo,OK,,Marília Martins de Oliveira Souza
+DEZ24,2024-12-22,,80.00,receita,Dízimo,OK,,JOÃO BARBOSA DE MOURA NETO MOURA
+DEZ24,2024-12-23,,150.00,receita,Dízimo,OK,,Adriana Araújo Vieira
+DEZ24,2024-12-23,,142.00,receita,Dízimo,OK,,Antonio da Conceição Rodrigues Gomes
+DEZ24,2024-12-23,,30.00,receita,Dízimo,OK,,Mila Gabriela Carvalho dos Santos
+DEZ24,2024-12-25,,20.00,receita,Dízimo,OK,,Leonardo Vinicius de Oliveira Azevedo
+DEZ24,2024-12-29,oferta,181.50,receita,Oferta,OK,,Igreja
+DEZ24,2024-12-29,oferta pix,10.00,receita,Oferta,OK,,Igreja
+DEZ24,2024-12-29,dízimo,288.05,receita,Dízimo,OK,,Liliane Virginia Mendes
+DEZ24,2024-12-29,dízimo,118.00,receita,Dízimo,OK,,José Marcos Félix Pereira
+DEZ24,2024-12-29,,70.00,receita,Dízimo,OK,,Mila Gabriela Carvalho dos Santos
+DEZ24,2024-12-29,,60.00,receita,Dízimo,OK,,Francisca Lucielly da Silva Cavalcante
+DEZ24,2024-12-30,,20.00,receita,Oferta,OK,,Ezequiel Serra da Silva
+DEZ24,2024-12-30,,600.00,receita,Dízimo,OK,,Maria Bárbara Gomes da Silva
+DEZ24,2024-12-31,oferta,154.50,receita,Oferta,OK,,Igreja
+DEZ24,2024-12-31,,7.00,receita,Oferta,OK,,Maria Bárbara Gomes da Silva
+DEZ24,2024-12-31,,10.00,receita,Oferta,OK,,
+DEZ24,2024-12-31,dízimo,106.00,receita,Dízimo,OK,,Lucilene dos Santos Rosa Pereira
+DEZ24,2024-12-31,dízimo,200.00,receita,Dízimo,OK,,Adricia Sampaio Alves
+DEZ24,2024-12-31,,200.00,receita,Dízimo,OK,,
+DEZ24,2024-12-31,material de limpeza,52.50,despesa,Material de Limpeza,OK,,Mercado
+DEZ24,2024-12-31,,102.95,despesa,Internet,OK,,
+DEZ24,2024-12-31,,3337.28,despesa,Prebenda Pastoral,OK,,Rodrigo Barbosa da Silva
+DEZ24,2024-12-31,,75.00,despesa,App da igreja,OK,,
