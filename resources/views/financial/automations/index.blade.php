@@ -397,6 +397,90 @@
         </div>
     </div>
 
+    <div class="financial-automation-card mt-3" id="automation-mp-treasury-group">
+        <div class="financial-automation-card__head">
+            <button type="button"
+                    class="financial-automation-card__toggle-area"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#mpTreasuryGroupBody"
+                    aria-expanded="false"
+                    aria-controls="mpTreasuryGroupBody">
+                <span class="financial-automation-card__icon">
+                    <i class="bx bxl-whatsapp"></i>
+                </span>
+                <span class="financial-automation-card__copy text-start">
+                    <span class="financial-automation-card__name">Grupo WhatsApp da tesouraria</span>
+                    <span class="financial-automation-card__desc">
+                        Avisa o grupo sempre que entrar ou sair dinheiro na conta Mercado Pago.
+                    </span>
+                </span>
+            </button>
+
+            <div class="financial-automation-card__controls">
+                <div class="form-check form-switch financial-automation-switch-wrap mb-0" onclick="event.stopPropagation()">
+                    <input class="form-check-input financial-automation-switch"
+                           type="checkbox"
+                           role="switch"
+                           id="mpTreasuryGroupEnabled"
+                           data-toggle-url="{{ route('financial.automations.toggle', $mpTreasuryGroupAutomation) }}"
+                           @checked($mpTreasuryGroupAutomation->enabled)
+                           @disabled(!$canManage)>
+                    <label class="form-check-label visually-hidden" for="mpTreasuryGroupEnabled">Habilitar</label>
+                </div>
+                <button type="button"
+                        class="financial-automation-card__chevron"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#mpTreasuryGroupBody"
+                        aria-expanded="false"
+                        aria-controls="mpTreasuryGroupBody">
+                    <i class="bx bx-chevron-down"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="mpTreasuryGroupBody" class="collapse">
+            <div class="financial-automation-card__body">
+                <form method="POST" action="{{ route('financial.automations.update', $mpTreasuryGroupAutomation) }}">
+                    @csrf
+                    @method('PUT')
+
+                    <div class="mb-3">
+                        <label class="form-label" for="mp_whatsapp_group_jid">Grupo da tesouraria</label>
+                        <div class="input-group">
+                            <select name="whatsapp_group_jid"
+                                    id="mp_whatsapp_group_jid"
+                                    class="form-select"
+                                    @disabled(!$canManage)>
+                                <option value="">Carregando grupos...</option>
+                            </select>
+                            <button type="button" class="btn btn-outline-secondary" id="mpWhatsappGroupsRefresh" title="Atualizar lista">
+                                <i class="bx bx-refresh"></i>
+                            </button>
+                        </div>
+                        <input type="hidden"
+                               name="whatsapp_group_name"
+                               id="mp_whatsapp_group_name"
+                               value="{{ $mpTreasuryGroupSettings['whatsapp_group_name'] ?? '' }}">
+                        @error('whatsapp_group_jid')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">
+                            Grupos da instância WhatsApp em Notificações → Configuração WPP. A mensagem inclui valor, descrição e o saldo atual da carteira.
+                        </div>
+                    </div>
+
+                    @if($canManage)
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bx bx-save me-1"></i> Salvar
+                            </button>
+                        </div>
+                    @endif
+                </form>
+            </div>
+        </div>
+    </div>
+
     {{-- Lembrete de despesas a vencer --}}
     <div class="financial-automation-card mt-3" id="automation-due-reminder">
         <div class="financial-automation-card__head">
@@ -1262,6 +1346,65 @@
         if (input.value) input.value = maskPhone(input.value);
     });
     reindexRows();
+})();
+
+(function () {
+    const select = document.getElementById('mp_whatsapp_group_jid');
+    const nameInput = document.getElementById('mp_whatsapp_group_name');
+    const refreshBtn = document.getElementById('mpWhatsappGroupsRefresh');
+    if (!select) return;
+
+    const groupsUrl = @json(route('financial.automations.whatsapp-groups'));
+    const savedJid = @json(old('whatsapp_group_jid', $mpTreasuryGroupSettings['whatsapp_group_jid'] ?? ''));
+    const savedName = @json(old('whatsapp_group_name', $mpTreasuryGroupSettings['whatsapp_group_name'] ?? ''));
+
+    function syncGroupName() {
+        if (!nameInput) return;
+        const opt = select.selectedOptions[0];
+        nameInput.value = opt && opt.value ? (opt.textContent || '').trim() : '';
+    }
+
+    async function loadGroups() {
+        const previous = select.value || savedJid || '';
+        select.innerHTML = '<option value="">Carregando grupos...</option>';
+        select.disabled = true;
+        try {
+            const res = await fetch(groupsUrl, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await res.json();
+            select.innerHTML = '<option value="">Selecione o grupo...</option>';
+            (data.groups || []).forEach((g) => {
+                const opt = document.createElement('option');
+                opt.value = g.jid;
+                opt.textContent = g.name || g.jid;
+                if (previous && previous === g.jid) opt.selected = true;
+                select.appendChild(opt);
+            });
+            if (previous && !select.value) {
+                const opt = document.createElement('option');
+                opt.value = previous;
+                opt.textContent = savedName || previous;
+                opt.selected = true;
+                select.appendChild(opt);
+            }
+            if (!(data.success) && (data.message || data.error) && !(data.groups || []).length) {
+                const opt = document.createElement('option');
+                opt.value = '';
+                opt.textContent = data.message || data.error;
+                select.appendChild(opt);
+            }
+            syncGroupName();
+        } catch (e) {
+            select.innerHTML = '<option value="">Falha ao carregar grupos</option>';
+        } finally {
+            select.disabled = false;
+        }
+    }
+
+    select.addEventListener('change', syncGroupName);
+    refreshBtn?.addEventListener('click', loadGroups);
+    loadGroups();
 })();
 </script>
 @endpush

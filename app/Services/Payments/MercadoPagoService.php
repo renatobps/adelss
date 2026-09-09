@@ -2,7 +2,10 @@
 
 namespace App\Services\Payments;
 
+use Carbon\Carbon;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use MercadoPago\Client\Common\RequestOptions;
 use MercadoPago\Client\Payment\PaymentClient;
@@ -109,6 +112,593 @@ class MercadoPagoService
 
             throw new \RuntimeException($e->getMessage());
         }
+    }
+
+    public function isConfigured(): bool
+    {
+        return trim((string) config('mercadopago.access_token', '')) !== '';
+    }
+
+    /**
+     * Saldo da carteira Mercado Pago vinculada ao token.
+     *
+     * @return array{available: float, unavailable: float, total: float, currency: string}
+     */
+    public function getAccountBalance(bool $fresh = false): array
+    {
+        $cacheKey = 'mercadopago.account_balance';
+        if (! $fresh) {
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached) && array_key_exists('available', $cached)) {
+                return $cached;
+            }
+        }
+
+        $token = trim((string) config('mercadopago.access_token', ''));
+        if ($token === '') {
+            throw new \RuntimeException('Mercado Pago não configurado (MP_ACCESS_TOKEN).');
+        }
+
+        $payload = $this->requestBalancePayload($token);
+        $balance = $this->normalizeBalance($payload);
+
+        Cache::put($cacheKey, $balance, now()->addSeconds(45));
+
+        return $balance;
+    }
+
+    /**
+     * Pagamentos recentes da conta: aprovados entram, estornos saem.
+     *
+     * @return array{
+     *     days: int,
+     *     in_total: float,
+     *     out_total: float,
+     *     items: array<int, array<string, mixed>>,
+     *     truncated: bool,
+     *     error: ?string
+     * }
+     */
+    public function getPaymentMovements(bool $fresh = false, int $days = 30, int $limit = 50): array
+    {
+        $empty = [
+            'days' => $days,
+            'in_total' => 0.0,
+            'out_total' => 0.0,
+            'items' => [],
+            'truncated' => false,
+            'error' => null,
+        ];
+
+        $cacheKey = 'mercadopago.payment_movements.'.$days.'.'.$limit;
+        if (! $fresh) {
+            $cached = Cache::get($cacheKey);
+            if (is_array($cached) && array_key_exists('items', $cached)) {
+                return $cached;
+            }
+        }
+
+        $token = trim((string) config('mercadopago.access_token', ''));
+        if ($token === '') {
+            $empty['error'] = 'MP_ACCESS_TOKEN não configurado.';
+
+            return $empty;
+        }
+
+        try {
+            $payload = $this->requestPaymentMovements($token, $days, $limit);
+            Cache::put($cacheKey, $payload, now()->addSeconds(45));
+
+            return $payload;
+        } catch (\Throwable $e) {
+            Log::warning('Mercado Pago movimentos indisponíveis', [
+                'message' => $e->getMessage(),
+            ]);
+            $empty['error'] = $e->getMessage();
+
+            return $empty;
+        }
+    }
+
+    /**
+     * @return array{
+     *     days: int,
+     *     in_total: float,
+     *     out_total: float,
+     *     items: array<int, array<string, mixed>>,
+     *     truncated: bool,
+     *     error: ?string
+     * }
+     */
+    private function requestPaymentMovements(string $token, int $days, int $limit): array
+    {
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+        ])->timeout(20)->get('https://api.mercadopago.com/v1/payments/search', [
+            'sort' => 'date_created',
+            'criteria' => 'desc',
+            'range' => 'date_created',
+            'begin_date' => 'NOW-'.$days.'DAYS',
+            'end_date' => 'NOW',
+            'limit' => $limit,
+        ]);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException($this->friendlyBalanceError($response, $token));
+        }
+
+        $results = $response->json('results') ?? [];
+        if (! is_array($results)) {
+            $results = [];
+        }
+
+        $items = [];
+        $inTotal = 0.0;
+        $outTotal = 0.0;
+
+        foreach ($results as $payment) {
+            if (! is_array($payment)) {
+                continue;
+            }
+
+            $mapped = $this->mapPaymentMovement($payment);
+            if ($mapped === null) {
+                continue;
+            }
+
+            $items[] = $mapped;
+            if ($mapped['direction'] === 'in') {
+                $inTotal += (float) $mapped['amount'];
+            } elseif ($mapped['direction'] === 'out') {
+                $outTotal += (float) $mapped['amount'];
+            }
+        }
+
+        $reportOutflows = $this->fetchReleaseOutflows($token, $days);
+        foreach ($reportOutflows as $item) {
+            $dup = collect($items)->contains(
+                fn (array $existing) => ($existing['id'] ?? '') === ($item['id'] ?? '')
+                    && ($existing['direction'] ?? '') === 'out'
+            );
+            if ($dup) {
+                continue;
+            }
+            $items[] = $item;
+            $outTotal += (float) $item['amount'];
+        }
+
+        usort($items, function (array $a, array $b) {
+            return strcmp((string) ($b['occurred_at'] ?? ''), (string) ($a['occurred_at'] ?? ''));
+        });
+
+        $pagingTotal = (int) ($response->json('paging.total') ?? count($results));
+
+        return [
+            'days' => $days,
+            'in_total' => round($inTotal, 2),
+            'out_total' => round($outTotal, 2),
+            'items' => $items,
+            'truncated' => $pagingTotal > count($results),
+            'error' => null,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $payment
+     * @return array<string, mixed>|null
+     */
+    private function mapPaymentMovement(array $payment): ?array
+    {
+        $status = strtolower((string) ($payment['status'] ?? ''));
+        $direction = match ($status) {
+            'approved' => 'in',
+            'refunded', 'charged_back' => 'out',
+            'pending', 'in_process', 'in_mediation' => 'pending',
+            default => null,
+        };
+
+        if ($direction === null) {
+            return null;
+        }
+
+        $gross = (float) ($payment['transaction_amount'] ?? 0);
+        $refunded = (float) ($payment['transaction_amount_refunded'] ?? 0);
+        $amount = $direction === 'in' ? max(0, $gross - $refunded) : $gross;
+        $occurredAt = $payment['date_approved']
+            ?? $payment['date_last_updated']
+            ?? $payment['date_created']
+            ?? null;
+
+        $when = null;
+        if (is_string($occurredAt) && $occurredAt !== '') {
+            try {
+                $when = Carbon::parse($occurredAt)->timezone('America/Sao_Paulo');
+            } catch (\Throwable) {
+                $when = null;
+            }
+        }
+
+        $payerName = trim(implode(' ', array_filter([
+            (string) data_get($payment, 'payer.first_name', ''),
+            (string) data_get($payment, 'payer.last_name', ''),
+        ])));
+        $payer = $payerName !== ''
+            ? $payerName
+            : (string) (data_get($payment, 'payer.email') ?: '');
+
+        $description = trim((string) ($payment['description'] ?? ''));
+        if ($description === '') {
+            $description = 'Pagamento '.($payment['id'] ?? '');
+        }
+
+        return [
+            'id' => (string) ($payment['id'] ?? ''),
+            'direction' => $direction,
+            'status' => $status,
+            'amount' => round($amount, 2),
+            'method' => $this->paymentMethodLabel((string) ($payment['payment_method_id'] ?? '')),
+            'description' => $description,
+            'payer' => $payer,
+            'occurred_at' => $when?->toIso8601String(),
+            'occurred_at_label' => $when?->format('d/m/Y H:i') ?? '—',
+        ];
+    }
+
+    private function paymentMethodLabel(string $method): string
+    {
+        $method = strtolower(trim($method));
+
+        return match ($method) {
+            'pix' => 'PIX',
+            'account_money', 'available_money' => 'Saldo MP',
+            'bolbradesco', 'pec', 'bolix' => 'Boleto',
+            '' => 'Pagamento',
+            default => strtoupper($method),
+        };
+    }
+
+    /**
+     * Saques, PIX enviados e outros débitos do relatório de liberações.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function fetchReleaseOutflows(string $token, int $days): array
+    {
+        $headers = [
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+        ];
+
+        try {
+            $search = Http::withHeaders($headers)->timeout(20)->get(
+                'https://api.mercadopago.com/v1/account/release_report/search',
+                ['limit' => 5]
+            );
+            $rows = $search->successful() ? ($search->json('results') ?? []) : [];
+            if (! is_array($rows)) {
+                $rows = [];
+            }
+
+            $usable = false;
+            $items = [];
+            foreach ($rows as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                $file = (string) ($row['file_name'] ?? '');
+                if ($file === '') {
+                    continue;
+                }
+
+                $download = Http::withHeaders($headers)->timeout(30)
+                    ->get('https://api.mercadopago.com/v1/account/release_report/'.$file);
+                if (! $download->successful() || trim($download->body()) === '') {
+                    continue;
+                }
+
+                $parsed = $this->parseReleaseReportCsv($download->body(), $days);
+                if ($parsed['usable']) {
+                    $usable = true;
+                    $items = $parsed['items'];
+                    break;
+                }
+            }
+
+            if (! $usable) {
+                $this->requestReleaseReport($token, $days);
+            }
+
+            return $items;
+        } catch (\Throwable $e) {
+            Log::warning('Mercado Pago relatório de saídas indisponível', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+    }
+
+    /**
+     * @return array{usable: bool, items: array<int, array<string, mixed>>}
+     */
+    private function parseReleaseReportCsv(string $csv, int $days): array
+    {
+        $lines = preg_split("/\r\n|\n|\r/", trim($csv)) ?: [];
+        $headerLine = array_shift($lines);
+        if (! is_string($headerLine) || $headerLine === '') {
+            return ['usable' => false, 'items' => []];
+        }
+
+        $delimiter = substr_count($headerLine, ';') > substr_count($headerLine, ',') ? ';' : ',';
+        $headers = array_map(
+            fn ($h) => strtoupper(trim((string) $h, "\" \t")),
+            str_getcsv($headerLine, $delimiter)
+        );
+        $index = array_flip($headers);
+        $usable = isset($index['NET_DEBIT_AMOUNT']) || isset($index['DESCRIPTION']);
+        if (! $usable) {
+            return ['usable' => false, 'items' => []];
+        }
+
+        $since = now('America/Sao_Paulo')->subDays($days)->startOfDay();
+        $items = [];
+
+        foreach ($lines as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            $cols = str_getcsv($line, $delimiter);
+            $recordType = strtolower((string) $this->csvColumn($cols, $index, 'RECORD_TYPE'));
+            if (in_array($recordType, ['total', 'initial_available_balance'], true)) {
+                continue;
+            }
+
+            $description = strtolower(trim($this->csvColumn($cols, $index, 'DESCRIPTION')));
+            if ($description === 'payment' || str_starts_with($description, 'pre_payout') || str_starts_with($description, 'pos_payout')) {
+                continue;
+            }
+
+            $debit = (float) str_replace(',', '.', $this->csvColumn($cols, $index, 'NET_DEBIT_AMOUNT'));
+            $tags = strtolower($this->csvColumn($cols, $index, 'OPERATION_TAGS'));
+            $isOut = $debit > 0
+                || in_array($description, ['payout', 'refund', 'chargeback'], true)
+                || str_contains($tags, 'cashout');
+
+            if (! $isOut) {
+                continue;
+            }
+
+            $whenRaw = $this->csvColumn($cols, $index, 'DATE');
+            $when = null;
+            if ($whenRaw !== '') {
+                try {
+                    $when = Carbon::parse($whenRaw)->timezone('America/Sao_Paulo');
+                } catch (\Throwable) {
+                    $when = null;
+                }
+            }
+            if ($when && $when->lt($since)) {
+                continue;
+            }
+
+            $amount = $debit > 0 ? $debit : (float) str_replace(',', '.', $this->csvColumn($cols, $index, 'GROSS_AMOUNT'));
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $label = match (true) {
+                str_contains($description, 'payout') || str_contains($tags, 'cashout') => 'Saque / transferência',
+                $description === 'refund' => 'Estorno',
+                $description === 'chargeback' => 'Chargeback',
+                $description !== '' => $description,
+                default => 'Saída da carteira',
+            };
+
+            $sourceId = $this->csvColumn($cols, $index, 'SOURCE_ID');
+
+            $items[] = [
+                'id' => $sourceId !== '' ? $sourceId : ('rel-'.md5($line)),
+                'direction' => 'out',
+                'status' => 'outflow',
+                'amount' => round($amount, 2),
+                'method' => $this->paymentMethodLabel($this->csvColumn($cols, $index, 'PAYMENT_METHOD')),
+                'description' => $label,
+                'payer' => '',
+                'occurred_at' => $when?->toIso8601String(),
+                'occurred_at_label' => $when?->format('d/m/Y H:i') ?? '—',
+            ];
+        }
+
+        return ['usable' => true, 'items' => $items];
+    }
+
+    /**
+     * @param  array<int, string|null>  $cols
+     * @param  array<string, int>  $index
+     */
+    private function csvColumn(array $cols, array $index, string $name): string
+    {
+        if (! isset($index[$name])) {
+            return '';
+        }
+
+        return trim((string) ($cols[$index[$name]] ?? ''));
+    }
+
+    private function requestReleaseReport(string $token, int $days): void
+    {
+        if (Cache::has('mercadopago.release_report_requested')) {
+            return;
+        }
+
+        Cache::put('mercadopago.release_report_requested', true, now()->addMinutes(30));
+
+        $headers = [
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+
+        Http::withHeaders($headers)->timeout(20)->put('https://api.mercadopago.com/v1/account/release_report/config', [
+            'file_name_prefix' => 'adelss-release',
+            'include_withdrawal_at_end' => true,
+            'execute_after_withdrawal' => true,
+            'display_timezone' => 'GMT-03',
+            'header_language' => 'pt',
+            'frequency' => ['hour' => 6, 'type' => 'monthly', 'value' => 1],
+            'columns' => [
+                ['key' => 'DATE'],
+                ['key' => 'SOURCE_ID'],
+                ['key' => 'RECORD_TYPE'],
+                ['key' => 'DESCRIPTION'],
+                ['key' => 'NET_DEBIT_AMOUNT'],
+                ['key' => 'NET_CREDIT_AMOUNT'],
+                ['key' => 'GROSS_AMOUNT'],
+                ['key' => 'MP_FEE_AMOUNT'],
+                ['key' => 'PAYMENT_METHOD'],
+                ['key' => 'OPERATION_TAGS'],
+            ],
+        ]);
+
+        Http::withHeaders($headers)->timeout(20)->post('https://api.mercadopago.com/v1/account/release_report', [
+            'begin_date' => now('UTC')->subDays($days)->startOfDay()->format('Y-m-d\TH:i:s\Z'),
+            'end_date' => now('UTC')->format('Y-m-d\TH:i:s\Z'),
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function requestBalancePayload(string $token): array
+    {
+        $headers = [
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+        ];
+
+        $me = Http::withHeaders($headers)->timeout(15)->get('https://api.mercadopago.com/users/me');
+        if (! $me->successful()) {
+            throw new \RuntimeException($this->friendlyBalanceError($me, $token));
+        }
+
+        $meJson = $me->json() ?? [];
+        $userId = $meJson['id'] ?? null;
+        if (! $userId) {
+            throw new \RuntimeException('Não foi possível identificar a conta Mercado Pago vinculada ao Access Token.');
+        }
+
+        if ($this->isTestUser($meJson, $token)) {
+            throw new \RuntimeException(
+                'O Access Token atual é de teste. Ele autentica um usuário fictício (CPF), não a conta CNPJ do painel. Para ver o saldo da carteira da empresa, use as credenciais de Produção em Suas integrações → Produção.'
+            );
+        }
+
+        $byUser = Http::withHeaders($headers)
+            ->timeout(15)
+            ->get('https://api.mercadopago.com/users/'.$userId.'/mercadopago_account/balance');
+
+        if ($byUser->successful()) {
+            return $byUser->json() ?? [];
+        }
+
+        Log::warning('Mercado Pago saldo da carteira indisponível', [
+            'status' => $byUser->status(),
+            'error' => $byUser->json('error'),
+            'credential' => $this->credentialKind($token),
+        ]);
+
+        throw new \RuntimeException($this->friendlyBalanceError($byUser, $token));
+    }
+
+    /**
+     * @param  array<string, mixed>  $me
+     */
+    private function isTestUser(array $me, string $token): bool
+    {
+        if ($this->credentialKind($token) === 'test') {
+            return true;
+        }
+
+        $tags = $me['tags'] ?? [];
+        if (is_array($tags) && in_array('test_user', $tags, true)) {
+            return true;
+        }
+
+        return str_starts_with(strtoupper((string) ($me['nickname'] ?? '')), 'TESTUSER');
+    }
+
+    private function credentialKind(string $token): string
+    {
+        if (str_starts_with($token, 'TEST-')) {
+            return 'test';
+        }
+        if (str_starts_with($token, 'APP_USR-')) {
+            return 'production';
+        }
+
+        return 'unknown';
+    }
+
+    private function friendlyBalanceError(\Illuminate\Http\Client\Response $response, string $token): string
+    {
+        $status = $response->status();
+        $error = (string) ($response->json('error') ?? '');
+        $message = trim((string) ($response->json('message') ?? ''));
+        $isTest = $this->credentialKind($token) === 'test';
+
+        if ($status === 401 || $error === 'invalid_credentials' || str_contains(mb_strtolower($message), 'invalid')) {
+            return 'Access Token do Mercado Pago inválido ou expirado.';
+        }
+
+        if ($status === 403 || strcasecmp($error, 'forbidden') === 0 || strcasecmp($message, 'forbidden') === 0) {
+            return 'As credenciais estão válidas, mas o Mercado Pago não libera consulta ao vivo do saldo da carteira para esta aplicação. O card usa o saldo interno; entradas e saídas continuam pelo webhook.';
+        }
+
+        if ($status === 404 || $error === 'resource not found') {
+            if ($isTest) {
+                return 'O Access Token atual é de teste (TEST-). A carteira de teste não tem API de saldo. Use o Access Token de produção (APP_USR-) em Suas integrações → Produção.';
+            }
+
+            return 'A API de saldo da carteira não está disponível para esta credencial. Confira se o Access Token de produção (APP_USR-) está ativo.';
+        }
+
+        if ($message !== '' && ! str_contains(mb_strtolower($message), 'si quieres')) {
+            return $message;
+        }
+
+        return 'Não foi possível consultar o saldo do Mercado Pago (HTTP '.$status.').';
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array{available: float, unavailable: float, total: float, currency: string}
+     */
+    private function normalizeBalance(array $payload): array
+    {
+        $available = $payload['available_balance']
+            ?? $payload['available_amount']
+            ?? data_get($payload, 'available.total')
+            ?? data_get($payload, 'available.amount')
+            ?? 0;
+        $unavailable = $payload['unavailable_balance']
+            ?? $payload['unavailable_amount']
+            ?? data_get($payload, 'unavailable.total')
+            ?? data_get($payload, 'unavailable.amount')
+            ?? 0;
+        $total = $payload['total_amount']
+            ?? $payload['total']
+            ?? ((float) $available + (float) $unavailable);
+        $currency = (string) ($payload['currency_id']
+            ?? data_get($payload, 'available.currency_id')
+            ?? config('mercadopago.currency', 'BRL'));
+
+        return [
+            'available' => round((float) $available, 2),
+            'unavailable' => round((float) $unavailable, 2),
+            'total' => round((float) $total, 2),
+            'currency' => $currency !== '' ? $currency : 'BRL',
+        ];
     }
 
     /**

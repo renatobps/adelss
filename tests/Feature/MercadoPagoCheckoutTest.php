@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Models\FinancialTransaction;
 use App\Models\PaymentTransaction;
 use App\Models\User;
+use App\Services\FinancialNotificationService;
 use App\Services\Payments\MercadoPagoService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Mockery;
 use Tests\TestCase;
 
 class MercadoPagoCheckoutTest extends TestCase
@@ -19,6 +21,11 @@ class MercadoPagoCheckoutTest extends TestCase
         config()->set('database.default', 'sqlite');
         config()->set('database.connections.sqlite.database', ':memory:');
         config()->set('mercadopago.webhook_secret', '');
+
+        $this->app->instance(
+            FinancialNotificationService::class,
+            Mockery::mock(FinancialNotificationService::class)->shouldIgnoreMissing()
+        );
 
         Schema::create('users', function (Blueprint $table) {
             $table->id();
@@ -156,6 +163,53 @@ class MercadoPagoCheckoutTest extends TestCase
         $this->assertSame('recebido', $transaction->status);
         $this->assertSame('approved', $payment->status);
         $this->assertNotNull($payment->paid_at);
+    }
+
+    public function test_webhook_aprovado_notifica_grupo_da_tesouraria(): void
+    {
+        $transaction = FinancialTransaction::create([
+            'type' => 'receita',
+            'transaction_date' => now()->toDateString(),
+            'description' => 'Oferta PIX',
+            'amount' => 80,
+            'is_paid' => false,
+            'status' => 'a_receber',
+        ]);
+
+        PaymentTransaction::create([
+            'financial_transaction_id' => $transaction->id,
+            'gateway' => 'mercado_pago',
+            'idempotency_key' => 'idem-test-notify',
+            'external_payment_id' => '777888',
+            'external_reference' => 'ftx-notify',
+            'status' => 'pending',
+            'payment_method' => 'pix',
+            'amount' => 80,
+            'currency' => 'BRL',
+        ]);
+
+        $notif = Mockery::mock(FinancialNotificationService::class);
+        $notif->shouldReceive('enviarComprovanteReceita')->once();
+        $notif->shouldReceive('notificarMovimentacaoMercadoPago')
+            ->once()
+            ->with('in', Mockery::on(fn ($payment) => (string) ($payment['id'] ?? '') === '777888'), Mockery::any());
+        $this->app->instance(FinancialNotificationService::class, $notif);
+
+        $serviceMock = $this->mock(MercadoPagoService::class);
+        $serviceMock->shouldReceive('getPayment')
+            ->once()
+            ->andReturn([
+                'id' => '777888',
+                'status' => 'approved',
+                'status_detail' => 'accredited',
+                'payment_method_id' => 'pix',
+                'transaction_amount' => 80,
+            ]);
+
+        $this->postJson(route('webhooks.mercadopago', ['type' => 'payment', 'data.id' => '777888']), [
+            'type' => 'payment',
+            'data' => ['id' => '777888'],
+        ])->assertOk();
     }
 
     public function test_webhook_duplicado_nao_duplica_registro_de_pagamento(): void

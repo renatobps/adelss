@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Financial;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialAccount;
+use App\Services\Payments\MercadoPagoService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
 {
+    public function __construct(private MercadoPagoService $mercadoPago) {}
+
     public function index(Request $request)
     {
         $this->authorize('viewAny', FinancialAccount::class);
@@ -26,8 +29,16 @@ class AccountController extends Controller
             $query->where('is_active', false);
         }
 
-        $accounts = $query->get()->map(function (FinancialAccount $account) {
-            $account->current_balance = $account->currentBalance();
+        $listedAccounts = $query->get();
+        $hasMercadoPagoAccount = FinancialAccount::query()
+            ->get()
+            ->contains(fn (FinancialAccount $account) => $account->isMercadoPago());
+        $mpMovements = $hasMercadoPagoAccount
+            ? $this->mercadoPago->getPaymentMovements()
+            : null;
+
+        $accounts = $listedAccounts->map(function (FinancialAccount $account) use ($mpMovements) {
+            $this->applyDisplayBalance($account, $mpMovements);
 
             return $account;
         });
@@ -40,7 +51,11 @@ class AccountController extends Controller
 
         $saldoAtivas = FinancialAccount::where('is_active', true)
             ->get()
-            ->sum(fn (FinancialAccount $account) => $account->currentBalance());
+            ->sum(function (FinancialAccount $account) use ($mpMovements) {
+                $this->applyDisplayBalance($account, $mpMovements);
+
+                return (float) $account->current_balance;
+            });
 
         $types = FinancialAccount::TYPES;
         $colors = FinancialAccount::COLORS;
@@ -51,7 +66,8 @@ class AccountController extends Controller
             'counts',
             'saldoAtivas',
             'types',
-            'colors'
+            'colors',
+            'mpMovements'
         ));
     }
 
@@ -153,5 +169,24 @@ class AccountController extends Controller
             'color.required' => 'Selecione uma cor de identificação.',
             'color.in' => 'Cor de identificação inválida.',
         ]);
+    }
+
+    /**
+     * @param  array{in_total?: float, out_total?: float, error?: string|null}|null  $mpMovements
+     */
+    private function applyDisplayBalance(FinancialAccount $account, ?array $mpMovements): void
+    {
+        if ($account->isMercadoPago() && is_array($mpMovements) && empty($mpMovements['error'])) {
+            $account->current_balance = round(
+                (float) ($mpMovements['in_total'] ?? 0) - (float) ($mpMovements['out_total'] ?? 0),
+                2
+            );
+            $account->balance_source = 'mp_flow';
+
+            return;
+        }
+
+        $account->current_balance = $account->currentBalance();
+        $account->balance_source = 'ledger';
     }
 }

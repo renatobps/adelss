@@ -11,11 +11,14 @@ class FinancialAccount extends Model
 {
     use HasFactory, SoftDeletes;
 
+    public const TYPE_MERCADO_PAGO = 'mercado_pago';
+
     public const TYPES = [
         'caixa' => 'Caixa',
         'conta_corrente' => 'Conta Corrente',
         'poupanca' => 'Poupança',
         'investimento' => 'Investimento',
+        self::TYPE_MERCADO_PAGO => 'Mercado Pago',
     ];
 
     public const COLORS = [
@@ -54,9 +57,40 @@ class FinancialAccount extends Model
 
     public function bankDisplay(): string
     {
+        if ($this->isMercadoPago()) {
+            return 'Mercado Pago';
+        }
+
         $bank = trim((string) ($this->bank_name ?: ''));
 
         return $bank !== '' ? $bank : $this->name;
+    }
+
+    public function isMercadoPago(): bool
+    {
+        if ($this->type === self::TYPE_MERCADO_PAGO) {
+            return true;
+        }
+
+        $haystack = mb_strtolower(trim($this->name.' '.$this->bank_name));
+
+        return str_contains($haystack, 'mercado pago')
+            || str_contains($haystack, 'mercadopago');
+    }
+
+    public static function mercadoPagoAccount(): ?self
+    {
+        return static::query()
+            ->where('is_active', true)
+            ->where(function ($query) {
+                $query->where('type', self::TYPE_MERCADO_PAGO)
+                    ->orWhere('bank_name', 'like', '%Mercado Pago%')
+                    ->orWhere('bank_name', 'like', '%MercadoPago%')
+                    ->orWhere('name', 'like', '%Mercado Pago%')
+                    ->orWhere('name', 'like', '%MercadoPago%');
+            })
+            ->orderBy('id')
+            ->first();
     }
 
     public function currentBalance(): float

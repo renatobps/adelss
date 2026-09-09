@@ -464,7 +464,7 @@ class WhatsAppService
             ]);
         }
 
-        $numero = self::normalizarNumero($numero);
+        $numero = self::resolverDestinatario($numero);
         $payload = [
             'number' => $numero,
             'text' => $mensagem,

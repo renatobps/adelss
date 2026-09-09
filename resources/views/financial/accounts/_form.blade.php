@@ -24,13 +24,13 @@
 <div class="row g-3 mb-3">
     <div class="col-md-6">
         <label for="{{ $prefix }}type" class="form-label">Tipo <span class="text-danger">*</span></label>
-        <select class="form-select" id="{{ $prefix }}type" name="type" required>
+        <select class="form-select js-account-type" id="{{ $prefix }}type" name="type" required>
             @foreach($types as $value => $label)
                 <option value="{{ $value }}" {{ $selectedType === $value ? 'selected' : '' }}>{{ $label }}</option>
             @endforeach
         </select>
     </div>
-    <div class="col-md-6">
+    <div class="col-md-6 js-account-initial-wrap">
         <label for="{{ $prefix }}initial_balance" class="form-label">Saldo Inicial (R$) <span class="text-danger">*</span></label>
         <input type="number"
                step="0.01"
@@ -39,6 +39,9 @@
                name="initial_balance"
                value="{{ old('initial_balance', $account?->initial_balance ?? '0') }}"
                required>
+        <small class="text-muted d-none js-mp-balance-hint">
+            O saldo atual deste card é a diferença entre entradas e saídas do Mercado Pago.
+        </small>
     </div>
 </div>
 

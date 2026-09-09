@@ -38,6 +38,7 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
     // Automações
     Route::get('automations', [AutomationController::class, 'index'])->name('automations.index');
     Route::get('automations/members/search', [AutomationController::class, 'searchMembers'])->name('automations.members.search');
+    Route::get('automations/whatsapp-groups', [AutomationController::class, 'listWhatsAppGroups'])->name('automations.whatsapp-groups');
     Route::post('automations/{automation}/toggle', [AutomationController::class, 'toggle'])->name('automations.toggle');
     Route::post('automations/{automation}/test-treasurer', [AutomationController::class, 'sendTreasurerTest'])->name('automations.test-treasurer');
     Route::post('automations/{automation}/send-smart-summary', [AutomationController::class, 'sendSmartSummaryNow'])->name('automations.send-smart-summary');

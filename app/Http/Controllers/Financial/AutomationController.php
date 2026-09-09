@@ -37,6 +37,9 @@ class AutomationController extends Controller
         $smartSummaryAutomation = FinancialAutomation::smartSummary();
         $smartSummarySettings = $smartSummaryAutomation->mergedSettings();
 
+        $mpTreasuryGroupAutomation = FinancialAutomation::mpTreasuryGroup();
+        $mpTreasuryGroupSettings = $mpTreasuryGroupAutomation->mergedSettings();
+
         $logQuery = FinancialNotificationLog::query()
             ->where('notification_type', FinancialNotificationLog::TYPE_RECEIPT_MEMBER);
 
@@ -76,6 +79,8 @@ class AutomationController extends Controller
             'dueReminderSettings',
             'smartSummaryAutomation',
             'smartSummarySettings',
+            'mpTreasuryGroupAutomation',
+            'mpTreasuryGroupSettings',
             'hourOptions'
         ));
     }
@@ -125,6 +130,10 @@ class AutomationController extends Controller
 
         if ($automation->key === FinancialAutomation::KEY_SMART_SUMMARY) {
             return $this->updateSmartSummary($request, $automation);
+        }
+
+        if ($automation->key === FinancialAutomation::KEY_MP_TREASURY_GROUP) {
+            return $this->updateMpTreasuryGroup($request, $automation);
         }
 
         abort(404);
@@ -342,5 +351,50 @@ class AutomationController extends Controller
         $automation->update(['settings' => $settings]);
 
         return back()->with('success', 'Resumo financeiro salvo com sucesso.');
+    }
+
+    private function updateMpTreasuryGroup(Request $request, FinancialAutomation $automation)
+    {
+        $validated = $request->validate([
+            'whatsapp_group_jid' => 'nullable|string|max:80',
+            'whatsapp_group_name' => 'nullable|string|max:180',
+        ], [
+            'whatsapp_group_jid.max' => 'JID do grupo inválido.',
+        ]);
+
+        $jid = trim((string) ($validated['whatsapp_group_jid'] ?? ''));
+        if ($jid !== '' && ! str_contains($jid, '@g.us')) {
+            return back()
+                ->withErrors(['whatsapp_group_jid' => 'Selecione um grupo WhatsApp válido.'])
+                ->withInput();
+        }
+
+        $automation->update([
+            'settings' => [
+                'whatsapp_group_jid' => $jid,
+                'whatsapp_group_name' => trim((string) ($validated['whatsapp_group_name'] ?? '')),
+            ],
+        ]);
+
+        return back()->with('success', 'Grupo da tesouraria salvo com sucesso.');
+    }
+
+    public function listWhatsAppGroups()
+    {
+        $this->authorize('financial.view-automations');
+
+        $result = $this->whatsAppService->listGroups();
+        if (! ($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['error'] ?? 'Falha ao listar grupos.',
+                'groups' => [],
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'groups' => $result['groups'] ?? [],
+        ]);
     }
 }

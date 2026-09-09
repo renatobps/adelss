@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class MercadoPagoWebhookController extends Controller
 {
@@ -35,7 +36,7 @@ class MercadoPagoWebhookController extends Controller
 
         try {
             $payment = $this->mercadoPagoService->getPayment((string) $paymentId);
-            $this->syncPayment($payment, $request->all());
+            $pending = $this->syncPayment($payment, $request->all());
         } catch (\Throwable $e) {
             Log::warning('Mercado Pago webhook processamento falhou', [
                 'payment_id' => $paymentId,
@@ -48,22 +49,36 @@ class MercadoPagoWebhookController extends Controller
             ], 422);
         }
 
+        $this->dispatchPendingNotifications($pending, $payment ?? []);
+
         return response()->json(['success' => true]);
     }
 
     /**
-     * @param array<string, mixed> $payment
-     * @param array<string, mixed> $webhookPayload
+     * @return array{
+     *     confirmedRegistration: ?EventRegistration,
+     *     receiptTransaction: ?\App\Models\FinancialTransaction,
+     *     mpMovement: ?array{direction: string, payment: array<string, mixed>, transaction: ?\App\Models\FinancialTransaction}
+     * }
      */
-    private function syncPayment(array $payment, array $webhookPayload): void
+    private function syncPayment(array $payment, array $webhookPayload): array
     {
         $externalId = (string) ($payment['id'] ?? '');
         if ($externalId === '') {
             throw new \RuntimeException('Pagamento sem ID externo.');
         }
 
-        $confirmedRegistration = DB::transaction(function () use ($externalId, $payment, $webhookPayload) {
+        $status = (string) ($payment['status'] ?? '');
+        $mpMovementDirection = match ($status) {
+            'approved' => 'in',
+            'refunded', 'charged_back' => 'out',
+            default => null,
+        };
+
+        return DB::transaction(function () use ($externalId, $payment, $webhookPayload, $mpMovementDirection) {
             $confirmedRegistration = null;
+            $receiptTransaction = null;
+            $mpTransaction = null;
             $handled = false;
             /** @var PaymentTransaction|null $paymentTransaction */
             $paymentTransaction = PaymentTransaction::query()
@@ -75,6 +90,7 @@ class MercadoPagoWebhookController extends Controller
                 $handled = true;
                 $status = (string) ($payment['status'] ?? $paymentTransaction->status);
                 $statusDetail = (string) ($payment['status_detail'] ?? $paymentTransaction->status_detail);
+                $wasPaid = $paymentTransaction->status === 'approved';
 
                 $paymentTransaction->update([
                     'status' => $status,
@@ -92,6 +108,7 @@ class MercadoPagoWebhookController extends Controller
 
                 $financialTransaction = $paymentTransaction->financialTransaction()->lockForUpdate()->first();
                 if ($financialTransaction) {
+                    $mpTransaction = $financialTransaction;
                     if ($status === 'approved') {
                         if (!$financialTransaction->is_paid) {
                             $financialTransaction->update([
@@ -99,7 +116,7 @@ class MercadoPagoWebhookController extends Controller
                                 'status' => 'recebido',
                             ]);
                             $financialTransaction->refresh()->load(['member', 'category']);
-                            $this->financialNotificationService->enviarComprovanteReceita($financialTransaction);
+                            $receiptTransaction = $financialTransaction;
                         }
                     } elseif (in_array($status, ['rejected', 'cancelled', 'refunded', 'charged_back'], true) && $financialTransaction->type === 'receita') {
                         $financialTransaction->update([
@@ -108,13 +125,20 @@ class MercadoPagoWebhookController extends Controller
                         ]);
                     }
                 }
+
+                if ($wasPaid && $status === 'approved') {
+                    $mpMovementDirection = null;
+                }
             }
 
             /** @var EventRegistrationPayment|null $eventRegistrationPayment */
-            $eventRegistrationPayment = EventRegistrationPayment::query()
-                ->where('external_payment_id', $externalId)
-                ->lockForUpdate()
-                ->first();
+            $eventRegistrationPayment = null;
+            if (Schema::hasTable('event_registration_payments')) {
+                $eventRegistrationPayment = EventRegistrationPayment::query()
+                    ->where('external_payment_id', $externalId)
+                    ->lockForUpdate()
+                    ->first();
+            }
 
             if ($eventRegistrationPayment) {
                 $handled = true;
@@ -149,21 +173,71 @@ class MercadoPagoWebhookController extends Controller
             }
 
             if (!$handled) {
-                Log::info('Webhook Mercado Pago ignorado: pagamento não rastreado localmente', [
+                Log::info('Webhook Mercado Pago sem lançamento local; notificando tesouraria se houver movimentação', [
                     'external_payment_id' => $externalId,
+                    'status' => $payment['status'] ?? null,
                 ]);
             }
 
-            return $confirmedRegistration;
+            return [
+                'confirmedRegistration' => $confirmedRegistration,
+                'receiptTransaction' => $receiptTransaction,
+                'mpMovement' => $mpMovementDirection
+                    ? [
+                        'direction' => $mpMovementDirection,
+                        'payment' => $payment,
+                        'transaction' => $mpTransaction,
+                    ]
+                    : null,
+            ];
         });
+    }
 
-        // Envio do comprovante fora da transação: falha de envio nunca invalida a inscrição.
+    /**
+     * @param  array{
+     *     confirmedRegistration?: ?EventRegistration,
+     *     receiptTransaction?: ?\App\Models\FinancialTransaction,
+     *     mpMovement?: ?array{direction: string, payment: array<string, mixed>, transaction: ?\App\Models\FinancialTransaction}
+     * }  $pending
+     * @param  array<string, mixed>  $payment
+     */
+    private function dispatchPendingNotifications(array $pending, array $payment): void
+    {
+        $receiptTransaction = $pending['receiptTransaction'] ?? null;
+        if ($receiptTransaction) {
+            try {
+                $this->financialNotificationService->enviarComprovanteReceita($receiptTransaction);
+            } catch (\Throwable $e) {
+                Log::warning('Falha ao enviar comprovante financeiro após pagamento aprovado', [
+                    'transaction_id' => $receiptTransaction->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $confirmedRegistration = $pending['confirmedRegistration'] ?? null;
         if ($confirmedRegistration) {
             try {
                 app(EventRegistrationReceiptService::class)->enviarComprovante($confirmedRegistration);
             } catch (\Throwable $e) {
                 Log::warning('Falha ao enviar comprovante de inscrição após pagamento aprovado', [
                     'registration_id' => $confirmedRegistration->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $mpMovement = $pending['mpMovement'] ?? null;
+        if ($mpMovement) {
+            try {
+                $this->financialNotificationService->notificarMovimentacaoMercadoPago(
+                    $mpMovement['direction'],
+                    $mpMovement['payment'] ?? $payment,
+                    $mpMovement['transaction'] ?? null
+                );
+            } catch (\Throwable $e) {
+                Log::warning('Falha ao notificar tesouraria sobre movimentação Mercado Pago', [
+                    'payment_id' => $payment['id'] ?? null,
                     'error' => $e->getMessage(),
                 ]);
             }

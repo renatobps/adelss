@@ -8,6 +8,7 @@ class FinancialAutomation extends Model
 {
     public const KEY_CONTRIBUTION_THANKS = 'contribution_thanks';
     public const KEY_TREASURERS = 'treasurers';
+    public const KEY_MP_TREASURY_GROUP = 'mp_treasury_group';
     public const KEY_DUE_REMINDER = 'due_reminder';
     public const KEY_SMART_SUMMARY = 'smart_summary';
     public const MAX_TREASURERS = 5;
@@ -56,6 +57,10 @@ class FinancialAutomation extends Model
         return match ($key) {
             self::KEY_TREASURERS => [
                 'recipients' => [],
+            ],
+            self::KEY_MP_TREASURY_GROUP => [
+                'whatsapp_group_jid' => '',
+                'whatsapp_group_name' => '',
             ],
             self::KEY_DUE_REMINDER => [
                 'days_ahead' => 1,
@@ -124,6 +129,15 @@ class FinancialAutomation extends Model
         return static::ensure(self::KEY_TREASURERS, 'Tesoureiros (destinatários)', true);
     }
 
+    public static function mpTreasuryGroup(): self
+    {
+        return static::ensure(
+            self::KEY_MP_TREASURY_GROUP,
+            'Grupo WhatsApp da tesouraria (Mercado Pago)',
+            true
+        );
+    }
+
     public static function dueReminder(): self
     {
         return static::ensure(
@@ -183,5 +197,15 @@ class FinancialAutomation extends Model
         }
 
         return $normalized;
+    }
+
+    public function whatsappGroupJid(): string
+    {
+        return trim((string) $this->setting('whatsapp_group_jid', ''));
+    }
+
+    public function whatsappGroupName(): string
+    {
+        return trim((string) $this->setting('whatsapp_group_name', ''));
     }
 }

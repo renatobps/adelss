@@ -148,6 +148,65 @@ class FinancialNotificationService
         return ['success' => false, 'error' => $ultimoErro ?? 'Falha ao notificar tesoureiro(s).'];
     }
 
+    /**
+     * Avisa o grupo da tesouraria quando entra ou sai dinheiro no Mercado Pago.
+     *
+     * @param  array<string, mixed>  $payment
+     */
+    public function notificarMovimentacaoMercadoPago(
+        string $direction,
+        array $payment,
+        ?FinancialTransaction $transaction = null
+    ): array {
+        if (! config('financial.whatsapp.mp_treasury_group_enabled', true)) {
+            return ['success' => false, 'error' => 'Notificação de movimentação Mercado Pago desabilitada.'];
+        }
+
+        if (! in_array($direction, ['in', 'out'], true)) {
+            return ['success' => false, 'error' => 'Direção de movimentação inválida.'];
+        }
+
+        $externalId = (string) ($payment['id'] ?? '');
+        if ($externalId === '') {
+            return ['success' => false, 'error' => 'Pagamento sem ID.'];
+        }
+
+        try {
+            if (! Schema::hasTable('financial_automations')) {
+                return ['success' => false, 'error' => 'Automações financeiras indisponíveis.'];
+            }
+            $automation = FinancialAutomation::mpTreasuryGroup();
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+
+        if (! $automation->enabled) {
+            return ['success' => false, 'error' => 'Automação do grupo da tesouraria desabilitada.'];
+        }
+
+        $groupJid = $automation->whatsappGroupJid();
+        if ($groupJid === '' || ! str_contains($groupJid, '@g.us')) {
+            return ['success' => false, 'error' => 'Selecione o grupo WhatsApp da tesouraria em Financeiro → Automações.'];
+        }
+
+        if ($this->jaNotificouMovimentacaoMp($externalId, $direction)) {
+            return ['success' => false, 'error' => 'Movimentação já notificada.'];
+        }
+
+        $mensagem = $this->montarMensagemMovimentacaoMp($direction, $payment, $transaction);
+        $resultado = $this->whatsappService->enviarMensagem($groupJid, $mensagem);
+
+        $this->registrarLogDestino(
+            $transaction,
+            FinancialNotificationLog::TYPE_MP_MOVEMENT,
+            $groupJid,
+            $mensagem,
+            $resultado
+        );
+
+        return $resultado;
+    }
+
     public function notificarDespesasVencendo(bool $force = false): array
     {
         $automation = null;
@@ -865,6 +924,105 @@ class FinancialNotificationService
             ->where('status', 'sent')
             ->whereDate('created_at', today())
             ->exists();
+    }
+
+    /**
+     * @param  array<string, mixed>  $payment
+     */
+    private function montarMensagemMovimentacaoMp(
+        string $direction,
+        array $payment,
+        ?FinancialTransaction $transaction
+    ): string {
+        $entrada = $direction === 'in';
+        $amount = (float) ($payment['transaction_amount']
+            ?? $payment['amount']
+            ?? $transaction?->amount
+            ?? 0);
+        $valor = 'R$ '.number_format($amount, 2, ',', '.');
+        $metodo = strtoupper((string) ($payment['payment_method_id'] ?? $payment['payment_type_id'] ?? '—'));
+        $pagador = (string) (
+            data_get($payment, 'payer.first_name')
+            ?: data_get($payment, 'payer.email')
+            ?: $transaction?->source_name
+            ?: '—'
+        );
+        $descricao = (string) ($payment['description'] ?? $transaction?->description ?: 'Movimentação Mercado Pago');
+        $status = (string) ($payment['status'] ?? '');
+        $externalId = (string) ($payment['id'] ?? '');
+        $titulo = $entrada ? '💰 *Entrada no Mercado Pago*' : '📤 *Saída no Mercado Pago*';
+
+        $saldoLinha = '';
+        try {
+            $balance = app(\App\Services\Payments\MercadoPagoService::class)->getAccountBalance();
+            $saldoLinha = '*Saldo atual:* R$ '.number_format((float) $balance['available'], 2, ',', '.');
+        } catch (\Throwable $e) {
+            $saldoLinha = '';
+        }
+
+        $linhas = [
+            '*ADEL São Sebastião*',
+            '',
+            $titulo,
+            '',
+            '*Valor:* '.$valor,
+            '*Descrição:* '.$descricao,
+            '*Forma:* '.$metodo,
+            '*De/Para:* '.$pagador,
+        ];
+
+        if ($status !== '') {
+            $linhas[] = '*Status:* '.$status;
+        }
+        if ($saldoLinha !== '') {
+            $linhas[] = $saldoLinha;
+        }
+        $linhas[] = '';
+        $linhas[] = '[mp:'.$externalId.':'.$direction.']';
+
+        return implode("\n", $linhas);
+    }
+
+    private function jaNotificouMovimentacaoMp(string $externalId, string $direction): bool
+    {
+        if (! Schema::hasTable('financial_notification_logs')) {
+            return false;
+        }
+
+        $marker = '[mp:'.$externalId.':'.$direction.']';
+
+        return FinancialNotificationLog::query()
+            ->where('notification_type', FinancialNotificationLog::TYPE_MP_MOVEMENT)
+            ->where('status', 'sent')
+            ->where('message', 'like', '%'.$marker.'%')
+            ->exists();
+    }
+
+    /**
+     * @param array{success?: bool, error?: string} $resultado
+     */
+    private function registrarLogDestino(
+        ?FinancialTransaction $transaction,
+        string $type,
+        string $destino,
+        string $mensagem,
+        array $resultado,
+        ?int $triggeredByUserId = null
+    ): void {
+        if (! Schema::hasTable('financial_notification_logs')) {
+            return;
+        }
+
+        FinancialNotificationLog::create([
+            'financial_transaction_id' => $transaction?->id,
+            'member_id' => null,
+            'phone' => WhatsAppService::resolverDestinatario($destino),
+            'notification_type' => $type,
+            'status' => ($resultado['success'] ?? false) ? 'sent' : 'failed',
+            'message' => $mensagem,
+            'error' => ($resultado['success'] ?? false) ? null : ($resultado['error'] ?? 'Erro desconhecido'),
+            'triggered_by_user_id' => $triggeredByUserId,
+        ]);
     }
 
     /**

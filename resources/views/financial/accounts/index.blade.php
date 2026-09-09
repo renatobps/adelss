@@ -79,6 +79,9 @@
                                 @unless($account->is_active)
                                     <span class="badge bg-secondary ms-1">Inativa</span>
                                 @endunless
+                                @if($account->isMercadoPago())
+                                    <span class="badge bg-info ms-1">Mercado Pago</span>
+                                @endif
                             </div>
                             <span class="financial-account-card__type">{{ $account->typeLabel() }}</span>
                         </div>
@@ -94,10 +97,25 @@
                                 <div class="financial-account-card__balance {{ $balance >= 0 ? 'is-positive' : 'is-negative' }}">
                                     {{ $fmt($balance) }}
                                 </div>
-                                <div class="financial-account-card__initial">
-                                    Inicial: {{ $fmt($account->initial_balance) }}
-                                </div>
+                                @if(($account->balance_source ?? '') !== 'mp_flow')
+                                    <div class="financial-account-card__initial">
+                                        Inicial: {{ $fmt($account->initial_balance) }}
+                                    </div>
+                                @endif
                             </div>
+                            @if($account->isMercadoPago() && is_array($mpMovements ?? null) && empty($mpMovements['error']))
+                                <hr class="financial-account-card__divider">
+                                <div class="financial-account-card__flow">
+                                    <div>
+                                        <div class="financial-account-card__label">Entradas ({{ $mpMovements['days'] }} dias)</div>
+                                        <div class="financial-account-card__flow-in">{{ $fmt($mpMovements['in_total'] ?? 0) }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="financial-account-card__label">Saídas ({{ $mpMovements['days'] }} dias)</div>
+                                        <div class="financial-account-card__flow-out">{{ $fmt($mpMovements['out_total'] ?? 0) }}</div>
+                                    </div>
+                                </div>
+                            @endif
                         </div>
 
                         <div class="financial-account-card__actions">
@@ -136,6 +154,69 @@
                 </div>
             @endforeach
         </div>
+
+        @if(is_array($mpMovements ?? null))
+            <section class="financial-mp-movements">
+                <div class="financial-mp-movements__head">
+                    <div>
+                        <h2 class="financial-mp-movements__title">Entradas e saídas — Mercado Pago</h2>
+                        <p class="financial-mp-movements__hint mb-0">
+                            Últimos {{ $mpMovements['days'] }} dias · pagamentos, estornos, saques e PIX enviados.
+                            Se um saque acabou de sair, recarregue em alguns minutos.
+                        </p>
+                    </div>
+                    <div class="financial-mp-movements__totals">
+                        <span class="text-success">Entradas {{ $fmt($mpMovements['in_total'] ?? 0) }}</span>
+                        <span class="text-danger">Saídas {{ $fmt($mpMovements['out_total'] ?? 0) }}</span>
+                    </div>
+                </div>
+                @if(!empty($mpMovements['error']))
+                    <p class="text-warning small mb-0">{{ $mpMovements['error'] }}</p>
+                @elseif(empty($mpMovements['items']))
+                    <p class="text-muted small mb-0">Nenhum pagamento neste período.</p>
+                @else
+                    @if(!empty($mpMovements['truncated']))
+                        <p class="text-muted small">Mostrando os {{ count($mpMovements['items']) }} movimentos mais recentes.</p>
+                    @endif
+                    <div class="table-responsive">
+                        <table class="table table-sm financial-mp-movements__table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Tipo</th>
+                                    <th>Descrição</th>
+                                    <th>Meio</th>
+                                    <th class="text-end">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($mpMovements['items'] as $item)
+                                    @php
+                                        $dir = $item['direction'] ?? '';
+                                        $tipo = $dir === 'in' ? 'Entrada' : ($dir === 'out' ? 'Saída' : 'Pendente');
+                                        $tipoClass = $dir === 'in' ? 'text-success' : ($dir === 'out' ? 'text-danger' : 'text-muted');
+                                    @endphp
+                                    <tr>
+                                        <td class="text-nowrap">{{ $item['occurred_at_label'] ?? '—' }}</td>
+                                        <td class="{{ $tipoClass }} fw-semibold">{{ $tipo }}</td>
+                                        <td>
+                                            {{ $item['description'] ?? 'Pagamento' }}
+                                            @if(!empty($item['payer']))
+                                                <div class="text-muted small">{{ $item['payer'] }}</div>
+                                            @endif
+                                        </td>
+                                        <td>{{ $item['method'] ?? '—' }}</td>
+                                        <td class="text-end {{ $tipoClass }}">
+                                            {{ $dir === 'out' ? '-' : '' }}{{ $fmt($item['amount'] ?? 0) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+            </section>
+        @endif
 
         @if($canEdit)
             @foreach($accounts as $account)
@@ -318,6 +399,59 @@
         font-size: 0.82rem;
         color: #9ca3af;
     }
+    .financial-account-card__flow {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+    }
+    .financial-account-card__flow-in,
+    .financial-account-card__flow-out {
+        font-size: 1.05rem;
+        font-weight: 700;
+    }
+    .financial-account-card__flow-in { color: #16a34a; }
+    .financial-account-card__flow-out { color: #dc2626; }
+    .financial-mp-movements {
+        margin-top: 1.5rem;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.85rem;
+        padding: 1.1rem 1.15rem;
+    }
+    .financial-mp-movements__head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.9rem;
+    }
+    .financial-mp-movements__title {
+        margin: 0 0 0.2rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    .financial-mp-movements__hint {
+        color: #6b7280;
+        font-size: 0.85rem;
+    }
+    .financial-mp-movements__totals {
+        display: flex;
+        gap: 1rem;
+        font-weight: 700;
+        font-size: 0.92rem;
+        align-items: flex-start;
+    }
+    .financial-mp-movements__table th {
+        color: #6b7280;
+        font-weight: 600;
+        font-size: 0.78rem;
+        border-bottom-color: #eef2f7;
+    }
+    .financial-mp-movements__table td {
+        vertical-align: top;
+        border-bottom-color: #f3f4f6;
+    }
     .financial-account-card__actions {
         display: flex;
         gap: 0.45rem;
@@ -385,5 +519,24 @@
         color: #6b7280;
     }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+(function () {
+    function syncAccountType(select) {
+        if (!select) return;
+        const wrap = select.closest('.modal, form') || document;
+        const hint = wrap.querySelector('.js-mp-balance-hint');
+        if (hint) {
+            hint.classList.toggle('d-none', select.value !== 'mercado_pago');
+        }
+    }
+    document.querySelectorAll('.js-account-type').forEach(function (select) {
+        select.addEventListener('change', function () { syncAccountType(select); });
+        syncAccountType(select);
+    });
+})();
+</script>
 @endpush
 @endsection
