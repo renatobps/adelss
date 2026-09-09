@@ -23,23 +23,39 @@
             font-size: 14px;
             font-weight: bold;
             letter-spacing: 0.6px;
-            margin: 4px 0 10px;
+            margin: 4px 0 2px;
             text-transform: uppercase;
+        }
+        .periodo {
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0 0 12px;
         }
         table.form { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
         table.form th, table.form td {
-            border: 1px solid #111;
+            border: 1px solid #cbd5e1;
             padding: 5px 7px;
         }
         table.form th {
-            background: #f3f4f6;
             text-align: left;
             font-size: 9px;
             text-transform: uppercase;
         }
-        table.form .sec th { background: #e5e7eb; text-align: center; }
-        table.form .num { text-align: right; width: 38mm; white-space: nowrap; }
-        table.form .total td { font-weight: bold; background: #f8fafc; }
+        table.form .num { text-align: right; width: 38mm; white-space: nowrap; font-weight: bold; }
+        table.form.receita th { background: #dbeafe; color: #1e3a8a; }
+        table.form.receita .sec th { background: #1d4ed8; color: #fff; text-align: center; }
+        table.form.receita td { color: #1e3a8a; }
+        table.form.receita .total td { background: #eff6ff; font-weight: bold; }
+        table.form.despesa th { background: #fee2e2; color: #991b1b; }
+        table.form.despesa .sec th { background: #b91c1c; color: #fff; text-align: center; }
+        table.form.despesa td { color: #991b1b; }
+        table.form.despesa .total td { background: #fef2f2; font-weight: bold; }
+        table.form.resumo th { background: #e5e7eb; color: #111827; }
+        table.form.resumo .sec th { background: #334155; color: #fff; text-align: center; }
+        table.form.resumo .row-receita td { color: #1d4ed8; background: #eff6ff; font-weight: bold; }
+        table.form.resumo .row-despesa td { color: #b91c1c; background: #fef2f2; font-weight: bold; }
+        table.form.resumo .total td { background: #1e3a8a; color: #fff; font-weight: bold; }
         .assinaturas { width: 100%; margin-top: 28px; border-collapse: collapse; }
         .assinaturas td { width: 50%; text-align: center; padding: 14px 12px 6px; vertical-align: bottom; }
         .assinaturas .linha { border-top: 1px solid #111; margin: 36px auto 6px; width: 78%; }
@@ -60,13 +76,17 @@
         <table class="meta">
             <tr>
                 <td><strong>CONGREGAÇÃO:</strong> {{ $congregacao }}</td>
-                <td style="text-align: right;">{{ $cidade }}, {{ $mes['date_label'] }}</td>
+                <td style="text-align: right;"><strong>MÊS:</strong> {{ $mes['month_name'] }}/{{ $year }}</td>
+            </tr>
+            <tr>
+                <td colspan="2" style="text-align: right;">{{ $cidade }}, {{ $mes['date_label'] }}</td>
             </tr>
         </table>
 
         <div class="title">Demonstrativo financeiro</div>
+        <div class="periodo">Referente ao mês de {{ $mes['month_name_lower'] }} de {{ $year }}</div>
 
-        <table class="form">
+        <table class="form receita">
             <tr class="sec">
                 <th colspan="2">Discriminação das entradas</th>
             </tr>
@@ -75,11 +95,11 @@
                 <th class="num">Valor</th>
             </tr>
             <tr>
-                <td>Dízimos dos obreiros (37% da renda mensal)</td>
+                <td>Dízimos dos obreiros</td>
                 <td class="num">{{ $fmt($mes['dizimo_obreiros']) }}</td>
             </tr>
             <tr>
-                <td>Dízimos dos membros e congregados (63%)</td>
+                <td>Dízimos dos membros e congregados</td>
                 <td class="num">{{ $fmt($mes['dizimo_membros']) }}</td>
             </tr>
             <tr class="total">
@@ -88,7 +108,7 @@
             </tr>
         </table>
 
-        <table class="form">
+        <table class="form despesa">
             <tr class="sec">
                 <th colspan="2">Discriminação das saídas</th>
             </tr>
@@ -106,7 +126,7 @@
             </tr>
         </table>
 
-        <table class="form">
+        <table class="form resumo">
             <tr class="sec">
                 <th colspan="2">Resumo</th>
             </tr>
@@ -118,11 +138,11 @@
                 <td>Saldo do mês anterior</td>
                 <td class="num">{{ $fmt($mes['saldo_anterior']) }}</td>
             </tr>
-            <tr>
+            <tr class="row-receita">
                 <td>Entradas do mês</td>
                 <td class="num">{{ $fmt($mes['total_entradas']) }}</td>
             </tr>
-            <tr>
+            <tr class="row-despesa">
                 <td>Saídas do mês</td>
                 <td class="num">{{ $fmt($mes['total_saidas']) }}</td>
             </tr>

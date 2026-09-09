@@ -41,10 +41,10 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Mês</th>
-                                <th class="text-end">Obreiros 37%</th>
-                                <th class="text-end">Membros 63%</th>
-                                <th class="text-end">Entradas</th>
-                                <th class="text-end">Saídas</th>
+                                <th class="text-end text-success">Obreiros</th>
+                                <th class="text-end text-success">Membros</th>
+                                <th class="text-end text-success">Entradas</th>
+                                <th class="text-end text-danger">Saídas</th>
                                 <th class="text-end">Saldo anterior</th>
                                 <th class="text-end">Saldo</th>
                             </tr>
@@ -53,8 +53,8 @@
                             @foreach($months as $mes)
                                 <tr>
                                     <td>{{ $mes['month_name'] }}</td>
-                                    <td class="text-end">{{ $fmt($mes['dizimo_obreiros']) }}</td>
-                                    <td class="text-end">{{ $fmt($mes['dizimo_membros']) }}</td>
+                                    <td class="text-end text-success">{{ $fmt($mes['dizimo_obreiros']) }}</td>
+                                    <td class="text-end text-success">{{ $fmt($mes['dizimo_membros']) }}</td>
                                     <td class="text-end text-success">{{ $fmt($mes['total_entradas']) }}</td>
                                     <td class="text-end text-danger">{{ $fmt($mes['total_saidas']) }}</td>
                                     <td class="text-end">{{ $fmt($mes['saldo_anterior']) }}</td>
