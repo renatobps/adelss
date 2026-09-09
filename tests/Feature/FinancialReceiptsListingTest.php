@@ -36,6 +36,7 @@ class FinancialReceiptsListingTest extends TestCase
         Schema::create('members', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('phone')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
@@ -251,6 +252,19 @@ class FinancialReceiptsListingTest extends TestCase
         $this->assertSame(2, $data['summary']['revenues']);
         $this->assertNotNull($data['revenues']->firstWhere('id', $enviado->id)->notificationLogs->first());
         $this->assertNull($data['revenues']->firstWhere('id', $naoEnviado->id)->notificationLogs->first());
+    }
+
+    public function test_aba_de_dizimos_traz_membro_com_telefone_para_envio_direto(): void
+    {
+        $member = Member::create(['name' => 'Ana Dizimista', 'phone' => '61999999999']);
+        $tx = $this->transaction(['member_id' => $member->id]);
+
+        $data = $this->listing(['tab' => 'receitas']);
+        $row = $data['revenues']->firstWhere('id', $tx->id);
+
+        $this->assertTrue($data['revenuesAvailable']);
+        $this->assertSame($member->id, $row->member_id);
+        $this->assertSame('61999999999', $row->member->phone);
     }
 
     public function test_arquivo_do_recibo_e_servido_para_download(): void

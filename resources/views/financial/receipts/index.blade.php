@@ -14,6 +14,9 @@
 @include('financial.reports.partials.styles')
 
 @php
+    $user = Auth::user();
+    $isAdmin = $user?->is_admin ?? false;
+    $canViewReceitas = $isAdmin || $user?->hasPermission('financial.receitas.view') || $user?->hasPermission('financial.receitas.manage');
     $perPage = in_array((int) request('per_page'), [50, 100, 200], true) ? (int) request('per_page') : 50;
     $tabUrl = fn (string $target) => request()->fullUrlWithQuery(['tab' => $target, 'page' => null]);
     $transactionsFilter = fn ($transaction) => route('financial.transactions.index', [
@@ -241,8 +244,8 @@
         @elseif($tab === 'receitas')
             @if($revenues->count() > 0)
                 <p class="text-muted">
-                    O recibo do dízimo ou oferta é emitido na hora: imprima o talão ou confira o comprovante
-                    já enviado ao dizimista pelo WhatsApp.
+                    O recibo do dízimo ou oferta é emitido na hora: imprima o talão ou envie o comprovante
+                    por WhatsApp nesta tela, sem abrir o lançamento.
                 </p>
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -260,7 +263,11 @@
                         </thead>
                         <tbody>
                             @foreach($revenues as $transaction)
-                                @php $sentAt = $transaction->notificationLogs->first()?->created_at; @endphp
+                                @php
+                                    $sentAt = $transaction->notificationLogs->first()?->created_at;
+                                    $canSendWhatsapp = $canViewReceitas && $transaction->is_paid && $transaction->member_id;
+                                    $hasPhone = filled($transaction->member?->phone);
+                                @endphp
                                 <tr>
                                     <td><span class="font-monospace">{{ \App\Support\FinancialReceiptPresenter::number($transaction) }}</span></td>
                                     <td>{{ $transaction->transaction_date->format('d/m/Y') }}</td>
@@ -273,7 +280,7 @@
                                     <td>{{ $transaction->listingPersonName() ?: '—' }}</td>
                                     <td>{{ $transaction->category?->name ?? '—' }}</td>
                                     <td class="text-end">R$ {{ number_format((float) $transaction->amount, 2, ',', '.') }}</td>
-                                    <td>
+                                    <td data-receipt-status>
                                         @if($sentAt)
                                             <span class="badge bg-success">
                                                 <i class="bx bxl-whatsapp me-1"></i>{{ $sentAt->format('d/m/Y H:i') }}
@@ -293,8 +300,19 @@
                                            class="btn btn-sm btn-outline-primary" title="Imprimir recibo do sistema">
                                             <i class="bx bx-printer"></i>
                                         </a>
+                                        @if($canSendWhatsapp)
+                                            <button type="button"
+                                                    class="btn btn-sm {{ $sentAt ? 'btn-outline-success' : 'btn-success' }} send-receipt-whatsapp"
+                                                    data-transaction-id="{{ $transaction->id }}"
+                                                    data-already-sent="{{ $sentAt ? '1' : '0' }}"
+                                                    data-has-phone="{{ $hasPhone ? '1' : '0' }}"
+                                                    title="{{ $hasPhone ? ($sentAt ? 'Reenviar comprovante por WhatsApp' : 'Enviar comprovante por WhatsApp') : 'Membro sem telefone cadastrado' }}"
+                                                    @disabled(! $hasPhone)>
+                                                <i class="bx bxl-whatsapp"></i>
+                                            </button>
+                                        @endif
                                         <a href="{{ $transactionsFilter($transaction) }}"
-                                           class="btn btn-sm btn-outline-secondary" title="Abrir lançamento (anexar ou enviar por WhatsApp)">
+                                           class="btn btn-sm btn-outline-secondary" title="Abrir lançamento">
                                             <i class="bx bx-link-external"></i>
                                         </a>
                                     </td>
@@ -370,3 +388,71 @@
 </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+document.querySelectorAll('.send-receipt-whatsapp').forEach(function (button) {
+    button.addEventListener('click', function () {
+        if (this.disabled || this.getAttribute('data-has-phone') !== '1') {
+            return;
+        }
+
+        const alreadySent = this.getAttribute('data-already-sent') === '1';
+        const confirmText = alreadySent
+            ? 'Reenviar o comprovante por WhatsApp para o membro?'
+            : 'Enviar comprovante por WhatsApp para o membro?';
+
+        if (!confirm(confirmText)) {
+            return;
+        }
+
+        const btn = this;
+        const transactionId = this.dataset.transactionId;
+        btn.disabled = true;
+
+        fetch('{{ route("financial.transactions.send-receipt", ":id") }}'.replace(':id', transactionId), {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}',
+                'Accept': 'application/json',
+            },
+        })
+        .then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, data: data };
+            });
+        })
+        .then(function (result) {
+            if (result.ok && result.data.success) {
+                const cell = btn.closest('tr')?.querySelector('[data-receipt-status]');
+                if (cell) {
+                    const now = new Date();
+                    const pad = function (n) { return String(n).padStart(2, '0'); };
+                    const stamp = pad(now.getDate()) + '/' + pad(now.getMonth() + 1) + '/' + now.getFullYear()
+                        + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+                    const extra = cell.querySelector('small');
+                    cell.innerHTML = '<span class="badge bg-success"><i class="bx bxl-whatsapp me-1"></i>' + stamp + '</span>';
+                    if (extra) {
+                        cell.appendChild(extra);
+                    }
+                }
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-outline-success');
+                btn.setAttribute('data-already-sent', '1');
+                btn.setAttribute('title', 'Reenviar comprovante por WhatsApp');
+                alert('Comprovante enviado por WhatsApp com sucesso!');
+                return;
+            }
+
+            alert(result.data.error || result.data.message || 'Não foi possível enviar o comprovante.');
+        })
+        .catch(function () {
+            alert('Erro ao enviar comprovante por WhatsApp. Atualize a página e tente de novo.');
+        })
+        .finally(function () {
+            btn.disabled = btn.getAttribute('data-has-phone') !== '1';
+        });
+    });
+});
+</script>
+@endpush
