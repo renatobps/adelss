@@ -95,6 +95,7 @@ Organizados nas três categorias do menu lateral.
 - **Configuração**: nunca usar `env()` fora de `config/*.php` — produção roda com `config:cache` e `env()` retorna `null`.
 - **PDFs (DomPDF)**: sem flexbox/grid (usar tabelas), margem **apenas** em `@page` (nunca também no `body`), fonte `DejaVu Sans`, imagens embutidas em base64, sem emoji (usar `App\Support\PdfText::stripEmoji`).
 - **QR Codes**: usar `App\Support\QrCode` (baseado em GD — o servidor não tem imagick).
+- **PDF de comprovante no fechamento**: o FPDI gratuito não importa PDF 1.5+. Sem Imagick, a rasterização usa Ghostscript se estiver no PATH (ou `GHOSTSCRIPT_PATH`); senão extrai JPEG/PNG embutidos no arquivo.
 - **Mobile-first**: tabelas devem ter alternativa em card, ações em tabela colapsam em menu `⋮`, área de toque mínima de 44×44px.
 - **Assets CSS**: arquivos alterados com frequência usam cache-busting `?v=filemtime` no link (ex.: `custom.css`, `event-landing.css`).
 

@@ -29,4 +29,8 @@ return [
         'app_secret' => env('INSTAGRAM_APP_SECRET', env('META_APP_SECRET')),
     ],
 
+    'ghostscript' => [
+        'binary' => env('GHOSTSCRIPT_PATH'),
+    ],
+
 ];

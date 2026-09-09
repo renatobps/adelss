@@ -5,6 +5,7 @@ namespace App\Services\Financial;
 use App\Models\FinancialAccount;
 use App\Models\FinancialTransaction;
 use App\Support\PdfText;
+use App\Support\PdfToImages;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class CashFlowClosingPdfService
 {
     public function __construct(
         private readonly PdfSignatureService $signatures,
+        private readonly PdfToImages $pdfToImages,
     ) {
     }
 
@@ -117,7 +119,7 @@ class CashFlowClosingPdfService
 
     /**
      * @param  Collection<int, FinancialTransaction>  $saidas
-     * @return list<array{transaction: FinancialTransaction, fileName: string, kind: string, imageSrc: ?string, absolutePath: ?string}>
+     * @return list<array{transaction: FinancialTransaction, fileName: string, kind: string, imageSrc: ?string, imageSrcs: list<string>, absolutePath: ?string}>
      */
     private function mapComprovantes(Collection $saidas): array
     {
@@ -127,18 +129,58 @@ class CashFlowClosingPdfService
             foreach ($transaction->attachments as $attachment) {
                 $absolute = $this->absolutePath((string) $attachment->file_path);
                 $kind = $this->detectKind((string) $attachment->file_type, (string) $attachment->file_name, $absolute);
+                $imageSrcs = [];
+
+                if ($kind === 'image' && $absolute) {
+                    $uri = $this->toDataUri($absolute);
+                    if ($uri) {
+                        $imageSrcs[] = $uri;
+                    }
+                }
+
+                if ($kind === 'pdf' && $absolute) {
+                    $rendered = $this->pdfPagesAsDataUris($absolute);
+                    if ($rendered !== []) {
+                        $kind = 'image';
+                        $imageSrcs = $rendered;
+                        $absolute = null;
+                    }
+                }
 
                 $items[] = [
                     'transaction' => $transaction,
                     'fileName' => PdfText::stripEmoji((string) $attachment->file_name),
                     'kind' => $kind,
-                    'imageSrc' => $kind === 'image' && $absolute ? $this->toDataUri($absolute) : null,
+                    'imageSrc' => $imageSrcs[0] ?? null,
+                    'imageSrcs' => $imageSrcs,
                     'absolutePath' => $kind === 'pdf' ? $absolute : null,
                 ];
             }
         }
 
         return $items;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function pdfPagesAsDataUris(string $pdfPath): array
+    {
+        $files = $this->pdfToImages->convert($pdfPath);
+        if ($files === []) {
+            return [];
+        }
+
+        $uris = [];
+        foreach ($files as $file) {
+            $uri = $this->toDataUri($file);
+            if ($uri) {
+                $uris[] = $uri;
+            }
+            @unlink($file);
+        }
+
+        return $uris;
     }
 
     private function periodQuery(Carbon $start, Carbon $end, ?int $accountId, ?int $costCenterId)
@@ -256,11 +298,11 @@ class CashFlowClosingPdfService
 
         try {
             $fpdi = new Fpdi();
-            $this->importPdf($fpdi, $tmpMain);
+            $this->importPdfOrFlatten($fpdi, $tmpMain);
 
             foreach ($extraPdfPaths as $path) {
                 try {
-                    $this->importPdf($fpdi, $path);
+                    $this->importPdfOrFlatten($fpdi, $path);
                 } catch (Throwable $e) {
                     Log::warning('Comprovante PDF não pôde ser incorporado ao fechamento de caixa.', [
                         'path' => $path,
@@ -279,6 +321,25 @@ class CashFlowClosingPdfService
             return null;
         } finally {
             @unlink($tmpMain);
+        }
+    }
+
+    private function importPdfOrFlatten(Fpdi $fpdi, string $path): void
+    {
+        try {
+            $this->importPdf($fpdi, $path);
+
+            return;
+        } catch (Throwable $e) {
+            $flat = $this->pdfToImages->flattenToPdf14($path);
+            if ($flat === null) {
+                throw $e;
+            }
+            try {
+                $this->importPdf($fpdi, $flat);
+            } finally {
+                @unlink($flat);
+            }
         }
     }
 

@@ -153,6 +153,7 @@ class CashFlowClosingPdfTest extends TestCase
         $this->assertCount(1, $data['comprovantes']);
         $this->assertSame('image', $data['comprovantes'][0]['kind']);
         $this->assertNotEmpty($data['comprovantes'][0]['imageSrc']);
+        $this->assertNotEmpty($data['comprovantes'][0]['imageSrcs']);
         $this->assertSame('Maria Tesoureira', $data['tesoureiroNome']);
         $this->assertSame('João Pastor', $data['pastorNome']);
 
@@ -162,5 +163,61 @@ class CashFlowClosingPdfTest extends TestCase
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
         $this->assertStringStartsWith('%PDF', $response->getContent());
         $this->assertStringContainsString('fechamento-caixa-2026-08.pdf', $response->headers->get('Content-Disposition'));
+    }
+
+    public function test_comprovante_pdf_com_imagem_embutida_entra_no_fechamento(): void
+    {
+        Storage::fake('public');
+
+        if (! function_exists('imagecreatetruecolor')) {
+            $this->markTestSkipped('GD é necessário para montar o comprovante de teste.');
+        }
+
+        $despesa = FinancialTransaction::create([
+            'type' => 'despesa',
+            'transaction_date' => '2026-08-12',
+            'description' => 'Material',
+            'amount' => 35,
+            'is_paid' => true,
+            'status' => 'pago',
+        ]);
+
+        $jpeg = $this->makeJpeg(400, 300);
+        $pdf = "%PDF-1.7\n1 0 obj<< /Type /Catalog >>endobj\n".$jpeg."\n%%EOF";
+        Storage::disk('public')->put('financial/transactions/attachments/recibo.pdf', $pdf);
+
+        FinancialTransactionAttachment::create([
+            'transaction_id' => $despesa->id,
+            'file_path' => 'financial/transactions/attachments/recibo.pdf',
+            'file_name' => 'recibo.pdf',
+            'file_type' => 'application/pdf',
+            'file_size' => strlen($pdf),
+        ]);
+
+        $request = Request::create('/financial/reports/cash-flow/extract/pdf', 'GET', [
+            'start_date' => '2026-08-01',
+            'end_date' => '2026-08-31',
+        ]);
+
+        $data = app(CashFlowClosingPdfService::class)->buildViewData($request);
+
+        $this->assertCount(1, $data['comprovantes']);
+        $this->assertSame('image', $data['comprovantes'][0]['kind']);
+        $this->assertNotEmpty($data['comprovantes'][0]['imageSrc']);
+        $this->assertStringStartsWith('data:image/', $data['comprovantes'][0]['imageSrc']);
+    }
+
+    private function makeJpeg(int $width, int $height): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        $bg = imagecolorallocate($image, 240, 240, 240);
+        $fg = imagecolorallocate($image, 20, 20, 20);
+        imagefilledrectangle($image, 0, 0, $width, $height, $bg);
+        imagestring($image, 5, 20, 20, 'RECIBO', $fg);
+        ob_start();
+        imagejpeg($image, null, 85);
+        imagedestroy($image);
+
+        return (string) ob_get_clean();
     }
 }

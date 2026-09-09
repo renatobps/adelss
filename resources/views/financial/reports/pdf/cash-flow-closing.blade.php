@@ -189,7 +189,11 @@
                     — {{ $fmt($item['transaction']->amount) }}<br>
                     Arquivo: {{ $item['fileName'] }}
                 </div>
-                @if($item['kind'] === 'image' && $item['imageSrc'])
+                @if($item['kind'] === 'image' && !empty($item['imageSrcs']))
+                    @foreach($item['imageSrcs'] as $src)
+                        <img src="{{ $src }}" alt="Comprovante">
+                    @endforeach
+                @elseif($item['kind'] === 'image' && $item['imageSrc'])
                     <img src="{{ $item['imageSrc'] }}" alt="Comprovante">
                 @elseif($item['kind'] === 'pdf')
                     <p>O comprovante em PDF foi anexado nas páginas seguintes deste relatório.</p>

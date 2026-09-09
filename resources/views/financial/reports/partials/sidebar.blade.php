@@ -25,6 +25,8 @@
                    class="fr-nav-link {{ request()->routeIs('financial.reports.cultos*') ? 'is-active' : '' }}">Dízimos e Ofertas</a>
                 <a href="{{ route('financial.reports.weekly-closing') }}"
                    class="fr-nav-link {{ request()->routeIs('financial.reports.weekly-closing*') ? 'is-active' : '' }}">Fechamento Semanal</a>
+                <a href="{{ route('financial.reports.matrix-demonstrativo') }}"
+                   class="fr-nav-link {{ request()->routeIs('financial.reports.matrix-demonstrativo*') ? 'is-active' : '' }}">Demonstrativo da matriz</a>
             </div>
             @endif
 

@@ -91,6 +91,10 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
     Route::post('reports/cultos/{event}/vincular', [ClosingReportController::class, 'attachToCulto'])->name('reports.cultos.attach');
     Route::post('reports/cultos/{event}/lancamentos/{transaction}/desvincular', [ClosingReportController::class, 'detachFromCulto'])->name('reports.cultos.detach');
     Route::get('reports/cultos/{event}/pdf', [ClosingReportController::class, 'cultosPdf'])->name('reports.cultos.pdf');
+    Route::get('reports/demonstrativo-matriz', [ClosingReportController::class, 'matrixDemonstrativo'])
+        ->name('reports.matrix-demonstrativo');
+    Route::get('reports/demonstrativo-matriz/pdf', [ClosingReportController::class, 'matrixDemonstrativoPdf'])
+        ->name('reports.matrix-demonstrativo.pdf');
     Route::get('reports/fechamento-semanal', [ClosingReportController::class, 'weekly'])->name('reports.weekly-closing');
     Route::post('reports/fechamento-semanal', [ClosingReportController::class, 'weeklyGenerate'])->name('reports.weekly-closing.generate');
     Route::get('reports/fechamento-semanal/{cashClosing}/pdf', [ClosingReportController::class, 'weeklyPdf'])->name('reports.weekly-closing.pdf');

@@ -7,6 +7,7 @@ use App\Models\CashClosing;
 use App\Models\Event;
 use App\Models\FinancialTransaction;
 use App\Services\Financial\CultoOfferingReportService;
+use App\Services\Financial\MatrixFinancialReportService;
 use App\Services\Financial\PdfSignatureService;
 use App\Services\Financial\WeeklyCashClosingService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -80,6 +81,37 @@ class ClosingReportController extends Controller
         $this->authorize('financial.fechamento.view');
 
         return $service->download($event);
+    }
+
+    public function matrixDemonstrativo(Request $request, MatrixFinancialReportService $service)
+    {
+        $this->authorize('financial.fechamento.view');
+
+        $year = (int) $request->input('year', now()->year);
+        if ($year < 2000 || $year > now()->year + 1) {
+            $year = (int) now()->year;
+        }
+
+        $report = $service->buildYear($year);
+        $years = range(now()->year, now()->year - 10);
+
+        return view('financial.reports.matrix-demonstrativo', [
+            'year' => $year,
+            'years' => $years,
+            'months' => $report['months'],
+        ]);
+    }
+
+    public function matrixDemonstrativoPdf(Request $request, MatrixFinancialReportService $service): Response
+    {
+        $this->authorize('financial.fechamento.view');
+
+        $year = (int) $request->input('year', now()->year);
+        if ($year < 2000 || $year > now()->year + 1) {
+            $year = (int) now()->year;
+        }
+
+        return $service->download($year);
     }
 
     public function weekly(Request $request, WeeklyCashClosingService $service)
