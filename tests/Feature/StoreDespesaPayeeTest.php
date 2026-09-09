@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\FinancialCategory;
 use App\Models\FinancialTransaction;
 use App\Models\Member;
 use App\Models\User;
@@ -71,10 +72,22 @@ class StoreDespesaPayeeTest extends TestCase
             $table->integer('file_size')->nullable();
             $table->timestamps();
         });
+
+        Schema::create('financial_categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('slug')->nullable();
+            $table->text('description')->nullable();
+            $table->string('type');
+            $table->boolean('sends_receipt')->default(false);
+            $table->timestamps();
+            $table->softDeletes();
+        });
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('financial_categories');
         Schema::dropIfExists('financial_transaction_attachments');
         Schema::dropIfExists('financial_transactions');
         Schema::dropIfExists('members');
@@ -157,5 +170,59 @@ class StoreDespesaPayeeTest extends TestCase
         $this->assertNull($tx->member_id);
         $this->assertSame('Fornecedor XYZ', $tx->received_from_other);
         $this->assertSame('Fornecedor XYZ', $tx->source_name);
+    }
+
+    public function test_prebenda_pastoral_dispensa_anexo_e_emite_recibo_assinado(): void
+    {
+        Storage::fake('public');
+        $this->actingAsAdmin();
+        $member = Member::create(['name' => 'Pastor Sebastião Tavares']);
+        $category = $this->prebendaCategory();
+
+        $this->post(route('financial.transactions.store.despesa'), [
+            'transaction_date' => now()->toDateString(),
+            'description' => 'Prebenda pastoral de setembro',
+            'amount' => 1500,
+            'is_paid' => 1,
+            'member_id' => $member->id,
+            'category_id' => $category->id,
+        ])->assertRedirect(route('financial.transactions.index'));
+
+        $tx = FinancialTransaction::first();
+        $this->assertNotNull($tx);
+
+        $attachment = $tx->attachments()->first();
+        $this->assertNotNull($attachment, 'O recibo da prebenda deveria ser emitido automaticamente.');
+        $this->assertTrue($attachment->isSystemGenerated());
+        $this->assertSame('application/pdf', $attachment->file_type);
+        Storage::disk('public')->assertExists($attachment->file_path);
+    }
+
+    public function test_prebenda_pastoral_exige_selecionar_quem_recebeu(): void
+    {
+        Storage::fake('public');
+        $this->actingAsAdmin();
+        $category = $this->prebendaCategory();
+
+        $this->from(route('financial.transactions.index'))
+            ->post(route('financial.transactions.store.despesa'), [
+                'transaction_date' => now()->toDateString(),
+                'description' => 'Prebenda pastoral de setembro',
+                'amount' => 1500,
+                'is_paid' => 1,
+                'category_id' => $category->id,
+            ])
+            ->assertSessionHasErrors('member_id');
+
+        $this->assertSame(0, FinancialTransaction::count());
+    }
+
+    private function prebendaCategory(): FinancialCategory
+    {
+        return FinancialCategory::create([
+            'name' => 'Prebenda Pastoral',
+            'slug' => 'prebenda-pastoral',
+            'type' => 'despesa',
+        ]);
     }
 }

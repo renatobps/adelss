@@ -42,5 +42,5 @@
 .f-assinatura { top: 73.2%; left: 18%; width: 55%; height: 12%; overflow: visible; }
 .f-assinatura-img { max-height: 110px; max-width: 320px; height: 110px; width: auto; display: block; }
 .f-nome { top: 84.8%; left: 12%; width: 48%; font-size: 14px; }
-.f-cpf { top: 84.8%; left: 66%; width: 28%; font-size: 14px; }
+.f-cpf { top: 84.8%; left: 70%; width: 24%; font-size: 14px; }
 .f-endereco { top: 90.6%; left: 15%; width: 78%; font-size: 13px; }

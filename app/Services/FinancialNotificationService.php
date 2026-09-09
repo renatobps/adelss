@@ -527,15 +527,7 @@ class FinancialNotificationService
                 mkdir($dir, 0755, true);
             }
 
-            $fundoSource = FinancialReceiptLogo::backgroundAbsolutePath();
-            $fundoPath = null;
-            if ($fundoSource) {
-                $fundoPath = $dir.DIRECTORY_SEPARATOR.'recibo-fundo.png';
-                if (! is_file($fundoPath) || filemtime($fundoPath) < filemtime($fundoSource)) {
-                    @copy($fundoSource, $fundoPath);
-                }
-                $fundoPath = str_replace('\\', '/', $fundoPath);
-            }
+            $fundoPath = FinancialReceiptLogo::backgroundPathForPdf();
 
             $assinaturaPath = $this->signatures->imagePath(PdfSignatureService::ROLE_TESOUREIRO);
             if ($assinaturaPath) {

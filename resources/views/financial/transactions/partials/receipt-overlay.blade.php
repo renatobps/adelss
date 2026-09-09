@@ -1,6 +1,10 @@
 @php
     $r = $receipt ?? \App\Support\FinancialReceiptPresenter::from($transaction);
     $fundo = $fundoSrc ?? $fundoPath ?? \App\Support\FinancialReceiptLogo::backgroundHtmlSrc();
+    $assinanteNome = $signerName ?? $tesoureiroNome ?? '';
+    $assinanteImagem = $signerSignatureSrc ?? $tesoureiroAssinaturaSrc ?? null;
+    $assinanteCpfRg = $signerCpfRg ?? '';
+    $assinanteEndereco = $signerAddress ?? '';
 @endphp
 <div class="recibo-page">
     @if(!empty($fundo))
@@ -17,9 +21,15 @@
     <div class="f f-mes">{{ $r['month'] }}</div>
     <div class="f f-ano">{{ $r['year'] }}</div>
     <div class="f f-assinatura">
-        @if(!empty($tesoureiroAssinaturaSrc) && (str_starts_with((string) $tesoureiroAssinaturaSrc, 'data:') || is_file((string) $tesoureiroAssinaturaSrc)))
-            <img src="{{ $tesoureiroAssinaturaSrc }}" class="f-assinatura-img" alt="">
+        @if(!empty($assinanteImagem) && (str_starts_with((string) $assinanteImagem, 'data:') || is_file((string) $assinanteImagem)))
+            <img src="{{ $assinanteImagem }}" class="f-assinatura-img" alt="">
         @endif
     </div>
-    <div class="f f-nome">{{ $tesoureiroNome ?? '' }}</div>
+    <div class="f f-nome">{{ $assinanteNome }}</div>
+    @if(!empty($assinanteCpfRg))
+        <div class="f f-cpf">{{ $assinanteCpfRg }}</div>
+    @endif
+    @if(!empty($assinanteEndereco))
+        <div class="f f-endereco">{{ $assinanteEndereco }}</div>
+    @endif
 </div>

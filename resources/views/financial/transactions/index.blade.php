@@ -1047,7 +1047,8 @@
                                 <select class="form-select" id="edit_despesa_category_id" name="category_id">
                                     <option value="">Selecione</option>
                                     @foreach($categories as $category)
-                                        <option value="{{ $category->id }}" data-type="{{ $category->type }}">
+                                        <option value="{{ $category->id }}" data-type="{{ $category->type }}"
+                                                data-prebenda="{{ $category->isPrebendaPastoral() ? '1' : '0' }}">
                                             {{ $category->name }}
                                         </option>
                                     @endforeach
@@ -1124,6 +1125,11 @@
                         </label>
                         <div class="alert alert-warning py-2 small d-none" id="edit_receipt_hint">
                             Pagamento a membro exige o recibo de pagamento assinado por quem recebeu (foto ou PDF).
+                        </div>
+                        <div class="alert alert-info py-2 small d-none" id="edit_prebenda_hint">
+                            Prebenda pastoral: não precisa anexar recibo. O sistema reemite o recibo com a assinatura do
+                            pastor e o nome selecionado em &quot;Pago à&quot;.
+                            @include('financial.transactions.partials.prebenda-signature-warning')
                         </div>
                         <div class="d-flex flex-wrap gap-2 mb-2">
                             <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('edit_attachments_upload').click()">
@@ -1231,7 +1237,9 @@
                             <select class="form-select" id="despesa_category" name="category_id">
                                 <option value="">Selecione</option>
                                 @foreach($categories->where('type', 'despesa') as $category)
-                                    <option value="{{ $category->id }}" {{ old('category_id') == $category->id ? 'selected' : '' }}>
+                                    <option value="{{ $category->id }}"
+                                            data-prebenda="{{ $category->isPrebendaPastoral() ? '1' : '0' }}"
+                                            {{ old('category_id') == $category->id ? 'selected' : '' }}>
                                         {{ $category->name }}
                                     </option>
                                 @endforeach
@@ -1316,6 +1324,11 @@
                         </label>
                         <div class="alert alert-warning py-2 small d-none" id="despesa_receipt_hint">
                             Pagamento a membro exige o recibo de pagamento assinado por quem recebeu (foto ou PDF).
+                        </div>
+                        <div class="alert alert-info py-2 small d-none" id="despesa_prebenda_hint">
+                            Prebenda pastoral: não precisa anexar recibo. O sistema emite o recibo com a assinatura do
+                            pastor e o nome selecionado em &quot;Pago à&quot;.
+                            @include('financial.transactions.partials.prebenda-signature-warning')
                         </div>
                         <div class="d-flex flex-wrap gap-2 mb-2">
                             <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('despesa_attachments_upload').click()">
@@ -1934,11 +1947,21 @@
         });
     }
 
-    function syncDespesaPayeeUi(select, otherField, requiredId, hintId) {
+    function categoryIsPrebenda(select) {
+        const option = select?.selectedOptions?.[0];
+        if (!option || !option.value) return false;
+        if (option.dataset.prebenda === '1') return true;
+        return (option.textContent || '').toLowerCase().includes('prebenda');
+    }
+
+    function syncDespesaPayeeUi(select, otherField, requiredId, hintId, categorySelect, prebendaHintId) {
         const isMember = select && select.value && select.value !== 'other';
         const isOther = select?.value === 'other';
-        document.getElementById(requiredId)?.classList.toggle('d-none', !isMember);
-        document.getElementById(hintId)?.classList.toggle('d-none', !isMember);
+        const isPrebenda = categoryIsPrebenda(categorySelect);
+        const needsReceipt = isMember && !isPrebenda;
+        document.getElementById(requiredId)?.classList.toggle('d-none', !needsReceipt);
+        document.getElementById(hintId)?.classList.toggle('d-none', !needsReceipt);
+        document.getElementById(prebendaHintId)?.classList.toggle('d-none', !isPrebenda);
         if (!otherField) return;
         if (isOther) {
             otherField.classList.remove('d-none');
@@ -1982,29 +2005,34 @@
         }
     });
 
-    document.getElementById('despesa_payee')?.addEventListener('change', function() {
+    function syncDespesaCreateReceiptUi() {
         syncDespesaPayeeUi(
-            this,
+            document.getElementById('despesa_payee'),
             document.getElementById('despesa_other_name'),
             'despesa_receipt_required',
-            'despesa_receipt_hint'
+            'despesa_receipt_hint',
+            document.getElementById('despesa_category'),
+            'despesa_prebenda_hint'
         );
-    });
-    syncDespesaPayeeUi(
-        document.getElementById('despesa_payee'),
-        document.getElementById('despesa_other_name'),
-        'despesa_receipt_required',
-        'despesa_receipt_hint'
-    );
+    }
 
-    document.getElementById('edit_payee_id')?.addEventListener('change', function() {
+    function syncDespesaEditReceiptUi() {
         syncDespesaPayeeUi(
-            this,
+            document.getElementById('edit_payee_id'),
             document.getElementById('edit_payee_other_name'),
             'edit_receipt_required',
-            'edit_receipt_hint'
+            'edit_receipt_hint',
+            document.getElementById('edit_despesa_category_id'),
+            'edit_prebenda_hint'
         );
-    });
+    }
+
+    document.getElementById('despesa_payee')?.addEventListener('change', syncDespesaCreateReceiptUi);
+    document.getElementById('despesa_category')?.addEventListener('change', syncDespesaCreateReceiptUi);
+    syncDespesaCreateReceiptUi();
+
+    document.getElementById('edit_payee_id')?.addEventListener('change', syncDespesaEditReceiptUi);
+    document.getElementById('edit_despesa_category_id')?.addEventListener('change', syncDespesaEditReceiptUi);
 
     // Validação antes de enviar o formulário de receita
     document.getElementById('receitaForm')?.addEventListener('submit', function(e) {
@@ -2037,6 +2065,14 @@
     document.getElementById('despesaForm')?.addEventListener('submit', function(e) {
         const payee = document.getElementById('despesa_payee');
         const otherField = document.getElementById('despesa_other_name');
+        const isPrebenda = categoryIsPrebenda(document.getElementById('despesa_category'));
+
+        if (isPrebenda && !payee?.value) {
+            e.preventDefault();
+            alert('Selecione o pastor que recebeu a prebenda ou escolha "Outros".');
+            payee?.focus();
+            return false;
+        }
 
         if (payee?.value === 'other') {
             if (!otherField?.value?.trim()) {
@@ -2051,7 +2087,7 @@
             otherField.removeAttribute('name');
         }
 
-        if (payee?.value && payee.value !== 'other' && despesaAttachmentManager.getTotalCount() < 1) {
+        if (!isPrebenda && payee?.value && payee.value !== 'other' && despesaAttachmentManager.getTotalCount() < 1) {
             e.preventDefault();
             alert('Anexe o recibo de pagamento assinado pela pessoa que recebeu.');
             return false;
@@ -2064,6 +2100,15 @@
             return;
         }
         const otherField = document.getElementById('edit_payee_other_name');
+        const isPrebenda = categoryIsPrebenda(document.getElementById('edit_despesa_category_id'));
+
+        if (isPrebenda && !payee?.value) {
+            e.preventDefault();
+            alert('Selecione o pastor que recebeu a prebenda ou escolha "Outros".');
+            payee?.focus();
+            return false;
+        }
+
         if (payee?.value === 'other') {
             if (!otherField?.value?.trim()) {
                 e.preventDefault();
@@ -2075,7 +2120,7 @@
             payee.setAttribute('name', 'member_id_hidden');
         }
 
-        if (payee?.value && payee.value !== 'other' && editAttachmentManager.getTotalCount() < 1) {
+        if (!isPrebenda && payee?.value && payee.value !== 'other' && editAttachmentManager.getTotalCount() < 1) {
             e.preventDefault();
             alert('Anexe o recibo de pagamento assinado pela pessoa que recebeu.');
             return false;
@@ -2218,8 +2263,14 @@
         const attachmentsEl = document.getElementById('view_attachments');
         if (tx.attachments && tx.attachments.length) {
             attachmentsEl.innerHTML = tx.attachments.map(function(a) {
-                return '<span class="badge bg-light text-dark border me-1 mb-1"><i class="bx bx-paperclip me-1"></i>' +
-                    (a.file_name || 'arquivo') + '</span>';
+                const icon = a.generated ? 'bx-file' : 'bx-paperclip';
+                const name = escapeAttachmentName(a.file_name || 'arquivo');
+                const label = '<i class="bx ' + icon + ' me-1"></i>' + name +
+                    (a.generated ? ' <span class="text-muted">(emitido pelo sistema)</span>' : '');
+                return a.url
+                    ? '<a href="' + a.url + '" target="_blank" rel="noopener" ' +
+                        'class="badge bg-light text-dark border text-decoration-none me-1 mb-1">' + label + '</a>'
+                    : '<span class="badge bg-light text-dark border me-1 mb-1">' + label + '</span>';
             }).join('');
         } else {
             attachmentsEl.textContent = 'Nenhum anexo';
@@ -2365,7 +2416,7 @@
 
             filterCategories('edit_despesa_category_id', 'despesa');
             document.getElementById('edit_despesa_category_id').value = transaction.category_id || '';
-            syncDespesaPayeeUi(payeeSelect, payeeOther, 'edit_receipt_required', 'edit_receipt_hint');
+            syncDespesaEditReceiptUi();
         }
 
         setDisabledFormControls(receitaFields, transaction.type !== 'receita');
@@ -2382,7 +2433,14 @@
                 const div = document.createElement('div');
                 div.className = 'd-flex justify-content-between align-items-center mb-2 p-2 border rounded';
                 div.dataset.existingAttachment = '1';
-                div.innerHTML = `
+                div.innerHTML = attachment.generated
+                    ? `
+                    <a class="small text-decoration-none" href="${attachment.url}" target="_blank" rel="noopener">
+                        <i class="bx bx-file me-1"></i>${escapeAttachmentName(attachment.file_name)}
+                    </a>
+                    <span class="badge bg-info-subtle text-info-emphasis border">Emitido pelo sistema</span>
+                `
+                    : `
                     <span class="small"><i class="bx bx-paperclip me-1"></i>${escapeAttachmentName(attachment.file_name)}</span>
                     <button type="button" class="btn btn-sm btn-danger" onclick="removeExistingFile(${attachment.id}, this)">
                         <i class="bx bx-trash"></i>

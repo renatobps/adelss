@@ -35,6 +35,30 @@ class FinancialReceiptLogo
     }
 
     /**
+     * O DomPDF lê a arte do talão do disco; a cópia em storage evita depender
+     * do caminho público durante a renderização.
+     */
+    public static function backgroundPathForPdf(): ?string
+    {
+        $source = self::backgroundAbsolutePath();
+        if (! $source) {
+            return null;
+        }
+
+        $dir = storage_path('app/temp/receipts');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+
+        $copy = $dir.DIRECTORY_SEPARATOR.'recibo-fundo.png';
+        if (! is_file($copy) || filemtime($copy) < filemtime($source)) {
+            @copy($source, $copy);
+        }
+
+        return str_replace('\\', '/', $copy);
+    }
+
+    /**
      * Papel do PDF na mesma proporção do talão (1447×1087), em pontos.
      *
      * @return array{0: float, 1: float, 2: float, 3: float}

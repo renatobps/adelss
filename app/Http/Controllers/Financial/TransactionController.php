@@ -11,6 +11,7 @@ use App\Models\FinancialCategory;
 use App\Models\FinancialAccount;
 use App\Models\FinancialCostCenter;
 use App\Services\Financial\PdfSignatureService;
+use App\Services\Financial\PrebendaReceiptService;
 use App\Services\FinancialNotificationService;
 use App\Support\FinancialReceiptLogo;
 use Illuminate\Http\Request;
@@ -24,13 +25,14 @@ class TransactionController extends Controller
     use AppliesFinancialTransactionListing;
 
     public function __construct(
-        private FinancialNotificationService $financialNotificationService
+        private FinancialNotificationService $financialNotificationService,
+        private PrebendaReceiptService $prebendaReceipts
     ) {}
 
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request)
+    public function index(Request $request, PdfSignatureService $signatures)
     {
         $this->authorize('viewAny', FinancialTransaction::class);
 
@@ -122,6 +124,7 @@ class TransactionController extends Controller
         $members = Member::orderBy('name')->get(); // Para o modal de receita
         $contacts = FinancialContact::orderBy('name')->get(); // Para o modal de despesa
         $mercadoPagoPublicKey = (string) config('mercadopago.public_key', '');
+        $pastorSignatureMissing = $signatures->imagePath(PdfSignatureService::ROLE_PASTOR) === null;
 
         return view('financial.transactions.index', compact(
             'transactions',
@@ -137,7 +140,8 @@ class TransactionController extends Controller
             'contacts',
             'startDate',
             'endDate',
-            'mercadoPagoPublicKey'
+            'mercadoPagoPublicKey',
+            'pastorSignatureMissing'
         ));
     }
 
@@ -326,6 +330,12 @@ class TransactionController extends Controller
             }
         }
 
+        if ($this->prebendaReceipts->appliesTo($transaction)) {
+            foreach ($transactions as $created) {
+                $this->prebendaReceipts->regenerate($created);
+            }
+        }
+
         $whatsappMessage = null;
         if (!$transaction->is_paid) {
             $transaction->load(['member', 'contact', 'category']);
@@ -406,6 +416,8 @@ class TransactionController extends Controller
             'attachments' => $transaction->attachments->map(fn ($a) => [
                 'id' => $a->id,
                 'file_name' => $a->file_name,
+                'url' => asset('storage/'.$a->file_path),
+                'generated' => $a->isSystemGenerated(),
             ])->values(),
         ]);
     }
@@ -443,6 +455,8 @@ class TransactionController extends Controller
                     'id' => $attachment->id,
                     'file_name' => $attachment->file_name,
                     'file_path' => $attachment->file_path,
+                    'url' => asset('storage/'.$attachment->file_path),
+                    'generated' => $attachment->isSystemGenerated(),
                 ];
             }),
         ]);
@@ -541,6 +555,14 @@ class TransactionController extends Controller
         $transaction->update($validated);
         $transaction->refresh()->load(['member', 'category', 'contact']);
 
+        if ($transaction->type === 'despesa') {
+            if ($this->prebendaReceipts->appliesTo($transaction)) {
+                $this->prebendaReceipts->regenerate($transaction);
+            } else {
+                $this->prebendaReceipts->deleteGenerated($transaction);
+            }
+        }
+
         $whatsappMessage = null;
         $dueDateChanged = ($transaction->due_date?->format('Y-m-d') ?? null) !== $previousDueDate;
 
@@ -601,10 +623,21 @@ class TransactionController extends Controller
         $this->authorize('receipt', $transaction);
         $transaction->load(['member', 'contact', 'category']);
 
+        $signer = $this->prebendaReceipts->appliesTo($transaction)
+            ? $this->prebendaReceipts->signer($transaction, asDataUri: true)
+            : [
+                'name' => $signatures->tesoureiroNome(),
+                'signatureSrc' => $signatures->imageSrc(PdfSignatureService::ROLE_TESOUREIRO),
+                'cpfRg' => '',
+                'address' => '',
+            ];
+
         return view('financial.transactions.receipt', [
             'transaction' => $transaction,
-            'tesoureiroNome' => $signatures->tesoureiroNome(),
-            'tesoureiroAssinaturaSrc' => $signatures->imageSrc(PdfSignatureService::ROLE_TESOUREIRO),
+            'signerName' => $signer['name'],
+            'signerSignatureSrc' => $signer['signatureSrc'],
+            'signerCpfRg' => $signer['cpfRg'],
+            'signerAddress' => $signer['address'],
             'logoSrc' => FinancialReceiptLogo::htmlSrc(),
             'logoPath' => FinancialReceiptLogo::absolutePath(),
             'fundoSrc' => FinancialReceiptLogo::backgroundHtmlSrc(),
@@ -970,18 +1003,24 @@ class TransactionController extends Controller
 
     /**
      * Pago à: membro da lista, ou “Outros” com nome livre.
-     * Pagamento a membro exige recibo assinado anexado.
+     * Pagamento a membro exige recibo assinado anexado, exceto na prebenda
+     * pastoral, em que o sistema emite o recibo já assinado pelo pastor.
      *
      * @return array{0: array<string, string>, 1: array<string, string>}
      */
     private function despesaPayeeRules(Request $request, ?FinancialTransaction $transaction = null): array
     {
         $memberId = $request->input('member_id');
+        $isPrebenda = $this->prebendaReceipts->categoryIsPrebenda(
+            $request->input('category_id', $transaction?->category_id)
+        );
+
         $rules = [
             'member_id' => 'nullable',
             'received_from_other' => 'nullable|string|max:255',
         ];
         $messages = [
+            'member_id.required' => 'Selecione o pastor que recebeu a prebenda ou escolha "Outros".',
             'member_id.exists' => 'O membro selecionado não existe.',
             'received_from_other.required' => 'Informe a quem foi pago quando selecionar "Outros".',
             'attachments.required' => 'Anexe o recibo de pagamento assinado pela pessoa que recebeu.',
@@ -997,11 +1036,16 @@ class TransactionController extends Controller
         if ($memberId && is_numeric($memberId)) {
             $rules['member_id'] = 'required|exists:members,id';
 
-            $remaining = 0;
-            if ($transaction) {
-                $removing = count(array_filter((array) $request->input('remove_attachments', [])));
-                $remaining = max(0, $transaction->attachments()->count() - $removing);
+            if ($isPrebenda) {
+                return [$rules, $messages];
             }
+
+            $remaining = $transaction
+                ? $this->prebendaReceipts->manualAttachmentsCount(
+                    $transaction,
+                    array_filter((array) $request->input('remove_attachments', []))
+                )
+                : 0;
             $newCount = $request->hasFile('attachments') ? count($request->file('attachments')) : 0;
 
             if (($remaining + $newCount) < 1) {
@@ -1009,6 +1053,11 @@ class TransactionController extends Controller
             }
 
             return [$rules, $messages];
+        }
+
+        // O nome impresso no recibo emitido vem de "Pago à".
+        if ($isPrebenda) {
+            $rules['member_id'] = 'required';
         }
 
         return [$rules, $messages];

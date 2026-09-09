@@ -47,6 +47,11 @@ class FinancialCategory extends Model
         return self::slugIsDizimoOuOferta($this->slug, $this->name);
     }
 
+    public function isPrebendaPastoral(): bool
+    {
+        return self::slugIsPrebendaPastoral($this->slug, $this->name);
+    }
+
     public static function slugIsDizimo(?string $slug, ?string $name = null): bool
     {
         $slug = strtolower(trim((string) $slug));
@@ -71,6 +76,16 @@ class FinancialCategory extends Model
         return str_contains($name, 'dízimo')
             || str_contains($name, 'dizimo')
             || str_contains($name, 'oferta');
+    }
+
+    public static function slugIsPrebendaPastoral(?string $slug, ?string $name = null): bool
+    {
+        $slug = strtolower(trim((string) $slug));
+        if (str_contains($slug, 'prebenda')) {
+            return true;
+        }
+
+        return str_contains(mb_strtolower((string) $name), 'prebenda');
     }
 
     /**
