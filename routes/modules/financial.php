@@ -8,6 +8,7 @@ use App\Http\Controllers\Financial\ContactController;
 use App\Http\Controllers\Financial\CostCenterController;
 use App\Http\Controllers\Financial\CorrectionController;
 use App\Http\Controllers\Financial\TransactionController;
+use App\Http\Controllers\Financial\ReceiptController;
 use App\Http\Controllers\Financial\ReportController;
 use App\Http\Controllers\Financial\ClosingReportController;
 use App\Http\Controllers\Financial\ReportSignatureController;
@@ -67,6 +68,12 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
     Route::post('transactions/{transaction}/send-receipt', [TransactionController::class, 'sendReceiptWhatsApp'])->name('transactions.send-receipt');
     Route::post('transactions/{transaction}/duplicate', [TransactionController::class, 'duplicate'])->name('transactions.duplicate');
     Route::put('transactions/{transaction}/description', [TransactionController::class, 'updateDescription'])->name('transactions.update-description');
+
+    // Recibos (comprovantes enviados e recibos emitidos pelo sistema)
+    Route::get('receipts', [ReceiptController::class, 'index'])->name('receipts.index');
+    Route::get('receipts/export', [ReceiptController::class, 'export'])->name('receipts.export');
+    Route::get('receipts/{attachment}/arquivo', [ReceiptController::class, 'file'])->name('receipts.file');
+    Route::get('receipts/{attachment}/download', [ReceiptController::class, 'download'])->name('receipts.download');
 
     // Relatórios
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');

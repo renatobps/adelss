@@ -32,7 +32,7 @@ class FinancialReceiptPresenter
                 ? PdfText::upper($member->name)
                 : PdfText::upper($transaction->received_from_other ?: 'OUTROS');
         } else {
-            $fromName = 'ASSEMBLEIA DE DEUS DE LUZIÂNIA';
+            $fromName = 'ASSEMBLEIA DE DEUS DE LUZIÂNIA em São Sebastião';
         }
 
         $fallbackCategory = $transaction->type === 'receita' ? 'RECEITA' : 'DESPESA';
@@ -57,9 +57,17 @@ class FinancialReceiptPresenter
             'month' => $date->translatedFormat('F'),
             'year' => $date->format('Y'),
             'dateLine' => $date->isoFormat('D [de] MMMM [de] YYYY'),
-            'reciboNumero' => str_pad((string) $transaction->id, 6, '0', STR_PAD_LEFT),
+            'reciboNumero' => self::number($transaction),
             'memberCpfRg' => $cpf !== '' ? $cpf : $rg,
             'memberAddress' => $member ? $member->fullAddress() : '',
         ];
+    }
+
+    /**
+     * Número do recibo: id da transação com zeros à esquerda.
+     */
+    public static function number(FinancialTransaction $transaction): string
+    {
+        return str_pad((string) $transaction->id, 6, '0', STR_PAD_LEFT);
     }
 }

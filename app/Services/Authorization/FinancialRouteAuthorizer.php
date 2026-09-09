@@ -7,6 +7,7 @@ use App\Models\FinancialCategory;
 use App\Models\FinancialContact;
 use App\Models\FinancialCostCenter;
 use App\Models\FinancialTransaction;
+use App\Models\FinancialTransactionAttachment;
 use App\Models\User;
 use App\Policies\Financial\FinancialAccountPolicy;
 use App\Policies\Financial\FinancialCategoryPolicy;
@@ -97,6 +98,10 @@ class FinancialRouteAuthorizer
             return $this->transactionPolicy->checkout($user)
                 ? null
                 : $denyAccess('Acesso negado. Você não tem permissão para gerar cobranças.');
+        }
+
+        if (str_starts_with($routeName ?? '', 'financial.receipts')) {
+            return $this->authorizeReceiptRoute($request, $user, $routeName, $denyAccess);
         }
 
         if (str_starts_with($routeName ?? '', 'financial.reports')) {
@@ -209,6 +214,37 @@ class FinancialRouteAuthorizer
     }
 
     /**
+     * Recibos arquivados: a listagem segue as permissões de transações e cada
+     * arquivo é liberado conforme o tipo do lançamento de origem.
+     *
+     * @param  callable(string): Response  $denyAccess
+     */
+    private function authorizeReceiptRoute(
+        Request $request,
+        User $user,
+        ?string $routeName,
+        callable $denyAccess
+    ): ?Response {
+        if ($routeName === 'financial.receipts.export') {
+            return $this->transactionPolicy->export($user)
+                ? null
+                : $denyAccess('Acesso negado. Você não tem permissão para exportar recibos.');
+        }
+
+        if ($routeName === 'financial.receipts.index') {
+            return $this->transactionPolicy->viewAny($user)
+                ? null
+                : $denyAccess('Acesso negado. Você não tem permissão para visualizar recibos.');
+        }
+
+        $transaction = $this->resolveAttachmentTransaction($request);
+
+        return $transaction && $this->transactionPolicy->receipt($user, $transaction)
+            ? null
+            : $denyAccess('Acesso negado. Você não tem permissão para visualizar este recibo.');
+    }
+
+    /**
      * @param  callable(string): Response  $denyAccess
      */
     private function authorizeTransactionRoute(
@@ -311,6 +347,17 @@ class FinancialRouteAuthorizer
         return $policy->authorizeRouteAction($user, $action)
             ? null
             : $denyAccess("Acesso negado. Você não tem permissão para acessar {$resourceLabel}.");
+    }
+
+    private function resolveAttachmentTransaction(Request $request): ?FinancialTransaction
+    {
+        $attachment = $request->route('attachment');
+
+        if (! $attachment instanceof FinancialTransactionAttachment) {
+            $attachment = $attachment ? FinancialTransactionAttachment::find($attachment) : null;
+        }
+
+        return $attachment?->transaction;
     }
 
     private function resolveTransaction(Request $request): ?FinancialTransaction

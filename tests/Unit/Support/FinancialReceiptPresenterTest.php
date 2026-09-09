@@ -65,6 +65,22 @@ class FinancialReceiptPresenterTest extends TestCase
         );
     }
 
+    public function test_despesa_recebe_da_igreja(): void
+    {
+        $tx = new FinancialTransaction([
+            'type' => 'despesa',
+            'amount' => 1500.00,
+            'transaction_date' => Carbon::parse('2026-09-09'),
+        ]);
+        $tx->id = 143;
+        $tx->setRelation('member', null);
+        $tx->setRelation('category', null);
+
+        $data = FinancialReceiptPresenter::from($tx);
+
+        $this->assertSame('ASSEMBLEIA DE DEUS DE LUZIÂNIA em São Sebastião', $data['fromName']);
+    }
+
     public function test_html_do_pdf_contem_campos_do_talao(): void
     {
         $tx = new FinancialTransaction([

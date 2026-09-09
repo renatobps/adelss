@@ -25,6 +25,12 @@
             'active' => request()->routeIs('financial.transactions.*'),
         ] : null,
         $canViewTransactions ? [
+            'label' => 'Recibos',
+            'icon' => 'bx bx-receipt',
+            'url' => route('financial.receipts.index'),
+            'active' => request()->routeIs('financial.receipts.*'),
+        ] : null,
+        $canViewTransactions ? [
             'label' => 'Correção',
             'icon' => 'bx bx-wrench',
             'url' => route('financial.correction.index'),
