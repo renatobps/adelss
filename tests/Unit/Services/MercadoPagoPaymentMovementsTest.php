@@ -166,6 +166,26 @@ class MercadoPagoPaymentMovementsTest extends TestCase
         $this->assertFalse($movements['outflows_pending']);
     }
 
+    public function test_consulta_sem_renovar_relatorio_nao_gera_csv_novo(): void
+    {
+        $posts = 0;
+        Http::fake(function (\Illuminate\Http\Client\Request $request) use (&$posts) {
+            if (in_array($request->method(), ['POST', 'PUT'], true)
+                && (str_contains($request->url(), 'settlement_report') || str_contains($request->url(), 'release_report'))) {
+                $posts++;
+            }
+            if (str_contains($request->url(), '/v1/payments/search')) {
+                return Http::response(['paging' => ['total' => 0], 'results' => []], 200);
+            }
+
+            return Http::response(['results' => []], 200);
+        });
+
+        app(MercadoPagoService::class)->getPaymentMovements(true, 30, 50, false);
+
+        $this->assertSame(0, $posts);
+    }
+
     public function test_falha_da_api_nao_quebra_a_consulta(): void
     {
         Http::fake([

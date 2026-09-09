@@ -110,6 +110,8 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
     ]);
 
     // Contas
+    Route::get('accounts/mercado-pago/movements', [AccountController::class, 'mercadoPagoMovements'])
+        ->name('accounts.mp-movements');
     Route::post('accounts/{account}/toggle-active', [AccountController::class, 'toggleActive'])
         ->name('accounts.toggle-active');
     Route::resource('accounts', AccountController::class)->names([

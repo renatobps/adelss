@@ -36,18 +36,8 @@ class AccountController extends Controller
             ->get()
             ->contains(fn (FinancialAccount $account) => $account->isMercadoPago());
         $mpMovements = $hasMercadoPagoAccount
-            ? $this->mercadoPago->getPaymentMovements(true)
+            ? $this->loadMercadoPagoMovements(refreshOutflowReports: true)
             : null;
-
-        if (is_array($mpMovements) && empty($mpMovements['error'])) {
-            try {
-                app(FinancialNotificationService::class)->notificarMovimentosMercadoPagoRecentes($mpMovements);
-            } catch (\Throwable $e) {
-                Log::warning('Falha ao notificar tesouraria a partir dos movimentos Mercado Pago', [
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
 
         $accounts = $listedAccounts->map(function (FinancialAccount $account) use ($mpMovements) {
             $this->applyDisplayBalance($account, $mpMovements);
@@ -81,6 +71,32 @@ class AccountController extends Controller
             'colors',
             'mpMovements'
         ));
+    }
+
+    public function mercadoPagoMovements()
+    {
+        $this->authorize('viewAny', FinancialAccount::class);
+
+        $mpMovements = $this->loadMercadoPagoMovements(refreshOutflowReports: false);
+        $mpBalance = round(
+            (float) ($mpMovements['in_total'] ?? 0) - (float) ($mpMovements['out_total'] ?? 0),
+            2
+        );
+
+        $saldoAtivas = FinancialAccount::where('is_active', true)
+            ->get()
+            ->sum(function (FinancialAccount $account) use ($mpMovements) {
+                $this->applyDisplayBalance($account, $mpMovements);
+
+                return (float) $account->current_balance;
+            });
+
+        return response()->json([
+            'success' => empty($mpMovements['error']),
+            'saldo_ativas' => $saldoAtivas,
+            'mp_balance' => $mpBalance,
+            'movements' => $mpMovements,
+        ]);
     }
 
     public function create()
@@ -181,6 +197,34 @@ class AccountController extends Controller
             'color.required' => 'Selecione uma cor de identificação.',
             'color.in' => 'Cor de identificação inválida.',
         ]);
+    }
+
+    /**
+     * @return array{
+     *     days: int,
+     *     in_total: float,
+     *     out_total: float,
+     *     items: array<int, array<string, mixed>>,
+     *     truncated: bool,
+     *     error: ?string,
+     *     outflows_pending: bool
+     * }
+     */
+    private function loadMercadoPagoMovements(bool $refreshOutflowReports): array
+    {
+        $mpMovements = $this->mercadoPago->getPaymentMovements(true, 30, 50, $refreshOutflowReports);
+
+        if (empty($mpMovements['error'])) {
+            try {
+                app(FinancialNotificationService::class)->notificarMovimentosMercadoPagoRecentes($mpMovements);
+            } catch (\Throwable $e) {
+                Log::warning('Falha ao notificar tesouraria a partir dos movimentos Mercado Pago', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $mpMovements;
     }
 
     /**

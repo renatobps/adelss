@@ -28,6 +28,9 @@ class Kernel extends ConsoleKernel
             ->hourly()
             ->withoutOverlapping(120);
         $schedule->command('financial:send-smart-summary')->hourly();
+        $schedule->command('financial:sync-mercadopago-movements')
+            ->everyTwoMinutes()
+            ->withoutOverlapping(5);
         $schedule->command('cultos:check-pastoral-alerts')->dailyAt('09:00');
         // withoutOverlapping evita duas execuções simultâneas (causa de envio
         // duplicado ao WhatsApp quando a publicação no Instagram demora +5 min)

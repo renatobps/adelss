@@ -38,7 +38,7 @@
         <div>
             <h1 class="financial-accounts-page__title mb-1">Contas e Caixas</h1>
             <p class="financial-accounts-page__subtitle mb-0">
-                Saldo (ativas): <strong>{{ $fmt($saldoAtivas) }}</strong>
+                Saldo (ativas): <strong data-saldo-ativas>{{ $fmt($saldoAtivas) }}</strong>
             </p>
         </div>
         @if($canCreate)
@@ -94,7 +94,8 @@
                             <hr class="financial-account-card__divider">
                             <div>
                                 <div class="financial-account-card__label">Saldo Atual</div>
-                                <div class="financial-account-card__balance {{ $balance >= 0 ? 'is-positive' : 'is-negative' }}">
+                                <div class="financial-account-card__balance {{ $balance >= 0 ? 'is-positive' : 'is-negative' }}"
+                                     @if($account->isMercadoPago()) data-mp-balance @endif>
                                     {{ $fmt($balance) }}
                                 </div>
                                 @if(($account->balance_source ?? '') !== 'mp_flow')
@@ -108,11 +109,11 @@
                                 <div class="financial-account-card__flow">
                                     <div>
                                         <div class="financial-account-card__label">Entradas ({{ $mpMovements['days'] }} dias)</div>
-                                        <div class="financial-account-card__flow-in">{{ $fmt($mpMovements['in_total'] ?? 0) }}</div>
+                                        <div class="financial-account-card__flow-in" data-mp-in-total>{{ $fmt($mpMovements['in_total'] ?? 0) }}</div>
                                     </div>
                                     <div>
                                         <div class="financial-account-card__label">Saídas ({{ $mpMovements['days'] }} dias)</div>
-                                        <div class="financial-account-card__flow-out">{{ $fmt($mpMovements['out_total'] ?? 0) }}</div>
+                                        <div class="financial-account-card__flow-out" data-mp-out-total>{{ $fmt($mpMovements['out_total'] ?? 0) }}</div>
                                     </div>
                                 </div>
                             @endif
@@ -156,33 +157,29 @@
         </div>
 
         @if(is_array($mpMovements ?? null))
-            <section class="financial-mp-movements">
+            <section class="financial-mp-movements" data-mp-refresh-url="{{ route('financial.accounts.mp-movements') }}">
                 <div class="financial-mp-movements__head">
                     <div>
                         <h2 class="financial-mp-movements__title">Entradas e saídas — Mercado Pago</h2>
                         <p class="financial-mp-movements__hint mb-0">
-                            Últimos {{ $mpMovements['days'] }} dias · recebimentos pela API e saídas pelo relatório do Mercado Pago.
-                            PIX enviado pelo app não entra na lista de pagamentos: só aparece quando o MP fecha o relatório (costuma levar alguns minutos).
+                            Últimos {{ $mpMovements['days'] }} dias · a tela atualiza sozinha a cada 30 segundos.
+                            PIX recebido entra na hora. PIX enviado só aparece quando o Mercado Pago fecha o relatório.
                         </p>
-                        @if(!empty($mpMovements['outflows_pending']))
-                            <p class="text-warning small mb-0 mt-2">
-                                O relatório de saídas ainda está sendo gerado. Recarregue esta página em 1 ou 2 minutos para ver o PIX recém-enviado.
-                            </p>
-                        @endif
+                        <p class="text-warning small mb-0 mt-2 js-mp-outflows-pending {{ empty($mpMovements['outflows_pending']) ? 'd-none' : '' }}">
+                            O relatório de saídas ainda está sendo gerado. A saída do PIX enviado entra automaticamente em alguns minutos.
+                        </p>
                     </div>
                     <div class="financial-mp-movements__totals">
-                        <span class="text-success">Entradas {{ $fmt($mpMovements['in_total'] ?? 0) }}</span>
-                        <span class="text-danger">Saídas {{ $fmt($mpMovements['out_total'] ?? 0) }}</span>
+                        <span class="text-success">Entradas <span data-mp-in-total>{{ $fmt($mpMovements['in_total'] ?? 0) }}</span></span>
+                        <span class="text-danger">Saídas <span data-mp-out-total>{{ $fmt($mpMovements['out_total'] ?? 0) }}</span></span>
                     </div>
                 </div>
                 @if(!empty($mpMovements['error']))
-                    <p class="text-warning small mb-0">{{ $mpMovements['error'] }}</p>
-                @elseif(empty($mpMovements['items']))
-                    <p class="text-muted small mb-0">Nenhum pagamento neste período.</p>
-                @else
-                    @if(!empty($mpMovements['truncated']))
-                        <p class="text-muted small">Mostrando os {{ count($mpMovements['items']) }} movimentos mais recentes.</p>
-                    @endif
+                    <p class="text-warning small mb-0 js-mp-error">{{ $mpMovements['error'] }}</p>
+                @endif
+                <p class="text-muted small mb-0 js-mp-empty {{ empty($mpMovements['error']) && empty($mpMovements['items']) ? '' : 'd-none' }}">Nenhum pagamento neste período.</p>
+                <div class="js-mp-table-wrap {{ empty($mpMovements['error']) && !empty($mpMovements['items']) ? '' : 'd-none' }}">
+                    <p class="text-muted small js-mp-truncated {{ empty($mpMovements['truncated']) ? 'd-none' : '' }}">Mostrando os movimentos mais recentes.</p>
                     <div class="table-responsive">
                         <table class="table table-sm financial-mp-movements__table mb-0">
                             <thead>
@@ -194,8 +191,8 @@
                                     <th class="text-end">Valor</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                @foreach($mpMovements['items'] as $item)
+                            <tbody class="js-mp-movements-body">
+                                @foreach($mpMovements['items'] ?? [] as $item)
                                     @php
                                         $dir = $item['direction'] ?? '';
                                         $tipo = $dir === 'in' ? 'Entrada' : ($dir === 'out' ? 'Saída' : 'Pendente');
@@ -219,7 +216,7 @@
                             </tbody>
                         </table>
                     </div>
-                @endif
+                </div>
             </section>
         @endif
 
@@ -541,6 +538,84 @@
         select.addEventListener('change', function () { syncAccountType(select); });
         syncAccountType(select);
     });
+
+    const refreshRoot = document.querySelector('[data-mp-refresh-url]');
+    if (refreshRoot) {
+        const url = refreshRoot.getAttribute('data-mp-refresh-url');
+        const fmt = function (value) {
+            const number = Number(value || 0);
+            return 'R$ ' + number.toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        };
+        const escapeHtml = function (text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        };
+        const setText = function (selector, value) {
+            document.querySelectorAll(selector).forEach(function (el) {
+                el.textContent = value;
+            });
+        };
+        const toggle = function (selector, show) {
+            document.querySelectorAll(selector).forEach(function (el) {
+                el.classList.toggle('d-none', !show);
+            });
+        };
+
+        const render = function (payload) {
+            const movements = payload.movements || {};
+            const items = Array.isArray(movements.items) ? movements.items : [];
+            setText('[data-mp-in-total]', fmt(movements.in_total));
+            setText('[data-mp-out-total]', fmt(movements.out_total));
+            setText('[data-mp-balance]', fmt(payload.mp_balance));
+            setText('[data-saldo-ativas]', fmt(payload.saldo_ativas));
+            document.querySelectorAll('[data-mp-balance]').forEach(function (el) {
+                const balance = Number(payload.mp_balance || 0);
+                el.classList.toggle('is-positive', balance >= 0);
+                el.classList.toggle('is-negative', balance < 0);
+            });
+            toggle('.js-mp-outflows-pending', !!movements.outflows_pending);
+            toggle('.js-mp-error', !!movements.error);
+            const errorEl = document.querySelector('.js-mp-error');
+            if (errorEl && movements.error) {
+                errorEl.textContent = movements.error;
+            }
+            toggle('.js-mp-empty', !movements.error && items.length === 0);
+            toggle('.js-mp-table-wrap', !movements.error && items.length > 0);
+            toggle('.js-mp-truncated', !!movements.truncated);
+
+            const body = document.querySelector('.js-mp-movements-body');
+            if (!body) return;
+            body.innerHTML = items.map(function (item) {
+                const dir = item.direction || '';
+                const tipo = dir === 'in' ? 'Entrada' : (dir === 'out' ? 'Saída' : 'Pendente');
+                const tipoClass = dir === 'in' ? 'text-success' : (dir === 'out' ? 'text-danger' : 'text-muted');
+                const payer = item.payer
+                    ? '<div class="text-muted small">' + escapeHtml(item.payer) + '</div>'
+                    : '';
+                const sign = dir === 'out' ? '-' : '';
+                return '<tr>' +
+                    '<td class="text-nowrap">' + escapeHtml(item.occurred_at_label || '—') + '</td>' +
+                    '<td class="' + tipoClass + ' fw-semibold">' + tipo + '</td>' +
+                    '<td>' + escapeHtml(item.description || 'Pagamento') + payer + '</td>' +
+                    '<td>' + escapeHtml(item.method || '—') + '</td>' +
+                    '<td class="text-end ' + tipoClass + '">' + sign + fmt(item.amount) + '</td>' +
+                    '</tr>';
+            }).join('');
+        };
+
+        const tick = function () {
+            fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (response) { return response.ok ? response.json() : null; })
+                .then(function (payload) { if (payload && payload.movements) render(payload); })
+                .catch(function () {});
+        };
+
+        setInterval(tick, 30000);
+    }
 })();
 </script>
 @endpush

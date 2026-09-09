@@ -160,7 +160,7 @@ class MercadoPagoService
      *     outflows_pending: bool
      * }
      */
-    public function getPaymentMovements(bool $fresh = false, int $days = 30, int $limit = 50): array
+    public function getPaymentMovements(bool $fresh = false, int $days = 30, int $limit = 50, bool $refreshOutflowReports = true): array
     {
         $empty = [
             'days' => $days,
@@ -188,7 +188,7 @@ class MercadoPagoService
         }
 
         try {
-            $payload = $this->requestPaymentMovements($token, $days, $limit);
+            $payload = $this->requestPaymentMovements($token, $days, $limit, $refreshOutflowReports);
             Cache::put($cacheKey, $payload, now()->addSeconds(20));
 
             return $payload;
@@ -213,7 +213,7 @@ class MercadoPagoService
      *     outflows_pending: bool
      * }
      */
-    private function requestPaymentMovements(string $token, int $days, int $limit): array
+    private function requestPaymentMovements(string $token, int $days, int $limit, bool $refreshOutflowReports = true): array
     {
         $response = Http::withHeaders([
             'Authorization' => 'Bearer '.$token,
@@ -258,7 +258,7 @@ class MercadoPagoService
             }
         }
 
-        $reportOutflows = $this->fetchAccountOutflows($token, $days);
+        $reportOutflows = $this->fetchAccountOutflows($token, $days, $refreshOutflowReports);
         foreach ($reportOutflows['items'] as $item) {
             $dup = collect($items)->contains(
                 fn (array $existing) => ($existing['id'] ?? '') === ($item['id'] ?? '')
@@ -367,10 +367,10 @@ class MercadoPagoService
      *
      * @return array{items: array<int, array<string, mixed>>, pending: bool}
      */
-    private function fetchAccountOutflows(string $token, int $days): array
+    private function fetchAccountOutflows(string $token, int $days, bool $refreshReports = true): array
     {
-        $fromSettlement = $this->fetchSettlementOutflows($token, $days);
-        $fromRelease = $this->fetchReleaseOutflows($token, $days);
+        $fromSettlement = $this->fetchSettlementOutflows($token, $days, $refreshReports);
+        $fromRelease = $this->fetchReleaseOutflows($token, $days, $refreshReports);
 
         return [
             'items' => $this->dedupeOutflows(array_merge($fromSettlement['items'], $fromRelease)),
@@ -411,7 +411,7 @@ class MercadoPagoService
      *
      * @return array{items: array<int, array<string, mixed>>, pending: bool}
      */
-    private function fetchSettlementOutflows(string $token, int $days): array
+    private function fetchSettlementOutflows(string $token, int $days, bool $refreshReports = true): array
     {
         $headers = [
             'Authorization' => 'Bearer '.$token,
@@ -419,7 +419,9 @@ class MercadoPagoService
         ];
 
         try {
-            $this->refreshSettlementReportIfStale($token, $days, $headers);
+            if ($refreshReports) {
+                $this->refreshSettlementReportIfStale($token, $days, $headers);
+            }
 
             $search = Http::withHeaders($headers)->timeout(20)->get(
                 'https://api.mercadopago.com/v1/account/settlement_report/search',
@@ -696,7 +698,7 @@ class MercadoPagoService
      *
      * @return array<int, array<string, mixed>>
      */
-    private function fetchReleaseOutflows(string $token, int $days): array
+    private function fetchReleaseOutflows(string $token, int $days, bool $refreshReports = true): array
     {
         $headers = [
             'Authorization' => 'Bearer '.$token,
@@ -704,7 +706,9 @@ class MercadoPagoService
         ];
 
         try {
-            $this->refreshReleaseReportIfStale($token, $days, $headers);
+            if ($refreshReports) {
+                $this->refreshReleaseReportIfStale($token, $days, $headers);
+            }
 
             $search = Http::withHeaders($headers)->timeout(20)->get(
                 'https://api.mercadopago.com/v1/account/release_report/search',
@@ -740,7 +744,7 @@ class MercadoPagoService
                 }
             }
 
-            if (! $usable) {
+            if (! $usable && $refreshReports) {
                 $this->requestReleaseReport($token, $days);
             }
 
