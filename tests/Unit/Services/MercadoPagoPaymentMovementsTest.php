@@ -113,6 +113,59 @@ class MercadoPagoPaymentMovementsTest extends TestCase
         $this->assertSame('Saque / transferência', $movements['items'][1]['description']);
     }
 
+    public function test_inclui_pix_enviado_do_relatorio_de_dinheiro_em_conta(): void
+    {
+        $csv = implode("\n", [
+            'SOURCE_ID;TRANSACTION_TYPE;TRANSACTION_AMOUNT;SETTLEMENT_NET_AMOUNT;SETTLEMENT_DATE;PAYMENT_METHOD',
+            '888;PAYOUTS;-75.50;-75.50;2026-09-09T15:36:00.000-03:00;pix',
+            '1;SETTLEMENT;100.00;97.00;2026-09-09T15:25:00.000-03:00;pix',
+        ]);
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) use ($csv) {
+            $url = $request->url();
+            if (str_contains($url, '/v1/payments/search')) {
+                return Http::response([
+                    'paging' => ['total' => 1, 'limit' => 50, 'offset' => 0],
+                    'results' => [[
+                        'id' => 1,
+                        'status' => 'approved',
+                        'transaction_amount' => 100,
+                        'date_approved' => '2026-09-09T15:25:00.000-03:00',
+                        'description' => 'Oferta',
+                        'payment_method_id' => 'pix',
+                    ]],
+                ], 200);
+            }
+            if (str_contains($url, 'settlement_report/search')) {
+                return Http::response([
+                    'paging' => ['total' => 1],
+                    'results' => [[
+                        'file_name' => 'adelss-settlement.csv',
+                        'file_status' => 'processed',
+                        'date_created' => now()->toIso8601String(),
+                    ]],
+                ], 200);
+            }
+            if (str_contains($url, 'adelss-settlement.csv')) {
+                return Http::response($csv, 200, ['Content-Type' => 'text/csv']);
+            }
+            if (str_contains($url, 'release_report/search')) {
+                return Http::response(['paging' => ['total' => 0], 'results' => []], 200);
+            }
+
+            return Http::response(['ok' => true], 200);
+        });
+
+        $movements = app(MercadoPagoService::class)->getPaymentMovements(true);
+
+        $this->assertSame(100.0, $movements['in_total']);
+        $this->assertSame(75.5, $movements['out_total']);
+        $this->assertCount(2, $movements['items']);
+        $this->assertSame('out', $movements['items'][0]['direction']);
+        $this->assertSame('Saque / PIX enviado', $movements['items'][0]['description']);
+        $this->assertFalse($movements['outflows_pending']);
+    }
+
     public function test_falha_da_api_nao_quebra_a_consulta(): void
     {
         Http::fake([

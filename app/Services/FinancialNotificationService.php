@@ -207,6 +207,58 @@ class FinancialNotificationService
         return $resultado;
     }
 
+    /**
+     * Completa o webhook: avisa o grupo sobre entradas/saídas recentes ainda não notificadas.
+     *
+     * @param  array{items?: array<int, array<string, mixed>>, in_total?: float, out_total?: float}  $movements
+     */
+    public function notificarMovimentosMercadoPagoRecentes(array $movements, int $maxAgeHours = 2): int
+    {
+        $sent = 0;
+        $saldo = round((float) ($movements['in_total'] ?? 0) - (float) ($movements['out_total'] ?? 0), 2);
+        $cutoff = now()->subHours(max(1, $maxAgeHours));
+
+        foreach ($movements['items'] ?? [] as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $direction = (string) ($item['direction'] ?? '');
+            if (! in_array($direction, ['in', 'out'], true)) {
+                continue;
+            }
+
+            $when = null;
+            if (! empty($item['occurred_at'])) {
+                try {
+                    $when = \Carbon\Carbon::parse((string) $item['occurred_at']);
+                } catch (\Throwable) {
+                    $when = null;
+                }
+            }
+            if ($when && $when->lt($cutoff)) {
+                continue;
+            }
+
+            $payment = [
+                'id' => (string) ($item['id'] ?? ''),
+                'status' => (string) ($item['status'] ?? ($direction === 'in' ? 'approved' : 'outflow')),
+                'transaction_amount' => (float) ($item['amount'] ?? 0),
+                'description' => (string) ($item['description'] ?? 'Movimentação Mercado Pago'),
+                'payment_method_id' => (string) ($item['method'] ?? ''),
+                'payer' => ['first_name' => (string) ($item['payer'] ?? '')],
+                '_display_balance' => $saldo,
+            ];
+
+            $resultado = $this->notificarMovimentacaoMercadoPago($direction, $payment);
+            if (! empty($resultado['success'])) {
+                $sent++;
+            }
+        }
+
+        return $sent;
+    }
+
     public function notificarDespesasVencendo(bool $force = false): array
     {
         $automation = null;
@@ -953,11 +1005,15 @@ class FinancialNotificationService
         $titulo = $entrada ? '💰 *Entrada no Mercado Pago*' : '📤 *Saída no Mercado Pago*';
 
         $saldoLinha = '';
-        try {
-            $balance = app(\App\Services\Payments\MercadoPagoService::class)->getAccountBalance();
-            $saldoLinha = '*Saldo atual:* R$ '.number_format((float) $balance['available'], 2, ',', '.');
-        } catch (\Throwable $e) {
-            $saldoLinha = '';
+        if (isset($payment['_display_balance']) && is_numeric($payment['_display_balance'])) {
+            $saldoLinha = '*Saldo atual:* R$ '.number_format((float) $payment['_display_balance'], 2, ',', '.');
+        } else {
+            try {
+                $balance = app(\App\Services\Payments\MercadoPagoService::class)->getAccountBalance();
+                $saldoLinha = '*Saldo atual:* R$ '.number_format((float) $balance['available'], 2, ',', '.');
+            } catch (\Throwable $e) {
+                $saldoLinha = '';
+            }
         }
 
         $linhas = [

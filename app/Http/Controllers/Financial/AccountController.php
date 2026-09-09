@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Financial;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialAccount;
+use App\Services\FinancialNotificationService;
 use App\Services\Payments\MercadoPagoService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class AccountController extends Controller
@@ -34,8 +36,18 @@ class AccountController extends Controller
             ->get()
             ->contains(fn (FinancialAccount $account) => $account->isMercadoPago());
         $mpMovements = $hasMercadoPagoAccount
-            ? $this->mercadoPago->getPaymentMovements()
+            ? $this->mercadoPago->getPaymentMovements(true)
             : null;
+
+        if (is_array($mpMovements) && empty($mpMovements['error'])) {
+            try {
+                app(FinancialNotificationService::class)->notificarMovimentosMercadoPagoRecentes($mpMovements);
+            } catch (\Throwable $e) {
+                Log::warning('Falha ao notificar tesouraria a partir dos movimentos Mercado Pago', [
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         $accounts = $listedAccounts->map(function (FinancialAccount $account) use ($mpMovements) {
             $this->applyDisplayBalance($account, $mpMovements);

@@ -102,4 +102,42 @@ class MercadoPagoTreasuryGroupNotificationTest extends TestCase
         $this->assertSame(1, FinancialNotificationLog::query()->where('status', 'sent')->count());
         $this->assertSame('120363@g.us', FinancialNotificationLog::first()->phone);
     }
+
+    public function test_notifica_apenas_movimentos_recentes_ainda_nao_enviados(): void
+    {
+        $whatsapp = Mockery::mock(WhatsAppService::class);
+        $whatsapp->shouldReceive('enviarMensagem')
+            ->once()
+            ->with('120363@g.us', Mockery::on(fn ($msg) => str_contains($msg, '5,00') && str_contains($msg, '[mp:pix5:in]')))
+            ->andReturn(['success' => true]);
+        $this->app->instance(WhatsAppService::class, $whatsapp);
+
+        $service = app(FinancialNotificationService::class);
+
+        $sent = $service->notificarMovimentosMercadoPagoRecentes([
+            'in_total' => 5,
+            'out_total' => 0,
+            'items' => [
+                [
+                    'id' => 'old1',
+                    'direction' => 'in',
+                    'amount' => 100,
+                    'description' => 'Antigo',
+                    'method' => 'PIX',
+                    'occurred_at' => now()->subDays(3)->toIso8601String(),
+                ],
+                [
+                    'id' => 'pix5',
+                    'direction' => 'in',
+                    'amount' => 5,
+                    'description' => 'PIX',
+                    'method' => 'PIX',
+                    'payer' => 'Renato',
+                    'occurred_at' => now()->subMinutes(10)->toIso8601String(),
+                ],
+            ],
+        ]);
+
+        $this->assertSame(1, $sent);
+    }
 }

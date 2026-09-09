@@ -161,9 +161,14 @@
                     <div>
                         <h2 class="financial-mp-movements__title">Entradas e saídas — Mercado Pago</h2>
                         <p class="financial-mp-movements__hint mb-0">
-                            Últimos {{ $mpMovements['days'] }} dias · pagamentos, estornos, saques e PIX enviados.
-                            Se um saque acabou de sair, recarregue em alguns minutos.
+                            Últimos {{ $mpMovements['days'] }} dias · recebimentos pela API e saídas pelo relatório do Mercado Pago.
+                            PIX enviado pelo app não entra na lista de pagamentos: só aparece quando o MP fecha o relatório (costuma levar alguns minutos).
                         </p>
+                        @if(!empty($mpMovements['outflows_pending']))
+                            <p class="text-warning small mb-0 mt-2">
+                                O relatório de saídas ainda está sendo gerado. Recarregue esta página em 1 ou 2 minutos para ver o PIX recém-enviado.
+                            </p>
+                        @endif
                     </div>
                     <div class="financial-mp-movements__totals">
                         <span class="text-success">Entradas {{ $fmt($mpMovements['in_total'] ?? 0) }}</span>

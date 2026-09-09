@@ -156,7 +156,8 @@ class MercadoPagoService
      *     out_total: float,
      *     items: array<int, array<string, mixed>>,
      *     truncated: bool,
-     *     error: ?string
+     *     error: ?string,
+     *     outflows_pending: bool
      * }
      */
     public function getPaymentMovements(bool $fresh = false, int $days = 30, int $limit = 50): array
@@ -168,6 +169,7 @@ class MercadoPagoService
             'items' => [],
             'truncated' => false,
             'error' => null,
+            'outflows_pending' => false,
         ];
 
         $cacheKey = 'mercadopago.payment_movements.'.$days.'.'.$limit;
@@ -187,7 +189,7 @@ class MercadoPagoService
 
         try {
             $payload = $this->requestPaymentMovements($token, $days, $limit);
-            Cache::put($cacheKey, $payload, now()->addSeconds(45));
+            Cache::put($cacheKey, $payload, now()->addSeconds(20));
 
             return $payload;
         } catch (\Throwable $e) {
@@ -207,7 +209,8 @@ class MercadoPagoService
      *     out_total: float,
      *     items: array<int, array<string, mixed>>,
      *     truncated: bool,
-     *     error: ?string
+     *     error: ?string,
+     *     outflows_pending: bool
      * }
      */
     private function requestPaymentMovements(string $token, int $days, int $limit): array
@@ -255,8 +258,8 @@ class MercadoPagoService
             }
         }
 
-        $reportOutflows = $this->fetchReleaseOutflows($token, $days);
-        foreach ($reportOutflows as $item) {
+        $reportOutflows = $this->fetchAccountOutflows($token, $days);
+        foreach ($reportOutflows['items'] as $item) {
             $dup = collect($items)->contains(
                 fn (array $existing) => ($existing['id'] ?? '') === ($item['id'] ?? '')
                     && ($existing['direction'] ?? '') === 'out'
@@ -281,6 +284,7 @@ class MercadoPagoService
             'items' => $items,
             'truncated' => $pagingTotal > count($results),
             'error' => null,
+            'outflows_pending' => (bool) ($reportOutflows['pending'] ?? false),
         ];
     }
 
@@ -359,7 +363,336 @@ class MercadoPagoService
     }
 
     /**
-     * Saques, PIX enviados e outros débitos do relatório de liberações.
+     * Débitos da carteira: relatório de dinheiro em conta (saques/PIX) e relatório de liberações.
+     *
+     * @return array{items: array<int, array<string, mixed>>, pending: bool}
+     */
+    private function fetchAccountOutflows(string $token, int $days): array
+    {
+        $fromSettlement = $this->fetchSettlementOutflows($token, $days);
+        $fromRelease = $this->fetchReleaseOutflows($token, $days);
+
+        return [
+            'items' => $this->dedupeOutflows(array_merge($fromSettlement['items'], $fromRelease)),
+            'pending' => $fromSettlement['pending'],
+        ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array<int, array<string, mixed>>
+     */
+    private function dedupeOutflows(array $items): array
+    {
+        $byId = [];
+        foreach ($items as $item) {
+            $id = (string) ($item['id'] ?? '');
+            if ($id === '') {
+                $byId['anon-'.count($byId)] = $item;
+                continue;
+            }
+            $existing = $byId[$id] ?? null;
+            if ($existing === null) {
+                $byId[$id] = $item;
+                continue;
+            }
+            $preferNew = str_contains(strtolower((string) ($item['description'] ?? '')), 'saque')
+                && ! str_contains(strtolower((string) ($existing['description'] ?? '')), 'saque');
+            if ($preferNew || (float) ($item['amount'] ?? 0) >= (float) ($existing['amount'] ?? 0)) {
+                $byId[$id] = $item;
+            }
+        }
+
+        return array_values($byId);
+    }
+
+    /**
+     * Relatório “dinheiro em conta”: PAYOUTS / WITHDRAWAL são saídas reais (PIX/TED).
+     *
+     * @return array{items: array<int, array<string, mixed>>, pending: bool}
+     */
+    private function fetchSettlementOutflows(string $token, int $days): array
+    {
+        $headers = [
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+        ];
+
+        try {
+            $this->refreshSettlementReportIfStale($token, $days, $headers);
+
+            $search = Http::withHeaders($headers)->timeout(20)->get(
+                'https://api.mercadopago.com/v1/account/settlement_report/search',
+                ['limit' => 8]
+            );
+            $rows = $search->successful() ? ($search->json('results') ?? []) : [];
+            if (! is_array($rows)) {
+                $rows = [];
+            }
+
+            $pending = isset($rows[0]) && is_array($rows[0]) && $this->isPendingReportRow($rows[0]);
+            $items = [];
+
+            foreach ($rows as $row) {
+                if (! is_array($row) || ! $this->isProcessedReportRow($row)) {
+                    continue;
+                }
+
+                $download = Http::withHeaders($headers)->timeout(30)
+                    ->get('https://api.mercadopago.com/v1/account/settlement_report/'.$row['file_name']);
+                if (! $download->successful() || trim($download->body()) === '') {
+                    continue;
+                }
+
+                $parsed = $this->parseSettlementReportCsv($download->body(), $days);
+                if ($parsed['usable']) {
+                    $items = $parsed['items'];
+                    break;
+                }
+            }
+
+            return ['items' => $items, 'pending' => $pending];
+        } catch (\Throwable $e) {
+            Log::warning('Mercado Pago settlement de saídas indisponível', [
+                'message' => $e->getMessage(),
+            ]);
+
+            return ['items' => [], 'pending' => false];
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function reportRowStatus(array $row): string
+    {
+        return strtolower((string) ($row['file_status'] ?? $row['status'] ?? ''));
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function isProcessedReportRow(array $row): bool
+    {
+        $file = (string) ($row['file_name'] ?? '');
+        $status = $this->reportRowStatus($row);
+
+        return $file !== '' && ($status === '' || $status === 'processed' || $status === 'enabled');
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function isPendingReportRow(array $row): bool
+    {
+        return $this->reportRowStatus($row) === 'pending'
+            || ((string) ($row['file_name'] ?? '') === '' && $this->reportRowStatus($row) !== 'processed');
+    }
+
+    /**
+     * @param  array<string, string>  $headers
+     */
+    private function refreshSettlementReportIfStale(string $token, int $days, array $headers): void
+    {
+        $search = Http::withHeaders($headers)->timeout(20)->get(
+            'https://api.mercadopago.com/v1/account/settlement_report/search',
+            ['limit' => 3]
+        );
+        $rows = $search->successful() ? ($search->json('results') ?? []) : [];
+        $latestRow = is_array($rows) && isset($rows[0]) && is_array($rows[0]) ? $rows[0] : null;
+        $latestCreated = null;
+        if ($latestRow) {
+            $raw = (string) ($latestRow['date_created'] ?? '');
+            if ($raw !== '') {
+                try {
+                    $latestCreated = Carbon::parse($raw);
+                } catch (\Throwable) {
+                    $latestCreated = null;
+                }
+            }
+        }
+
+        if ($latestRow && $this->isPendingReportRow($latestRow)) {
+            $this->waitForNewerSettlementReport($headers, $latestCreated?->copy()->subSecond());
+
+            return;
+        }
+
+        $stale = $latestCreated === null || $latestCreated->lt(now()->subMinutes(2));
+        if (! $stale) {
+            return;
+        }
+
+        if ($this->requestSettlementReport($token, $days)) {
+            $this->waitForNewerSettlementReport($headers, $latestCreated);
+        }
+    }
+
+    /**
+     * @param  array<string, string>  $headers
+     */
+    private function waitForNewerSettlementReport(array $headers, ?Carbon $after): void
+    {
+        $attempts = app()->environment('testing') ? 1 : 4;
+        $sleepSeconds = app()->environment('testing') ? 0 : 3;
+
+        for ($i = 0; $i < $attempts; $i++) {
+            if ($i > 0 && $sleepSeconds > 0) {
+                sleep($sleepSeconds);
+            }
+
+            $search = Http::withHeaders($headers)->timeout(20)->get(
+                'https://api.mercadopago.com/v1/account/settlement_report/search',
+                ['limit' => 3]
+            );
+            $rows = $search->successful() ? ($search->json('results') ?? []) : [];
+            if (! is_array($rows) || ! isset($rows[0]) || ! is_array($rows[0])) {
+                continue;
+            }
+            $status = $this->reportRowStatus($rows[0]);
+            $file = (string) ($rows[0]['file_name'] ?? '');
+            $createdRaw = (string) ($rows[0]['date_created'] ?? '');
+            if ($file === '' || ($status !== '' && ! in_array($status, ['processed', 'enabled'], true))) {
+                continue;
+            }
+            if ($after === null) {
+                return;
+            }
+            try {
+                $created = Carbon::parse($createdRaw);
+            } catch (\Throwable) {
+                continue;
+            }
+            if ($created->gt($after)) {
+                return;
+            }
+        }
+    }
+
+    private function requestSettlementReport(string $token, int $days): bool
+    {
+        if (Cache::has('mercadopago.settlement_report_requested')) {
+            return false;
+        }
+
+        Cache::put('mercadopago.settlement_report_requested', true, now()->addSeconds(90));
+
+        $headers = [
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+        ];
+
+        Http::withHeaders($headers)->timeout(20)->post('https://api.mercadopago.com/v1/account/settlement_report/config', [
+            'file_name_prefix' => 'adelss-settlement',
+            'display_timezone' => 'GMT-03',
+            'include_withdraw' => true,
+            'columns' => [
+                ['key' => 'SOURCE_ID'],
+                ['key' => 'TRANSACTION_TYPE'],
+                ['key' => 'TRANSACTION_AMOUNT'],
+                ['key' => 'TRANSACTION_DATE'],
+                ['key' => 'SETTLEMENT_NET_AMOUNT'],
+                ['key' => 'OPERATION_TAGS'],
+                ['key' => 'PAYMENT_METHOD'],
+            ],
+        ]);
+
+        Http::withHeaders($headers)->timeout(20)->post('https://api.mercadopago.com/v1/account/settlement_report', [
+            'begin_date' => now('UTC')->subDays($days)->startOfDay()->format('Y-m-d\TH:i:s\Z'),
+            'end_date' => now('UTC')->addDay()->startOfDay()->format('Y-m-d\TH:i:s\Z'),
+        ]);
+
+        return true;
+    }
+
+    /**
+     * @return array{usable: bool, items: array<int, array<string, mixed>>}
+     */
+    private function parseSettlementReportCsv(string $csv, int $days): array
+    {
+        $lines = preg_split("/\r\n|\n|\r/", trim($csv)) ?: [];
+        $headerLine = array_shift($lines);
+        if (! is_string($headerLine) || $headerLine === '') {
+            return ['usable' => false, 'items' => []];
+        }
+
+        $delimiter = substr_count($headerLine, ';') > substr_count($headerLine, ',') ? ';' : ',';
+        $headers = array_map(
+            fn ($h) => strtoupper(trim((string) $h, "\" \t")),
+            str_getcsv($headerLine, $delimiter)
+        );
+        $index = array_flip($headers);
+        $usable = isset($index['TRANSACTION_TYPE']) || isset($index['TRANSACTION_AMOUNT']);
+        if (! $usable) {
+            return ['usable' => false, 'items' => []];
+        }
+
+        $since = now('America/Sao_Paulo')->subDays($days)->startOfDay();
+        $outTypes = ['payouts', 'payout', 'withdrawal', 'withdraw', 'refund', 'chargeback', 'money_transfer'];
+        $items = [];
+
+        foreach ($lines as $line) {
+            if (trim($line) === '') {
+                continue;
+            }
+            $cols = str_getcsv($line, $delimiter);
+            $type = strtolower($this->csvColumn($cols, $index, 'TRANSACTION_TYPE'));
+            if (! in_array($type, $outTypes, true)) {
+                continue;
+            }
+
+            $gross = (float) str_replace(',', '.', $this->csvColumn($cols, $index, 'TRANSACTION_AMOUNT'));
+            $net = (float) str_replace(',', '.', $this->csvColumn($cols, $index, 'SETTLEMENT_NET_AMOUNT'));
+            $amount = abs($gross !== 0.0 ? $gross : $net);
+            if ($amount <= 0) {
+                continue;
+            }
+
+            $whenRaw = $this->csvColumn($cols, $index, 'SETTLEMENT_DATE')
+                ?: $this->csvColumn($cols, $index, 'TRANSACTION_DATE');
+            $when = null;
+            if ($whenRaw !== '') {
+                try {
+                    $when = Carbon::parse($whenRaw)->timezone('America/Sao_Paulo');
+                } catch (\Throwable) {
+                    $when = null;
+                }
+            }
+            if ($when && $when->lt($since)) {
+                continue;
+            }
+
+            $tags = strtolower($this->csvColumn($cols, $index, 'OPERATION_TAGS'));
+            $label = match (true) {
+                str_contains($tags, 'pix') || $type === 'money_transfer' => 'PIX enviado',
+                in_array($type, ['payouts', 'payout'], true) => 'Saque / PIX enviado',
+                in_array($type, ['withdrawal', 'withdraw'], true) => 'Transferência bancária',
+                $type === 'refund' => 'Estorno',
+                $type === 'chargeback' => 'Chargeback',
+                default => 'Saída da carteira',
+            };
+
+            $sourceId = $this->csvColumn($cols, $index, 'SOURCE_ID');
+
+            $items[] = [
+                'id' => $sourceId !== '' ? $sourceId : ('set-'.md5($line)),
+                'direction' => 'out',
+                'status' => 'outflow',
+                'amount' => round($amount, 2),
+                'method' => $this->paymentMethodLabel($this->csvColumn($cols, $index, 'PAYMENT_METHOD')),
+                'description' => $label,
+                'payer' => '',
+                'occurred_at' => $when?->toIso8601String(),
+                'occurred_at_label' => $when?->format('d/m/Y H:i') ?? '—',
+            ];
+        }
+
+        return ['usable' => true, 'items' => $items];
+    }
+
+    /**
+     * Saques e débitos do relatório de liberações (fallback).
      *
      * @return array<int, array<string, mixed>>
      */
@@ -371,6 +704,8 @@ class MercadoPagoService
         ];
 
         try {
+            $this->refreshReleaseReportIfStale($token, $days, $headers);
+
             $search = Http::withHeaders($headers)->timeout(20)->get(
                 'https://api.mercadopago.com/v1/account/release_report/search',
                 ['limit' => 5]
@@ -455,7 +790,10 @@ class MercadoPagoService
             }
 
             $description = strtolower(trim($this->csvColumn($cols, $index, 'DESCRIPTION')));
-            if ($description === 'payment' || str_starts_with($description, 'pre_payout') || str_starts_with($description, 'pos_payout')) {
+            if ($description === 'payment'
+                || $description === 'reserve_for_payout'
+                || str_starts_with($description, 'pre_payout')
+                || str_starts_with($description, 'pos_payout')) {
                 continue;
             }
 
@@ -526,13 +864,42 @@ class MercadoPagoService
         return trim((string) ($cols[$index[$name]] ?? ''));
     }
 
+    /**
+     * @param  array<string, string>  $headers
+     */
+    private function refreshReleaseReportIfStale(string $token, int $days, array $headers): void
+    {
+        $search = Http::withHeaders($headers)->timeout(20)->get(
+            'https://api.mercadopago.com/v1/account/release_report/search',
+            ['limit' => 3]
+        );
+        $rows = $search->successful() ? ($search->json('results') ?? []) : [];
+        $latestCreated = null;
+        if (is_array($rows) && isset($rows[0]) && is_array($rows[0])) {
+            $raw = (string) ($rows[0]['date_created'] ?? '');
+            if ($raw !== '') {
+                try {
+                    $latestCreated = Carbon::parse($raw);
+                } catch (\Throwable) {
+                    $latestCreated = null;
+                }
+            }
+        }
+
+        if ($latestCreated !== null && $latestCreated->gte(now()->subMinutes(2))) {
+            return;
+        }
+
+        $this->requestReleaseReport($token, $days);
+    }
+
     private function requestReleaseReport(string $token, int $days): void
     {
         if (Cache::has('mercadopago.release_report_requested')) {
             return;
         }
 
-        Cache::put('mercadopago.release_report_requested', true, now()->addMinutes(30));
+        Cache::put('mercadopago.release_report_requested', true, now()->addSeconds(90));
 
         $headers = [
             'Authorization' => 'Bearer '.$token,

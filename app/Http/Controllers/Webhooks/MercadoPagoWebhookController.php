@@ -28,9 +28,10 @@ class MercadoPagoWebhookController extends Controller
             return response()->json(['success' => false, 'error' => 'Assinatura inválida.'], 401);
         }
 
-        $topic = (string) ($request->input('type') ?: $request->query('type') ?: $request->input('topic') ?: '');
-        $paymentId = $request->input('data.id') ?: $request->query('data.id') ?: $request->input('id');
-        if (!$paymentId || ($topic !== '' && $topic !== 'payment')) {
+        $topic = strtolower((string) ($request->input('type') ?: $request->query('type') ?: $request->input('topic') ?: $request->query('topic') ?: ''));
+        $paymentId = $request->input('data.id') ?: $request->query('data.id') ?: $request->input('id') ?: $request->query('id');
+        $isPayment = $topic === '' || $topic === 'payment' || str_starts_with($topic, 'payment');
+        if (!$paymentId || ! $isPayment) {
             return response()->json(['success' => true, 'message' => 'Evento ignorado.']);
         }
 
@@ -253,8 +254,14 @@ class MercadoPagoWebhookController extends Controller
 
         $xSignature = (string) $request->header('x-signature', '');
         $xRequestId = (string) $request->header('x-request-id', '');
-        $dataId = (string) ($request->input('data.id') ?: $request->query('data.id') ?: '');
+        $dataId = (string) ($request->input('data.id') ?: $request->query('data.id') ?: $request->input('id') ?: $request->query('id') ?: '');
         if ($xSignature === '' || $xRequestId === '' || $dataId === '') {
+            if ($this->allowsUnsignedWebhook()) {
+                Log::info('Webhook Mercado Pago sem cabeçalhos de assinatura; processando mesmo assim (túnel/sandbox).');
+
+                return true;
+            }
+
             return false;
         }
 
@@ -276,5 +283,18 @@ class MercadoPagoWebhookController extends Controller
         $expected = hash_hmac('sha256', $manifest, $secret);
 
         return hash_equals($expected, $v1);
+    }
+
+    private function allowsUnsignedWebhook(): bool
+    {
+        if (filter_var(config('mercadopago.sandbox'), FILTER_VALIDATE_BOOL)) {
+            return true;
+        }
+
+        $notificationUrl = strtolower((string) config('mercadopago.notification_url', ''));
+
+        return str_contains($notificationUrl, 'ultrahook.com')
+            || str_contains($notificationUrl, 'ngrok')
+            || str_contains($notificationUrl, 'localhost');
     }
 }

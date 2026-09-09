@@ -261,4 +261,25 @@ class MercadoPagoCheckoutTest extends TestCase
             'status' => 'approved',
         ]);
     }
+
+    public function test_webhook_sem_assinatura_no_sandbox_ainda_processa(): void
+    {
+        config()->set('mercadopago.webhook_secret', 'segredo-local');
+        config()->set('mercadopago.sandbox', true);
+
+        $serviceMock = $this->mock(MercadoPagoService::class);
+        $serviceMock->shouldReceive('getPayment')
+            ->once()
+            ->andReturn([
+                'id' => '999001',
+                'status' => 'approved',
+                'payment_method_id' => 'pix',
+                'transaction_amount' => 5,
+            ]);
+
+        $this->postJson(route('webhooks.mercadopago'), [
+            'type' => 'payment',
+            'data' => ['id' => '999001'],
+        ])->assertOk()->assertJsonPath('success', true);
+    }
 }
