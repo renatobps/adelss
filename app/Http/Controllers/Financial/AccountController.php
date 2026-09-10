@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\FinancialAccount;
 use App\Services\FinancialNotificationService;
 use App\Services\Payments\MercadoPagoService;
+use App\Support\PdfText;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AccountController extends Controller
 {
@@ -23,7 +26,14 @@ class AccountController extends Controller
             $status = 'ativas';
         }
 
-        $query = FinancialAccount::query()->orderBy('name');
+        $query = FinancialAccount::query()
+            ->withSum(['transactions as paid_receitas_sum' => function ($q) {
+                $q->where('type', 'receita')->where('is_paid', true);
+            }], 'amount')
+            ->withSum(['transactions as paid_despesas_sum' => function ($q) {
+                $q->where('type', 'despesa')->where('is_paid', true);
+            }], 'amount')
+            ->orderBy('name');
 
         if ($status === 'ativas') {
             $query->where('is_active', true);
@@ -33,10 +43,16 @@ class AccountController extends Controller
 
         $listedAccounts = $query->get();
         $hasMercadoPagoAccount = FinancialAccount::query()
-            ->get()
-            ->contains(fn (FinancialAccount $account) => $account->isMercadoPago());
+            ->where(function ($q) {
+                $q->where('type', FinancialAccount::TYPE_MERCADO_PAGO)
+                    ->orWhere('bank_name', 'like', '%Mercado Pago%')
+                    ->orWhere('bank_name', 'like', '%MercadoPago%')
+                    ->orWhere('name', 'like', '%Mercado Pago%')
+                    ->orWhere('name', 'like', '%MercadoPago%');
+            })
+            ->exists();
         $mpMovements = $hasMercadoPagoAccount
-            ? $this->loadMercadoPagoMovements(refreshOutflowReports: true)
+            ? ($this->mercadoPago->getCachedPaymentMovements() ?? $this->emptyMpMovements())
             : null;
 
         $accounts = $listedAccounts->map(function (FinancialAccount $account) use ($mpMovements) {
@@ -51,13 +67,24 @@ class AccountController extends Controller
             'todas' => FinancialAccount::count(),
         ];
 
-        $saldoAtivas = FinancialAccount::where('is_active', true)
-            ->get()
-            ->sum(function (FinancialAccount $account) use ($mpMovements) {
-                $this->applyDisplayBalance($account, $mpMovements);
+        if ($status === 'ativas') {
+            $saldoAtivas = $accounts->sum(fn (FinancialAccount $account) => (float) $account->current_balance);
+        } else {
+            $saldoAtivas = FinancialAccount::query()
+                ->where('is_active', true)
+                ->withSum(['transactions as paid_receitas_sum' => function ($q) {
+                    $q->where('type', 'receita')->where('is_paid', true);
+                }], 'amount')
+                ->withSum(['transactions as paid_despesas_sum' => function ($q) {
+                    $q->where('type', 'despesa')->where('is_paid', true);
+                }], 'amount')
+                ->get()
+                ->sum(function (FinancialAccount $account) use ($mpMovements) {
+                    $this->applyDisplayBalance($account, $mpMovements);
 
-                return (float) $account->current_balance;
-            });
+                    return (float) $account->current_balance;
+                });
+        }
 
         $types = FinancialAccount::TYPES;
         $colors = FinancialAccount::COLORS;
@@ -77,13 +104,20 @@ class AccountController extends Controller
     {
         $this->authorize('viewAny', FinancialAccount::class);
 
-        $mpMovements = $this->loadMercadoPagoMovements(refreshOutflowReports: false);
+        $mpMovements = $this->loadMercadoPagoMovements(refreshOutflowReports: false, notify: true);
         $mpBalance = round(
             (float) ($mpMovements['in_total'] ?? 0) - (float) ($mpMovements['out_total'] ?? 0),
             2
         );
 
-        $saldoAtivas = FinancialAccount::where('is_active', true)
+        $saldoAtivas = FinancialAccount::query()
+            ->where('is_active', true)
+            ->withSum(['transactions as paid_receitas_sum' => function ($q) {
+                $q->where('type', 'receita')->where('is_paid', true);
+            }], 'amount')
+            ->withSum(['transactions as paid_despesas_sum' => function ($q) {
+                $q->where('type', 'despesa')->where('is_paid', true);
+            }], 'amount')
             ->get()
             ->sum(function (FinancialAccount $account) use ($mpMovements) {
                 $this->applyDisplayBalance($account, $mpMovements);
@@ -96,6 +130,55 @@ class AccountController extends Controller
             'saldo_ativas' => $saldoAtivas,
             'mp_balance' => $mpBalance,
             'movements' => $mpMovements,
+        ]);
+    }
+
+    public function exportMercadoPagoPdf(Request $request)
+    {
+        $this->authorize('viewAny', FinancialAccount::class);
+
+        $extract = $this->filteredMpExtract($request->input('q'));
+        $binary = Pdf::loadView('financial.accounts.pdf.mp-extract', $extract)
+            ->setPaper('a4', 'portrait')
+            ->output();
+
+        return response($binary, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="extrato-mercado-pago-'.now()->format('Y-m-d').'.pdf"',
+        ]);
+    }
+
+    public function exportMercadoPagoExcel(Request $request): StreamedResponse
+    {
+        $this->authorize('viewAny', FinancialAccount::class);
+
+        $extract = $this->filteredMpExtract($request->input('q'));
+        $filename = 'extrato-mercado-pago-'.now()->format('Y-m-d').'.csv';
+
+        return response()->streamDownload(function () use ($extract) {
+            $out = fopen('php://output', 'w');
+            fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
+            fputcsv($out, ['Data', 'Tipo', 'Descrição', 'Pagador', 'Meio', 'Valor'], ';');
+            foreach ($extract['items'] as $item) {
+                $dir = $item['direction'] ?? '';
+                $tipo = $dir === 'in' ? 'Entrada' : ($dir === 'out' ? 'Saída' : 'Pendente');
+                $amount = (float) ($item['amount'] ?? 0);
+                $signed = ($dir === 'out' ? '-' : '').number_format($amount, 2, ',', '.');
+                fputcsv($out, [
+                    $item['occurred_at_label'] ?? '',
+                    $tipo,
+                    $item['description'] ?? '',
+                    $item['payer'] ?? '',
+                    $item['method'] ?? '',
+                    $signed,
+                ], ';');
+            }
+            fputcsv($out, [], ';');
+            fputcsv($out, ['Entradas', number_format((float) $extract['in_total'], 2, ',', '.')], ';');
+            fputcsv($out, ['Saídas', number_format((float) $extract['out_total'], 2, ',', '.')], ';');
+            fclose($out);
+        }, $filename, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
         ]);
     }
 
@@ -210,11 +293,11 @@ class AccountController extends Controller
      *     outflows_pending: bool
      * }
      */
-    private function loadMercadoPagoMovements(bool $refreshOutflowReports): array
+    private function loadMercadoPagoMovements(bool $refreshOutflowReports, bool $notify = false): array
     {
         $mpMovements = $this->mercadoPago->getPaymentMovements(true, 30, 50, $refreshOutflowReports);
 
-        if (empty($mpMovements['error'])) {
+        if ($notify && empty($mpMovements['error'])) {
             try {
                 app(FinancialNotificationService::class)->notificarMovimentosMercadoPagoRecentes($mpMovements);
             } catch (\Throwable $e) {
@@ -225,6 +308,82 @@ class AccountController extends Controller
         }
 
         return $mpMovements;
+    }
+
+    /**
+     * @return array{
+     *     days: int,
+     *     q: string,
+     *     items: list<array<string, mixed>>,
+     *     in_total: float,
+     *     out_total: float,
+     *     error: ?string
+     * }
+     */
+    private function filteredMpExtract(?string $search): array
+    {
+        $movements = $this->mercadoPago->getCachedPaymentMovements()
+            ?? $this->mercadoPago->getPaymentMovements(false, 30, 50, false);
+
+        $term = mb_strtolower(trim((string) $search));
+        $items = [];
+        $inTotal = 0.0;
+        $outTotal = 0.0;
+
+        foreach ($movements['items'] ?? [] as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $dir = (string) ($item['direction'] ?? '');
+            $tipo = $dir === 'in' ? 'Entrada' : ($dir === 'out' ? 'Saída' : 'Pendente');
+            if ($term !== '') {
+                $haystack = mb_strtolower(implode(' ', [
+                    $item['occurred_at_label'] ?? '',
+                    $tipo,
+                    $item['description'] ?? '',
+                    $item['payer'] ?? '',
+                    $item['method'] ?? '',
+                    (string) ($item['amount'] ?? ''),
+                ]));
+                if (! str_contains($haystack, $term)) {
+                    continue;
+                }
+            }
+
+            $item['description'] = PdfText::stripEmoji((string) ($item['description'] ?? ''));
+            $item['payer'] = PdfText::stripEmoji((string) ($item['payer'] ?? ''));
+            $items[] = $item;
+            $amount = (float) ($item['amount'] ?? 0);
+            if ($dir === 'in') {
+                $inTotal += $amount;
+            } elseif ($dir === 'out') {
+                $outTotal += $amount;
+            }
+        }
+
+        return [
+            'days' => (int) ($movements['days'] ?? 30),
+            'q' => trim((string) $search),
+            'items' => $items,
+            'in_total' => round($inTotal, 2),
+            'out_total' => round($outTotal, 2),
+            'error' => $movements['error'] ?? null,
+        ];
+    }
+
+    private function emptyMpMovements(): array
+    {
+        return [
+            'days' => 30,
+            'in_total' => 0.0,
+            'out_total' => 0.0,
+            'items' => [],
+            'truncated' => false,
+            'error' => null,
+            'outflows_pending' => false,
+            'loading' => true,
+        ];
     }
 
     /**
@@ -242,7 +401,16 @@ class AccountController extends Controller
             return;
         }
 
-        $account->current_balance = $account->currentBalance();
+        $receitas = $account->getAttribute('paid_receitas_sum');
+        $despesas = $account->getAttribute('paid_despesas_sum');
+        if ($receitas !== null || $despesas !== null) {
+            $account->current_balance = round(
+                (float) $account->initial_balance + (float) $receitas - (float) $despesas,
+                2
+            );
+        } else {
+            $account->current_balance = $account->currentBalance();
+        }
         $account->balance_source = 'ledger';
     }
 }

@@ -116,6 +116,10 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
     // Contas
     Route::get('accounts/mercado-pago/movements', [AccountController::class, 'mercadoPagoMovements'])
         ->name('accounts.mp-movements');
+    Route::get('accounts/mercado-pago/extrato.pdf', [AccountController::class, 'exportMercadoPagoPdf'])
+        ->name('accounts.mp-extract.pdf');
+    Route::get('accounts/mercado-pago/extrato.csv', [AccountController::class, 'exportMercadoPagoExcel'])
+        ->name('accounts.mp-extract.excel');
     Route::post('accounts/{account}/toggle-active', [AccountController::class, 'toggleActive'])
         ->name('accounts.toggle-active');
     Route::resource('accounts', AccountController::class)->names([

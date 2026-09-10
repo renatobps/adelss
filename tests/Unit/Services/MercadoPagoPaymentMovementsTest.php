@@ -201,4 +201,25 @@ class MercadoPagoPaymentMovementsTest extends TestCase
         $this->assertSame([], $movements['items']);
         $this->assertSame(0.0, $movements['in_total']);
     }
+
+    public function test_le_movimentos_somente_do_cache(): void
+    {
+        Cache::put('mercadopago.payment_movements.30.50', [
+            'days' => 30,
+            'in_total' => 12.0,
+            'out_total' => 0.0,
+            'items' => [['id' => '9', 'direction' => 'in', 'amount' => 12]],
+            'truncated' => false,
+            'error' => null,
+            'outflows_pending' => false,
+        ], now()->addMinute());
+
+        Http::fake();
+
+        $cached = app(MercadoPagoService::class)->getCachedPaymentMovements();
+
+        $this->assertSame(12.0, $cached['in_total']);
+        $this->assertSame('9', $cached['items'][0]['id']);
+        Http::assertNothingSent();
+    }
 }

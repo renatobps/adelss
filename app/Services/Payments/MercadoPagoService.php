@@ -148,6 +148,32 @@ class MercadoPagoService
     }
 
     /**
+     * @return array{
+     *     days: int,
+     *     in_total: float,
+     *     out_total: float,
+     *     items: array<int, array<string, mixed>>,
+     *     truncated: bool,
+     *     error: ?string,
+     *     outflows_pending: bool
+     * }|null
+     */
+    public function getCachedPaymentMovements(int $days = 30, int $limit = 50): ?array
+    {
+        $cached = Cache::get($this->paymentMovementsCacheKey($days, $limit));
+        if (! is_array($cached) || ! array_key_exists('items', $cached)) {
+            return null;
+        }
+
+        return $cached;
+    }
+
+    private function paymentMovementsCacheKey(int $days, int $limit): string
+    {
+        return 'mercadopago.payment_movements.'.$days.'.'.$limit;
+    }
+
+    /**
      * Pagamentos recentes da conta: aprovados entram, estornos saem.
      *
      * @return array{
@@ -172,10 +198,9 @@ class MercadoPagoService
             'outflows_pending' => false,
         ];
 
-        $cacheKey = 'mercadopago.payment_movements.'.$days.'.'.$limit;
         if (! $fresh) {
-            $cached = Cache::get($cacheKey);
-            if (is_array($cached) && array_key_exists('items', $cached)) {
+            $cached = $this->getCachedPaymentMovements($days, $limit);
+            if ($cached !== null) {
                 return $cached;
             }
         }
@@ -189,7 +214,7 @@ class MercadoPagoService
 
         try {
             $payload = $this->requestPaymentMovements($token, $days, $limit, $refreshOutflowReports);
-            Cache::put($cacheKey, $payload, now()->addSeconds(20));
+            Cache::put($this->paymentMovementsCacheKey($days, $limit), $payload, now()->addSeconds(20));
 
             return $payload;
         } catch (\Throwable $e) {

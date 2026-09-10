@@ -64,17 +64,8 @@
                 </div>
             </div>
 
-            <!-- start: search & user box -->
+            <!-- start: user box -->
             <div class="header-right">
-                <form action="#" class="search nav-form">
-                    <div class="input-group">
-                        <input type="text" class="form-control" name="q" id="q" placeholder="Buscar...">
-                        <button class="btn btn-default" type="submit"><i class="bx bx-search"></i></button>
-                    </div>
-                </form>
-
-                <span class="separator"></span>
-
                 @php
                     $loggedUser = Auth::user();
                     $loggedMember = $loggedUser?->member;
