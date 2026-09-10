@@ -85,7 +85,34 @@ class PdfSignatureService
 
     public function pastorNome(): ?string
     {
-        return $this->namesForRole(['Pastor%', 'Pastora%', '%Pastor(a)%']);
+        $members = $this->membersWithRoleLike(['%Pastor%', '%Pastora%']);
+        if ($members->isEmpty()) {
+            return null;
+        }
+
+        $members = $members->reject(function (Member $member) {
+            return $this->roleContains((string) ($member->role->name ?? ''), 'presidente');
+        });
+
+        $exact = $members->filter(
+            fn (Member $member) => $this->roleIsMainPastor((string) ($member->role->name ?? ''))
+        );
+        if ($exact->isNotEmpty()) {
+            return $this->formatMemberNames($exact);
+        }
+
+        $dirigente = $members->filter(
+            fn (Member $member) => $this->roleContains((string) ($member->role->name ?? ''), 'dirigente')
+        );
+        if ($dirigente->isNotEmpty()) {
+            return $this->formatMemberNames($dirigente);
+        }
+
+        $withoutAuxiliar = $members->reject(
+            fn (Member $member) => $this->roleContains((string) ($member->role->name ?? ''), 'auxiliar')
+        );
+
+        return $this->formatMemberNames($withoutAuxiliar->isNotEmpty() ? $withoutAuxiliar : $members);
     }
 
     public function tesoureiroNome(): ?string
@@ -120,12 +147,16 @@ class PdfSignatureService
         return (bool) preg_match('/(?:^|[\s])(?:2[ºo°]?|segundo)\s*tesoureir/iu', $roleName);
     }
 
-    /**
-     * @param  list<string>  $namePatterns
-     */
-    private function namesForRole(array $namePatterns): ?string
+    private function roleContains(string $roleName, string $needle): bool
     {
-        return $this->formatMemberNames($this->membersWithRoleLike($namePatterns));
+        return mb_stripos($roleName, $needle) !== false;
+    }
+
+    private function roleIsMainPastor(string $roleName): bool
+    {
+        $normalized = mb_strtolower(trim(preg_replace('/\s+/', ' ', $roleName) ?? $roleName), 'UTF-8');
+
+        return in_array($normalized, ['pastor', 'pastor(a)', 'pastora', 'pastor dirigente'], true);
     }
 
     /**
@@ -141,16 +172,17 @@ class PdfSignatureService
         $query = Member::query()
             ->with('role')
             ->whereHas('role', function ($q) use ($namePatterns) {
-                $q->where('is_active', true)
-                    ->where(function ($inner) use ($namePatterns) {
-                        foreach ($namePatterns as $index => $pattern) {
-                            if ($index === 0) {
-                                $inner->where('name', 'like', $pattern);
-                            } else {
-                                $inner->orWhere('name', 'like', $pattern);
-                            }
+                $q->where(function ($inner) use ($namePatterns) {
+                    foreach ($namePatterns as $index => $pattern) {
+                        $sql = 'LOWER(name) LIKE ?';
+                        $value = mb_strtolower($pattern, 'UTF-8');
+                        if ($index === 0) {
+                            $inner->whereRaw($sql, [$value]);
+                        } else {
+                            $inner->orWhereRaw($sql, [$value]);
                         }
-                    });
+                    }
+                });
             })
             ->orderBy('name');
 
@@ -171,10 +203,37 @@ class PdfSignatureService
         $names = $members
             ->pluck('name')
             ->filter()
-            ->map(fn ($name) => PdfText::stripEmoji((string) $name))
+            ->map(fn ($name) => $this->formatPersonName((string) $name))
             ->unique()
             ->values();
 
         return $names->isEmpty() ? null : $names->implode(' / ');
+    }
+
+    private function formatPersonName(string $name): string
+    {
+        $name = trim(PdfText::stripEmoji($name));
+        if ($name === '') {
+            return '';
+        }
+
+        $upper = mb_strtoupper($name, 'UTF-8');
+        $lower = mb_strtolower($name, 'UTF-8');
+        if ($name !== $upper && $name !== $lower) {
+            return $name;
+        }
+
+        $smallWords = ['da', 'de', 'do', 'das', 'dos', 'e'];
+        $parts = preg_split('/\s+/', $lower) ?: [];
+        $formatted = [];
+        foreach ($parts as $index => $part) {
+            if ($index > 0 && in_array($part, $smallWords, true)) {
+                $formatted[] = $part;
+            } else {
+                $formatted[] = mb_convert_case($part, MB_CASE_TITLE, 'UTF-8');
+            }
+        }
+
+        return implode(' ', $formatted);
     }
 }

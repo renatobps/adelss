@@ -54,8 +54,10 @@
         .assinaturas { width: 100%; margin-top: 36px; border-collapse: collapse; }
         .assinaturas td { width: 50%; text-align: center; padding: 18px 18px 8px; vertical-align: bottom; }
         .assinaturas .linha { border-top: 1px solid #111; margin: 42px auto 8px; width: 78%; }
-        .assinaturas .nome { font-size: 10px; font-weight: bold; }
+        .assinaturas .nome { font-size: 10px; font-weight: bold; color: #111827; padding-top: 4px; }
+        .assinaturas .cargo { font-size: 9px; color: #4b5563; }
         .assinaturas .assinatura-img { max-height: 48px; max-width: 180px; display: block; margin: 0 auto 4px; }
+        .assinatura-bloco { width: 100%; border-collapse: collapse; }
         .comp { page-break-before: always; }
         .comp img { max-width: 100%; max-height: 210mm; }
         .comp-meta { font-size: 9px; margin-bottom: 8px; }
@@ -144,26 +146,42 @@
     <table class="assinaturas">
         <tr>
             <td>
-                @if(!empty($pastorAssinaturaSrc))
-                    <img src="{{ $pastorAssinaturaSrc }}" class="assinatura-img" alt="Assinatura do pastor dirigente">
-                @else
-                    <div class="linha"></div>
-                @endif
-                @if(!empty($pastorNome))
-                    <div class="nome">{{ $pastorNome }}</div>
-                @endif
-                <div class="cargo">Pastor Dirigente</div>
+                <table class="assinatura-bloco">
+                    <tr>
+                        <td>
+                            @if(!empty($pastorAssinaturaSrc))
+                                <img src="{{ $pastorAssinaturaSrc }}" class="assinatura-img" alt="Assinatura do pastor dirigente">
+                            @else
+                                <div class="linha"></div>
+                            @endif
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="nome">{{ $pastorNome ?: ' ' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="cargo">Pastor Dirigente</td>
+                    </tr>
+                </table>
             </td>
             <td>
-                @if(!empty($tesoureiroAssinaturaSrc))
-                    <img src="{{ $tesoureiroAssinaturaSrc }}" class="assinatura-img" alt="Assinatura do tesoureiro da congregação">
-                @else
-                    <div class="linha"></div>
-                @endif
-                @if(!empty($tesoureiroNome))
-                    <div class="nome">{{ $tesoureiroNome }}</div>
-                @endif
-                <div class="cargo">Tesoureiro (a) Congregação</div>
+                <table class="assinatura-bloco">
+                    <tr>
+                        <td>
+                            @if(!empty($tesoureiroAssinaturaSrc))
+                                <img src="{{ $tesoureiroAssinaturaSrc }}" class="assinatura-img" alt="Assinatura do tesoureiro da congregação">
+                            @else
+                                <div class="linha"></div>
+                            @endif
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="nome">{{ $tesoureiroNome ?: ' ' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="cargo">Tesoureiro (a) Congregação</td>
+                    </tr>
+                </table>
             </td>
         </tr>
         <tr>

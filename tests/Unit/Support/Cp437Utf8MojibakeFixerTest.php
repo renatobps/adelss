@@ -20,7 +20,14 @@ class Cp437Utf8MojibakeFixerTest extends TestCase
         $this->assertSame('Material de Construção', $fixer->repair('Material de Constru├º├úo'));
         $this->assertSame('Materiais Escritório', $fixer->repair('Materiais Escrit├│rio'));
         $this->assertSame('Instrumentos & Acessórios', $fixer->repair('Instrumentos & Acess├│rios'));
-        $this->assertSame('Conta de água', $fixer->repair('Conta de ├ígua'));
+        $this->assertSame('1º Tesoureiro(a)', $fixer->repair('1┬║ Tesoureiro(a)'));
+        $this->assertSame('2º Tesoureiro(a)', $fixer->repair('2┬║ Tesoureiro(a)'));
+        $this->assertSame('Apóstolo', $fixer->repair('Ap├│stolo'));
+        $this->assertSame('Diácono', $fixer->repair('Di├ícono'));
+        $this->assertSame('Líder de Crianças', $fixer->repair('L├¡der de Crian├ºas'));
+        $this->assertSame('Líder de Intercessão', $fixer->repair('L├¡der de Intercess├úo'));
+        $this->assertSame('Líder do Ministério de Louvor', $fixer->repair('L├¡der do Minist├⌐rio de Louvor'));
+        $this->assertSame('Operador de Transmissão', $fixer->repair('Operador de Transmiss├úo'));
     }
 
     public function test_nao_altera_texto_ja_correto(): void
@@ -30,6 +37,8 @@ class Cp437Utf8MojibakeFixerTest extends TestCase
         $this->assertSame('Dízimo', $fixer->repair('Dízimo'));
         $this->assertSame('Oferta', $fixer->repair('Oferta'));
         $this->assertSame('Zeladoria', $fixer->repair('Zeladoria'));
-        $this->assertSame('mercado (pago a cleia)', $fixer->repair('mercado (pago a cleia)'));
+        $this->assertSame('1º Tesoureiro(a)', $fixer->repair('1º Tesoureiro(a)'));
+        $this->assertSame('Diácono', $fixer->repair('Diácono'));
+        $this->assertSame('Líder', $fixer->repair('Líder'));
     }
 }

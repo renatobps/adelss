@@ -9,7 +9,7 @@ class Cp437Utf8MojibakeFixer
      */
     public function looksBroken(string $text): bool
     {
-        return (bool) preg_match('/[\x{2500}-\x{257F}\x{00A1}\x{00AA}\x{00BA}\x{2591}-\x{2593}]/u', $text);
+        return (bool) preg_match('/[\x{2500}-\x{257F}\x{2591}-\x{2593}]/u', $text);
     }
 
     public function repair(string $text): string
