@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\FinancialTransaction;
+use Carbon\Carbon;
 
 class FinancialReceiptPresenter
 {
@@ -60,6 +61,48 @@ class FinancialReceiptPresenter
             'reciboNumero' => self::number($transaction),
             'memberCpfRg' => $cpf !== '' ? $cpf : $rg,
             'memberAddress' => $member ? $member->fullAddress() : '',
+        ];
+    }
+
+    /**
+     * Recibo de saída agrupada do demonstrativo da matriz (mesmo talão das despesas).
+     *
+     * @return array{
+     *     fromName: string,
+     *     categoryName: string,
+     *     amount: string,
+     *     amountExtenso: string,
+     *     amountLine: string,
+     *     city: string,
+     *     day: string,
+     *     month: string,
+     *     year: string,
+     *     dateLine: string,
+     *     reciboNumero: string,
+     *     memberCpfRg: string,
+     *     memberAddress: string
+     * }
+     */
+    public static function forExpenseGroup(string $description, float $amount, Carbon $date, string $numero): array
+    {
+        $date = $date->copy()->locale('pt_BR');
+        $amountFormatted = number_format($amount, 2, ',', '.');
+        $amountExtenso = ValorPorExtenso::reais($amount);
+
+        return [
+            'fromName' => 'ASSEMBLEIA DE DEUS DE LUZIÂNIA em São Sebastião',
+            'categoryName' => PdfText::upper($description),
+            'amount' => $amountFormatted,
+            'amountExtenso' => $amountExtenso,
+            'amountLine' => 'R$ '.$amountFormatted.' ('.$amountExtenso.')',
+            'city' => 'Brasília - DF',
+            'day' => $date->format('d'),
+            'month' => $date->translatedFormat('F'),
+            'year' => $date->format('Y'),
+            'dateLine' => $date->isoFormat('D [de] MMMM [de] YYYY'),
+            'reciboNumero' => $numero,
+            'memberCpfRg' => '',
+            'memberAddress' => '',
         ];
     }
 

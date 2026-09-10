@@ -95,6 +95,8 @@ class PdfSignatureServiceTest extends TestCase
 
         $this->assertStringContainsString('Rodrigo Barbosa da Silva', $html);
         $this->assertStringContainsString('Pastor Dirigente', $html);
+        $this->assertStringNotContainsString('Saídas do mês de', $html);
+        $this->assertStringContainsString('Nenhuma saída paga neste mês.', $html);
 
         Schema::dropIfExists('financial_transactions');
     }
