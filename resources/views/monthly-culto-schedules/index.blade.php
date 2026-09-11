@@ -41,15 +41,14 @@
                     <div class="col-md-12">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#generateMonthlyModal">
-                                    <i class="bx bx-calendar-plus me-2"></i>Gerar Escala Mensal
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addScheduleModal">
+                                    <i class="bx bx-plus me-2"></i>Adicionar Escala
                                 </button>
-                                <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#manualPreletorModal">
-                                    <i class="bx bx-user-voice me-2"></i>Cadastrar Escala de Preletor (Manual)
-                                </button>
-                                <a href="{{ route('voluntarios.escalas-mensais.create', ['month' => $month, 'year' => $year]) }}" class="btn btn-primary">
-                                    <i class="bx bx-plus me-2"></i>Cadastrar Escala Mensal
-                                </a>
+                                @if(auth()->user()?->can('update', new \App\Models\ServiceSchedule()))
+                                    <a href="{{ route('voluntarios.escalas-mensais.settings.edit') }}" class="btn btn-default">
+                                        <i class="bx bx-slider-alt me-2"></i>Configurar escalas
+                                    </a>
+                                @endif
                             </div>
                         </div>
                         <form method="GET" action="{{ route('voluntarios.escalas-mensais.index') }}" class="row g-3">
@@ -201,8 +200,8 @@
                 @else
                     <div class="alert alert-info">
                         <i class="bx bx-info-circle me-2"></i>
-                        Nenhuma escala cadastrada para o mês selecionado. 
-                        <a href="{{ route('voluntarios.escalas-mensais.create', ['month' => $month, 'year' => $year]) }}">Cadastrar escalas</a>
+                        Nenhuma escala cadastrada para o mês selecionado.
+                        Use o botão <strong>Adicionar Escala</strong> para preencher as áreas de serviço.
                     </div>
                 @endif
             </div>
@@ -210,58 +209,89 @@
     </div>
 </div>
 
-<div class="modal fade" id="manualPreletorModal" tabindex="-1" aria-labelledby="manualPreletorModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
+<div class="modal fade" id="addScheduleModal" tabindex="-1" aria-labelledby="addScheduleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
-            <form method="POST" action="{{ route('voluntarios.escalas-mensais.preletor.manual') }}">
+            <form method="POST" action="{{ route('voluntarios.escalas-mensais.area.manual') }}" id="addScheduleForm">
                 @csrf
                 <input type="hidden" name="month" value="{{ $month }}">
                 <input type="hidden" name="year" value="{{ $year }}">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="manualPreletorModalLabel">Cadastro Manual - Preletor</h5>
+                    <h5 class="modal-title" id="addScheduleModalLabel">
+                        Adicionar Escala de {{ \Carbon\Carbon::create($year, $month, 1)->locale('pt_BR')->translatedFormat('F Y') }}
+                    </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body">
-                    @if(!$preletorArea)
+                    @if($serviceAreas->count() === 0)
                         <div class="alert alert-danger mb-0">
-                            A área de serviço <strong>Preletor</strong> não foi encontrada.
+                            Nenhuma área de serviço ativa foi encontrada.
                         </div>
                     @elseif($cultos->count() === 0)
                         <div class="alert alert-warning mb-0">
-                            Nenhum culto encontrado para o mês selecionado.
-                        </div>
-                    @elseif($preletorVolunteers->count() === 0)
-                        <div class="alert alert-warning mb-0">
-                            Não existem voluntários ativos vinculados à área de serviço Preletor.
+                            Nenhum culto de quarta ou domingo encontrado na agenda para o mês selecionado.
                         </div>
                     @else
                         <div class="mb-3">
-                            <label for="manual_preletor_event_id" class="form-label">Culto <span class="text-danger">*</span></label>
-                            <select class="form-select" id="manual_preletor_event_id" name="event_id" required>
-                                <option value="">Selecione o culto...</option>
-                                @foreach($cultos as $culto)
-                                    <option value="{{ $culto->id }}">
-                                        {{ $culto->start_date->format('d/m/Y H:i') }} - {{ $culto->title }}
+                            <label for="add_schedule_area_id" class="form-label">Área de serviço <span class="text-danger">*</span></label>
+                            <select class="form-select" id="add_schedule_area_id" name="service_area_id" required>
+                                <option value="">Selecione a escala que deseja adicionar...</option>
+                                @foreach($serviceAreas as $area)
+                                    @php
+                                        $areaMeta = $scheduleBuilder['areas'][(string) $area->id] ?? null;
+                                        $quantity = $areaMeta['quantity'] ?? 1;
+                                    @endphp
+                                    <option value="{{ $area->id }}">
+                                        {{ $area->name }} ({{ $quantity }} {{ $quantity === 1 ? 'pessoa' : 'pessoas' }}){{ !empty($areaMeta['sunday_only']) ? ' · somente domingo' : '' }}
                                     </option>
                                 @endforeach
                             </select>
+                            <div class="form-text" id="add_schedule_area_help">
+                                Escolha a área. Os cultos do mês aparecerão para você preencher os voluntários.
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="manual_preletor_volunteer_id" class="form-label">Voluntário da Área Preletor <span class="text-danger">*</span></label>
-                            <select class="form-select" id="manual_preletor_volunteer_id" name="preletor_volunteer_id" required>
-                                <option value="">Selecione o voluntário...</option>
-                                @foreach($preletorVolunteers as $volunteer)
-                                    <option value="{{ $volunteer->id }}">{{ $volunteer->member->name ?? 'Sem nome' }}</option>
-                                @endforeach
-                            </select>
+
+                        <div id="add_schedule_empty_volunteers" class="alert alert-warning d-none">
+                            Esta área não possui voluntários ativos cadastrados.
+                        </div>
+
+                        <div id="add_schedule_cultos" class="d-none">
+                            <p class="text-muted" id="add_schedule_rules">
+                                Cultos de quarta e domingo da agenda. A mesma pessoa não pode servir em áreas diferentes no mesmo culto.
+                                Cultos sem preenchimento não são alterados.
+                            </p>
+                            @foreach($cultos as $culto)
+                                @php
+                                    $weekday = $culto->start_date->copy()->locale('pt_BR')->isoFormat('dddd');
+                                    $isWednesday = $culto->start_date->dayOfWeek === \Carbon\Carbon::WEDNESDAY;
+                                    $isSunday = $culto->start_date->dayOfWeek === \Carbon\Carbon::SUNDAY;
+                                @endphp
+                                <div class="border rounded p-3 mb-3" data-culto-row data-event-id="{{ $culto->id }}" data-is-sunday="{{ $isSunday ? '1' : '0' }}">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                                        <div>
+                                            <div class="fw-semibold text-capitalize">{{ $weekday }}, {{ $culto->start_date->format('d/m/Y') }}</div>
+                                            <div class="text-muted">{{ $culto->title }} · {{ $culto->start_date->format('H:i') }}</div>
+                                        </div>
+                                        <span class="badge {{ $isWednesday ? 'bg-warning text-dark' : 'bg-primary' }}">
+                                            {{ $isWednesday ? 'Quarta' : 'Domingo' }}
+                                        </span>
+                                    </div>
+                                    <div data-slots></div>
+                                    <div class="d-none mt-2" data-guest-wrap>
+                                        <label class="form-label">Nome do convidado</label>
+                                        <input type="text" class="form-control" maxlength="150" placeholder="Ex.: Pr. José da Silva" data-guest-input>
+                                        <small class="text-muted">Use este campo se o preletor não estiver na lista de voluntários.</small>
+                                    </div>
+                                </div>
+                            @endforeach
                         </div>
                     @endif
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancelar</button>
-                    @if($preletorArea && $cultos->count() > 0 && $preletorVolunteers->count() > 0)
-                        <button type="submit" class="btn btn-warning">
-                            <i class="bx bx-check me-2"></i>Salvar Escala de Preletor
+                    @if($serviceAreas->count() > 0 && $cultos->count() > 0)
+                        <button type="submit" class="btn btn-primary" id="add_schedule_submit" disabled>
+                            <i class="bx bx-check me-2"></i>Salvar Escala
                         </button>
                     @endif
                 </div>
@@ -326,75 +356,215 @@
     </div>
 </div>
 
-<div class="modal fade" id="generateMonthlyModal" tabindex="-1" aria-labelledby="generateMonthlyModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" action="{{ route('voluntarios.escalas-mensais.generate-monthly') }}">
-                @csrf
-                <div class="modal-header">
-                    <h5 class="modal-title" id="generateMonthlyModalLabel">Gerar Escala Mensal Automática</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="service_area_id" class="form-label">Área de Serviço <span class="text-danger">*</span></label>
-                        <select class="form-select" id="service_area_id" name="service_area_id" required>
-                            <option value="">Selecione a área...</option>
-                            @foreach($serviceAreas as $area)
-                                <option value="{{ $area->id }}">{{ $area->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="culto_tipo" class="form-label">Tipo de Culto <span class="text-danger">*</span></label>
-                        <select class="form-select" id="culto_tipo" name="culto_tipo" required>
-                            <option value="">Selecione o culto...</option>
-                            <option value="familia">Culto da Família (Domingo)</option>
-                            <option value="graca">Culto da Graça (Quarta)</option>
-                        </select>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="month_generate" class="form-label">Mês</label>
-                            <select name="month" id="month_generate" class="form-select">
-                                @for($m = 1; $m <= 12; $m++)
-                                    <option value="{{ $m }}" {{ $month == $m ? 'selected' : '' }}>
-                                        {{ \Carbon\Carbon::create(null, $m, 1)->locale('pt_BR')->translatedFormat('F') }}
-                                    </option>
-                                @endfor
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="year_generate" class="form-label">Ano</label>
-                            <select name="year" id="year_generate" class="form-select">
-                                @for($y = date('Y') - 1; $y <= date('Y') + 1; $y++)
-                                    <option value="{{ $y }}" {{ $year == $y ? 'selected' : '' }}>{{ $y }}</option>
-                                @endfor
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="alert alert-info mb-0">
-                        Regras de geração por área:<br>
-                        Apoio Geral: 1 | Direção do Culto: 1 | Intercessão: 4 | Portaria: 1 | Preletor: 1 | Recepção: 2 | Sala das Crianças: 2 (1 professor + 1 monitor).
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bx bx-play-circle me-2"></i>Gerar
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 @push('scripts')
 <script>
+window.monthlyScheduleBuilder = @json($scheduleBuilder);
+</script>
+<script>
 document.addEventListener('DOMContentLoaded', function() {
+    const builder = window.monthlyScheduleBuilder || { areas: {}, assignments: {}, guests: {}, occupied: {} };
+    const areaSelect = document.getElementById('add_schedule_area_id');
+    const helpEl = document.getElementById('add_schedule_area_help');
+    const rulesEl = document.getElementById('add_schedule_rules');
+    const cultosWrap = document.getElementById('add_schedule_cultos');
+    const emptyVolunteers = document.getElementById('add_schedule_empty_volunteers');
+    const submitBtn = document.getElementById('add_schedule_submit');
+    const addScheduleModalElement = document.getElementById('addScheduleModal');
+
+    function selectedValuesFor(eventId, area) {
+        const oldAreaId = String(builder.old_area_id || '');
+        if (oldAreaId && oldAreaId === String(area.id) && builder.old_assignments && builder.old_assignments[eventId]) {
+            return [].concat(builder.old_assignments[eventId]);
+        }
+        return ((builder.assignments[eventId] || {})[String(area.id)] || []).slice();
+    }
+
+    function guestValueFor(eventId, area) {
+        if (!area.is_preletor) return '';
+        const oldAreaId = String(builder.old_area_id || '');
+        if (oldAreaId && oldAreaId === String(area.id) && builder.old_guests && builder.old_guests[eventId] !== undefined) {
+            return builder.old_guests[eventId] || '';
+        }
+        return builder.guests[eventId] || '';
+    }
+
+    function refreshDisabledOptions(row, area) {
+        const selects = Array.from(row.querySelectorAll('[data-slot-select]'));
+        const chosen = selects.map(function(select) { return select.value; }).filter(Boolean);
+        const occupied = builder.occupied[row.getAttribute('data-event-id')] || {};
+
+        selects.forEach(function(select) {
+            Array.from(select.options).forEach(function(option) {
+                if (!option.value) {
+                    option.disabled = false;
+                    return;
+                }
+
+                const occupiedInfo = occupied[option.value] || occupied[String(option.value)];
+                const takenInOtherArea = !area.allows_overlap && occupiedInfo && Number(occupiedInfo.area_id) !== Number(area.id);
+                const takenInAnotherSlot = chosen.includes(option.value) && select.value !== option.value;
+                option.disabled = takenInOtherArea || takenInAnotherSlot;
+
+                const baseName = option.getAttribute('data-name') || option.textContent;
+                option.textContent = takenInOtherArea
+                    ? baseName + ' — já em ' + occupiedInfo.area_name
+                    : baseName;
+            });
+        });
+    }
+
+    function renderAreaForm(areaId) {
+        const area = builder.areas[String(areaId)];
+        if (!area || !cultosWrap) {
+            if (cultosWrap) cultosWrap.classList.add('d-none');
+            if (emptyVolunteers) emptyVolunteers.classList.add('d-none');
+            if (submitBtn) submitBtn.disabled = true;
+            if (helpEl) helpEl.textContent = 'Escolha a área. Os cultos do mês aparecerão para você preencher os voluntários.';
+            return;
+        }
+
+        if (helpEl) {
+            helpEl.textContent = area.help;
+        }
+        if (rulesEl && area.rules_text) {
+            rulesEl.textContent = area.rules_text;
+        }
+        const hasVolunteers = area.volunteers.length > 0;
+        if (emptyVolunteers) {
+            emptyVolunteers.classList.toggle('d-none', hasVolunteers || area.is_preletor);
+            emptyVolunteers.textContent = area.uses_members
+                ? 'Não há membros ativos para montar a escala de limpeza.'
+                : 'Esta área não possui voluntários ativos cadastrados.';
+        }
+        if (cultosWrap) {
+            cultosWrap.classList.remove('d-none');
+        }
+        if (submitBtn) submitBtn.disabled = !(hasVolunteers || area.is_preletor);
+
+        document.querySelectorAll('[data-culto-row]').forEach(function(row) {
+            const eventId = row.getAttribute('data-event-id');
+            const slotsEl = row.querySelector('[data-slots]');
+            const guestWrap = row.querySelector('[data-guest-wrap]');
+            const guestInput = row.querySelector('[data-guest-input]');
+            const isSunday = row.getAttribute('data-is-sunday') === '1';
+            const hideRow = area.sunday_only && !isSunday;
+            row.classList.toggle('d-none', hideRow);
+
+            const selected = selectedValuesFor(eventId, area);
+            if (!slotsEl || !guestWrap || !guestInput) {
+                return;
+            }
+            slotsEl.innerHTML = '';
+            if (hideRow) {
+                return;
+            }
+
+            area.slots.forEach(function(label, index) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'mb-2';
+                const labelEl = document.createElement('label');
+                labelEl.className = 'form-label';
+                labelEl.textContent = label;
+                const select = document.createElement('select');
+                select.className = 'form-select';
+                select.name = 'assignments[' + eventId + '][]';
+                select.setAttribute('data-slot-select', '1');
+
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = area.uses_members ? 'Selecione o membro...' : 'Selecione o voluntário...';
+                select.appendChild(placeholder);
+
+                area.volunteers.forEach(function(volunteer) {
+                    const option = document.createElement('option');
+                    option.value = String(volunteer.id);
+                    option.setAttribute('data-name', volunteer.name);
+                    option.textContent = volunteer.name;
+                    select.appendChild(option);
+                });
+
+                if (selected[index]) {
+                    select.value = String(selected[index]);
+                }
+
+                select.addEventListener('change', function() {
+                    if (select.value && guestInput) {
+                        guestInput.value = '';
+                    }
+                    refreshDisabledOptions(row, area);
+                });
+
+                wrapper.appendChild(labelEl);
+                wrapper.appendChild(select);
+                slotsEl.appendChild(wrapper);
+            });
+
+            if (area.is_preletor) {
+                guestWrap.classList.remove('d-none');
+                guestInput.name = 'guests[' + eventId + ']';
+                guestInput.value = selected.some(Boolean) ? '' : guestValueFor(eventId, area);
+                guestInput.oninput = function() {
+                    if (!guestInput.value.trim()) return;
+                    row.querySelectorAll('[data-slot-select]').forEach(function(select) {
+                        select.value = '';
+                    });
+                    refreshDisabledOptions(row, area);
+                };
+            } else {
+                guestWrap.classList.add('d-none');
+                guestInput.removeAttribute('name');
+                guestInput.value = '';
+                guestInput.oninput = null;
+            }
+
+            refreshDisabledOptions(row, area);
+        });
+    }
+
+    if (areaSelect) {
+        areaSelect.addEventListener('change', function() {
+            renderAreaForm(areaSelect.value);
+        });
+        if (builder.old_area_id) {
+            areaSelect.value = String(builder.old_area_id);
+            renderAreaForm(areaSelect.value);
+        }
+    }
+
+    const addScheduleForm = document.getElementById('addScheduleForm');
+    if (addScheduleForm) {
+        addScheduleForm.addEventListener('submit', function(event) {
+            const rows = Array.from(document.querySelectorAll('[data-culto-row]'));
+            let hasValue = false;
+            for (let index = 0; index < rows.length; index++) {
+                const row = rows[index];
+                const ids = Array.from(row.querySelectorAll('[data-slot-select]'))
+                    .map(function(select) { return select.value; })
+                    .filter(Boolean);
+                const guestInput = row.querySelector('[data-guest-input]');
+                const hasGuest = guestInput && guestInput.getAttribute('name') && guestInput.value.trim();
+                if (ids.length || hasGuest) {
+                    hasValue = true;
+                }
+                if (ids.length !== new Set(ids).size) {
+                    event.preventDefault();
+                    alert('No mesmo culto, o mesmo voluntário não pode servir em mais de uma vaga.');
+                    return;
+                }
+            }
+            if (!hasValue) {
+                event.preventDefault();
+                alert('Preencha ao menos um culto antes de salvar.');
+            }
+        });
+    }
+
+    @if(session('open_add_schedule_modal'))
+        if (addScheduleModalElement && window.bootstrap) {
+            new bootstrap.Modal(addScheduleModalElement).show();
+        }
+    @endif
+
     const notifyModalElement = document.getElementById('notifyAllFromListModal');
     const notifyModal = notifyModalElement ? new bootstrap.Modal(notifyModalElement) : null;
     const notifyForm = document.getElementById('notifyAllFromListForm');

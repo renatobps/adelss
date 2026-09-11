@@ -39,39 +39,9 @@ class MonthlyCultoScheduleController extends Controller
 
         $schedules = $query->orderBy('event_id')->get();
 
-        // Buscar todas as áreas de serviço para exibição
         $serviceAreas = ServiceArea::where('status', 'ativo')->orderBy('name')->get();
-
-        $startDate = Carbon::create($year, $month, 1)->startOfDay();
-        $endDate = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
-
-        $cultos = Event::whereBetween('start_date', [$startDate, $endDate])
-            ->where(function ($query) {
-                $query->whereRaw('LOWER(title) LIKE ?', ['%culto%'])
-                    ->orWhereHas('category', function ($q) {
-                        $q->whereRaw('LOWER(name) LIKE ?', ['%culto%']);
-                    });
-            })
-            ->orderBy('start_date')
-            ->get();
-
-        $preletorArea = ServiceArea::where('status', 'ativo')
-            ->where(function ($query) {
-                $query->whereRaw('LOWER(name) LIKE ?', ['%preletor%'])
-                    ->orWhereRaw('LOWER(name) LIKE ?', ['%pregador%']);
-            })
-            ->first();
-
-        $preletorVolunteers = collect();
-        if ($preletorArea) {
-            $preletorVolunteers = Volunteer::where('status', 'ativo')
-                ->whereHas('serviceAreas', function ($query) use ($preletorArea) {
-                    $query->where('service_areas.id', $preletorArea->id);
-                })
-                ->with('member')
-                ->orderBy('id')
-                ->get();
-        }
+        $cultos = $this->getCultosDoMes((int) $month, (int) $year);
+        $scheduleBuilder = $this->buildManualSchedulePayload($serviceAreas, (int) $month, (int) $year);
 
         $templates = ConfiguracaoMensagem::where('ativo', true)
             ->orderBy('tipo_notificacao')
@@ -83,8 +53,7 @@ class MonthlyCultoScheduleController extends Controller
             'year',
             'serviceAreas',
             'cultos',
-            'preletorArea',
-            'preletorVolunteers',
+            'scheduleBuilder',
             'templates'
         ));
     }
@@ -319,6 +288,16 @@ class MonthlyCultoScheduleController extends Controller
                         ]);
                     }
                 }
+            }
+        }
+
+        $preletorArea = $this->findPreletorArea();
+        if ($preletorArea) {
+            $hasPreletorVolunteer = collect($validated['service_areas'][$preletorArea->id] ?? [])
+                ->filter()
+                ->isNotEmpty();
+            if ($hasPreletorVolunteer) {
+                $escala->update(['guest_preletor_name' => null]);
             }
         }
 
@@ -694,6 +673,11 @@ class MonthlyCultoScheduleController extends Controller
             'status' => 'pendente',
         ]);
 
+        $preletorArea = $this->findPreletorArea();
+        if ($preletorArea && (int) $validated['service_area_id'] === (int) $preletorArea->id) {
+            $escala->update(['guest_preletor_name' => null]);
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'Voluntário adicionado manualmente com sucesso!',
@@ -959,94 +943,215 @@ class MonthlyCultoScheduleController extends Controller
     }
 
     /**
-     * Cadastro manual específico para área de Preletor
+     * Cadastro manual mensal por área de serviço
      */
-    public function storeManualPreletor(Request $request)
+    public function storeManualArea(Request $request)
     {
         $this->authorize('create', ServiceSchedule::class);
-        $validated = $request->validate([
-            'event_id' => 'required|exists:events,id',
-            'preletor_volunteer_id' => 'required|exists:volunteers,id',
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'service_area_id' => 'required|exists:service_areas,id',
             'month' => 'required|integer|min:1|max:12',
             'year' => 'required|integer|min:2020|max:2100',
         ], [
-            'event_id.required' => 'Selecione um culto.',
-            'event_id.exists' => 'O culto selecionado não existe.',
-            'preletor_volunteer_id.required' => 'Selecione o voluntário preletor.',
-            'preletor_volunteer_id.exists' => 'O voluntário selecionado não existe.',
+            'service_area_id.required' => 'Selecione a área de serviço.',
+            'service_area_id.exists' => 'A área de serviço selecionada não existe.',
         ]);
 
-        $preletorArea = ServiceArea::where('status', 'ativo')
-            ->where(function ($query) {
-                $query->whereRaw('LOWER(name) LIKE ?', ['%preletor%'])
-                    ->orWhereRaw('LOWER(name) LIKE ?', ['%pregador%']);
-            })
-            ->first();
+        $month = (int) $request->input('month', Carbon::now()->month);
+        $year = (int) $request->input('year', Carbon::now()->year);
+        $serviceAreaId = (int) $request->input('service_area_id');
 
-        if (!$preletorArea) {
-            return redirect()->route('voluntarios.escalas-mensais.index', [
-                'month' => $validated['month'],
-                'year' => $validated['year'],
-            ])->with('error', 'Área de serviço "Preletor" não encontrada.');
+        $redirect = function (string $type, string $message) use ($month, $year, $serviceAreaId) {
+            return redirect()->route('voluntarios.escalas-mensais.index', compact('month', 'year'))
+                ->with($type, $message)
+                ->withInput()
+                ->with('open_add_schedule_modal', true)
+                ->with('add_schedule_area_id', $serviceAreaId);
+        };
+
+        if ($validator->fails()) {
+            return redirect()->route('voluntarios.escalas-mensais.index', compact('month', 'year'))
+                ->withErrors($validator)
+                ->withInput()
+                ->with('open_add_schedule_modal', true)
+                ->with('add_schedule_area_id', $serviceAreaId)
+                ->with('error', $validator->errors()->first());
         }
 
-        $isVolunteerFromPreletorArea = Volunteer::where('id', $validated['preletor_volunteer_id'])
-            ->where('status', 'ativo')
-            ->whereHas('serviceAreas', function ($query) use ($preletorArea) {
-                $query->where('service_areas.id', $preletorArea->id);
-            })
-            ->exists();
+        $validated = $validator->validated();
+        $month = (int) $validated['month'];
+        $year = (int) $validated['year'];
+        $serviceAreaId = (int) $validated['service_area_id'];
 
-        if (!$isVolunteerFromPreletorArea) {
-            return redirect()->route('voluntarios.escalas-mensais.index', [
-                'month' => $validated['month'],
-                'year' => $validated['year'],
-            ])->with('error', 'O voluntário selecionado não pertence à área de serviço Preletor.');
+        $serviceArea = ServiceArea::where('status', 'ativo')->find($serviceAreaId);
+        if (!$serviceArea) {
+            return $redirect('error', 'Área de serviço não encontrada ou inativa.');
         }
+
+        $isPreletor = $this->isPreletorServiceArea($serviceArea);
+        $isLimpeza = $this->isLimpezaServiceArea($serviceArea);
+
+        $assignmentIdRule = $isLimpeza ? 'nullable|exists:members,id' : 'nullable|exists:volunteers,id';
+        $assignmentValidator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'assignments' => 'nullable|array',
+            'assignments.*' => 'nullable|array',
+            'assignments.*.*' => $assignmentIdRule,
+            'guests' => 'nullable|array',
+            'guests.*' => 'nullable|string|max:150',
+        ], [
+            'assignments.*.*.exists' => $isLimpeza
+                ? 'Um dos membros selecionados não existe.'
+                : 'Um dos voluntários selecionados não existe.',
+            'guests.*.max' => 'O nome do convidado deve ter no máximo 150 caracteres.',
+        ]);
+
+        if ($assignmentValidator->fails()) {
+            return $redirect('error', $assignmentValidator->errors()->first());
+        }
+
+        $cultosDoMes = $this->getCultosDoMes($month, $year);
+        if ($isLimpeza) {
+            $cultosDoMes = $cultosDoMes->filter(function ($event) {
+                return optional($event->start_date)->dayOfWeek === Carbon::SUNDAY;
+            })->values();
+        }
+
+        $allowedEventIds = $cultosDoMes->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        $areaVolunteerIds = $isLimpeza
+            ? Member::where('status', Member::STATUS_ATIVO)->pluck('id')->map(fn ($id) => (int) $id)
+            : Volunteer::where('status', 'ativo')
+                ->whereHas('serviceAreas', function ($query) use ($serviceArea) {
+                    $query->where('service_areas.id', $serviceArea->id);
+                })
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id);
+
+        $assignmentData = $assignmentValidator->validated();
+        $volunteerAssignments = collect($assignmentData['assignments'] ?? []);
+        $guestAssignments = collect($assignmentData['guests'] ?? []);
+        $payload = [];
+
+        foreach ($volunteerAssignments->keys()->merge($guestAssignments->keys())->unique() as $eventKey) {
+            $eventId = (int) $eventKey;
+            $rawVolunteers = $volunteerAssignments->get($eventKey) ?? $volunteerAssignments->get($eventId) ?? [];
+            $volunteerIds = collect(is_array($rawVolunteers) ? $rawVolunteers : [$rawVolunteers])
+                ->filter(fn ($id) => filled($id))
+                ->map(fn ($id) => (int) $id)
+                ->values();
+
+            $guestName = $isPreletor
+                ? trim((string) ($guestAssignments->get($eventKey) ?? $guestAssignments->get($eventId) ?? ''))
+                : '';
+
+            if ($volunteerIds->isEmpty() && $guestName === '') {
+                continue;
+            }
+
+            if ($volunteerIds->count() !== $volunteerIds->unique()->count()) {
+                return $redirect('error', 'No mesmo culto, o mesmo voluntário não pode ser escalado mais de uma vez na mesma área.');
+            }
+
+            $payload[$eventId] = [
+                'volunteer_ids' => $volunteerIds->all(),
+                'guest_name' => $guestName,
+            ];
+        }
+
+        if ($payload === []) {
+            return $redirect('error', 'Preencha ao menos um culto com voluntário' . ($isPreletor ? ' ou nome de convidado' : '') . '.');
+        }
+
+        if (collect(array_keys($payload))->diff($allowedEventIds)->isNotEmpty()) {
+            return $redirect(
+                'error',
+                $isLimpeza
+                    ? 'A escala de limpeza é somente para os cultos de domingo.'
+                    : 'Um ou mais cultos não pertencem à agenda do mês (quarta e domingo).'
+            );
+        }
+
+        $selectedVolunteerIds = collect($payload)->pluck('volunteer_ids')->flatten();
+        if ($selectedVolunteerIds->diff($areaVolunteerIds)->isNotEmpty()) {
+            return $redirect(
+                'error',
+                $isLimpeza
+                    ? 'Um ou mais membros selecionados não estão ativos.'
+                    : "Um ou mais voluntários não pertencem à área {$serviceArea->name}."
+            );
+        }
+
+        $saved = 0;
 
         try {
-            DB::transaction(function () use ($validated, $preletorArea) {
-                $schedule = MonthlyCultoSchedule::firstOrCreate(
-                    [
-                        'event_id' => $validated['event_id'],
-                        'month' => $validated['month'],
-                        'year' => $validated['year'],
-                    ],
-                    [
-                        'status' => 'rascunho',
-                    ]
-                );
+            DB::transaction(function () use ($payload, $serviceArea, $isPreletor, $isLimpeza, $month, $year, &$saved) {
+                foreach ($payload as $eventId => $assignment) {
+                    $schedule = MonthlyCultoSchedule::firstOrCreate(
+                        [
+                            'event_id' => $eventId,
+                            'month' => $month,
+                            'year' => $year,
+                        ],
+                        [
+                            'status' => 'rascunho',
+                        ]
+                    );
 
-                $alreadyAssignedToOtherArea = DB::table('monthly_culto_service_areas')
-                    ->where('monthly_culto_schedule_id', $schedule->id)
-                    ->where('volunteer_id', $validated['preletor_volunteer_id'])
-                    ->where('service_area_id', '!=', $preletorArea->id)
-                    ->exists();
+                    $volunteerIds = $isLimpeza
+                        ? $this->volunteerIdsForLimpezaMembers($assignment['volunteer_ids'], $serviceArea)
+                        : $assignment['volunteer_ids'];
 
-                if ($alreadyAssignedToOtherArea) {
-                    throw new \RuntimeException('Regra aplicada: no mesmo culto, o voluntário já está escalado em outra área.');
+                    if (! $isLimpeza) {
+                        foreach ($volunteerIds as $volunteerId) {
+                            $conflict = DB::table('monthly_culto_service_areas as pivot')
+                                ->join('service_areas as areas', 'areas.id', '=', 'pivot.service_area_id')
+                                ->leftJoin('volunteers as volunteers', 'volunteers.id', '=', 'pivot.volunteer_id')
+                                ->leftJoin('members as members', 'members.id', '=', 'volunteers.member_id')
+                                ->where('pivot.monthly_culto_schedule_id', $schedule->id)
+                                ->where('pivot.volunteer_id', $volunteerId)
+                                ->where('pivot.service_area_id', '!=', $serviceArea->id)
+                                ->select('areas.name as area_name', 'members.name as volunteer_name')
+                                ->first();
+
+                            if ($conflict) {
+                                $event = Event::find($eventId);
+                                $dateLabel = optional($event?->start_date)->format('d/m/Y') ?? (string) $eventId;
+                                $volunteerName = $conflict->volunteer_name ?: 'O voluntário';
+                                throw new \RuntimeException("No culto de {$dateLabel}, {$volunteerName} já está escalado em {$conflict->area_name}.");
+                            }
+                        }
+                    }
+
+                    $schedule->serviceAreaVolunteers()
+                        ->wherePivot('service_area_id', $serviceArea->id)
+                        ->detach();
+
+                    if ($isPreletor && $volunteerIds === [] && $assignment['guest_name'] !== '') {
+                        $schedule->update(['guest_preletor_name' => $assignment['guest_name']]);
+                        $saved++;
+                        continue;
+                    }
+
+                    if ($isPreletor) {
+                        $schedule->update(['guest_preletor_name' => null]);
+                    }
+
+                    foreach ($volunteerIds as $volunteerId) {
+                        $schedule->serviceAreaVolunteers()->attach($volunteerId, [
+                            'service_area_id' => $serviceArea->id,
+                            'status' => 'pendente',
+                        ]);
+                    }
+
+                    $saved++;
                 }
-
-                $schedule->serviceAreaVolunteers()
-                    ->wherePivot('service_area_id', $preletorArea->id)
-                    ->detach();
-
-                $schedule->serviceAreaVolunteers()->attach($validated['preletor_volunteer_id'], [
-                    'service_area_id' => $preletorArea->id,
-                    'status' => 'pendente',
-                ]);
             });
         } catch (\RuntimeException $exception) {
-            return redirect()->route('voluntarios.escalas-mensais.index', [
-                'month' => $validated['month'],
-                'year' => $validated['year'],
-            ])->with('error', $exception->getMessage());
+            return $redirect('error', $exception->getMessage());
         }
 
-        return redirect()->route('voluntarios.escalas-mensais.index', [
-            'month' => $validated['month'],
-            'year' => $validated['year'],
-        ])->with('success', 'Escala manual de preletor cadastrada com sucesso!');
+        return redirect()->route('voluntarios.escalas-mensais.index', compact('month', 'year'))
+            ->with('success', "Escala de {$serviceArea->name} salva com sucesso! Cultos atualizados: {$saved}.");
     }
 
     /**
@@ -1172,6 +1277,11 @@ class MonthlyCultoScheduleController extends Controller
                         ]);
                     }
 
+                    $preletorArea = $this->findPreletorArea();
+                    if ($preletorArea && (int) $serviceArea->id === (int) $preletorArea->id) {
+                        $schedule->update(['guest_preletor_name' => null]);
+                    }
+
                     // Regra: não pode escalar a mesma pessoa em dois cultos seguidos
                     $previousAreaVolunteerIds = $selectedVolunteerIds;
                 }
@@ -1190,6 +1300,263 @@ class MonthlyCultoScheduleController extends Controller
             'success',
             "Escala mensal gerada para {$serviceArea->name}. Cultos processados: {$events->count()} (novos: {$createdSchedules}, atualizados: {$updatedSchedules})."
         );
+    }
+
+    private function findPreletorArea(): ?ServiceArea
+    {
+        return ServiceArea::where('status', 'ativo')
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(name) LIKE ?', ['%preletor%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%pregador%']);
+            })
+            ->first();
+    }
+
+    private function buildManualSchedulePayload($serviceAreas, int $month, int $year): array
+    {
+        $volunteers = Volunteer::where('status', 'ativo')
+            ->whereHas('serviceAreas', function ($query) use ($serviceAreas) {
+                $query->whereIn('service_areas.id', $serviceAreas->pluck('id'));
+            })
+            ->with(['member', 'serviceAreas'])
+            ->get();
+
+        $members = Member::where('status', Member::STATUS_ATIVO)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($member) => [
+                'id' => $member->id,
+                'name' => $member->name,
+            ])
+            ->values()
+            ->all();
+
+        $areas = [];
+        foreach ($serviceAreas as $area) {
+            $quantity = $this->getRequiredVolunteersForArea($area);
+                $isLimpeza = $this->isLimpezaServiceArea($area);
+                $areas[(string) $area->id] = [
+                    'id' => $area->id,
+                    'name' => $area->name,
+                    'quantity' => $quantity,
+                    'help' => $this->getAreaHelpText($area),
+                    'rules_text' => $this->getAreaRulesText($area),
+                    'slots' => $this->getAreaSlotLabels($area),
+                    'is_preletor' => $this->isPreletorServiceArea($area),
+                    'is_limpeza' => $isLimpeza,
+                    'uses_members' => $isLimpeza,
+                    'allows_overlap' => $isLimpeza,
+                    'sunday_only' => $isLimpeza,
+                    'volunteers' => $isLimpeza
+                        ? $members
+                        : $volunteers
+                            ->filter(fn ($volunteer) => $volunteer->serviceAreas->contains('id', $area->id))
+                            ->sortBy(fn ($volunteer) => mb_strtolower($volunteer->member->name ?? ''))
+                            ->values()
+                            ->map(fn ($volunteer) => [
+                                'id' => $volunteer->id,
+                                'name' => $volunteer->member->name ?? 'Sem nome',
+                            ])
+                            ->all(),
+                ];
+        }
+
+        $assignments = [];
+        $guests = [];
+        $occupied = [];
+
+        $monthSchedules = MonthlyCultoSchedule::with('serviceAreaVolunteers')
+            ->byMonthYear($month, $year)
+            ->get();
+
+        foreach ($monthSchedules as $schedule) {
+            $eventId = (string) $schedule->event_id;
+            if (filled($schedule->guest_preletor_name)) {
+                $guests[$eventId] = $schedule->guest_preletor_name;
+            }
+
+            foreach ($schedule->serviceAreaVolunteers as $volunteer) {
+                $areaId = (string) $volunteer->pivot->service_area_id;
+                $assignedArea = $serviceAreas->firstWhere('id', (int) $areaId);
+                $isLimpezaAssignment = $assignedArea && $this->isLimpezaServiceArea($assignedArea);
+                $valueId = $isLimpezaAssignment ? (int) $volunteer->member_id : (int) $volunteer->id;
+                $assignments[$eventId][$areaId][] = $valueId;
+
+                if ($isLimpezaAssignment) {
+                    continue;
+                }
+
+                $areaName = $assignedArea->name ?? 'outra área';
+                $occupied[$eventId][(string) $volunteer->id] = [
+                    'area_id' => (int) $areaId,
+                    'area_name' => $areaName,
+                ];
+            }
+        }
+
+        return [
+            'areas' => $areas,
+            'assignments' => $assignments,
+            'guests' => $guests,
+            'occupied' => $occupied,
+            'old_area_id' => old('service_area_id', session('add_schedule_area_id')),
+            'old_assignments' => old('assignments', []),
+            'old_guests' => old('guests', []),
+        ];
+    }
+
+    private function normalizeServiceAreaName(ServiceArea $serviceArea): string
+    {
+        return Str::of($serviceArea->name)
+            ->lower()
+            ->ascii()
+            ->replaceMatches('/\s+/', ' ')
+            ->trim()
+            ->value();
+    }
+
+    private function isPreletorServiceArea(ServiceArea $serviceArea): bool
+    {
+        $normalized = $this->normalizeServiceAreaName($serviceArea);
+
+        return str_contains($normalized, 'preletor') || str_contains($normalized, 'pregador');
+    }
+
+    private function isLimpezaServiceArea(ServiceArea $serviceArea): bool
+    {
+        $normalized = $this->normalizeServiceAreaName($serviceArea);
+
+        return str_contains($normalized, 'limpeza')
+            || str_contains($normalized, 'zeladoria')
+            || str_contains($normalized, 'zelador');
+    }
+
+    private function getAreaRulesText(ServiceArea $serviceArea): string
+    {
+        if ($this->isLimpezaServiceArea($serviceArea)) {
+            return 'Somente cultos de domingo. A limpeza acontece fora do horário do culto, então a pessoa pode já estar em outra escala do dia. Cultos sem preenchimento não são alterados.';
+        }
+
+        return 'Cultos de quarta e domingo da agenda. A mesma pessoa não pode servir em áreas diferentes no mesmo culto. Cultos sem preenchimento não são alterados.';
+    }
+
+    private function getAreaHelpText(ServiceArea $serviceArea): string
+    {
+        $normalized = $this->normalizeServiceAreaName($serviceArea);
+        $quantity = $this->getRequiredVolunteersForArea($serviceArea);
+        $people = $quantity === 1 ? '1 pessoa' : "{$quantity} pessoas";
+
+        $texts = [
+            'apoio geral' => "Serve água e apoia em outras questões que aparecer. {$people}.",
+            'direcao do culto' => "Responsável por direcionar o culto. {$people}.",
+            'direcao' => "Responsável por direcionar o culto. {$people}.",
+            'intercessao' => "Interceder durante o culto. {$people}.",
+            'portaria' => "Segurança na entrada da igreja. {$people}.",
+            'preletor' => "Traz o sermão à igreja. {$people} (voluntário ou convidado).",
+            'recepcao' => "Recebe as pessoas nas entradas. {$people}.",
+            'sala das criancas' => "Cuida do ensino das crianças durante o culto. {$people} (professora e monitor).",
+            'limpeza' => "Limpeza da igreja para os cultos de domingo, sempre fora do horário do culto. {$people}, escolhidas na lista de membros.",
+            'zeladoria' => "Limpeza da igreja para os cultos de domingo, sempre fora do horário do culto. {$people}, escolhidas na lista de membros.",
+        ];
+
+        foreach ($texts as $areaKey => $text) {
+            if (str_contains($normalized, $areaKey)) {
+                return $text;
+            }
+        }
+
+        return "Selecione os voluntários desta área. {$people}.";
+    }
+
+    private function getAreaSlotLabels(ServiceArea $serviceArea): array
+    {
+        $normalized = $this->normalizeServiceAreaName($serviceArea);
+        $quantity = $this->getRequiredVolunteersForArea($serviceArea);
+
+        if (str_contains($normalized, 'sala das criancas')) {
+            $labels = ['Professora', 'Monitor'];
+            if ($quantity <= 1) {
+                return ['Professora'];
+            }
+            for ($index = 3; $index <= $quantity; $index++) {
+                $labels[] = "Voluntário {$index}";
+            }
+
+            return $labels;
+        }
+
+        if ($this->isPreletorServiceArea($serviceArea)) {
+            $labels = ['Preletor(a)'];
+            for ($index = 2; $index <= $quantity; $index++) {
+                $labels[] = "Preletor(a) {$index}";
+            }
+
+            return $labels;
+        }
+
+        if ($quantity === 1) {
+            return ['Voluntário'];
+        }
+
+        $labels = [];
+        for ($index = 1; $index <= $quantity; $index++) {
+            $labels[] = "Voluntário {$index}";
+        }
+
+        return $labels;
+    }
+
+    private function volunteerIdsForLimpezaMembers(array $memberIds, ServiceArea $serviceArea): array
+    {
+        $volunteerIds = [];
+
+        foreach ($memberIds as $memberId) {
+            $volunteer = Volunteer::withTrashed()->where('member_id', $memberId)->first();
+
+            if ($volunteer) {
+                if ($volunteer->trashed()) {
+                    $volunteer->restore();
+                }
+
+                if ($volunteer->status !== 'ativo') {
+                    $volunteer->update(['status' => 'ativo']);
+                }
+            } else {
+                $volunteer = Volunteer::create([
+                    'member_id' => $memberId,
+                    'experience_level' => 'novo',
+                    'start_date' => now()->toDateString(),
+                    'status' => 'ativo',
+                ]);
+            }
+
+            $volunteer->serviceAreas()->syncWithoutDetaching([$serviceArea->id]);
+            $volunteerIds[] = (int) $volunteer->id;
+        }
+
+        return $volunteerIds;
+    }
+
+    private function getCultosDoMes(int $month, int $year)
+    {
+        $startDate = Carbon::create($year, $month, 1)->startOfDay();
+        $endDate = Carbon::create($year, $month, 1)->endOfMonth()->endOfDay();
+
+        return Event::whereBetween('start_date', [$startDate, $endDate])
+            ->where(function ($query) {
+                $query->whereRaw('LOWER(title) LIKE ?', ['%culto%'])
+                    ->orWhereHas('category', function ($q) {
+                        $q->whereRaw('LOWER(name) LIKE ?', ['%culto%']);
+                    });
+            })
+            ->orderBy('start_date')
+            ->get()
+            ->filter(function ($event) {
+                $dayOfWeek = optional($event->start_date)->dayOfWeek;
+
+                return in_array($dayOfWeek, [Carbon::SUNDAY, Carbon::WEDNESDAY], true);
+            })
+            ->values();
     }
 
     private function getCultosByType(string $cultoTipo, int $month, int $year)
@@ -1225,30 +1592,6 @@ class MonthlyCultoScheduleController extends Controller
 
     private function getRequiredVolunteersForArea(ServiceArea $serviceArea): int
     {
-        $normalized = Str::of($serviceArea->name)
-            ->lower()
-            ->ascii()
-            ->replaceMatches('/\s+/', ' ')
-            ->trim()
-            ->value();
-
-        $rules = [
-            'apoio geral' => 1,
-            'direcao do culto' => 1,
-            'direcao' => 1,
-            'intercessao' => 4,
-            'portaria' => 1,
-            'preletor' => 1,
-            'recepcao' => 2,
-            'sala das criancas' => 2, // 1 professor + 1 monitor
-        ];
-
-        foreach ($rules as $areaKey => $quantity) {
-            if (str_contains($normalized, $areaKey)) {
-                return $quantity;
-            }
-        }
-
         return max(1, (int) $serviceArea->min_quantity);
     }
 

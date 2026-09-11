@@ -30,6 +30,25 @@ class Cp437Utf8MojibakeFixerTest extends TestCase
         $this->assertSame('Operador de Transmissão', $fixer->repair('Operador de Transmiss├úo'));
     }
 
+    public function test_repara_trechos_mistos_sem_abortar_no_resto_do_texto(): void
+    {
+        $fixer = new Cp437Utf8MojibakeFixer;
+        $suffix = "\u{00AD}\u{0192}\u{00F6}\u{00D1}";
+
+        $this->assertSame(
+            'Formando uma geração comprometida com Cristo, Seu Reino e Sua missão.'.$suffix,
+            $fixer->repair('Formando uma gera├º├úo comprometida com Cristo, Seu Reino e Sua miss├úo.'.$suffix)
+        );
+        $this->assertSame(
+            'Conduzindo a igreja à adoração e servindo com excelência para a glória de Deus.',
+            $fixer->repair('Conduzindo a igreja ├á adora├º├úo e servindo com excel├¬ncia para a glória de Deus.')
+        );
+        $this->assertSame(
+            'Edificando mulheres para viverem seu chamado com sabedoria e fé',
+            $fixer->repair("Edificando mulheres para viverem seu chamado com sabedoria e f├\u{00AE}")
+        );
+    }
+
     public function test_nao_altera_texto_ja_correto(): void
     {
         $fixer = new Cp437Utf8MojibakeFixer;

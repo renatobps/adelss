@@ -60,6 +60,12 @@ class ConfiguracaoMensagem extends Model
             $substituicoes[$chave] = (string) ($dados[$chave] ?? $valorPadrao);
         }
 
+        foreach ($dados as $chave => $valor) {
+            if (! isset($substituicoes[$chave])) {
+                $substituicoes[$chave] = (string) $valor;
+            }
+        }
+
         return strtr($template, $substituicoes);
     }
 }

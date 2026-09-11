@@ -32,6 +32,11 @@ class Kernel extends ConsoleKernel
             ->everyTwoMinutes()
             ->withoutOverlapping(5);
         $schedule->command('cultos:check-pastoral-alerts')->dailyAt('09:00');
+        // Lembretes de escala (mês / semana / dia): o comando confere
+        // o dia e o horário configurados na tela Configurar escalas.
+        $schedule->command('escalas:send-reminders')
+            ->hourly()
+            ->withoutOverlapping(120);
         // withoutOverlapping evita duas execuções simultâneas (causa de envio
         // duplicado ao WhatsApp quando a publicação no Instagram demora +5 min)
         $schedule->command('midia:publish-instagram-posts')

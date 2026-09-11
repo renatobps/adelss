@@ -79,7 +79,7 @@
                                         @endif
                                         <h4 class="card-title">{{ $department->name }}</h4>
                                         @if($department->description)
-                                            <p class="card-text text-muted">{{ mb_strlen($department->description) > 100 ? mb_substr($department->description, 0, 100) . '...' : $department->description }}</p>
+                                            <p class="card-text text-muted">{{ \Illuminate\Support\Str::limit($department->description, 100) }}</p>
                                         @endif
                                         <div class="mt-3">
                                             <span class="badge badge-primary">{{ $department->members->count() }} membros</span>

@@ -4,6 +4,7 @@
     $canViewDepartments = $isAdmin || $user?->hasPermission('servico.departments.view') || $user?->hasPermission('servico.departments.manage');
     $canViewAreas = $isAdmin || $user?->hasPermission('servico.voluntarios.areas.view') || $user?->hasPermission('servico.voluntarios.areas.manage');
     $canViewEscalas = $isAdmin || $user?->hasPermission('servico.voluntarios.escalas.view') || $user?->hasPermission('servico.voluntarios.escalas.manage');
+    $canConfigureEscalas = $isAdmin || $user?->hasPermission('servico.voluntarios.escalas.edit') || $user?->hasPermission('servico.voluntarios.escalas.manage');
     $canViewHistorico = $isAdmin || $user?->hasPermission('servico.voluntarios.historico.view') || $user?->hasPermission('servico.voluntarios.historico.manage');
     $canViewRelatorios = $isAdmin || $user?->hasPermission('servico.voluntarios.relatorios.view') || $user?->hasPermission('servico.voluntarios.relatorios.manage');
 
@@ -24,7 +25,14 @@
             'label' => 'Escalas',
             'icon' => 'bx bx-calendar',
             'url' => route('voluntarios.escalas-mensais.index'),
-            'active' => request()->routeIs('voluntarios.escalas-mensais.*') || request()->routeIs('voluntarios.escalas.*'),
+            'active' => (request()->routeIs('voluntarios.escalas-mensais.*') && !request()->routeIs('voluntarios.escalas-mensais.settings.*'))
+                || request()->routeIs('voluntarios.escalas.*'),
+        ] : null,
+        $canConfigureEscalas ? [
+            'label' => 'Configurar escalas',
+            'icon' => 'bx bx-slider-alt',
+            'url' => route('voluntarios.escalas-mensais.settings.edit'),
+            'active' => request()->routeIs('voluntarios.escalas-mensais.settings.*'),
         ] : null,
         $canViewHistorico ? [
             'label' => 'Histórico',
@@ -45,5 +53,5 @@
     'title' => 'Serviço',
     'subtitle' => 'Departamentos, escalas e voluntários',
     'items' => $items,
-    'columns' => 5,
+    'columns' => max(count($items), 2),
 ])

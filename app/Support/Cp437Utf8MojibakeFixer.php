@@ -9,7 +9,8 @@ class Cp437Utf8MojibakeFixer
      */
     public function looksBroken(string $text): bool
     {
-        return (bool) preg_match('/[\x{2500}-\x{257F}\x{2591}-\x{2593}]/u', $text);
+        return (bool) preg_match('/[\x{2500}-\x{257F}\x{2591}-\x{2593}]/u', $text)
+            || (bool) preg_match('/\x{00AD}\x{0192}/u', $text);
     }
 
     public function repair(string $text): string
@@ -19,31 +20,44 @@ class Cp437Utf8MojibakeFixer
         }
 
         $map = $this->cp437ReverseMap();
-        $bytes = '';
         $length = mb_strlen($text, 'UTF-8');
+        $out = '';
+        $i = 0;
 
-        for ($i = 0; $i < $length; $i++) {
-            $char = mb_substr($text, $i, 1, 'UTF-8');
-            $code = mb_ord($char, 'UTF-8');
-            if ($code < 128) {
-                $bytes .= chr($code);
-                continue;
+        while ($i < $length) {
+            $replaced = false;
+
+            foreach ([3, 2] as $size) {
+                if ($i + $size > $length) {
+                    continue;
+                }
+
+                $bytes = '';
+                $ok = true;
+                for ($j = 0; $j < $size; $j++) {
+                    $code = mb_ord(mb_substr($text, $i + $j, 1, 'UTF-8'), 'UTF-8');
+                    if ($code < 128 || ! isset($map[$code])) {
+                        $ok = false;
+                        break;
+                    }
+                    $bytes .= chr($map[$code]);
+                }
+
+                if ($ok && mb_check_encoding($bytes, 'UTF-8') && mb_strlen($bytes, 'UTF-8') === 1) {
+                    $out .= $bytes;
+                    $i += $size;
+                    $replaced = true;
+                    break;
+                }
             }
-            if (! isset($map[$code])) {
-                return $text;
+
+            if (! $replaced) {
+                $out .= mb_substr($text, $i, 1, 'UTF-8');
+                $i++;
             }
-            $bytes .= chr($map[$code]);
         }
 
-        if ($bytes === $text || ! mb_check_encoding($bytes, 'UTF-8')) {
-            return $text;
-        }
-
-        if ($this->looksBroken($bytes)) {
-            return $text;
-        }
-
-        return $bytes;
+        return $out;
     }
 
     /**
@@ -79,6 +93,10 @@ class Cp437Utf8MojibakeFixer
         foreach ($chars as $byte => $char) {
             $map[mb_ord($char, 'UTF-8')] = $byte;
         }
+
+        // CP850 usa ® (U+00AE) no byte 0xA9; CP437 usa ⌐. UTF-8 "é" (C3 A9)
+        // importado como CP850 vira ├® em vez de ├⌐.
+        $map[0x00AE] = 0xA9;
 
         return $map;
     }

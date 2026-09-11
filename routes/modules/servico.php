@@ -6,6 +6,7 @@ use App\Http\Controllers\VolunteerController;
 use App\Http\Controllers\ServiceAreaController;
 use App\Http\Controllers\ServiceScheduleController;
 use App\Http\Controllers\MonthlyCultoScheduleController;
+use App\Http\Controllers\ScheduleSettingController;
 use App\Http\Controllers\ServiceHistoryController;
 use App\Http\Controllers\VolunteerReportController;
 
@@ -66,10 +67,12 @@ Route::get('escalas/{escala}/pdf', [ServiceScheduleController::class, 'generateP
 
 // Escalas Mensais de Cultos
 Route::get('escalas-mensais', [MonthlyCultoScheduleController::class, 'index'])->name('escalas-mensais.index');
+Route::get('escalas-mensais/configuracoes', [ScheduleSettingController::class, 'edit'])->name('escalas-mensais.settings.edit');
+Route::put('escalas-mensais/configuracoes', [ScheduleSettingController::class, 'update'])->name('escalas-mensais.settings.update');
 Route::get('escalas-mensais/create', [MonthlyCultoScheduleController::class, 'create'])->name('escalas-mensais.create');
 Route::post('escalas-mensais', [MonthlyCultoScheduleController::class, 'store'])->name('escalas-mensais.store');
+Route::post('escalas-mensais/area/manual', [MonthlyCultoScheduleController::class, 'storeManualArea'])->name('escalas-mensais.area.manual');
 Route::post('escalas-mensais/generate-monthly', [MonthlyCultoScheduleController::class, 'generateMonthly'])->name('escalas-mensais.generate-monthly');
-Route::post('escalas-mensais/preletor/manual', [MonthlyCultoScheduleController::class, 'storeManualPreletor'])->name('escalas-mensais.preletor.manual');
 Route::get('escalas-mensais/{escala}', [MonthlyCultoScheduleController::class, 'show'])->name('escalas-mensais.show');
 Route::get('escalas-mensais/{escala}/edit', [MonthlyCultoScheduleController::class, 'edit'])->name('escalas-mensais.edit');
 Route::put('escalas-mensais/{escala}', [MonthlyCultoScheduleController::class, 'update'])->name('escalas-mensais.update');

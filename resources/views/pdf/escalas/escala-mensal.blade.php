@@ -245,15 +245,26 @@
     @foreach($serviceAreas as $area)
         @php
             $volunteers = $volunteersByArea[$area->id] ?? collect();
+            $guestPreletorName = $escala->guestPreletorNameForArea($area);
         @endphp
         
-        @if($volunteers->count() > 0)
+        @if($volunteers->count() > 0 || $guestPreletorName)
             <div class="area">
                 <div class="area-header">
                     <div class="area-title">{{ $area->name }}</div>
                 </div>
 
                 <table class="volunteers">
+                    @if($guestPreletorName)
+                        <tr>
+                            <td class="volunteer-name">
+                                Convidado: {{ $guestPreletorName }}
+                            </td>
+                            <td class="status status-confirmed">
+                                Convidado
+                            </td>
+                        </tr>
+                    @endif
                     @foreach($volunteers as $volunteer)
                         @php
                             $pivotStatus = $volunteer->pivot->status ?? 'pendente';

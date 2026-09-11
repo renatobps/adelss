@@ -191,15 +191,24 @@
 
         <!-- Áreas de Serviço -->
         @foreach($serviceAreas as $area)
-            @if(isset($volunteersByArea[$area->id]) && $volunteersByArea[$area->id]['volunteers']->count() > 0)
             @php
-                $areaData = $volunteersByArea[$area->id];
+                $hasVolunteers = isset($volunteersByArea[$area->id]) && $volunteersByArea[$area->id]['volunteers']->count() > 0;
+                $guestPreletorName = $escala->guestPreletorNameForArea($area);
+            @endphp
+            @if($hasVolunteers || $guestPreletorName)
+            @php
+                $areaData = $volunteersByArea[$area->id] ?? ['volunteers' => collect()];
             @endphp
             <div class="area">
                 <div class="area-header">
                     {{ $area->name }}
                 </div>
                 <div class="area-body">
+                    @if($guestPreletorName)
+                        <div class="volunteer-item">
+                            <span class="volunteer-name">{{ $guestPreletorName }} (Convidado)</span>
+                        </div>
+                    @endif
                     @foreach($areaData['volunteers'] as $volunteer)
                         <div class="volunteer-item">
                             <span class="volunteer-name">{{ $shortName($volunteer->member->name ?? null) }}</span>

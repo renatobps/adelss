@@ -134,10 +134,12 @@
     @foreach($serviceAreas as $area)
         @php
             $volunteers = $volunteersByArea[$area->id] ?? collect();
+            $guestPreletorName = $escala->guestPreletorNameForArea($area);
+            $guestCount = $guestPreletorName ? 1 : 0;
             $confirmedCount = $volunteers->filter(function($v) {
                 return ($v->pivot->status ?? 'pendente') == 'confirmado';
-            })->count();
-            $totalCount = $volunteers->count();
+            })->count() + $guestCount;
+            $totalCount = $volunteers->count() + $guestCount;
             $minQuantity = $area->min_quantity ?? 1;
             $isComplete = $confirmedCount >= $minQuantity && $totalCount >= $minQuantity;
             $isIncomplete = $totalCount < $minQuantity;
@@ -201,8 +203,22 @@
                         </div>
                     @endif
 
-                    @if($volunteers->count() > 0)
+                    @if($volunteers->count() > 0 || $guestPreletorName)
                         <div class="volunteers-list">
+                            @if($guestPreletorName)
+                                <div class="volunteer-item mb-3 pb-3 {{ $volunteers->count() > 0 ? 'border-bottom' : '' }}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-1 flex-wrap gap-2">
+                                                <strong>{{ $guestPreletorName }}</strong>
+                                                <span class="badge badge-info badge-sm">
+                                                    <i class="bx bx-user-plus me-1"></i>Convidado
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endif
                             @foreach($volunteers as $volunteer)
                                 @php
                                     $pivotId = $volunteer->pivot->id ?? null;

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class MonthlyCultoSchedule extends Model
 {
@@ -14,6 +15,7 @@ class MonthlyCultoSchedule extends Model
         'month',
         'year',
         'status',
+        'guest_preletor_name',
     ];
 
     /**
@@ -79,5 +81,20 @@ class MonthlyCultoSchedule extends Model
     public function scopeByMonthYear($query, $month, $year)
     {
         return $query->where('month', $month)->where('year', $year);
+    }
+
+    public function guestPreletorNameForArea(?ServiceArea $area): ?string
+    {
+        $name = trim((string) $this->guest_preletor_name);
+        if ($name === '' || !$area) {
+            return null;
+        }
+
+        $normalized = Str::of($area->name)->lower()->ascii()->value();
+        if (! str_contains($normalized, 'preletor') && ! str_contains($normalized, 'pregador')) {
+            return null;
+        }
+
+        return $name;
     }
 }
