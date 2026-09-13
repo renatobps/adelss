@@ -107,6 +107,8 @@
                             @enderror
                         </div>
 
+                        @include('service-areas.partials.whatsapp-group-field', ['area' => $area ?? null])
+
                         <div class="col-md-12 mb-3">
                             <h5 class="border-bottom pb-2 mt-2">Voluntários Participantes</h5>
                             <p class="text-muted mb-2">
@@ -168,4 +170,5 @@
         </section>
     </div>
 </div>
+@include('service-areas.partials.whatsapp-group-script')
 @endsection

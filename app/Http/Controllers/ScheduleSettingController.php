@@ -49,10 +49,17 @@ class ScheduleSettingController extends Controller
             'day_enabled' => 'nullable|boolean',
             'day_time' => 'required|date_format:H:i',
             'day_template' => 'nullable|string|max:4000',
+            'immediate_individual_template' => 'nullable|string|max:4000',
+            'immediate_group_template' => 'nullable|string|max:4000',
             'quantities' => 'nullable|array',
-            'quantities.*' => 'required|integer|min:1|max:20',
+            'quantities.*' => 'nullable|integer|min:1|max:20',
             'subarea_names' => 'nullable|array',
             'subarea_names.*' => 'nullable|string|max:150',
+            'add_parent_id' => 'nullable|exists:service_areas,id',
+            'new_subarea_name' => 'nullable|array',
+            'new_subarea_name.*' => 'nullable|string|max:150',
+            'new_subarea_quantity' => 'nullable|array',
+            'new_subarea_quantity.*' => 'nullable|integer|min:1|max:20',
         ], [
             'month_day.required' => 'Informe o dia do mês para o alerta.',
             'week_weekday.required' => 'Informe o dia da semana para o alerta.',
@@ -72,26 +79,38 @@ class ScheduleSettingController extends Controller
             'day_enabled' => $request->boolean('day_enabled'),
             'day_time' => $validated['day_time'],
             'day_template' => $validated['day_template'] ?: $settings->day_template,
+            'immediate_individual_template' => $validated['immediate_individual_template'] ?: $settings->immediate_individual_template,
+            'immediate_group_template' => $validated['immediate_group_template'] ?: $settings->immediate_group_template,
         ]);
 
-        foreach ($validated['quantities'] ?? [] as $areaId => $quantity) {
-            ServiceArea::where('id', (int) $areaId)->update([
-                'min_quantity' => (int) $quantity,
-            ]);
-        }
+        $this->syncQuantities($request->input('quantities', []));
+        $this->syncSubareaNames($validated['subarea_names'] ?? []);
 
-        foreach ($validated['subarea_names'] ?? [] as $areaId => $name) {
-            $name = trim((string) $name);
+        if (filled($validated['add_parent_id'] ?? null)) {
+            $parent = ServiceArea::query()->roots()->findOrFail($validated['add_parent_id']);
+            $name = trim((string) ($request->input('new_subarea_name.'.$parent->id) ?? ''));
+            $quantity = (int) ($request->input('new_subarea_quantity.'.$parent->id) ?? 1);
+
             if ($name === '') {
-                continue;
+                return back()->with('error', 'Informe o nome da subárea.')->withInput();
             }
 
-            ServiceArea::where('id', (int) $areaId)
-                ->whereNotNull('parent_id')
-                ->update(['name' => $name]);
+            $sortOrder = (int) $parent->children()->max('sort_order') + 1;
+
+            ServiceArea::create([
+                'parent_id' => $parent->id,
+                'name' => $name,
+                'status' => 'ativo',
+                'min_quantity' => max(1, min(20, $quantity)),
+                'sort_order' => $sortOrder,
+                'allowed_audience' => $parent->allowed_audience ?: 'ambos',
+                'leader_id' => $parent->leader_id,
+            ]);
+
+            return back()->with('success', "Quantidades atualizadas e subárea \"{$name}\" adicionada em {$parent->name}.");
         }
 
-        return back()->with('success', 'Configurações de escala salvas com sucesso.');
+        return back()->with('success', 'Quantidade de pessoas e demais configurações da escala atualizadas.');
     }
 
     public function storeSubarea(Request $request)
@@ -136,5 +155,37 @@ class ScheduleSettingController extends Controller
         $area->delete();
 
         return back()->with('success', "Subárea \"{$name}\" removida.");
+    }
+
+    private function syncQuantities(array $quantities): void
+    {
+        foreach ($quantities as $areaId => $quantity) {
+            if ($quantity === null || $quantity === '') {
+                continue;
+            }
+
+            $quantity = (int) $quantity;
+            if ($quantity < 1 || $quantity > 20) {
+                continue;
+            }
+
+            ServiceArea::where('id', (int) $areaId)->update([
+                'min_quantity' => $quantity,
+            ]);
+        }
+    }
+
+    private function syncSubareaNames(array $names): void
+    {
+        foreach ($names as $areaId => $name) {
+            $name = trim((string) $name);
+            if ($name === '') {
+                continue;
+            }
+
+            ServiceArea::where('id', (int) $areaId)
+                ->whereNotNull('parent_id')
+                ->update(['name' => $name]);
+        }
     }
 }

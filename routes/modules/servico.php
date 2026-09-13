@@ -28,6 +28,7 @@ Route::resource('cadastro', VolunteerController::class)->parameters([
     'destroy' => 'cadastro.destroy',
 ]);
 
+Route::get('areas/whatsapp-grupos', [ServiceAreaController::class, 'listWhatsAppGroups'])->name('areas.whatsapp-grupos');
 Route::resource('areas', ServiceAreaController::class)->names([
     'index' => 'areas.index',
     'create' => 'areas.create',

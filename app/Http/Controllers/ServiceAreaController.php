@@ -17,7 +17,7 @@ class ServiceAreaController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', ServiceArea::class);
-        $query = ServiceArea::with('leader');
+        $query = ServiceArea::with(['leader', 'parent']);
 
         // Busca
         if ($request->has('search') && $request->search) {
@@ -69,6 +69,8 @@ class ServiceAreaController extends Controller
             'leader_id' => 'nullable|exists:members,id',
             'min_quantity' => 'required|integer|min:1',
             'allowed_audience' => 'required|in:adulto,jovem,ambos',
+            'whatsapp_group_jid' => 'nullable|string|max:80',
+            'whatsapp_group_name' => 'nullable|string|max:150',
             'department_ids' => 'nullable|array',
             'department_ids.*' => 'exists:departments,id',
             'participant_member_ids' => 'nullable|array',
@@ -91,14 +93,18 @@ class ServiceAreaController extends Controller
             'participant_member_ids.*.exists' => 'Um dos membros selecionados não existe.',
         ]);
 
-        $areaData = collect($validated)->only([
-            'name',
-            'description',
-            'status',
-            'leader_id',
-            'min_quantity',
-            'allowed_audience',
-        ])->all();
+        $areaData = $this->normalizeWhatsAppGroup(
+            collect($validated)->only([
+                'name',
+                'description',
+                'status',
+                'leader_id',
+                'min_quantity',
+                'allowed_audience',
+                'whatsapp_group_jid',
+                'whatsapp_group_name',
+            ])->all()
+        );
 
         DB::transaction(function () use ($areaData, $validated) {
             $area = ServiceArea::create($areaData);
@@ -119,7 +125,7 @@ class ServiceAreaController extends Controller
     public function show(ServiceArea $area)
     {
         $this->authorize('view', $area);
-        $area->load('leader', 'volunteers.member');
+        $area->load('leader', 'volunteers.member', 'parent');
         
         return view('service-areas.show', compact('area'));
     }
@@ -137,7 +143,7 @@ class ServiceAreaController extends Controller
             }])
             ->orderBy('name')
             ->get();
-        $area->load('volunteers.member');
+        $area->load('volunteers.member', 'parent');
         
         return view('service-areas.edit', compact('area', 'members', 'departments'));
     }
@@ -155,6 +161,8 @@ class ServiceAreaController extends Controller
             'leader_id' => 'nullable|exists:members,id',
             'min_quantity' => 'required|integer|min:1',
             'allowed_audience' => 'required|in:adulto,jovem,ambos',
+            'whatsapp_group_jid' => 'nullable|string|max:80',
+            'whatsapp_group_name' => 'nullable|string|max:150',
             'department_ids' => 'nullable|array',
             'department_ids.*' => 'exists:departments,id',
             'participant_member_ids' => 'nullable|array',
@@ -177,14 +185,18 @@ class ServiceAreaController extends Controller
             'participant_member_ids.*.exists' => 'Um dos membros selecionados não existe.',
         ]);
 
-        $areaData = collect($validated)->only([
-            'name',
-            'description',
-            'status',
-            'leader_id',
-            'min_quantity',
-            'allowed_audience',
-        ])->all();
+        $areaData = $this->normalizeWhatsAppGroup(
+            collect($validated)->only([
+                'name',
+                'description',
+                'status',
+                'leader_id',
+                'min_quantity',
+                'allowed_audience',
+                'whatsapp_group_jid',
+                'whatsapp_group_name',
+            ])->all()
+        );
 
         DB::transaction(function () use ($area, $areaData, $validated) {
             $area->update($areaData);
@@ -256,5 +268,35 @@ class ServiceAreaController extends Controller
         })->filter()->values()->all();
 
         $area->volunteers()->sync($volunteerIds);
+    }
+
+    private function normalizeWhatsAppGroup(array $areaData): array
+    {
+        $jid = trim((string) ($areaData['whatsapp_group_jid'] ?? ''));
+        $areaData['whatsapp_group_jid'] = $jid !== '' ? $jid : null;
+        $areaData['whatsapp_group_name'] = $jid !== ''
+            ? (trim((string) ($areaData['whatsapp_group_name'] ?? '')) ?: null)
+            : null;
+
+        return $areaData;
+    }
+
+    public function listWhatsAppGroups(\App\Services\WhatsAppService $whatsapp)
+    {
+        $this->authorize('viewAny', ServiceArea::class);
+
+        $result = $whatsapp->listGroups();
+        if (! ($result['success'] ?? false)) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['error'] ?? 'Falha ao listar grupos.',
+                'groups' => [],
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'groups' => $result['groups'] ?? [],
+        ]);
     }
 }

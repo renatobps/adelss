@@ -9,6 +9,7 @@ class ScheduleReminderLog extends Model
     public const TYPE_MONTH = 'month';
     public const TYPE_WEEK = 'week';
     public const TYPE_DAY = 'day';
+    public const TYPE_WEEK_GROUP = 'week_group';
 
     protected $fillable = [
         'type',

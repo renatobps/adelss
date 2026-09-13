@@ -73,6 +73,7 @@ class MonthlyCultoSchedule extends Model
     {
         return $this->serviceAreaVolunteers()
                     ->wherePivot('service_area_id', $serviceAreaId)
+                    ->orderBy('monthly_culto_service_areas.id')
                     ->get();
     }
 

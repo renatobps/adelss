@@ -7,6 +7,7 @@ use App\Models\ScheduleNotificationSetting;
 use App\Models\ScheduleReminderLog;
 use App\Models\ServiceArea;
 use App\Services\NotificacaoService;
+use App\Services\ScheduleGroupNotificationService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
@@ -19,7 +20,7 @@ class SendScheduleReminders extends Command
 
     protected $description = 'Envia lembretes automáticos de escala (início do mês, da semana e no dia)';
 
-    public function handle(NotificacaoService $notificacaoService): int
+    public function handle(NotificacaoService $notificacaoService, ScheduleGroupNotificationService $groupNotifier): int
     {
         if (! Schema::hasTable('schedule_notification_settings') || ! Schema::hasTable('schedule_reminder_logs')) {
             $this->warn('Tabelas de configuração de escalas ainda não existem.');
@@ -39,11 +40,19 @@ class SendScheduleReminders extends Command
             $failed += $err;
         }
 
-        if ($this->shouldSendWeek($settings)) {
+        if ($this->shouldSendWeekPeople($settings)) {
             [$ok, $skip, $err] = $this->sendWeekReminders($settings, $notificacaoService);
             $sent += $ok;
             $skipped += $skip;
             $failed += $err;
+        }
+
+        if ($this->shouldSendMondayGroups($settings)) {
+            $groupResult = $groupNotifier->notifyWeekGroups();
+            $sent += (int) ($groupResult['sent'] ?? 0);
+            $skipped += (int) ($groupResult['skipped'] ?? 0);
+            $failed += (int) ($groupResult['failed'] ?? 0);
+            $this->info('PDF semanal nos grupos: enviados '.($groupResult['sent'] ?? 0).', já enviados '.($groupResult['skipped'] ?? 0).', falhas '.($groupResult['failed'] ?? 0).'.');
         }
 
         if ($this->shouldSendDay($settings)) {
@@ -84,6 +93,20 @@ class SendScheduleReminders extends Command
         return now()->dayOfWeekIso === (int) $settings->week_weekday && $settings->reachedSendTime('week_time');
     }
 
+    private function shouldSendWeekPeople(ScheduleNotificationSetting $settings): bool
+    {
+        return $this->shouldSendWeek($settings) || $this->shouldSendMondayGroups($settings);
+    }
+
+    private function shouldSendMondayGroups(ScheduleNotificationSetting $settings): bool
+    {
+        if ($this->option('force')) {
+            return true;
+        }
+
+        return now()->dayOfWeekIso === Carbon::MONDAY && $settings->reachedSendTime('week_time');
+    }
+
     private function shouldSendDay(ScheduleNotificationSetting $settings): bool
     {
         if (! $settings->day_enabled) {
@@ -120,7 +143,8 @@ class SendScheduleReminders extends Command
         $start = now()->startOfWeek(Carbon::MONDAY);
         $end = now()->endOfWeek(Carbon::SUNDAY);
         $periodKey = now()->isoFormat('GGGG-[W]WW');
-        $template = $settings->week_template ?: '';
+        $template = $settings->week_template
+            ?: "Olá, {nome}! 🙏\n\nNesta semana você está escalado(a) em:\n{escalas}\n\nDeus abençoe!";
 
         return $this->sendGroupedReminders(
             ScheduleReminderLog::TYPE_WEEK,
@@ -162,7 +186,7 @@ class SendScheduleReminders extends Command
             })
             ->get();
 
-        $areas = ServiceArea::query()->with('parent')->get()->keyBy('id');
+        $areas = ServiceArea::query()->with(['leader', 'parent.leader'])->get()->keyBy('id');
         $grouped = collect();
 
         foreach ($schedules as $schedule) {
@@ -189,6 +213,7 @@ class SendScheduleReminders extends Command
                     'dia_culto' => $event->start_date->format('d/m/Y'),
                     'hora_culto' => $event->start_date->format('H:i'),
                     'area_servico' => $area?->displayName() ?? '',
+                    'responsavel_area' => $area?->resolvedLeaderName() ?: 'liderança da área',
                     'sort' => $event->start_date->timestamp,
                 ]);
             }
@@ -238,6 +263,7 @@ class SendScheduleReminders extends Command
                 '{dia_culto}' => $first->dia_culto,
                 '{hora_culto}' => $first->hora_culto,
                 '{area_servico}' => $first->area_servico,
+                '{responsavel_area}' => $first->responsavel_area,
                 '{escalas}' => $escalas,
             ]));
 

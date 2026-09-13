@@ -14,17 +14,31 @@
                 </div>
             </div>
         @endif
+        @php $lastIntercessionPeriod = null; @endphp
         @foreach($volunteers as $volunteer)
             @php
                 $pivotId = $volunteer->pivot->id ?? null;
                 $status = $volunteer->pivot->status ?? 'pendente';
+                $slotLabel = $area->isIntercession() ? ($area->slotLabels()[$loop->index] ?? null) : null;
+                $periodLabel = null;
+                $positionLabel = $slotLabel;
+                if ($slotLabel && str_contains($slotLabel, ' · ')) {
+                    [$periodLabel, $positionLabel] = explode(' · ', $slotLabel, 2);
+                }
             @endphp
+            @if($periodLabel && $periodLabel !== $lastIntercessionPeriod)
+                <div class="fw-semibold text-primary {{ $lastIntercessionPeriod ? 'mt-3' : '' }} mb-2">{{ $periodLabel }}</div>
+                @php $lastIntercessionPeriod = $periodLabel; @endphp
+            @endif
             <div class="volunteer-item mb-3 pb-3 border-bottom volunteer-row"
                  data-pivot-id="{{ $pivotId }}"
                  data-service-area-id="{{ $area->id }}">
                 <div class="d-flex justify-content-between align-items-start">
                     <div class="flex-grow-1">
-                        <div class="d-flex align-items-center mb-1">
+                        <div class="d-flex align-items-center mb-1 flex-wrap gap-2">
+                            @if($positionLabel)
+                                <span class="badge badge-default">{{ $positionLabel }}</span>
+                            @endif
                             <strong class="me-2">{{ $firstName($volunteer->member->name ?? null) }}</strong>
                             @if($status == 'confirmado')
                                 <span class="badge badge-success badge-sm">
@@ -73,6 +87,14 @@
                 </div>
             </div>
         @endforeach
+        @php $minQuantity = max(1, (int) ($area->min_quantity ?? 1)); @endphp
+        @if($volunteers->count() < $minQuantity)
+            <button type="button"
+                    class="btn btn-sm btn-primary mt-1 add-volunteer-manual"
+                    data-service-area-id="{{ $area->id }}">
+                <i class="bx bx-plus me-1"></i>Adicionar
+            </button>
+        @endif
     </div>
 @else
     <div class="text-center py-3">

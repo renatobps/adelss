@@ -13,6 +13,7 @@
 <form method="POST" action="{{ route('voluntarios.escalas-mensais.settings.update') }}">
     @csrf
     @method('PUT')
+    <button type="submit" class="d-none" tabindex="-1" aria-hidden="true">Salvar configurações</button>
 
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
@@ -96,6 +97,26 @@
                 </div>
             </div>
 
+            <div class="border rounded p-3 mt-3">
+                <h6 class="mb-1">Envio imediato</h6>
+                <p class="text-muted small mb-3">
+                    Essas mensagens aparecem prontas ao clicar em <strong>Notificar todos</strong>.
+                    Dá para editar na hora do envio, sem alterar o que está salvo aqui.
+                </p>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label" for="immediate_individual_template">Template individual</label>
+                        <textarea class="form-control" id="immediate_individual_template" name="immediate_individual_template" rows="10">{{ old('immediate_individual_template', $settings->resolvedImmediateIndividualTemplate()) }}</textarea>
+                        <div class="form-text">Enviada no WhatsApp de cada pessoa escalada.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="immediate_group_template">Template do grupo</label>
+                        <textarea class="form-control" id="immediate_group_template" name="immediate_group_template" rows="10">{{ old('immediate_group_template', $settings->resolvedImmediateGroupTemplate()) }}</textarea>
+                        <div class="form-text">Enviada nos grupos de WhatsApp de cada área, junto com o PDF.</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="alert alert-info mt-3 mb-0">
                 Variáveis disponíveis:
                 @foreach(\App\Models\ScheduleNotificationSetting::VARIABLES as $variable => $description)
@@ -111,8 +132,9 @@
                 <i class="bx bx-group me-2 text-primary"></i>Áreas e subáreas
             </h5>
             <p class="text-muted mb-3">
-                As 6 escalas aparecem no botão Adicionar Escala. Em Culto (ou em qualquer área),
-                cadastre subáreas para os papéis do culto. A quantidade define as vagas de cada papel.
+                A quantidade de pessoas define quantas vagas aparecem ao adicionar a escala.
+                Altere o número e clique em <strong>Salvar configurações</strong> para atualizar na hora.
+                O grupo de WhatsApp de cada área é escolhido em <a href="{{ route('voluntarios.areas.index') }}">Áreas de serviço</a>.
             </p>
 
             @forelse($serviceAreas as $area)
@@ -126,12 +148,19 @@
                             @endif
                         </div>
                         @if($children->isEmpty())
-                            <div style="width: 140px;">
+                            <div style="width: 180px;">
                                 <label class="form-label small mb-1" for="qty_{{ $area->id }}">Pessoas</label>
                                 <input type="number" min="1" max="20" class="form-control"
                                        id="qty_{{ $area->id }}"
                                        name="quantities[{{ $area->id }}]"
                                        value="{{ old("quantities.{$area->id}", $area->min_quantity) }}">
+                                @if($area->isIntercession())
+                                    <div class="small text-muted mt-1">3 por período (Esquerda, Direita, Atrás)</div>
+                                @endif
+                            </div>
+                        @else
+                            <div class="small text-muted">
+                                Total: {{ $children->sum('min_quantity') }} {{ $children->sum('min_quantity') === 1 ? 'pessoa' : 'pessoas' }}
                             </div>
                         @endif
                     </div>
@@ -179,15 +208,15 @@
                         <div class="col-md-6">
                             <label class="form-label small mb-1" for="new_sub_{{ $area->id }}">Nova subárea</label>
                             <input type="text" class="form-control" id="new_sub_{{ $area->id }}"
-                                   form="add-subarea-{{ $area->id }}" name="name" placeholder="Ex.: Momento profético">
+                                   name="new_subarea_name[{{ $area->id }}]" placeholder="Ex.: Momento profético">
                         </div>
                         <div class="col-md-3">
                             <label class="form-label small mb-1" for="new_qty_{{ $area->id }}">Pessoas</label>
                             <input type="number" min="1" max="20" class="form-control" id="new_qty_{{ $area->id }}"
-                                   form="add-subarea-{{ $area->id }}" name="min_quantity" value="1">
+                                   name="new_subarea_quantity[{{ $area->id }}]" value="1">
                         </div>
                         <div class="col-md-3">
-                            <button type="submit" class="btn btn-outline-primary w-100" form="add-subarea-{{ $area->id }}">
+                            <button type="submit" class="btn btn-outline-primary w-100" name="add_parent_id" value="{{ $area->id }}">
                                 <i class="bx bx-plus me-1"></i>Adicionar
                             </button>
                         </div>
@@ -209,10 +238,6 @@
 </form>
 
 @foreach($serviceAreas as $area)
-    <form method="POST" action="{{ route('voluntarios.escalas-mensais.settings.subareas.store') }}" id="add-subarea-{{ $area->id }}" class="d-none">
-        @csrf
-        <input type="hidden" name="parent_id" value="{{ $area->id }}">
-    </form>
     @foreach($area->children as $child)
         <form method="POST" action="{{ route('voluntarios.escalas-mensais.settings.subareas.destroy', $child) }}" id="delete-subarea-{{ $child->id }}" class="d-none">
             @csrf

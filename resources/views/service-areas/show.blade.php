@@ -43,6 +43,17 @@
                                     <strong>Nome:</strong><br>
                                     <span>{{ $area->name }}</span>
                                 </div>
+                                <div class="mb-3">
+                                    <strong>Grupo de WhatsApp:</strong><br>
+                                    @if($area->resolvedWhatsAppGroupName())
+                                        <span><i class="bx bxl-whatsapp me-1"></i>{{ $area->resolvedWhatsAppGroupName() }}</span>
+                                        @if(!$area->whatsapp_group_jid && $area->parent_id)
+                                            <small class="text-muted">(herdado da área pai)</small>
+                                        @endif
+                                    @else
+                                        <span class="text-muted">Nenhum grupo vinculado</span>
+                                    @endif
+                                </div>
                                 @if($area->description)
                                     <div class="mb-3">
                                         <strong>Descrição:</strong><br>

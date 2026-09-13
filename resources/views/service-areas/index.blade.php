@@ -51,6 +51,7 @@
                                     <th>Responsável</th>
                                     <th>Quantidade Mínima</th>
                                     <th>Público Permitido</th>
+                                    <th>Grupo WhatsApp</th>
                                     <th>Status</th>
                                     <th>Ações</th>
                                 </tr>
@@ -79,6 +80,20 @@
                                                 <span class="badge badge-warning">Jovem</span>
                                             @else
                                                 <span class="badge badge-success">Ambos</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($area->whatsapp_group_jid)
+                                                <span class="badge badge-success">
+                                                    <i class="bx bxl-whatsapp me-1"></i>{{ $area->whatsapp_group_name ?: $area->whatsapp_group_jid }}
+                                                </span>
+                                            @elseif($area->resolvedWhatsAppGroupName())
+                                                <span class="text-muted">
+                                                    <i class="bx bxl-whatsapp me-1"></i>{{ $area->resolvedWhatsAppGroupName() }}
+                                                    <small>(herdado)</small>
+                                                </span>
+                                            @else
+                                                <span class="text-muted">—</span>
                                             @endif
                                         </td>
                                         <td>

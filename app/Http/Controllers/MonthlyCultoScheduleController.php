@@ -54,6 +54,7 @@ class MonthlyCultoScheduleController extends Controller
         $templates = ConfiguracaoMensagem::where('ativo', true)
             ->orderBy('tipo_notificacao')
             ->get(['id', 'tipo_notificacao', 'template']);
+        $scheduleSettings = \App\Models\ScheduleNotificationSetting::current();
 
         return view('monthly-culto-schedules.index', compact(
             'schedules',
@@ -62,7 +63,8 @@ class MonthlyCultoScheduleController extends Controller
             'serviceAreas',
             'cultos',
             'scheduleBuilder',
-            'templates'
+            'templates',
+            'scheduleSettings'
         ));
     }
 
@@ -354,18 +356,15 @@ class MonthlyCultoScheduleController extends Controller
         // Organizar voluntários por área com status
         $volunteersByArea = [];
         foreach ($serviceAreas as $area) {
-            $volunteers = $escala->serviceAreaVolunteers()
-                ->wherePivot('service_area_id', $area->id)
-                ->get();
-            
-            $volunteersByArea[$area->id] = $volunteers;
+            $volunteersByArea[$area->id] = $escala->getVolunteersByServiceArea($area->id);
         }
 
         $templates = ConfiguracaoMensagem::where('ativo', true)
             ->orderBy('tipo_notificacao')
             ->get(['id', 'tipo_notificacao', 'template']);
+        $scheduleSettings = \App\Models\ScheduleNotificationSetting::current();
 
-        return view('monthly-culto-schedules.show', compact('escala', 'serviceAreas', 'volunteersByArea', 'templates'));
+        return view('monthly-culto-schedules.show', compact('escala', 'serviceAreas', 'volunteersByArea', 'templates', 'scheduleSettings'));
     }
 
     /**
@@ -378,6 +377,7 @@ class MonthlyCultoScheduleController extends Controller
             'status' => 'required|in:rascunho,publicada,cancelada,concluido',
         ]);
 
+        $previousStatus = $escala->status;
         $escala->update(['status' => $validated['status']]);
 
         $statusLabels = [
@@ -387,9 +387,18 @@ class MonthlyCultoScheduleController extends Controller
             'concluido' => 'Concluído',
         ];
 
+        $message = 'Status alterado para ' . $statusLabels[$validated['status']] . '!';
+        if ($validated['status'] === 'publicada' && $previousStatus !== 'publicada') {
+            $groupResult = app(\App\Services\ScheduleGroupNotificationService::class)->notifyPublishedSchedule($escala->fresh(['event', 'serviceAreaVolunteers.member']));
+            $sent = (int) ($groupResult['sent'] ?? 0);
+            if ($sent > 0) {
+                $message .= " PDF enviado para {$sent} grupo(s) de WhatsApp.";
+            }
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Status alterado para ' . $statusLabels[$validated['status']] . '!',
+            'message' => $message,
             'status' => $validated['status'],
         ]);
     }
@@ -403,12 +412,31 @@ class MonthlyCultoScheduleController extends Controller
         $wasCanceled = $escala->status === 'cancelada';
         $escala->update(['status' => 'publicada']);
 
-        $message = $wasCanceled 
-            ? 'Escala republicada com sucesso!' 
+        $groupResult = ['sent' => 0, 'failed' => 0, 'skipped' => 0];
+        try {
+            $groupResult = app(\App\Services\ScheduleGroupNotificationService::class)->notifyPublishedSchedule($escala);
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::error('Escala: falha ao notificar grupos na publicação.', [
+                'schedule_id' => $escala->id,
+                'error' => $exception->getMessage(),
+            ]);
+            $groupResult['failed'] = 1;
+        }
+        $sent = (int) ($groupResult['sent'] ?? 0);
+        $failed = (int) ($groupResult['failed'] ?? 0);
+
+        $message = $wasCanceled
+            ? 'Escala republicada com sucesso!'
             : 'Escala publicada com sucesso!';
 
+        if ($sent > 0) {
+            $message .= " PDF enviado para {$sent} grupo(s) de WhatsApp.";
+        } elseif ($failed > 0) {
+            $message .= ' A escala foi publicada, mas o envio do PDF aos grupos falhou.';
+        }
+
         return redirect()->route('voluntarios.escalas-mensais.show', $escala)
-            ->with('success', $message);
+            ->with($failed > 0 && $sent === 0 ? 'error' : 'success', $message);
     }
 
     /**
@@ -733,7 +761,7 @@ class MonthlyCultoScheduleController extends Controller
         }
 
         $schedule = MonthlyCultoSchedule::with('event')->find($pivot->monthly_culto_schedule_id);
-        $serviceArea = ServiceArea::find($pivot->service_area_id);
+        $serviceArea = ServiceArea::with(['leader', 'parent.leader'])->find($pivot->service_area_id);
         $volunteer = Volunteer::with('member')->find($pivot->volunteer_id);
 
         if (!$schedule || !$schedule->event || !$volunteer || !$volunteer->member) {
@@ -752,6 +780,7 @@ class MonthlyCultoScheduleController extends Controller
             '{hora_culto}' => optional($schedule->event->start_date)->format('H:i') ?? '',
             '{area_servico}' => $serviceArea->name ?? '',
             '{local_servico}' => $schedule->event->location ?? 'Não informado',
+            '{responsavel_area}' => $serviceArea?->resolvedLeaderName() ?: 'liderança da área',
         ];
 
         $templateMessage = '';
@@ -846,20 +875,33 @@ class MonthlyCultoScheduleController extends Controller
         $validated = $request->validate([
             'template_id' => 'nullable|integer|exists:configuracoes_mensagens,id',
             'mensagem' => 'nullable|string|max:4096',
+            'mensagem_individual' => 'nullable|string|max:4096',
+            'mensagem_grupo' => 'nullable|string|max:4096',
             'arquivo' => 'nullable|file|max:20480',
             'enviar_pdf' => 'nullable|boolean',
+            'notify_groups' => 'nullable|boolean',
+            'notify_individuals' => 'nullable|boolean',
         ]);
+
+        $notifyGroups = $request->boolean('notify_groups');
+        $notifyIndividuals = $request->boolean('notify_individuals');
+        if (! $notifyGroups && ! $notifyIndividuals) {
+            return back()->with('error', 'Escolha ao menos um destino: grupos de WhatsApp ou individualmente.');
+        }
 
         $escala->loadMissing(['event', 'serviceAreaVolunteers.member']);
 
         $assignedVolunteers = $escala->serviceAreaVolunteers;
-        if ($assignedVolunteers->isEmpty()) {
-            return back()->with('error', 'Não há voluntários escalados para notificar.');
+        if ($assignedVolunteers->isEmpty() && $notifyIndividuals && ! $notifyGroups) {
+            return back()->with('error', 'Não há voluntários escalados para notificar individualmente.');
         }
 
-        $serviceAreaNames = ServiceArea::whereIn('id', $assignedVolunteers->pluck('pivot.service_area_id')->unique()->all())
-            ->pluck('name', 'id');
+        $notifyAreas = ServiceArea::with(['leader', 'parent.leader'])
+            ->whereIn('id', $assignedVolunteers->pluck('pivot.service_area_id')->unique()->all())
+            ->get()
+            ->keyBy('id');
 
+        $scheduleSettings = \App\Models\ScheduleNotificationSetting::current();
         $templateText = '';
         if (!empty($validated['template_id'])) {
             $template = ConfiguracaoMensagem::find($validated['template_id']);
@@ -868,110 +910,169 @@ class MonthlyCultoScheduleController extends Controller
             }
         }
 
-        $rawMessage = trim((string) ($validated['mensagem'] ?? ''));
-        $baseMessage = $rawMessage !== '' ? $rawMessage : $templateText;
+        $rawIndividual = html_entity_decode(trim((string) ($validated['mensagem_individual'] ?? $validated['mensagem'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $baseMessage = $rawIndividual !== ''
+            ? $rawIndividual
+            : ($templateText !== '' ? $templateText : $scheduleSettings->resolvedImmediateIndividualTemplate());
+        $groupMessage = html_entity_decode(trim((string) ($validated['mensagem_grupo'] ?? '')), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if ($groupMessage === '') {
+            $groupMessage = $scheduleSettings->resolvedImmediateGroupTemplate();
+        }
 
         $sendPdf = (bool) $request->boolean('enviar_pdf');
         $hasFile = $request->hasFile('arquivo');
+        $individualHasContent = $baseMessage !== '' || $hasFile || $sendPdf;
 
-        if ($baseMessage === '' && !$hasFile && !$sendPdf) {
-            return back()->with('error', 'Digite uma mensagem ou selecione um template para enviar a notificação.');
+        if ($notifyIndividuals && ! $individualHasContent && ! $notifyGroups) {
+            return back()->with('error', 'Digite uma mensagem, anexe um arquivo ou marque o envio do PDF.');
         }
 
-        $enviadas = 0;
-        $erros = 0;
-        $semTelefone = 0;
+        $summary = [];
+        $hasError = false;
 
-        $tempPdfPath = null;
-        $pdfFile = null;
-        if ($sendPdf) {
+        if ($notifyGroups) {
             try {
-                $pdfOutput = $this->buildMonthlySchedulePdfOutput($escala);
-                $tempDirectory = storage_path('app/tmp');
-                if (!is_dir($tempDirectory)) {
-                    mkdir($tempDirectory, 0775, true);
-                }
-
-                $tempPdfPath = $tempDirectory . DIRECTORY_SEPARATOR . 'escala-mensal-lote-' . $escala->id . '-' . time() . '.pdf';
-                file_put_contents($tempPdfPath, $pdfOutput);
-
-                $pdfFile = new UploadedFile(
-                    $tempPdfPath,
-                    'escala-mensal-' . $escala->id . '.pdf',
-                    'application/pdf',
-                    null,
-                    true
+                $groupResult = app(\App\Services\ScheduleGroupNotificationService::class)->notifyManualToGroups(
+                    $escala,
+                    $groupMessage,
+                    true,
+                    $hasFile ? $request->file('arquivo') : null
                 );
+                $groupCount = (int) ($groupResult['groups'] ?? 0);
+                $sent = (int) ($groupResult['sent'] ?? 0);
+                $failed = (int) ($groupResult['failed'] ?? 0);
+
+                if ($groupCount === 0) {
+                    $summary[] = 'Nenhum grupo de WhatsApp configurado nas áreas desta escala.';
+                    $hasError = true;
+                } else {
+                    $summary[] = "Grupos: {$sent} enviado(s), {$failed} falha(s).";
+                    if ($failed > 0 && $sent === 0) {
+                        $hasError = true;
+                    }
+                }
             } catch (\Throwable $exception) {
-                return back()->with('error', 'Falha ao gerar PDF da escala para envio.');
+                \Illuminate\Support\Facades\Log::error('Escala: falha ao notificar grupos manualmente.', [
+                    'schedule_id' => $escala->id,
+                    'error' => $exception->getMessage(),
+                ]);
+                $summary[] = 'Falha ao enviar para os grupos de WhatsApp.';
+                $hasError = true;
             }
         }
 
-        try {
-            foreach ($assignedVolunteers as $volunteer) {
-                $member = $volunteer->member;
-                if (!$member || empty($member->phone)) {
-                    $semTelefone++;
-                    continue;
-                }
+        if ($notifyIndividuals && $assignedVolunteers->isNotEmpty()) {
+            if (! $individualHasContent) {
+                $summary[] = 'Pessoas: nenhuma mensagem, arquivo ou PDF para envio individual.';
+            } else {
+                $enviadas = 0;
+                $erros = 0;
+                $semTelefone = 0;
 
-                $areaName = $serviceAreaNames[$volunteer->pivot->service_area_id] ?? '';
-                $variables = [
-                    '{nome}' => $member->name,
-                    '{culto}' => $escala->event->title ?? '',
-                    '{dia_culto}' => optional($escala->event->start_date)->format('d/m/Y') ?? '',
-                    '{hora_culto}' => optional($escala->event->start_date)->format('H:i') ?? '',
-                    '{area_servico}' => $areaName,
-                    '{local_servico}' => $escala->event->location ?? 'Não informado',
-                ];
+                $tempPdfPath = null;
+                $pdfFile = null;
+                if ($sendPdf) {
+                    try {
+                        $pdfOutput = $this->buildMonthlySchedulePdfOutput($escala);
+                        $tempDirectory = storage_path('app/tmp');
+                        if (!is_dir($tempDirectory)) {
+                            mkdir($tempDirectory, 0775, true);
+                        }
 
-                $message = $baseMessage !== '' ? ConfiguracaoMensagem::aplicarVariaveis($baseMessage, $variables) : '';
+                        $tempPdfPath = $tempDirectory . DIRECTORY_SEPARATOR . 'escala-mensal-lote-' . $escala->id . '-' . time() . '.pdf';
+                        file_put_contents($tempPdfPath, $pdfOutput);
 
-                if ($hasFile) {
-                    $resultMidia = $notificacaoService->enviarMidiaParaMembros(
-                        collect([$member]),
-                        $request->file('arquivo'),
-                        null,
-                        $message
-                    );
-                    if (($resultMidia['enviadas'] ?? 0) > 0) {
-                        $enviadas++;
-                    } else {
-                        $erros++;
-                    }
-                } elseif ($message !== '') {
-                    $resultText = $notificacaoService->enviarParaMembro($member, $message);
-                    if ($resultText['success'] ?? false) {
-                        $enviadas++;
-                    } else {
-                        $erros++;
+                        $pdfFile = new UploadedFile(
+                            $tempPdfPath,
+                            'escala-mensal-' . $escala->id . '.pdf',
+                            'application/pdf',
+                            null,
+                            true
+                        );
+                    } catch (\Throwable $exception) {
+                        $summary[] = 'Falha ao gerar PDF da escala para envio individual.';
+                        $hasError = true;
                     }
                 }
 
-                if ($pdfFile) {
-                    $resultPdf = $notificacaoService->enviarMidiaParaMembros(
-                        collect([$member]),
-                        $pdfFile,
-                        'document',
-                        'PDF da escala do dia.'
-                    );
-                    if (($resultPdf['enviadas'] ?? 0) > 0) {
-                        $enviadas++;
-                    } else {
-                        $erros++;
+                if (! ($sendPdf && $pdfFile === null && $baseMessage === '' && ! $hasFile)) {
+                    try {
+                        foreach ($assignedVolunteers as $volunteer) {
+                            $member = $volunteer->member;
+                            if (!$member || empty($member->phone)) {
+                                $semTelefone++;
+                                continue;
+                            }
+
+                            $area = $notifyAreas->get((int) $volunteer->pivot->service_area_id);
+                            $variables = [
+                                '{nome}' => $member->name,
+                                '{culto}' => $escala->event->title ?? '',
+                                '{dia_culto}' => optional($escala->event->start_date)->format('d/m/Y') ?? '',
+                                '{hora_culto}' => optional($escala->event->start_date)->format('H:i') ?? '',
+                                '{area_servico}' => $area?->name ?? '',
+                                '{local_servico}' => $escala->event->location ?? 'Não informado',
+                                '{responsavel_area}' => $area?->resolvedLeaderName() ?: 'liderança da área',
+                            ];
+
+                            $message = $baseMessage !== '' ? ConfiguracaoMensagem::aplicarVariaveis($baseMessage, $variables) : '';
+
+                            if ($hasFile) {
+                                $resultMidia = $notificacaoService->enviarMidiaParaMembros(
+                                    collect([$member]),
+                                    $request->file('arquivo'),
+                                    null,
+                                    $message
+                                );
+                                if (($resultMidia['enviadas'] ?? 0) > 0) {
+                                    $enviadas++;
+                                } else {
+                                    $erros++;
+                                }
+                            } elseif ($message !== '') {
+                                $resultText = $notificacaoService->enviarParaMembro($member, $message);
+                                if ($resultText['success'] ?? false) {
+                                    $enviadas++;
+                                } else {
+                                    $erros++;
+                                }
+                            }
+
+                            if ($pdfFile) {
+                                $resultPdf = $notificacaoService->enviarMidiaParaMembros(
+                                    collect([$member]),
+                                    $pdfFile,
+                                    'document',
+                                    'PDF da escala do dia.'
+                                );
+                                if (($resultPdf['enviadas'] ?? 0) > 0) {
+                                    $enviadas++;
+                                } else {
+                                    $erros++;
+                                }
+                            }
+                        }
+                    } finally {
+                        if ($tempPdfPath && file_exists($tempPdfPath)) {
+                            @unlink($tempPdfPath);
+                        }
+                    }
+
+                    $summary[] = "Pessoas: {$enviadas} enviada(s), {$erros} erro(s), {$semTelefone} sem telefone.";
+                    if ($erros > 0 && $enviadas === 0) {
+                        $hasError = true;
                     }
                 }
-            }
-        } finally {
-            if ($tempPdfPath && file_exists($tempPdfPath)) {
-                @unlink($tempPdfPath);
             }
         }
 
-        return back()->with(
-            'success',
-            "Notificação em lote concluída. Enviadas: {$enviadas}. Erros: {$erros}. Sem telefone: {$semTelefone}."
-        );
+        if ($notifyIndividuals && $assignedVolunteers->isEmpty()) {
+            $summary[] = 'Pessoas: não há voluntários escalados.';
+        }
+
+        $text = implode(' ', $summary);
+
+        return back()->with($hasError ? 'error' : 'success', $text !== '' ? $text : 'Notificação concluída.');
     }
 
     /**
@@ -1546,7 +1647,7 @@ class MonthlyCultoScheduleController extends Controller
             'direcao de culto' => "Responsável por direcionar o culto. {$people}.",
             'direcao do culto' => "Responsável por direcionar o culto. {$people}.",
             'direcao' => "Responsável por direcionar o culto. {$people}.",
-            'intercessao' => "Interceder durante o culto. {$people}.",
+            'intercessao' => "6 pessoas por culto, 3 em cada período: esquerda, direita e atrás.",
             'portaria' => "Segurança na entrada da igreja. {$people}.",
             'preletor' => "Traz o sermão à igreja. {$people} (voluntário ou convidado).",
             'recepcao' => "Recebe as pessoas nas entradas. {$people}.",
@@ -1566,51 +1667,7 @@ class MonthlyCultoScheduleController extends Controller
 
     private function getAreaSlotLabels(ServiceArea $serviceArea): array
     {
-        $quantity = $this->getRequiredVolunteersForArea($serviceArea);
-
-        if ($serviceArea->parent_id) {
-            if ($quantity === 1) {
-                return [$serviceArea->name];
-            }
-
-            $labels = [];
-            for ($index = 1; $index <= $quantity; $index++) {
-                $labels[] = "{$serviceArea->name} {$index}";
-            }
-
-            return $labels;
-        }
-
-        $normalized = $this->normalizeServiceAreaName($serviceArea);
-
-        if (str_contains($normalized, 'sala das criancas')) {
-            $labels = ['Professor(a)'];
-            for ($index = 1; $index < $quantity; $index++) {
-                $labels[] = $quantity === 2 ? 'Monitor' : "Monitor {$index}";
-            }
-
-            return $labels;
-        }
-
-        if ($this->isPreletorServiceArea($serviceArea)) {
-            $labels = ['Preletor(a)'];
-            for ($index = 2; $index <= $quantity; $index++) {
-                $labels[] = "Preletor(a) {$index}";
-            }
-
-            return $labels;
-        }
-
-        if ($quantity === 1) {
-            return ['Voluntário'];
-        }
-
-        $labels = [];
-        for ($index = 1; $index <= $quantity; $index++) {
-            $labels[] = "Voluntário {$index}";
-        }
-
-        return $labels;
+        return $serviceArea->slotLabels();
     }
 
     private function parseManualAreaAssignments($rawVolunteers, array $managedAreaIds, int $fallbackAreaId): array
@@ -1744,7 +1801,7 @@ class MonthlyCultoScheduleController extends Controller
 
     private function getRequiredVolunteersForArea(ServiceArea $serviceArea): int
     {
-        return max(1, (int) $serviceArea->min_quantity);
+        return max(1, (int) ($serviceArea->min_quantity ?? 1));
     }
 
     private function hasDuplicateVolunteersInPayload(array $serviceAreas): bool

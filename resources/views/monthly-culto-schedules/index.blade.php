@@ -243,11 +243,7 @@
                                         $hasSubareas = !empty($areaMeta['subareas']);
                                     @endphp
                                     <option value="{{ $area->id }}">
-                                        {{ $area->name }}@if($hasSubareas)
-                                            ({{ count($areaMeta['subareas']) }} {{ count($areaMeta['subareas']) === 1 ? 'subárea' : 'subáreas' }})
-                                        @else
-                                            ({{ $quantity }} {{ $quantity === 1 ? 'pessoa' : 'pessoas' }})
-                                        @endif{{ !empty($areaMeta['sunday_only']) ? ' · somente domingo' : '' }}
+                                        {{ $area->name }} ({{ $quantity }} {{ $quantity === 1 ? 'pessoa' : 'pessoas' }}){{ $hasSubareas ? ' · '.count($areaMeta['subareas']).' '. (count($areaMeta['subareas']) === 1 ? 'subárea' : 'subáreas') : '' }}{{ !empty($areaMeta['sunday_only']) ? ' · somente domingo' : '' }}
                                     </option>
                                 @endforeach
                             </select>
@@ -321,22 +317,13 @@
                         Culto: <strong id="notify_all_list_culto">-</strong>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Template de mensagem (opcional)</label>
-                        <select class="form-select" id="notify_all_list_template_id" name="template_id">
-                            <option value="">Sem template (digitar manualmente)</option>
-                            @foreach($templates as $template)
-                                <option value="{{ $template->id }}" data-template="{{ e($template->template) }}">
-                                    {{ $template->tipo_notificacao }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                    @include('monthly-culto-schedules.partials.notify-destinations', ['idPrefix' => 'notify_all_list'])
 
-                    <div class="mb-3">
-                        <label class="form-label">Mensagem</label>
-                        <textarea class="form-control" id="notify_all_list_message" name="mensagem" rows="5" placeholder="Digite a mensagem ou selecione um template acima"></textarea>
-                    </div>
+                    @include('monthly-culto-schedules.partials.notify-immediate-messages', [
+                        'idPrefix' => 'notify_all_list',
+                        'individualTemplate' => $scheduleSettings->resolvedImmediateIndividualTemplate(),
+                        'groupTemplate' => $scheduleSettings->resolvedImmediateGroupTemplate(),
+                    ])
 
                     <div class="mb-3">
                         <label class="form-label">Arquivo de mídia (opcional)</label>
@@ -346,7 +333,7 @@
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" value="1" id="notify_all_list_send_pdf" name="enviar_pdf">
                         <label class="form-check-label" for="notify_all_list_send_pdf">
-                            Enviar também o PDF da escala para todos
+                            Enviar também o PDF da escala para cada pessoa
                         </label>
                     </div>
                 </div>
@@ -364,6 +351,10 @@
 @push('scripts')
 <script>
 window.monthlyScheduleBuilder = @json($scheduleBuilder);
+window.immediateScheduleTemplates = {
+    individual: @json($scheduleSettings->resolvedImmediateIndividualTemplate()),
+    group: @json($scheduleSettings->resolvedImmediateGroupTemplate())
+};
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -484,14 +475,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 const selected = selectedValuesFor(eventId, String(target.id), area);
+                let lastPeriod = null;
                 (target.slots || []).forEach(function(label, index) {
+                    let displayLabel = String(label);
+                    if (displayLabel.includes(' · ')) {
+                        const parts = displayLabel.split(' · ');
+                        const period = parts[0];
+                        displayLabel = parts.slice(1).join(' · ');
+                        if (period !== lastPeriod) {
+                            const periodHeading = document.createElement('div');
+                            periodHeading.className = 'fw-semibold mt-3 mb-1 text-primary';
+                            periodHeading.textContent = period;
+                            slotsEl.appendChild(periodHeading);
+                            lastPeriod = period;
+                        }
+                    }
+
                     const wrapper = document.createElement('div');
                     wrapper.className = 'mb-2';
                     const skipLabel = target.name && String(label) === String(target.name);
                     if (!skipLabel) {
                         const labelEl = document.createElement('label');
                         labelEl.className = 'form-label';
-                        labelEl.textContent = label;
+                        labelEl.textContent = displayLabel;
                         wrapper.appendChild(labelEl);
                     }
                     const select = document.createElement('select');
@@ -599,8 +605,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const notifyModal = notifyModalElement ? new bootstrap.Modal(notifyModalElement) : null;
     const notifyForm = document.getElementById('notifyAllFromListForm');
     const notifyCulto = document.getElementById('notify_all_list_culto');
-    const notifyTemplate = document.getElementById('notify_all_list_template_id');
-    const notifyMessage = document.getElementById('notify_all_list_message');
+    const notifyPdf = document.getElementById('notify_all_list_send_pdf');
+    const notifyGroups = document.getElementById('notify_all_list_notify_groups');
+    const notifyIndividuals = document.getElementById('notify_all_list_notify_individuals');
+    const notifyIndividualMessage = document.getElementById('notify_all_list_message_individual');
+    const notifyGroupMessage = document.getElementById('notify_all_list_message_group');
+    const notifyIndividualWrap = notifyForm ? notifyForm.querySelector('[data-individual-message-wrap]') : null;
+    const notifyGroupWrap = notifyForm ? notifyForm.querySelector('[data-group-message-wrap]') : null;
+    const immediateTemplates = window.immediateScheduleTemplates || { individual: '', group: '' };
+
+    function syncNotifyMessageFields() {
+        if (notifyIndividualWrap) {
+            notifyIndividualWrap.classList.toggle('d-none', !(notifyIndividuals && notifyIndividuals.checked));
+        }
+        if (notifyGroupWrap) {
+            notifyGroupWrap.classList.toggle('d-none', !(notifyGroups && notifyGroups.checked));
+        }
+    }
+
+    if (notifyGroups) notifyGroups.addEventListener('change', syncNotifyMessageFields);
+    if (notifyIndividuals) notifyIndividuals.addEventListener('change', syncNotifyMessageFields);
 
     document.querySelectorAll('.notify-all-btn').forEach(function(button) {
         button.addEventListener('click', function() {
@@ -610,18 +634,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
             notifyForm.action = `{{ url('/servico/voluntarios/escalas-mensais') }}/${scheduleId}/volunteers/notify-all`;
             notifyCulto.textContent = cultoTitle;
-            notifyTemplate.value = '';
-            notifyMessage.value = '';
+            if (notifyPdf) notifyPdf.checked = false;
+            if (notifyGroups) notifyGroups.checked = true;
+            if (notifyIndividuals) notifyIndividuals.checked = true;
+            if (notifyIndividualMessage) notifyIndividualMessage.value = immediateTemplates.individual || '';
+            if (notifyGroupMessage) notifyGroupMessage.value = immediateTemplates.group || '';
+            syncNotifyMessageFields();
             notifyModal.show();
         });
     });
 
-    if (notifyTemplate && notifyMessage) {
-        notifyTemplate.addEventListener('change', function() {
-            const selected = this.options[this.selectedIndex];
-            const templateText = selected.getAttribute('data-template') || '';
-            if (templateText) {
-                notifyMessage.value = templateText;
+    if (notifyForm) {
+        notifyForm.addEventListener('submit', function(event) {
+            const groups = document.getElementById('notify_all_list_notify_groups');
+            const individuals = document.getElementById('notify_all_list_notify_individuals');
+            if (groups && individuals && !groups.checked && !individuals.checked) {
+                event.preventDefault();
+                alert('Escolha ao menos um destino: grupos de WhatsApp ou individualmente.');
             }
         });
     }

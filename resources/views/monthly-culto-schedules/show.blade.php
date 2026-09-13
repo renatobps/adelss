@@ -256,25 +256,13 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Template de mensagem (opcional)</label>
-                        <select class="form-select" id="notify_all_template_id" name="template_id">
-                            <option value="">Sem template (digitar manualmente)</option>
-                            @foreach($templates as $template)
-                                <option value="{{ $template->id }}" data-template="{{ e($template->template) }}">
-                                    {{ $template->tipo_notificacao }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
+                    @include('monthly-culto-schedules.partials.notify-destinations', ['idPrefix' => 'notify_all'])
 
-                    <div class="mb-3">
-                        <label class="form-label">Mensagem</label>
-                        <textarea class="form-control" id="notify_all_message" name="mensagem" rows="5" placeholder="Digite a mensagem ou selecione um template acima"></textarea>
-                        <small class="text-muted">
-                            Variáveis disponíveis: <code>{nome}</code>, <code>{culto}</code>, <code>{dia_culto}</code>, <code>{hora_culto}</code>, <code>{area_servico}</code>, <code>{local_servico}</code>
-                        </small>
-                    </div>
+                    @include('monthly-culto-schedules.partials.notify-immediate-messages', [
+                        'idPrefix' => 'notify_all',
+                        'individualTemplate' => $scheduleSettings->resolvedImmediateIndividualTemplate(),
+                        'groupTemplate' => $scheduleSettings->resolvedImmediateGroupTemplate(),
+                    ])
 
                     <div class="mb-3">
                         <label class="form-label">Arquivo de mídia (opcional)</label>
@@ -284,7 +272,7 @@
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" value="1" id="notify_all_send_pdf" name="enviar_pdf">
                         <label class="form-check-label" for="notify_all_send_pdf">
-                            Enviar também o PDF da escala para todos
+                            Enviar também o PDF da escala para cada pessoa
                         </label>
                     </div>
                 </div>
@@ -559,7 +547,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('notify_volunteer_name').textContent = volunteerName;
             document.getElementById('notify_area_name').textContent = areaName;
             document.getElementById('notify_template_id').value = '';
-            document.getElementById('notify_message').value = '';
+            document.getElementById('notify_message').value = @json($scheduleSettings->resolvedImmediateIndividualTemplate());
             document.getElementById('notify_send_pdf').checked = false;
 
             const notifyModal = new bootstrap.Modal(document.getElementById('notifyVolunteerModal'));
@@ -726,15 +714,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Preencher mensagem de lote a partir do template selecionado
-    const allTemplateSelect = document.getElementById('notify_all_template_id');
-    const allMessageTextarea = document.getElementById('notify_all_message');
-    if (allTemplateSelect && allMessageTextarea) {
-        allTemplateSelect.addEventListener('change', function () {
-            const selectedOption = this.options[this.selectedIndex];
-            const templateText = selectedOption.getAttribute('data-template') || '';
-            if (templateText) {
-                allMessageTextarea.value = templateText;
+    const allGroups = document.getElementById('notify_all_notify_groups');
+    const allIndividuals = document.getElementById('notify_all_notify_individuals');
+    const allForm = document.querySelector('#notifyAllVolunteersModal form');
+    const allIndividualWrap = allForm ? allForm.querySelector('[data-individual-message-wrap]') : null;
+    const allGroupWrap = allForm ? allForm.querySelector('[data-group-message-wrap]') : null;
+
+    function syncAllNotifyMessageFields() {
+        if (allIndividualWrap) {
+            allIndividualWrap.classList.toggle('d-none', !(allIndividuals && allIndividuals.checked));
+        }
+        if (allGroupWrap) {
+            allGroupWrap.classList.toggle('d-none', !(allGroups && allGroups.checked));
+        }
+    }
+
+    if (allGroups) allGroups.addEventListener('change', syncAllNotifyMessageFields);
+    if (allIndividuals) allIndividuals.addEventListener('change', syncAllNotifyMessageFields);
+    syncAllNotifyMessageFields();
+
+    if (allForm) {
+        allForm.addEventListener('submit', function (event) {
+            if (allGroups && allIndividuals && !allGroups.checked && !allIndividuals.checked) {
+                event.preventDefault();
+                alert('Escolha ao menos um destino: grupos de WhatsApp ou individualmente.');
             }
         });
     }

@@ -193,6 +193,13 @@
             font-size: 10px;
             color: #6b7280;
         }
+
+        .period-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: #1e3a8a;
+            margin: 12px 10px 6px;
+        }
     </style>
 </head>
 <body>
@@ -257,10 +264,13 @@
 
             @if($volunteers->count() > 0 || $guestPreletorName)
                 <div class="area">
-                    <div class="area-header">
-                        <div class="area-title">{{ $childAreas->isNotEmpty() ? $area->name.' — '.$section->name : $section->name }}</div>
-                    </div>
+                <div class="area-header">
+                    <div class="area-title">{{ $childAreas->isNotEmpty() ? $area->name.' — '.$section->name : $section->name }}</div>
+                </div>
 
+                @if($section->isIntercession())
+                    @include('pdf.escalas.partials.intercessao', ['section' => $section, 'volunteers' => $volunteers])
+                @else
                 <table class="volunteers">
                     @if($guestPreletorName)
                         <tr>
@@ -298,6 +308,7 @@
                         </tr>
                     @endforeach
                 </table>
+                @endif
             </div>
         @endif
         @endforeach
