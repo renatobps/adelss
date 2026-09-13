@@ -27,15 +27,15 @@
                         <table class="table table-bordered">
                             <tr>
                                 <th width="200">Data:</th>
-                                <td>{{ $history->date->format('d/m/Y') }}</td>
+                                <td>{{ optional($history->date)->format('d/m/Y') }}</td>
                             </tr>
                             <tr>
                                 <th>Voluntário:</th>
-                                <td><strong>{{ $history->member->name }}</strong></td>
+                                <td><strong>{{ $history->member->name ?? $history->volunteer?->member?->name ?? 'Sem membro' }}</strong></td>
                             </tr>
                             <tr>
                                 <th>Área:</th>
-                                <td>{{ $history->serviceArea->name }}</td>
+                                <td>{{ $history->serviceArea->name ?? 'Área não encontrada' }}</td>
                             </tr>
                             <tr>
                                 <th>Culto/Evento:</th>

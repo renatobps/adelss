@@ -39,7 +39,7 @@
                                 <option value="">Todos</option>
                                 @foreach($volunteers as $volunteer)
                                     <option value="{{ $volunteer->id }}" {{ request('volunteer') == $volunteer->id ? 'selected' : '' }}>
-                                        {{ $volunteer->member->name }}
+                                        {{ $volunteer->member->name ?? 'Sem membro' }}
                                     </option>
                                 @endforeach
                             </select>
@@ -107,9 +107,9 @@
                             <tbody>
                                 @foreach($histories as $history)
                                     <tr>
-                                        <td>{{ $history->date->format('d/m/Y') }}</td>
-                                        <td><strong>{{ $history->member->name }}</strong></td>
-                                        <td>{{ $history->serviceArea->name }}</td>
+                                        <td>{{ optional($history->date)->format('d/m/Y') }}</td>
+                                        <td><strong>{{ $history->member->name ?? $history->volunteer?->member?->name ?? 'Sem membro' }}</strong></td>
+                                        <td>{{ $history->serviceArea->name ?? 'Área não encontrada' }}</td>
                                         <td>
                                             {{ $history->schedule ? $history->schedule->title : 'Escala não encontrada' }}
                                             @if($history->service_type == 'culto')

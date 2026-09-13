@@ -47,7 +47,12 @@ class ServiceHistoryController extends Controller
                           ->orderBy('created_at', 'desc')
                           ->paginate(20);
 
-        $volunteers = Volunteer::with('member')->active()->get();
+        $volunteers = Volunteer::query()
+            ->with('member')
+            ->active()
+            ->whereHas('member')
+            ->get()
+            ->sortBy(fn ($volunteer) => mb_strtolower($volunteer->member->name ?? ''));
         $serviceAreas = ServiceArea::active()->get();
 
         $statusLabels = [

@@ -1,13 +1,13 @@
 @extends('layouts.porto')
 
-@section('title', 'Histórico - ' . $volunteer->member->name)
+@section('title', 'Histórico - ' . ($volunteer->member->name ?? 'Voluntário'))
 
-@section('page-title', 'Histórico de Serviço - ' . $volunteer->member->name)
+@section('page-title', 'Histórico de Serviço - ' . ($volunteer->member->name ?? 'Voluntário'))
 
 @section('breadcrumbs')
     <li><a href="{{ route('voluntarios.escalas.index') }}">Serviço</a></li>
     <li><a href="{{ route('voluntarios.historico.index') }}">Histórico de Serviço</a></li>
-    <li>{{ $volunteer->member->name }}</li>
+    <li>{{ $volunteer->member->name ?? 'Voluntário' }}</li>
 @endsection
 
 @section('content')
@@ -20,7 +20,7 @@
                     <a href="#" class="card-action card-action-dismiss" data-card-dismiss></a>
                 </div>
                 <h2 class="card-title">
-                    <i class="bx bx-user me-2"></i>{{ $volunteer->member->name }}
+                    <i class="bx bx-user me-2"></i>{{ $volunteer->member->name ?? 'Voluntário sem membro' }}
                 </h2>
             </header>
             <div class="card-body">
@@ -39,7 +39,7 @@
                             <div class="card-body text-center">
                                 <h3 class="mb-0">
                                     @if($lastService)
-                                        {{ $lastService->date->format('d/m/Y') }}
+                                        {{ optional($lastService->date)->format('d/m/Y') }}
                                     @else
                                         -
                                     @endif
@@ -98,8 +98,8 @@
                             <tbody>
                                 @foreach($histories as $history)
                                     <tr>
-                                        <td>{{ $history->date->format('d/m/Y') }}</td>
-                                        <td>{{ $history->serviceArea->name }}</td>
+                                        <td>{{ optional($history->date)->format('d/m/Y') }}</td>
+                                        <td>{{ $history->serviceArea->name ?? 'Área não encontrada' }}</td>
                                         <td>{{ $history->schedule ? $history->schedule->title : 'Escala não encontrada' }}</td>
                                         <td>
                                             @if($history->status == 'serviu')
