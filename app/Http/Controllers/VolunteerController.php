@@ -42,7 +42,7 @@ class VolunteerController extends Controller
         }
 
         $volunteers = $query->orderBy('created_at', 'desc')->paginate(15);
-        $serviceAreas = ServiceArea::active()->orderBy('name')->get();
+        $serviceAreas = ServiceArea::active()->roots()->orderBy('sort_order')->orderBy('name')->get();
 
         return view('volunteers.index', compact('volunteers', 'serviceAreas'));
     }
@@ -54,7 +54,7 @@ class VolunteerController extends Controller
     {
         $this->authorize('create', Volunteer::class);
         $members = Member::orderBy('name')->get();
-        $serviceAreas = ServiceArea::active()->orderBy('name')->get();
+        $serviceAreas = ServiceArea::active()->roots()->orderBy('sort_order')->orderBy('name')->get();
         
         return view('volunteers.create', compact('members', 'serviceAreas'));
     }
@@ -122,7 +122,7 @@ class VolunteerController extends Controller
     {
         $this->authorize('update', $volunteer);
         $members = Member::orderBy('name')->get();
-        $serviceAreas = ServiceArea::active()->orderBy('name')->get();
+        $serviceAreas = ServiceArea::active()->roots()->orderBy('sort_order')->orderBy('name')->get();
         $volunteer->load('serviceAreas');
         
         return view('volunteers.edit', compact('volunteer', 'members', 'serviceAreas'));

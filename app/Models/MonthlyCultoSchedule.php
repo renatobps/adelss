@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class MonthlyCultoSchedule extends Model
@@ -83,8 +84,33 @@ class MonthlyCultoSchedule extends Model
         return $query->where('month', $month)->where('year', $year);
     }
 
+    public static function hasGuestPreletorColumn(): bool
+    {
+        static $exists;
+
+        if ($exists === null) {
+            $exists = Schema::hasTable((new static)->getTable())
+                && Schema::hasColumn((new static)->getTable(), 'guest_preletor_name');
+        }
+
+        return $exists;
+    }
+
+    public function setGuestPreletorName(?string $name): void
+    {
+        if (! static::hasGuestPreletorColumn()) {
+            return;
+        }
+
+        $this->update(['guest_preletor_name' => filled($name) ? trim($name) : null]);
+    }
+
     public function guestPreletorNameForArea(?ServiceArea $area): ?string
     {
+        if (! static::hasGuestPreletorColumn()) {
+            return null;
+        }
+
         $name = trim((string) $this->guest_preletor_name);
         if ($name === '' || !$area) {
             return null;

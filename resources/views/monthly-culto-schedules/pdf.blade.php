@@ -191,17 +191,23 @@
 
         <!-- Áreas de Serviço -->
         @foreach($serviceAreas as $area)
+            @continue($area->parent_id)
             @php
-                $hasVolunteers = isset($volunteersByArea[$area->id]) && $volunteersByArea[$area->id]['volunteers']->count() > 0;
-                $guestPreletorName = $escala->guestPreletorNameForArea($area);
+                $childAreas = $serviceAreas->where('parent_id', $area->id)->sortBy([['sort_order', 'asc'], ['name', 'asc']]);
+                $sections = $childAreas->isNotEmpty() ? $childAreas : collect([$area]);
+            @endphp
+            @foreach($sections as $section)
+            @php
+                $hasVolunteers = isset($volunteersByArea[$section->id]) && $volunteersByArea[$section->id]['volunteers']->count() > 0;
+                $guestPreletorName = $escala->guestPreletorNameForArea($section);
             @endphp
             @if($hasVolunteers || $guestPreletorName)
             @php
-                $areaData = $volunteersByArea[$area->id] ?? ['volunteers' => collect()];
+                $areaData = $volunteersByArea[$section->id] ?? ['volunteers' => collect()];
             @endphp
             <div class="area">
                 <div class="area-header">
-                    {{ $area->name }}
+                    {{ $childAreas->isNotEmpty() ? $area->name.' — '.$section->name : $section->name }}
                 </div>
                 <div class="area-body">
                     @if($guestPreletorName)
@@ -217,6 +223,7 @@
                 </div>
             </div>
             @endif
+            @endforeach
         @endforeach
 
         <!-- Footer -->

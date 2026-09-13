@@ -108,45 +108,97 @@
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body">
             <h5 class="mb-1">
-                <i class="bx bx-group me-2 text-primary"></i>Quantidade de pessoas por escala
+                <i class="bx bx-group me-2 text-primary"></i>Áreas e subáreas
             </h5>
             <p class="text-muted mb-3">
-                Define quantas vagas aparecem ao adicionar a escala de cada área.
+                As 6 escalas aparecem no botão Adicionar Escala. Em Culto (ou em qualquer área),
+                cadastre subáreas para os papéis do culto. A quantidade define as vagas de cada papel.
             </p>
 
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>Área de serviço</th>
-                            <th style="width: 160px;">Pessoas</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse($serviceAreas as $area)
-                            <tr>
-                                <td>
-                                    <strong>{{ $area->name }}</strong>
-                                    @if($area->description)
-                                        <div class="small text-muted">{{ $area->description }}</div>
-                                    @endif
-                                </td>
-                                <td>
-                                    <input type="number" min="1" max="20" class="form-control"
-                                           name="quantities[{{ $area->id }}]"
-                                           value="{{ old("quantities.{$area->id}", $area->min_quantity) }}">
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="2" class="text-muted">Nenhuma área de serviço ativa.</td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
+            @forelse($serviceAreas as $area)
+                @php $children = $area->children; @endphp
+                <div class="border rounded p-3 mb-3">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+                        <div>
+                            <strong>{{ $area->name }}</strong>
+                            @if($area->description)
+                                <div class="small text-muted">{{ $area->description }}</div>
+                            @endif
+                        </div>
+                        @if($children->isEmpty())
+                            <div style="width: 140px;">
+                                <label class="form-label small mb-1" for="qty_{{ $area->id }}">Pessoas</label>
+                                <input type="number" min="1" max="20" class="form-control"
+                                       id="qty_{{ $area->id }}"
+                                       name="quantities[{{ $area->id }}]"
+                                       value="{{ old("quantities.{$area->id}", $area->min_quantity) }}">
+                            </div>
+                        @endif
+                    </div>
+
+                    @if($children->isNotEmpty())
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-2">
+                                <thead>
+                                    <tr>
+                                        <th>Subárea</th>
+                                        <th style="width: 120px;">Pessoas</th>
+                                        <th style="width: 70px;"></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($children as $child)
+                                        <tr>
+                                            <td>
+                                                <input type="text" class="form-control"
+                                                       name="subarea_names[{{ $child->id }}]"
+                                                       value="{{ old("subarea_names.{$child->id}", $child->name) }}">
+                                            </td>
+                                            <td>
+                                                <input type="number" min="1" max="20" class="form-control"
+                                                       name="quantities[{{ $child->id }}]"
+                                                       value="{{ old("quantities.{$child->id}", $child->min_quantity) }}">
+                                            </td>
+                                            <td class="text-end">
+                                                <button type="submit" form="delete-subarea-{{ $child->id }}"
+                                                        class="btn btn-sm btn-outline-danger"
+                                                        onclick="return confirm('Remover a subárea {{ $child->name }}?')">
+                                                    <i class="bx bx-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    @else
+                        <p class="small text-muted mb-2">Esta escala ainda não tem subáreas.</p>
+                    @endif
+
+                    <div class="row g-2 align-items-end">
+                        <div class="col-md-6">
+                            <label class="form-label small mb-1" for="new_sub_{{ $area->id }}">Nova subárea</label>
+                            <input type="text" class="form-control" id="new_sub_{{ $area->id }}"
+                                   form="add-subarea-{{ $area->id }}" name="name" placeholder="Ex.: Momento profético">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small mb-1" for="new_qty_{{ $area->id }}">Pessoas</label>
+                            <input type="number" min="1" max="20" class="form-control" id="new_qty_{{ $area->id }}"
+                                   form="add-subarea-{{ $area->id }}" name="min_quantity" value="1">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-outline-primary w-100" form="add-subarea-{{ $area->id }}">
+                                <i class="bx bx-plus me-1"></i>Adicionar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <p class="text-muted mb-0">Nenhuma área de serviço cadastrada.</p>
+            @endforelse
         </div>
     </div>
+
 
     <div class="d-flex justify-content-end gap-2">
         <a href="{{ route('voluntarios.escalas-mensais.index') }}" class="btn btn-default">Voltar</a>
@@ -155,4 +207,17 @@
         </button>
     </div>
 </form>
+
+@foreach($serviceAreas as $area)
+    <form method="POST" action="{{ route('voluntarios.escalas-mensais.settings.subareas.store') }}" id="add-subarea-{{ $area->id }}" class="d-none">
+        @csrf
+        <input type="hidden" name="parent_id" value="{{ $area->id }}">
+    </form>
+    @foreach($area->children as $child)
+        <form method="POST" action="{{ route('voluntarios.escalas-mensais.settings.subareas.destroy', $child) }}" id="delete-subarea-{{ $child->id }}" class="d-none">
+            @csrf
+            @method('DELETE')
+        </form>
+    @endforeach
+@endforeach
 @endsection

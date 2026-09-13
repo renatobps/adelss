@@ -162,7 +162,7 @@ class SendScheduleReminders extends Command
             })
             ->get();
 
-        $areas = ServiceArea::query()->get()->keyBy('id');
+        $areas = ServiceArea::query()->with('parent')->get()->keyBy('id');
         $grouped = collect();
 
         foreach ($schedules as $schedule) {
@@ -188,7 +188,7 @@ class SendScheduleReminders extends Command
                     'culto' => $event->title ?? '',
                     'dia_culto' => $event->start_date->format('d/m/Y'),
                     'hora_culto' => $event->start_date->format('H:i'),
-                    'area_servico' => $area->name ?? '',
+                    'area_servico' => $area?->displayName() ?? '',
                     'sort' => $event->start_date->timestamp,
                 ]);
             }

@@ -14,7 +14,14 @@ class ScheduleSettingController extends Controller
         $this->authorize('update', new ServiceSchedule());
 
         $settings = ScheduleNotificationSetting::current();
-        $serviceAreas = ServiceArea::where('status', 'ativo')->orderBy('name')->get();
+        $serviceAreas = ServiceArea::query()
+            ->with(['children' => function ($query) {
+                $query->orderBy('sort_order')->orderBy('name');
+            }])
+            ->roots()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
 
         return view('monthly-culto-schedules.settings', compact('settings', 'serviceAreas'));
     }
@@ -44,6 +51,8 @@ class ScheduleSettingController extends Controller
             'day_template' => 'nullable|string|max:4000',
             'quantities' => 'nullable|array',
             'quantities.*' => 'required|integer|min:1|max:20',
+            'subarea_names' => 'nullable|array',
+            'subarea_names.*' => 'nullable|string|max:150',
         ], [
             'month_day.required' => 'Informe o dia do mês para o alerta.',
             'week_weekday.required' => 'Informe o dia da semana para o alerta.',
@@ -71,6 +80,61 @@ class ScheduleSettingController extends Controller
             ]);
         }
 
+        foreach ($validated['subarea_names'] ?? [] as $areaId => $name) {
+            $name = trim((string) $name);
+            if ($name === '') {
+                continue;
+            }
+
+            ServiceArea::where('id', (int) $areaId)
+                ->whereNotNull('parent_id')
+                ->update(['name' => $name]);
+        }
+
         return back()->with('success', 'Configurações de escala salvas com sucesso.');
+    }
+
+    public function storeSubarea(Request $request)
+    {
+        $this->authorize('update', new ServiceSchedule());
+
+        $validated = $request->validate([
+            'parent_id' => 'required|exists:service_areas,id',
+            'name' => 'required|string|max:150',
+            'min_quantity' => 'required|integer|min:1|max:20',
+        ], [
+            'parent_id.required' => 'Selecione a escala pai.',
+            'name.required' => 'Informe o nome da subárea.',
+            'min_quantity.min' => 'A subárea precisa de pelo menos 1 pessoa.',
+        ]);
+
+        $parent = ServiceArea::query()->roots()->findOrFail($validated['parent_id']);
+        $sortOrder = (int) $parent->children()->max('sort_order') + 1;
+
+        ServiceArea::create([
+            'parent_id' => $parent->id,
+            'name' => trim($validated['name']),
+            'status' => 'ativo',
+            'min_quantity' => (int) $validated['min_quantity'],
+            'sort_order' => $sortOrder,
+            'allowed_audience' => $parent->allowed_audience ?: 'ambos',
+            'leader_id' => $parent->leader_id,
+        ]);
+
+        return back()->with('success', "Subárea \"{$validated['name']}\" adicionada em {$parent->name}.");
+    }
+
+    public function destroySubarea(ServiceArea $area)
+    {
+        $this->authorize('update', new ServiceSchedule());
+
+        if (! $area->parent_id) {
+            return back()->with('error', 'Só é possível remover subáreas.');
+        }
+
+        $name = $area->name;
+        $area->delete();
+
+        return back()->with('success', "Subárea \"{$name}\" removida.");
     }
 }

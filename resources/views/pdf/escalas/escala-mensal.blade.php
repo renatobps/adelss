@@ -243,16 +243,23 @@
 
     <!-- ÁREAS -->
     @foreach($serviceAreas as $area)
+        @continue($area->parent_id)
         @php
-            $volunteers = $volunteersByArea[$area->id] ?? collect();
-            $guestPreletorName = $escala->guestPreletorNameForArea($area);
+            $childAreas = $serviceAreas->where('parent_id', $area->id)->sortBy([['sort_order', 'asc'], ['name', 'asc']]);
+            $sections = $childAreas->isNotEmpty() ? $childAreas : collect([$area]);
         @endphp
-        
-        @if($volunteers->count() > 0 || $guestPreletorName)
-            <div class="area">
-                <div class="area-header">
-                    <div class="area-title">{{ $area->name }}</div>
-                </div>
+
+        @foreach($sections as $section)
+            @php
+                $volunteers = $volunteersByArea[$section->id] ?? collect();
+                $guestPreletorName = $escala->guestPreletorNameForArea($section);
+            @endphp
+
+            @if($volunteers->count() > 0 || $guestPreletorName)
+                <div class="area">
+                    <div class="area-header">
+                        <div class="area-title">{{ $childAreas->isNotEmpty() ? $area->name.' — '.$section->name : $section->name }}</div>
+                    </div>
 
                 <table class="volunteers">
                     @if($guestPreletorName)
@@ -293,6 +300,7 @@
                 </table>
             </div>
         @endif
+        @endforeach
     @endforeach
 
     <!-- FOOTER -->

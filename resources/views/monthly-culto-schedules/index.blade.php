@@ -240,9 +240,14 @@
                                     @php
                                         $areaMeta = $scheduleBuilder['areas'][(string) $area->id] ?? null;
                                         $quantity = $areaMeta['quantity'] ?? 1;
+                                        $hasSubareas = !empty($areaMeta['subareas']);
                                     @endphp
                                     <option value="{{ $area->id }}">
-                                        {{ $area->name }} ({{ $quantity }} {{ $quantity === 1 ? 'pessoa' : 'pessoas' }}){{ !empty($areaMeta['sunday_only']) ? ' · somente domingo' : '' }}
+                                        {{ $area->name }}@if($hasSubareas)
+                                            ({{ count($areaMeta['subareas']) }} {{ count($areaMeta['subareas']) === 1 ? 'subárea' : 'subáreas' }})
+                                        @else
+                                            ({{ $quantity }} {{ $quantity === 1 ? 'pessoa' : 'pessoas' }})
+                                        @endif{{ !empty($areaMeta['sunday_only']) ? ' · somente domingo' : '' }}
                                     </option>
                                 @endforeach
                             </select>
@@ -371,12 +376,19 @@ document.addEventListener('DOMContentLoaded', function() {
     const submitBtn = document.getElementById('add_schedule_submit');
     const addScheduleModalElement = document.getElementById('addScheduleModal');
 
-    function selectedValuesFor(eventId, area) {
+    function selectedValuesFor(eventId, targetId, area) {
         const oldAreaId = String(builder.old_area_id || '');
-        if (oldAreaId && oldAreaId === String(area.id) && builder.old_assignments && builder.old_assignments[eventId]) {
-            return [].concat(builder.old_assignments[eventId]);
+        const old = builder.old_assignments || {};
+        if (oldAreaId && oldAreaId === String(area.id) && old[eventId]) {
+            const eventOld = old[eventId];
+            if (eventOld && !Array.isArray(eventOld) && Object.prototype.hasOwnProperty.call(eventOld, targetId)) {
+                return [].concat(eventOld[targetId] || []);
+            }
+            if (Array.isArray(eventOld) && String(targetId) === String(area.id)) {
+                return eventOld;
+            }
         }
-        return ((builder.assignments[eventId] || {})[String(area.id)] || []).slice();
+        return ((builder.assignments[eventId] || {})[String(targetId)] || []).slice();
     }
 
     function guestValueFor(eventId, area) {
@@ -401,7 +413,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 const occupiedInfo = occupied[option.value] || occupied[String(option.value)];
-                const takenInOtherArea = !area.allows_overlap && occupiedInfo && Number(occupiedInfo.area_id) !== Number(area.id);
+                const managedIds = (area.managed_area_ids || [area.id]).map(Number);
+                const takenInOtherArea = !area.allows_overlap && occupiedInfo && managedIds.indexOf(Number(occupiedInfo.area_id)) === -1;
                 const takenInAnotherSlot = chosen.includes(option.value) && select.value !== option.value;
                 option.disabled = takenInOtherArea || takenInAnotherSlot;
 
@@ -450,7 +463,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const hideRow = area.sunday_only && !isSunday;
             row.classList.toggle('d-none', hideRow);
 
-            const selected = selectedValuesFor(eventId, area);
             if (!slotsEl || !guestWrap || !guestInput) {
                 return;
             }
@@ -459,50 +471,68 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            area.slots.forEach(function(label, index) {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'mb-2';
-                const labelEl = document.createElement('label');
-                labelEl.className = 'form-label';
-                labelEl.textContent = label;
-                const select = document.createElement('select');
-                select.className = 'form-select';
-                select.name = 'assignments[' + eventId + '][]';
-                select.setAttribute('data-slot-select', '1');
+            const targets = (area.subareas && area.subareas.length)
+                ? area.subareas
+                : [{ id: area.id, name: null, slots: area.slots }];
 
-                const placeholder = document.createElement('option');
-                placeholder.value = '';
-                placeholder.textContent = area.uses_members ? 'Selecione o membro...' : 'Selecione o voluntário...';
-                select.appendChild(placeholder);
-
-                area.volunteers.forEach(function(volunteer) {
-                    const option = document.createElement('option');
-                    option.value = String(volunteer.id);
-                    option.setAttribute('data-name', volunteer.name);
-                    option.textContent = volunteer.name;
-                    select.appendChild(option);
-                });
-
-                if (selected[index]) {
-                    select.value = String(selected[index]);
+            targets.forEach(function(target) {
+                if (target.name) {
+                    const heading = document.createElement('div');
+                    heading.className = 'fw-semibold mt-3 mb-1';
+                    heading.textContent = target.name;
+                    slotsEl.appendChild(heading);
                 }
 
-                select.addEventListener('change', function() {
-                    if (select.value && guestInput) {
-                        guestInput.value = '';
+                const selected = selectedValuesFor(eventId, String(target.id), area);
+                (target.slots || []).forEach(function(label, index) {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'mb-2';
+                    const skipLabel = target.name && String(label) === String(target.name);
+                    if (!skipLabel) {
+                        const labelEl = document.createElement('label');
+                        labelEl.className = 'form-label';
+                        labelEl.textContent = label;
+                        wrapper.appendChild(labelEl);
                     }
-                    refreshDisabledOptions(row, area);
-                });
+                    const select = document.createElement('select');
+                    select.className = 'form-select';
+                    select.name = 'assignments[' + eventId + '][' + target.id + '][]';
+                    select.setAttribute('data-slot-select', '1');
 
-                wrapper.appendChild(labelEl);
-                wrapper.appendChild(select);
-                slotsEl.appendChild(wrapper);
+                    const placeholder = document.createElement('option');
+                    placeholder.value = '';
+                    placeholder.textContent = area.uses_members ? 'Selecione o membro...' : 'Selecione o voluntário...';
+                    select.appendChild(placeholder);
+
+                    area.volunteers.forEach(function(volunteer) {
+                        const option = document.createElement('option');
+                        option.value = String(volunteer.id);
+                        option.setAttribute('data-name', volunteer.name);
+                        option.textContent = volunteer.name;
+                        select.appendChild(option);
+                    });
+
+                    if (selected[index]) {
+                        select.value = String(selected[index]);
+                    }
+
+                    select.addEventListener('change', function() {
+                        if (select.value && guestInput) {
+                            guestInput.value = '';
+                        }
+                        refreshDisabledOptions(row, area);
+                    });
+
+                    wrapper.appendChild(select);
+                    slotsEl.appendChild(wrapper);
+                });
             });
 
             if (area.is_preletor) {
                 guestWrap.classList.remove('d-none');
                 guestInput.name = 'guests[' + eventId + ']';
-                guestInput.value = selected.some(Boolean) ? '' : guestValueFor(eventId, area);
+                const preletorSelected = selectedValuesFor(eventId, String(area.id), area);
+                guestInput.value = preletorSelected.some(Boolean) ? '' : guestValueFor(eventId, area);
                 guestInput.oninput = function() {
                     if (!guestInput.value.trim()) return;
                     row.querySelectorAll('[data-slot-select]').forEach(function(select) {
@@ -548,7 +578,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (ids.length !== new Set(ids).size) {
                     event.preventDefault();
-                    alert('No mesmo culto, o mesmo voluntário não pode servir em mais de uma vaga.');
+                    alert('No mesmo culto, a mesma pessoa não pode servir em duas vagas, áreas ou subáreas.');
                     return;
                 }
             }

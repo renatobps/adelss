@@ -69,6 +69,8 @@ Route::get('escalas/{escala}/pdf', [ServiceScheduleController::class, 'generateP
 Route::get('escalas-mensais', [MonthlyCultoScheduleController::class, 'index'])->name('escalas-mensais.index');
 Route::get('escalas-mensais/configuracoes', [ScheduleSettingController::class, 'edit'])->name('escalas-mensais.settings.edit');
 Route::put('escalas-mensais/configuracoes', [ScheduleSettingController::class, 'update'])->name('escalas-mensais.settings.update');
+Route::post('escalas-mensais/configuracoes/subareas', [ScheduleSettingController::class, 'storeSubarea'])->name('escalas-mensais.settings.subareas.store');
+Route::delete('escalas-mensais/configuracoes/subareas/{area}', [ScheduleSettingController::class, 'destroySubarea'])->name('escalas-mensais.settings.subareas.destroy');
 Route::get('escalas-mensais/create', [MonthlyCultoScheduleController::class, 'create'])->name('escalas-mensais.create');
 Route::post('escalas-mensais', [MonthlyCultoScheduleController::class, 'store'])->name('escalas-mensais.store');
 Route::post('escalas-mensais/area/manual', [MonthlyCultoScheduleController::class, 'storeManualArea'])->name('escalas-mensais.area.manual');

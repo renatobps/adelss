@@ -132,15 +132,19 @@
 <!-- Grid de Áreas de Serviço -->
 <div class="row">
     @foreach($serviceAreas as $area)
+        @continue($area->parent_id)
         @php
+            $childAreas = $serviceAreas->where('parent_id', $area->id)->sortBy([['sort_order', 'asc'], ['name', 'asc']]);
+            $assignmentAreas = $childAreas->isNotEmpty() ? $childAreas : collect([$area]);
             $volunteers = $volunteersByArea[$area->id] ?? collect();
             $guestPreletorName = $escala->guestPreletorNameForArea($area);
             $guestCount = $guestPreletorName ? 1 : 0;
-            $confirmedCount = $volunteers->filter(function($v) {
+            $allVolunteers = $assignmentAreas->flatMap(fn ($item) => $volunteersByArea[$item->id] ?? collect());
+            $confirmedCount = $allVolunteers->filter(function($v) {
                 return ($v->pivot->status ?? 'pendente') == 'confirmado';
             })->count() + $guestCount;
-            $totalCount = $volunteers->count() + $guestCount;
-            $minQuantity = $area->min_quantity ?? 1;
+            $totalCount = $allVolunteers->count() + $guestCount;
+            $minQuantity = $assignmentAreas->sum(fn ($item) => $item->min_quantity ?? 1);
             $isComplete = $confirmedCount >= $minQuantity && $totalCount >= $minQuantity;
             $isIncomplete = $totalCount < $minQuantity;
             
@@ -152,7 +156,7 @@
                 $borderClass = 'border-warning';
             }
         @endphp
-        <div class="col-12 col-md-6 col-lg-4 mb-4">
+        <div class="{{ $childAreas->isNotEmpty() ? 'col-12 col-lg-8' : 'col-12 col-md-6 col-lg-4' }} mb-4">
             <div class="card h-100 {{ $borderClass }} border-2 shadow-sm">
                 <!-- Header do Card da Área -->
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -161,11 +165,13 @@
                             $areaIcons = [
                                 'Portaria' => 'bx-door-open',
                                 'Recepção' => 'bx-user-voice',
+                                'Culto' => 'bx-microphone',
                                 'Água' => 'bx-water',
                                 'Direção de Culto' => 'bx-microphone',
                                 'Sala das Crianças' => 'bx-child',
                                 'Apoio Geral' => 'bx-support',
                                 'Intercessão' => 'bx-pray',
+                                'Zeladoria' => 'bx-home',
                                 'Preletor(a)' => 'bx-book',
                                 'Preletor' => 'bx-book',
                             ];
@@ -203,92 +209,33 @@
                         </div>
                     @endif
 
-                    @if($volunteers->count() > 0 || $guestPreletorName)
-                        <div class="volunteers-list">
-                            @if($guestPreletorName)
-                                <div class="volunteer-item mb-3 pb-3 {{ $volunteers->count() > 0 ? 'border-bottom' : '' }}">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center mb-1 flex-wrap gap-2">
-                                                <strong>{{ $guestPreletorName }}</strong>
-                                                <span class="badge badge-info badge-sm">
-                                                    <i class="bx bx-user-plus me-1"></i>Convidado
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
+                    @if($childAreas->isNotEmpty())
+                        @foreach($childAreas as $child)
+                            @php
+                                $childVolunteers = $volunteersByArea[$child->id] ?? collect();
+                            @endphp
+                            <div class="mb-3 pb-2 {{ !$loop->last ? 'border-bottom' : '' }}">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong>{{ $child->name }}</strong>
+                                    <span class="badge badge-default">{{ $childVolunteers->count() }}/{{ $child->min_quantity ?? 1 }}</span>
                                 </div>
-                            @endif
-                            @foreach($volunteers as $volunteer)
-                                @php
-                                    $pivotId = $volunteer->pivot->id ?? null;
-                                    $status = $volunteer->pivot->status ?? 'pendente';
-                                @endphp
-                                <div class="volunteer-item mb-3 pb-3 border-bottom volunteer-row" 
-                                     data-pivot-id="{{ $pivotId }}"
-                                     data-service-area-id="{{ $area->id }}">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div class="flex-grow-1">
-                                            <div class="d-flex align-items-center mb-1">
-                                                <strong class="me-2">{{ $firstName($volunteer->member->name ?? null) }}</strong>
-                                                @if($status == 'confirmado')
-                                                    <span class="badge badge-success badge-sm">
-                                                        <i class="bx bx-check-circle me-1"></i>Confirmado
-                                                    </span>
-                                                @elseif($status == 'cancelado')
-                                                    <span class="badge badge-danger badge-sm">
-                                                        <i class="bx bx-x-circle me-1"></i>Cancelado
-                                                    </span>
-                                                @else
-                                                    <span class="badge badge-warning badge-sm">
-                                                        <i class="bx bx-time me-1"></i>Pendente
-                                                    </span>
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <div class="volunteer-actions">
-                                            <div class="btn-group btn-group-sm" role="group">
-                                                @if($status == 'pendente')
-                                                    <button type="button" class="btn btn-sm btn-success confirm-volunteer" 
-                                                            data-pivot-id="{{ $pivotId }}"
-                                                            title="Confirmar">
-                                                        <i class="bx bx-check"></i>
-                                                    </button>
-                                                @endif
-                                                <button type="button" class="btn btn-sm btn-default substitute-volunteer" 
-                                                        data-pivot-id="{{ $pivotId }}"
-                                                        data-service-area-id="{{ $area->id }}"
-                                                        title="Substituir">
-                                                    <i class="bx bx-refresh"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-info notify-volunteer"
-                                                        data-pivot-id="{{ $pivotId }}"
-                                                        data-volunteer-name="{{ $volunteer->member->name ?? 'Sem nome' }}"
-                                                        data-service-area-name="{{ $area->name }}"
-                                                        title="Notificar WhatsApp">
-                                                    <i class="bx bxl-whatsapp"></i>
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-danger remove-volunteer" 
-                                                        data-pivot-id="{{ $pivotId }}"
-                                                        title="Remover">
-                                                    <i class="bx bx-trash"></i>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
+                                @include('monthly-culto-schedules.partials.area-volunteers', [
+                                    'area' => $child,
+                                    'volunteers' => $childVolunteers,
+                                    'guestPreletorName' => null,
+                                    'firstName' => $firstName,
+                                    'shortName' => $shortName,
+                                ])
+                            </div>
+                        @endforeach
                     @else
-                        <div class="text-center py-4">
-                            <i class="bx bx-user-x fs-1 text-muted mb-2 d-block"></i>
-                            <p class="text-muted mb-0">Nenhum voluntário atribuído</p>
-                            <button type="button"
-                                    class="btn btn-sm btn-primary mt-2 add-volunteer-manual"
-                                    data-service-area-id="{{ $area->id }}">
-                                <i class="bx bx-plus me-1"></i>Adicionar Manualmente
-                            </button>
-                        </div>
+                        @include('monthly-culto-schedules.partials.area-volunteers', [
+                            'area' => $area,
+                            'volunteers' => $volunteers,
+                            'guestPreletorName' => $guestPreletorName,
+                            'firstName' => $firstName,
+                            'shortName' => $shortName,
+                        ])
                     @endif
                 </div>
             </div>
