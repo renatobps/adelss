@@ -1,10 +1,8 @@
 {{--
-    Gráfico de série diária do Financeiro.
+    Gráfico de barras do Financeiro (série diária).
 
-    Desktop: uma linha por dia, com as quatro séries.
-    Celular: barras agrupadas por semana e apenas Receitas e Despesas — no
-    celular a pergunta útil é "entrou mais do que saiu nesta semana?", e os
-    valores previstos já aparecem como totais na própria tela.
+    Desktop e celular: barras agrupadas. Com muitos dias, os valores são
+    somados por semana para as barras ficarem legíveis.
 
     Parâmetros:
       chartId       id do container, único na página (obrigatório)
@@ -13,7 +11,6 @@
       despesas      série de despesas pagas
       aReceber      série de receitas previstas
       aPagar        série de despesas previstas
-      area          preenche a área sob a linha no desktop (padrão: false)
       mobileNote    texto auxiliar exibido só em celular
       emptyMessage  mensagem quando não há movimentação
 --}}
@@ -56,37 +53,28 @@
         var despesas = @json(array_values($serieDespesas));
         var aReceber = @json(array_values($serieAReceber));
         var aPagar = @json(array_values($serieAPagar));
-        var area = @json((bool) ($area ?? false));
 
         C.render(@json($chartId), function (mobile) {
-            if (mobile) {
-                var agrupado = C.groupIntoWeeks(labels, [receitas, despesas]);
-
-                return {
-                    chart: { type: 'bar' },
-                    colors: [C.seriesColors.receitas, C.seriesColors.despesas],
-                    series: [
-                        { name: 'Receitas', data: agrupado.series[0] },
-                        { name: 'Despesas', data: agrupado.series[1] }
-                    ],
-                    xaxis: { categories: agrupado.labels }
-                };
-            }
+            var seriesList = mobile
+                ? [receitas, despesas]
+                : [receitas, despesas, aReceber, aPagar];
+            var names = mobile
+                ? ['Receitas', 'Despesas']
+                : ['Receitas', 'Despesas', 'A receber', 'A pagar'];
+            var colors = mobile
+                ? [C.seriesColors.receitas, C.seriesColors.despesas]
+                : [C.seriesColors.receitas, C.seriesColors.despesas, C.seriesColors.aReceber, C.seriesColors.aPagar];
+            var agrupado = labels.length > 10
+                ? C.groupIntoWeeks(labels, seriesList)
+                : { labels: labels, series: seriesList };
 
             return {
-                chart: { type: area ? 'area' : 'line' },
-                stroke: { width: [3, 3, 2, 2], curve: 'smooth', dashArray: [0, 0, 5, 5] },
-                fill: area
-                    ? { type: ['gradient', 'gradient', 'solid', 'solid'], opacity: [0.2, 0.2, 0, 0] }
-                    : { opacity: 0 },
-                markers: { size: 0, hover: { size: 4 } },
-                series: [
-                    { name: 'Receitas', data: receitas },
-                    { name: 'Despesas', data: despesas },
-                    { name: 'A receber', data: aReceber },
-                    { name: 'A pagar', data: aPagar }
-                ],
-                xaxis: { categories: labels }
+                chart: { type: 'bar', stacked: false },
+                colors: colors,
+                series: names.map(function (name, index) {
+                    return { name: name, data: agrupado.series[index] };
+                }),
+                xaxis: { categories: agrupado.labels }
             };
         });
     })();

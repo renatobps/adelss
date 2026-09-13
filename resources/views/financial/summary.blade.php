@@ -157,8 +157,6 @@
                             <strong class="financial-chart-forecast__value--pagar">- {{ $fmt($mensalAPagar) }}</strong>
                         </div>
                     </div>
-                @else
-                    @include('partials.chart-empty', ['message' => 'Sem movimentações neste mês'])
                 @endif
             </div>
         </div>
@@ -376,9 +374,7 @@
 
     function annualOptions(height) {
         return C.deepMerge(C.baseOptions(C.isMobile()), {
-            chart: { type: 'line', height: height },
-            stroke: { width: [3, 3, 2, 2], curve: 'smooth', dashArray: [0, 0, 5, 5] },
-            markers: { size: 0, hover: { size: 4 } },
+            chart: { type: 'bar', height: height, stacked: false },
             series: [
                 { name: 'Receitas', data: annual.receitas || [] },
                 { name: 'Despesas', data: annual.despesas || [] },
