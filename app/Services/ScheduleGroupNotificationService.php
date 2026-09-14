@@ -255,7 +255,14 @@ class ScheduleGroupNotificationService
 
         foreach ($schedules as $schedule) {
             $schedule->loadMissing(['event', 'serviceAreaVolunteers.member']);
+            $isSunday = optional($schedule->event?->start_date)->dayOfWeek === Carbon::SUNDAY;
+
             foreach ($serviceAreas as $area) {
+                if (! $isSunday && $area->isSundayOnly()) {
+                    $volunteersBySchedule[$schedule->id][$area->id] = collect();
+                    continue;
+                }
+
                 $volunteers = $schedule->getVolunteersByServiceArea($area->id);
                 $volunteersBySchedule[$schedule->id][$area->id] = $volunteers;
                 if ($volunteers->isNotEmpty() || $schedule->guestPreletorNameForArea($area)) {

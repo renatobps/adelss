@@ -206,6 +206,10 @@ class SendScheduleReminders extends Command
                 }
 
                 $area = $areas->get((int) $volunteer->pivot->service_area_id);
+                if ($area?->isSundayOnly() && $event->start_date->dayOfWeek !== Carbon::SUNDAY) {
+                    continue;
+                }
+
                 $grouped->push((object) [
                     'volunteer_id' => (int) $volunteer->id,
                     'member' => $member,

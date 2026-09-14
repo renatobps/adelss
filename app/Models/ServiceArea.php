@@ -161,6 +161,28 @@ class ServiceArea extends Model
         return str_contains($normalized, 'intercess');
     }
 
+    /**
+     * Áreas que só servem nos cultos de domingo (não há escala nos cultos de quarta).
+     */
+    public function isSundayOnly(): bool
+    {
+        $normalized = Str::of($this->name)->lower()->ascii()->value();
+
+        foreach (['sala das criancas', 'limpeza', 'zeladoria', 'zelador'] as $needle) {
+            if (str_contains($normalized, $needle)) {
+                return true;
+            }
+        }
+
+        if ($this->parent_id) {
+            $parent = $this->relationLoaded('parent') ? $this->parent : $this->parent()->first();
+
+            return (bool) $parent?->isSundayOnly();
+        }
+
+        return false;
+    }
+
     public function slotLabels(): array
     {
         $quantity = max(1, (int) $this->min_quantity);

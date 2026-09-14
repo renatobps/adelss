@@ -168,7 +168,7 @@ class MonthlyCultoScheduleController extends Controller
             'year' => 'required|integer|min:2020|max:2100',
             'service_areas' => 'nullable|array',
             'service_areas.*' => 'nullable|array',
-            'service_areas.*.*' => 'exists:volunteers,id',
+            'service_areas.*.*' => 'nullable|exists:volunteers,id',
         ], [
             'event_id.required' => 'Selecione um culto.',
             'event_id.exists' => 'O culto selecionado não existe.',
@@ -193,6 +193,24 @@ class MonthlyCultoScheduleController extends Controller
             return redirect()->back()
                 ->withInput()
                 ->with('error', 'Regra aplicada: no mesmo culto, o mesmo voluntário não pode ser repetido em mais de uma área.');
+        }
+
+        $event = Event::find($validated['event_id']);
+        $filledAreaIds = collect($validated['service_areas'] ?? [])
+            ->filter(fn ($volunteerIds) => collect($volunteerIds)->filter(fn ($id) => filled($id))->isNotEmpty())
+            ->keys();
+
+        if ($filledAreaIds->isNotEmpty() && ! $this->eventIsSunday($event)) {
+            $sundayOnlyArea = ServiceArea::with('parent')
+                ->whereIn('id', $filledAreaIds->all())
+                ->get()
+                ->first(fn (ServiceArea $area) => $this->isSundayOnlyServiceArea($area));
+
+            if ($sundayOnlyArea) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "A escala de {$sundayOnlyArea->displayName()} é somente para os cultos de domingo.");
+            }
         }
 
         $schedule = MonthlyCultoSchedule::create([
@@ -230,38 +248,53 @@ class MonthlyCultoScheduleController extends Controller
         $this->authorize('update', new ServiceSchedule());
         $escala->load(['event', 'serviceAreaVolunteers']);
 
-        // Buscar todas as áreas de serviço ativas
-        $serviceAreas = ServiceArea::where('status', 'ativo')->orderBy('name')->get();
+        $serviceAreas = $this->serviceAreasForEvent(
+            ServiceArea::query()
+                ->active()
+                ->with(['leader', 'parent', 'children' => function ($query) {
+                    $query->active()->orderBy('sort_order')->orderBy('name');
+                }])
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(),
+            $escala->event
+        );
 
-        // Para cada área de serviço, buscar voluntários que têm essa área cadastrada
         $volunteersByArea = [];
+        $selectedVolunteersByArea = [];
+        $slotLabelsByArea = [];
+
+        // A view preenche cada área raiz pelas suas subáreas; a raiz só recebe
+        // campos quando não tem subárea ou quando já tem gente escalada nela.
         foreach ($serviceAreas as $area) {
-            $volunteers = Volunteer::where('status', 'ativo')
-                ->whereHas('serviceAreas', function($query) use ($area) {
-                    $query->where('service_areas.id', $area->id);
+            $volunteersByArea[$area->id] = Volunteer::where('status', 'ativo')
+                ->whereHas('serviceAreas', function ($query) use ($area) {
+                    $query->whereIn('service_areas.id', $area->volunteerPoolAreaIds());
                 })
                 ->with('member')
-                ->orderBy('id')
-                ->get();
-            
-            if ($volunteers->count() > 0) {
-                $volunteersByArea[$area->id] = $volunteers->map(function($volunteer) {
-                    return [
-                        'id' => $volunteer->id,
-                        'name' => $volunteer->member->name ?? 'Sem nome',
-                        'member_id' => $volunteer->member_id,
-                    ];
-                });
-            }
+                ->get()
+                ->sortBy(fn (Volunteer $volunteer) => mb_strtolower($volunteer->member->name ?? ''))
+                ->values()
+                ->map(fn (Volunteer $volunteer) => [
+                    'id' => $volunteer->id,
+                    'name' => $volunteer->member->name ?? 'Sem nome',
+                ]);
+
+            $selectedVolunteersByArea[$area->id] = $escala->getVolunteersByServiceArea($area->id)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $slotLabelsByArea[$area->id] = $area->slotLabels();
         }
 
-        // Buscar voluntários já selecionados por área de serviço
-        $selectedVolunteersByArea = [];
-        foreach ($serviceAreas as $area) {
-            $selectedVolunteersByArea[$area->id] = $escala->getVolunteersByServiceArea($area->id)->pluck('id')->toArray();
-        }
-
-        return view('monthly-culto-schedules.edit', compact('escala', 'serviceAreas', 'volunteersByArea', 'selectedVolunteersByArea'));
+        return view('monthly-culto-schedules.edit', compact(
+            'escala',
+            'serviceAreas',
+            'volunteersByArea',
+            'selectedVolunteersByArea',
+            'slotLabelsByArea'
+        ));
     }
 
     /**
@@ -273,9 +306,10 @@ class MonthlyCultoScheduleController extends Controller
         $validated = $request->validate([
             'service_areas' => 'nullable|array',
             'service_areas.*' => 'nullable|array',
-            'service_areas.*.*' => 'exists:volunteers,id',
+            'service_areas.*.*' => 'nullable|exists:volunteers,id',
         ], [
             'service_areas.array' => 'As áreas de serviço devem ser uma lista válida.',
+            'service_areas.*.*.exists' => 'Um dos voluntários selecionados não existe.',
         ]);
 
         if ($this->hasDuplicateVolunteersInPayload($validated['service_areas'] ?? [])) {
@@ -284,31 +318,55 @@ class MonthlyCultoScheduleController extends Controller
                 ->with('error', 'Regra aplicada: no mesmo culto, o mesmo voluntário não pode ser repetido em mais de uma área.');
         }
 
-        // Remover todas as áreas de serviço existentes e adicionar as novas
-        $escala->serviceAreaVolunteers()->detach();
+        $escala->loadMissing('event');
 
-        // Sincronizar áreas de serviço
-        if (isset($validated['service_areas']) && is_array($validated['service_areas'])) {
-            foreach ($validated['service_areas'] as $serviceAreaId => $volunteerIds) {
-                if (is_array($volunteerIds) && count($volunteerIds) > 0) {
-                    foreach ($volunteerIds as $volunteerId) {
-                        $escala->serviceAreaVolunteers()->attach($volunteerId, [
-                            'service_area_id' => $serviceAreaId,
-                            'status' => 'pendente'
-                        ]);
-                    }
+        $payload = collect($validated['service_areas'] ?? [])
+            ->mapWithKeys(fn ($volunteerIds, $areaId) => [
+                (int) $areaId => collect($volunteerIds)
+                    ->filter(fn ($id) => filled($id))
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all(),
+            ])
+            ->filter(fn (array $volunteerIds) => $volunteerIds !== []);
+
+        if ($payload->isNotEmpty()) {
+            $payloadAreas = ServiceArea::query()
+                ->with('parent')
+                ->whereIn('id', $payload->keys()->all())
+                ->get();
+
+            if ($payloadAreas->count() !== $payload->count()) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'Uma das áreas de serviço informadas não existe.');
+            }
+
+            if (! $this->eventIsSunday($escala->event)) {
+                $sundayOnlyArea = $payloadAreas->first(fn (ServiceArea $area) => $this->isSundayOnlyServiceArea($area));
+                if ($sundayOnlyArea) {
+                    return redirect()->back()
+                        ->withInput()
+                        ->with('error', "A escala de {$sundayOnlyArea->displayName()} é somente para os cultos de domingo.");
                 }
             }
         }
 
-        $preletorArea = $this->findPreletorArea();
-        if ($preletorArea) {
-            $hasPreletorVolunteer = collect($validated['service_areas'][$preletorArea->id] ?? [])
-                ->filter()
-                ->isNotEmpty();
-            if ($hasPreletorVolunteer) {
-                $escala->setGuestPreletorName(null);
+        // Remover todas as áreas de serviço existentes e adicionar as novas
+        $escala->serviceAreaVolunteers()->detach();
+
+        foreach ($payload as $serviceAreaId => $volunteerIds) {
+            foreach ($volunteerIds as $volunteerId) {
+                $escala->serviceAreaVolunteers()->attach($volunteerId, [
+                    'service_area_id' => $serviceAreaId,
+                    'status' => 'pendente',
+                ]);
             }
+        }
+
+        $preletorArea = $this->findPreletorArea();
+        if ($preletorArea && $payload->get((int) $preletorArea->id, []) !== []) {
+            $escala->setGuestPreletorName(null);
         }
 
         return redirect()->route('voluntarios.escalas-mensais.index', ['month' => $escala->month, 'year' => $escala->year])
@@ -343,15 +401,18 @@ class MonthlyCultoScheduleController extends Controller
         $this->authorize('view', new ServiceSchedule());
         $escala->load(['event', 'serviceAreaVolunteers.member']);
         
-        // Buscar todas as áreas de serviço para exibição
-        $serviceAreas = ServiceArea::query()
-            ->active()
-            ->with(['leader', 'parent', 'children' => function ($query) {
-                $query->active()->orderBy('sort_order')->orderBy('name');
-            }])
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
+        // Buscar as áreas de serviço válidas para o dia deste culto
+        $serviceAreas = $this->serviceAreasForEvent(
+            ServiceArea::query()
+                ->active()
+                ->with(['leader', 'parent', 'children' => function ($query) {
+                    $query->active()->orderBy('sort_order')->orderBy('name');
+                }])
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(),
+            $escala->event
+        );
         
         // Organizar voluntários por área com status
         $volunteersByArea = [];
@@ -466,15 +527,18 @@ class MonthlyCultoScheduleController extends Controller
         // Carregar relacionamentos necessários
         $escala->load(['event', 'serviceAreaVolunteers.member']);
         
-        // Buscar todas as áreas de serviço
-        $serviceAreas = ServiceArea::query()
-            ->active()
-            ->with(['parent', 'children' => function ($query) {
-                $query->active()->orderBy('sort_order')->orderBy('name');
-            }])
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
+        // Buscar as áreas de serviço válidas para o dia deste culto
+        $serviceAreas = $this->serviceAreasForEvent(
+            ServiceArea::query()
+                ->active()
+                ->with(['parent', 'children' => function ($query) {
+                    $query->active()->orderBy('sort_order')->orderBy('name');
+                }])
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(),
+            $escala->event
+        );
         
         // Organizar voluntários por área
         $volunteersByArea = [];
@@ -712,6 +776,15 @@ class MonthlyCultoScheduleController extends Controller
         }
 
         $serviceArea = ServiceArea::with(['parent', 'children'])->findOrFail($validated['service_area_id']);
+        $escala->loadMissing('event');
+
+        if ($this->isSundayOnlyServiceArea($serviceArea) && ! $this->eventIsSunday($escala->event)) {
+            return response()->json([
+                'success' => false,
+                'message' => "A escala de {$serviceArea->displayName()} é somente para os cultos de domingo.",
+            ], 422);
+        }
+
         $poolIds = $serviceArea->volunteerPoolAreaIds();
 
         $belongsToArea = Volunteer::where('id', $validated['volunteer_id'])
@@ -1130,6 +1203,7 @@ class MonthlyCultoScheduleController extends Controller
 
         $isPreletor = $this->isPreletorServiceArea($serviceArea);
         $isLimpeza = $this->isLimpezaServiceArea($serviceArea);
+        $isSundayOnly = $this->isSundayOnlyServiceArea($serviceArea);
         $assignmentAreaIds = $serviceArea->assignmentAreas()->pluck('id')->map(fn ($id) => (int) $id)->all();
         $managedAreaIds = array_values(array_unique(array_merge([(int) $serviceArea->id], $assignmentAreaIds)));
 
@@ -1153,10 +1227,8 @@ class MonthlyCultoScheduleController extends Controller
         }
 
         $cultosDoMes = $this->getCultosDoMes($month, $year);
-        if ($isLimpeza) {
-            $cultosDoMes = $cultosDoMes->filter(function ($event) {
-                return optional($event->start_date)->dayOfWeek === Carbon::SUNDAY;
-            })->values();
+        if ($isSundayOnly) {
+            $cultosDoMes = $cultosDoMes->filter(fn ($event) => $this->eventIsSunday($event))->values();
         }
 
         $allowedEventIds = $cultosDoMes->pluck('id')->map(fn ($id) => (int) $id)->all();
@@ -1212,8 +1284,8 @@ class MonthlyCultoScheduleController extends Controller
         if (collect(array_keys($payload))->diff($allowedEventIds)->isNotEmpty()) {
             return $redirect(
                 'error',
-                $isLimpeza
-                    ? 'A escala de limpeza é somente para os cultos de domingo.'
+                $isSundayOnly
+                    ? "A escala de {$serviceArea->name} é somente para os cultos de domingo."
                     : 'Um ou mais cultos não pertencem à agenda do mês (quarta e domingo).'
             );
         }
@@ -1522,7 +1594,7 @@ class MonthlyCultoScheduleController extends Controller
                 'is_limpeza' => $isLimpeza,
                 'uses_members' => $isLimpeza,
                 'allows_overlap' => $isLimpeza,
-                'sunday_only' => $isLimpeza,
+                'sunday_only' => $this->isSundayOnlyServiceArea($area),
                 'volunteers' => $isLimpeza
                     ? $members
                     : $volunteers
@@ -1611,10 +1683,38 @@ class MonthlyCultoScheduleController extends Controller
             || str_contains($normalized, 'zelador');
     }
 
+    private function isSundayOnlyServiceArea(ServiceArea $serviceArea): bool
+    {
+        return $serviceArea->isSundayOnly();
+    }
+
+    private function eventIsSunday(?Event $event): bool
+    {
+        return optional($event?->start_date)->dayOfWeek === Carbon::SUNDAY;
+    }
+
+    /**
+     * Remove as áreas de domingo quando o culto é de outro dia (ex.: Culto da Graça, na quarta).
+     */
+    private function serviceAreasForEvent($serviceAreas, ?Event $event)
+    {
+        if ($this->eventIsSunday($event)) {
+            return $serviceAreas;
+        }
+
+        return $serviceAreas
+            ->reject(fn (ServiceArea $area) => $this->isSundayOnlyServiceArea($area))
+            ->values();
+    }
+
     private function getAreaRulesText(ServiceArea $serviceArea): string
     {
         if ($this->isLimpezaServiceArea($serviceArea)) {
             return 'Somente cultos de domingo. A limpeza acontece fora do horário do culto, então a pessoa pode já estar em outra escala do dia. Cultos sem preenchimento não são alterados.';
+        }
+
+        if ($this->isSundayOnlyServiceArea($serviceArea)) {
+            return 'Somente cultos de domingo. A mesma pessoa não pode servir em duas áreas ou subáreas no mesmo culto. Cultos sem preenchimento não são alterados.';
         }
 
         return 'Cultos de quarta e domingo da agenda. A mesma pessoa não pode servir em duas áreas ou subáreas no mesmo culto. Cultos sem preenchimento não são alterados.';
@@ -1868,14 +1968,17 @@ class MonthlyCultoScheduleController extends Controller
     {
         $escala->loadMissing(['event', 'serviceAreaVolunteers.member']);
 
-        $serviceAreas = ServiceArea::query()
-            ->active()
-            ->with(['parent', 'children' => function ($query) {
-                $query->active()->orderBy('sort_order')->orderBy('name');
-            }])
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
+        $serviceAreas = $this->serviceAreasForEvent(
+            ServiceArea::query()
+                ->active()
+                ->with(['parent', 'children' => function ($query) {
+                    $query->active()->orderBy('sort_order')->orderBy('name');
+                }])
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get(),
+            $escala->event
+        );
 
         $volunteersByArea = [];
         foreach ($serviceAreas as $area) {
