@@ -7,6 +7,7 @@ use App\Models\Enquete;
 use App\Models\EnqueteEnvio;
 use App\Models\EnqueteResposta;
 use App\Models\Member;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -146,6 +147,11 @@ class EnqueteService
             return false;
         }
 
+        $chat = (string) ($info['Chat'] ?? $key['remoteJid'] ?? '');
+        if ($this->ehConversaColetiva($chat) || (bool) ($info['IsGroup'] ?? false)) {
+            return false;
+        }
+
         $telefone = $this->extrairTelefone($key, $payload, $item, $info);
         if ($telefone === '') {
             Log::info('Enquete webhook: telefone não identificado.', [
@@ -162,7 +168,12 @@ class EnqueteService
 
         $messageRaw = $item['Message'] ?? $item['message'] ?? [];
         $message = $this->desembrulharMensagem(is_array($messageRaw) ? $messageRaw : []);
-        [$buttonId, $textoResposta] = $this->extrairRespostaBotao($message);
+
+        if ($this->ehMensagemIgnorada($message)) {
+            return false;
+        }
+
+        [$buttonId, $textoResposta, $interativa] = $this->extrairRespostaBotao($message);
 
         if ($buttonId === null && $textoResposta === '') {
             Log::info('Enquete webhook: sem resposta de botão/texto reconhecível.', [
@@ -173,8 +184,10 @@ class EnqueteService
             return false;
         }
 
-        $envio = EnqueteEnvio::where('status', 'enviado')
+        $envio = EnqueteEnvio::query()
+            ->where('status', 'enviado')
             ->whereIn('telefone', $variantesTelefone)
+            ->whereHas('enquete', fn ($q) => $this->aplicarEscopoEnqueteVigente($q))
             ->latest('enviado_em')
             ->first();
 
@@ -203,8 +216,14 @@ class EnqueteService
                 'telefone' => $telefoneCanonico,
                 'button_id' => $buttonId,
                 'texto' => $textoResposta,
+                'interativa' => $interativa,
                 'opcoes' => $opcoes,
             ]);
+
+            // Mensagem comum (texto/mídia) não é tentativa de resposta: não devolve aviso.
+            if (!$interativa) {
+                return false;
+            }
 
             $this->whatsappService->enviarMensagem(
                 $telefoneCanonico,
@@ -339,8 +358,11 @@ class EnqueteService
     }
 
     /**
+     * Terceiro elemento indica interação direta com a enquete (botão, lista ou voto),
+     * único caso em que o sistema avisa sobre resposta inválida.
+     *
      * @param  array<string, mixed>  $message
-     * @return array{0: ?string, 1: string}
+     * @return array{0: ?string, 1: string, 2: bool}
      */
     private function extrairRespostaBotao(array $message): array
     {
@@ -349,6 +371,7 @@ class EnqueteService
             return [
                 isset($buttons['selectedButtonId']) ? (string) $buttons['selectedButtonId'] : null,
                 trim((string) ($buttons['selectedDisplayText'] ?? '')),
+                true,
             ];
         }
 
@@ -357,6 +380,7 @@ class EnqueteService
             return [
                 isset($template['selectedId']) ? (string) $template['selectedId'] : null,
                 trim((string) ($template['selectedDisplayText'] ?? '')),
+                true,
             ];
         }
 
@@ -367,6 +391,7 @@ class EnqueteService
             return [
                 $selectedId !== null ? (string) $selectedId : null,
                 trim((string) ($list['title'] ?? $list['description'] ?? '')),
+                true,
             ];
         }
 
@@ -385,13 +410,14 @@ class EnqueteService
                     return [
                         $id !== null ? (string) $id : null,
                         trim((string) $texto),
+                        true,
                     ];
                 }
             }
 
             $bodyText = trim((string) ($interactive['body']['text'] ?? ''));
             if ($bodyText !== '') {
-                return [null, $bodyText];
+                return [null, $bodyText, true];
             }
         }
 
@@ -416,7 +442,7 @@ class EnqueteService
                 $voteName = $pollUpdate['name'] ?? null;
             }
 
-            return [null, trim((string) ($voteName ?? ''))];
+            return [null, trim((string) ($voteName ?? '')), true];
         }
 
         $texto = trim((string) (
@@ -424,7 +450,56 @@ class EnqueteService
             ?? ($message['extendedTextMessage']['text'] ?? '')
         ));
 
-        return [null, $texto];
+        return [null, $texto, false];
+    }
+
+    /**
+     * Enquete é respondida somente na conversa individual.
+     */
+    private function ehConversaColetiva(string $jid): bool
+    {
+        foreach (['@g.us', '@broadcast', '@newsletter'] as $sufixo) {
+            if (str_contains($jid, $sufixo)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string, mixed>  $message
+     */
+    private function ehMensagemIgnorada(array $message): bool
+    {
+        $tipos = [
+            'reactionMessage',
+            'protocolMessage',
+            'senderKeyDistributionMessage',
+            'pollCreationMessage',
+            'pollCreationMessageV2',
+            'pollCreationMessageV3',
+        ];
+
+        foreach ($tipos as $tipo) {
+            if (isset($message[$tipo])) {
+                Log::info('Enquete webhook: tipo de mensagem ignorado.', ['tipo' => $tipo]);
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Só enquetes ativas e dentro do período configurado (inicio_em/fim_em) aceitam resposta.
+     */
+    private function aplicarEscopoEnqueteVigente(Builder $query): void
+    {
+        $query->where('ativa', true)
+            ->where(fn ($q) => $q->whereNull('inicio_em')->orWhere('inicio_em', '<=', now()))
+            ->where(fn ($q) => $q->whereNull('fim_em')->orWhere('fim_em', '>=', now()));
     }
 
     /**
