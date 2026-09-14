@@ -757,15 +757,18 @@
 
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="receita_account" class="form-label">Conta</label>
-                            <select class="form-select" id="receita_account" name="account_id">
+                            <label for="receita_account" class="form-label">Recebido em <span class="text-danger">*</span></label>
+                            <select class="form-select @error('account_id') is-invalid @enderror" id="receita_account" name="account_id" required>
                                 <option value="">Selecione</option>
                                 @foreach(($accountsActive ?? $accounts) as $account)
                                     <option value="{{ $account->id }}" {{ old('account_id') == $account->id ? 'selected' : '' }}>
-                                        {{ $account->name }}
+                                        {{ $account->paymentOptionLabel() }}
                                     </option>
                                 @endforeach
                             </select>
+                            @error('account_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="receita_cost_center" class="form-label">Centro de custo</label>
@@ -1059,11 +1062,11 @@
 
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="edit_account_id" class="form-label">Conta</label>
-                            <select class="form-select" id="edit_account_id" name="account_id">
+                            <label for="edit_account_id" class="form-label">PIX ou dinheiro <span class="text-danger">*</span></label>
+                            <select class="form-select" id="edit_account_id" name="account_id" required>
                                 <option value="">Selecione</option>
                                 @foreach($accounts as $account)
-                                    <option value="{{ $account->id }}">{{ $account->name }}</option>
+                                    <option value="{{ $account->id }}">{{ $account->paymentOptionLabel() }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -1249,15 +1252,18 @@
 
                     <div class="row">
                         <div class="col-md-4 mb-3">
-                            <label for="despesa_account" class="form-label">Conta</label>
-                            <select class="form-select" id="despesa_account" name="account_id">
+                            <label for="despesa_account" class="form-label">Pago com <span class="text-danger">*</span></label>
+                            <select class="form-select @error('account_id') is-invalid @enderror" id="despesa_account" name="account_id" required>
                                 <option value="">Selecione</option>
                                 @foreach(($accountsActive ?? $accounts) as $account)
                                     <option value="{{ $account->id }}" {{ old('account_id') == $account->id ? 'selected' : '' }}>
-                                        {{ $account->name }}
+                                        {{ $account->paymentOptionLabel() }}
                                     </option>
                                 @endforeach
                             </select>
+                            @error('account_id')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="despesa_cost_center" class="form-label">Centro de custo</label>

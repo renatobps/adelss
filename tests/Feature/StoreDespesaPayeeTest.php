@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\FinancialAccount;
 use App\Models\FinancialCategory;
 use App\Models\FinancialTransaction;
 use App\Models\Member;
@@ -51,6 +52,7 @@ class StoreDespesaPayeeTest extends TestCase
             $table->string('received_from_other')->nullable();
             $table->unsignedBigInteger('contact_id')->nullable();
             $table->unsignedBigInteger('category_id')->nullable();
+            $table->unsignedBigInteger('account_id')->nullable();
             $table->string('payment_type')->default('unico');
             $table->unsignedInteger('installments_count')->nullable();
             $table->unsignedInteger('installment_number')->nullable();
@@ -83,10 +85,22 @@ class StoreDespesaPayeeTest extends TestCase
             $table->timestamps();
             $table->softDeletes();
         });
+
+        Schema::create('financial_accounts', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('type', 32)->default('caixa');
+            $table->decimal('initial_balance', 15, 2)->default(0);
+            $table->string('color', 16)->default('#ef4444');
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+            $table->softDeletes();
+        });
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('financial_accounts');
         Schema::dropIfExists('financial_categories');
         Schema::dropIfExists('financial_transaction_attachments');
         Schema::dropIfExists('financial_transactions');
@@ -109,6 +123,17 @@ class StoreDespesaPayeeTest extends TestCase
         return $user;
     }
 
+    private function caixaAccount(): FinancialAccount
+    {
+        return FinancialAccount::create([
+            'name' => 'Caixa',
+            'type' => FinancialAccount::TYPE_CAIXA,
+            'initial_balance' => 0,
+            'color' => '#ef4444',
+            'is_active' => true,
+        ]);
+    }
+
     public function test_pagamento_a_membro_exige_recibo_assinado(): void
     {
         $this->actingAsAdmin();
@@ -121,8 +146,27 @@ class StoreDespesaPayeeTest extends TestCase
                 'amount' => 50,
                 'is_paid' => 1,
                 'member_id' => $member->id,
+                'account_id' => $this->caixaAccount()->id,
             ])
             ->assertSessionHasErrors('attachments');
+
+        $this->assertSame(0, FinancialTransaction::count());
+    }
+
+    public function test_despesa_exige_escolher_pix_ou_dinheiro(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->from(route('financial.transactions.index'))
+            ->post(route('financial.transactions.store.despesa'), [
+                'transaction_date' => now()->toDateString(),
+                'description' => 'Compra de material',
+                'amount' => 40,
+                'is_paid' => 1,
+                'member_id' => 'other',
+                'received_from_other' => 'Papelaria Central',
+            ])
+            ->assertSessionHasErrors('account_id');
 
         $this->assertSame(0, FinancialTransaction::count());
     }
@@ -139,6 +183,7 @@ class StoreDespesaPayeeTest extends TestCase
             'amount' => 80,
             'is_paid' => 1,
             'member_id' => $member->id,
+            'account_id' => $this->caixaAccount()->id,
             'attachments' => [
                 UploadedFile::fake()->create('recibo.pdf', 20, 'application/pdf'),
             ],
@@ -164,6 +209,7 @@ class StoreDespesaPayeeTest extends TestCase
             'is_paid' => 1,
             'member_id' => 'other',
             'received_from_other' => 'Fornecedor XYZ',
+            'account_id' => $this->caixaAccount()->id,
         ])->assertRedirect(route('financial.transactions.index'));
 
         $tx = FinancialTransaction::first();
@@ -186,6 +232,7 @@ class StoreDespesaPayeeTest extends TestCase
             'is_paid' => 1,
             'member_id' => $member->id,
             'category_id' => $category->id,
+            'account_id' => $this->caixaAccount()->id,
         ])->assertRedirect(route('financial.transactions.index'));
 
         $tx = FinancialTransaction::first();
@@ -211,6 +258,7 @@ class StoreDespesaPayeeTest extends TestCase
                 'amount' => 1500,
                 'is_paid' => 1,
                 'category_id' => $category->id,
+                'account_id' => $this->caixaAccount()->id,
             ])
             ->assertSessionHasErrors('member_id');
 

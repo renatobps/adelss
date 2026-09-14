@@ -13,8 +13,10 @@ class FinancialAccount extends Model
 
     public const TYPE_MERCADO_PAGO = 'mercado_pago';
 
+    public const TYPE_CAIXA = 'caixa';
+
     public const TYPES = [
-        'caixa' => 'Caixa',
+        self::TYPE_CAIXA => 'Caixa',
         'conta_corrente' => 'Conta Corrente',
         'poupanca' => 'Poupança',
         'investimento' => 'Investimento',
@@ -50,9 +52,45 @@ class FinancialAccount extends Model
         return $this->hasMany(FinancialTransaction::class, 'account_id');
     }
 
+    public function transfersOut(): HasMany
+    {
+        return $this->hasMany(FinancialTransfer::class, 'from_account_id');
+    }
+
+    public function transfersIn(): HasMany
+    {
+        return $this->hasMany(FinancialTransfer::class, 'to_account_id');
+    }
+
     public function typeLabel(): string
     {
         return self::TYPES[$this->type] ?? ucfirst((string) $this->type);
+    }
+
+    /**
+     * Forma como o dinheiro entra ou sai desta conta (PIX na Mercado Pago, dinheiro no caixa).
+     */
+    public function paymentFormLabel(): string
+    {
+        if ($this->isMercadoPago()) {
+            return 'PIX';
+        }
+
+        if ($this->type === self::TYPE_CAIXA) {
+            return 'Dinheiro';
+        }
+
+        return '';
+    }
+
+    /**
+     * Rótulo usado no campo de forma de recebimento/pagamento: "PIX (Mercado Pago)".
+     */
+    public function paymentOptionLabel(): string
+    {
+        $forma = $this->paymentFormLabel();
+
+        return $forma !== '' ? "{$forma} ({$this->name})" : $this->name;
     }
 
     public function bankDisplay(): string
@@ -105,6 +143,11 @@ class FinancialAccount extends Model
             ->where('is_paid', true)
             ->sum('amount');
 
-        return (float) $this->initial_balance + $receitas - $despesas;
+        $recebidoEmTransferencias = (float) $this->transfersIn()->sum('amount');
+        $enviadoEmTransferencias = (float) $this->transfersOut()->sum('amount');
+
+        return (float) $this->initial_balance
+            + $receitas - $despesas
+            + $recebidoEmTransferencias - $enviadoEmTransferencias;
     }
 }

@@ -54,10 +54,23 @@ class FinancialAccountsIndexTest extends TestCase
             $table->timestamps();
             $table->softDeletes();
         });
+
+        Schema::create('financial_transfers', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('from_account_id');
+            $table->unsignedBigInteger('to_account_id');
+            $table->date('transfer_date');
+            $table->decimal('amount', 15, 2);
+            $table->text('notes')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('financial_transfers');
         Schema::dropIfExists('financial_transactions');
         Schema::dropIfExists('financial_accounts');
         Schema::dropIfExists('users');

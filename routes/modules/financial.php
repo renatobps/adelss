@@ -8,6 +8,7 @@ use App\Http\Controllers\Financial\ContactController;
 use App\Http\Controllers\Financial\CostCenterController;
 use App\Http\Controllers\Financial\CorrectionController;
 use App\Http\Controllers\Financial\TransactionController;
+use App\Http\Controllers\Financial\TransferController;
 use App\Http\Controllers\Financial\ReceiptController;
 use App\Http\Controllers\Financial\ReportController;
 use App\Http\Controllers\Financial\ClosingReportController;
@@ -112,6 +113,10 @@ Route::prefix('financial')->name('financial.')->middleware('module.access:financ
     'update' => 'categories.update',
     'destroy' => 'categories.destroy',
     ]);
+
+    // Transferências entre contas próprias (ex.: depósito do caixa na Mercado Pago)
+    Route::post('transfers', [TransferController::class, 'store'])->name('transfers.store');
+    Route::delete('transfers/{transfer}', [TransferController::class, 'destroy'])->name('transfers.destroy');
 
     // Contas
     Route::get('accounts/mercado-pago/movements', [AccountController::class, 'mercadoPagoMovements'])

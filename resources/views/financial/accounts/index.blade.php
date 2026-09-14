@@ -41,11 +41,18 @@
                 Saldo (ativas): <strong data-saldo-ativas>{{ $fmt($saldoAtivas) }}</strong>
             </p>
         </div>
-        @if($canCreate)
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAccountModal">
-            <i class="bx bx-plus me-1"></i>Nova
-        </button>
-        @endif
+        <div class="d-flex flex-wrap gap-2">
+            @if($canEdit && $transferAccounts->count() > 1)
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#transferModal">
+                <i class="bx bx-transfer me-1"></i>Transferir
+            </button>
+            @endif
+            @if($canCreate)
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAccountModal">
+                <i class="bx bx-plus me-1"></i>Nova
+            </button>
+            @endif
+        </div>
     </div>
 
     <div class="financial-accounts-tabs mb-4">
@@ -288,6 +295,8 @@
             </p>
         </div>
     @endif
+
+    @include('financial.accounts.partials.transfers')
 </div>
 
 @if($canCreate)
@@ -319,6 +328,10 @@
         </div>
     </div>
 </div>
+@endif
+
+@if($canEdit && $transferAccounts->count() > 1)
+    @include('financial.accounts.partials.transfer-modal')
 @endif
 
 @push('styles')
@@ -469,6 +482,31 @@
         font-weight: 700;
         font-size: 0.92rem;
         align-items: flex-start;
+    }
+    .financial-transfers {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.85rem;
+        padding: 1.1rem 1.15rem;
+    }
+    .financial-transfers__head {
+        margin-bottom: 0.9rem;
+    }
+    .financial-transfers__title {
+        margin: 0 0 0.2rem;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+    }
+    .financial-transfers__hint {
+        color: #6b7280;
+        font-size: 0.85rem;
+    }
+    .financial-transfers__table th {
+        color: #6b7280;
+        font-weight: 600;
+        font-size: 0.78rem;
+        text-transform: uppercase;
     }
     .financial-mp-movements__table th {
         color: #6b7280;

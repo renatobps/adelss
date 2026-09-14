@@ -160,7 +160,7 @@ class TransactionController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'is_paid' => 'boolean',
             'category_id' => 'nullable|exists:financial_categories,id',
-            'account_id' => 'nullable|exists:financial_accounts,id',
+            'account_id' => 'required|exists:financial_accounts,id',
             'cost_center_id' => 'nullable|exists:financial_cost_centers,id',
             'payment_type' => 'nullable|in:unico,parcelado',
             'document_number' => 'nullable|string|max:50',
@@ -177,6 +177,7 @@ class TransactionController extends Controller
             'description.required' => 'A descrição é obrigatória.',
             'amount.required' => 'O valor é obrigatório.',
             'amount.min' => 'O valor deve ser maior que zero.',
+            'account_id.required' => 'Escolha como o valor foi recebido: PIX (Mercado Pago) ou dinheiro (Caixa).',
             'attachments.max' => 'Máximo de 5 arquivos permitidos.',
             'attachments.*.max' => 'Cada arquivo não pode ter mais de 10MB.',
         ];
@@ -257,7 +258,7 @@ class TransactionController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'is_paid' => 'boolean',
             'category_id' => 'nullable|exists:financial_categories,id',
-            'account_id' => 'nullable|exists:financial_accounts,id',
+            'account_id' => 'required|exists:financial_accounts,id',
             'cost_center_id' => 'nullable|exists:financial_cost_centers,id',
             'payment_type' => 'nullable|in:unico,parcelado',
             'installments_count' => 'nullable|integer|min:2|max:60|required_if:payment_type,parcelado',
@@ -273,6 +274,7 @@ class TransactionController extends Controller
             'description.required' => 'A descrição é obrigatória.',
             'amount.required' => 'O valor é obrigatório.',
             'amount.min' => 'O valor deve ser maior que zero.',
+            'account_id.required' => 'Escolha como o valor foi pago: PIX (Mercado Pago) ou dinheiro (Caixa).',
             'installments_count.required_if' => 'Informe em quantas vezes a despesa será parcelada.',
             'installments_count.min' => 'O parcelamento deve ter no mínimo 2 parcelas.',
             'installments_count.max' => 'O parcelamento pode ter no máximo 60 parcelas.',
@@ -474,7 +476,7 @@ class TransactionController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'is_paid' => 'boolean',
             'category_id' => 'nullable|exists:financial_categories,id',
-            'account_id' => 'nullable|exists:financial_accounts,id',
+            'account_id' => 'required|exists:financial_accounts,id',
             'cost_center_id' => 'nullable|exists:financial_cost_centers,id',
             'payment_type' => 'nullable|in:unico,parcelado',
             'document_number' => 'nullable|string|max:50',
@@ -486,6 +488,12 @@ class TransactionController extends Controller
             'attachments.*' => 'file|max:10240', // 10MB
             'remove_attachments' => 'nullable|array',
             'remove_attachments.*' => 'exists:financial_transaction_attachments,id',
+        ];
+
+        $accountMessages = [
+            'account_id.required' => $transaction->type === 'receita'
+                ? 'Escolha como o valor foi recebido: PIX (Mercado Pago) ou dinheiro (Caixa).'
+                : 'Escolha como o valor foi pago: PIX (Mercado Pago) ou dinheiro (Caixa).',
         ];
 
         $donorMessages = [];
@@ -502,7 +510,7 @@ class TransactionController extends Controller
             $donorMessages = $payeeMessages;
         }
 
-        $validated = $request->validate($rules, $donorMessages);
+        $validated = $request->validate($rules, array_merge($accountMessages, $donorMessages));
 
         // Determinar status
         $validated['is_paid'] = $request->has('is_paid') && $request->is_paid;

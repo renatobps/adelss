@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Financial;
 
 use App\Http\Controllers\Controller;
 use App\Models\FinancialAccount;
+use App\Models\FinancialTransfer;
 use App\Services\FinancialNotificationService;
 use App\Services\Payments\MercadoPagoService;
 use App\Support\PdfText;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -26,14 +28,7 @@ class AccountController extends Controller
             $status = 'ativas';
         }
 
-        $query = FinancialAccount::query()
-            ->withSum(['transactions as paid_receitas_sum' => function ($q) {
-                $q->where('type', 'receita')->where('is_paid', true);
-            }], 'amount')
-            ->withSum(['transactions as paid_despesas_sum' => function ($q) {
-                $q->where('type', 'despesa')->where('is_paid', true);
-            }], 'amount')
-            ->orderBy('name');
+        $query = $this->accountsWithBalanceSums()->orderBy('name');
 
         if ($status === 'ativas') {
             $query->where('is_active', true);
@@ -70,14 +65,8 @@ class AccountController extends Controller
         if ($status === 'ativas') {
             $saldoAtivas = $accounts->sum(fn (FinancialAccount $account) => (float) $account->current_balance);
         } else {
-            $saldoAtivas = FinancialAccount::query()
+            $saldoAtivas = $this->accountsWithBalanceSums()
                 ->where('is_active', true)
-                ->withSum(['transactions as paid_receitas_sum' => function ($q) {
-                    $q->where('type', 'receita')->where('is_paid', true);
-                }], 'amount')
-                ->withSum(['transactions as paid_despesas_sum' => function ($q) {
-                    $q->where('type', 'despesa')->where('is_paid', true);
-                }], 'amount')
                 ->get()
                 ->sum(function (FinancialAccount $account) use ($mpMovements) {
                     $this->applyDisplayBalance($account, $mpMovements);
@@ -89,6 +78,17 @@ class AccountController extends Controller
         $types = FinancialAccount::TYPES;
         $colors = FinancialAccount::COLORS;
 
+        $transferAccounts = FinancialAccount::query()
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get();
+
+        $transfers = FinancialTransfer::with(['fromAccount', 'toAccount'])
+            ->orderByDesc('transfer_date')
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get();
+
         return view('financial.accounts.index', compact(
             'accounts',
             'status',
@@ -96,7 +96,9 @@ class AccountController extends Controller
             'saldoAtivas',
             'types',
             'colors',
-            'mpMovements'
+            'mpMovements',
+            'transferAccounts',
+            'transfers'
         ));
     }
 
@@ -110,14 +112,8 @@ class AccountController extends Controller
             2
         );
 
-        $saldoAtivas = FinancialAccount::query()
+        $saldoAtivas = $this->accountsWithBalanceSums()
             ->where('is_active', true)
-            ->withSum(['transactions as paid_receitas_sum' => function ($q) {
-                $q->where('type', 'receita')->where('is_paid', true);
-            }], 'amount')
-            ->withSum(['transactions as paid_despesas_sum' => function ($q) {
-                $q->where('type', 'despesa')->where('is_paid', true);
-            }], 'amount')
             ->get()
             ->sum(function (FinancialAccount $account) use ($mpMovements) {
                 $this->applyDisplayBalance($account, $mpMovements);
@@ -386,6 +382,19 @@ class AccountController extends Controller
         ];
     }
 
+    private function accountsWithBalanceSums(): Builder
+    {
+        return FinancialAccount::query()
+            ->withSum(['transactions as paid_receitas_sum' => function ($q) {
+                $q->where('type', 'receita')->where('is_paid', true);
+            }], 'amount')
+            ->withSum(['transactions as paid_despesas_sum' => function ($q) {
+                $q->where('type', 'despesa')->where('is_paid', true);
+            }], 'amount')
+            ->withSum('transfersIn as transfers_in_sum', 'amount')
+            ->withSum('transfersOut as transfers_out_sum', 'amount');
+    }
+
     /**
      * @param  array{in_total?: float, out_total?: float, error?: string|null}|null  $mpMovements
      */
@@ -404,8 +413,13 @@ class AccountController extends Controller
         $receitas = $account->getAttribute('paid_receitas_sum');
         $despesas = $account->getAttribute('paid_despesas_sum');
         if ($receitas !== null || $despesas !== null) {
+            $recebidoEmTransferencias = (float) $account->getAttribute('transfers_in_sum');
+            $enviadoEmTransferencias = (float) $account->getAttribute('transfers_out_sum');
+
             $account->current_balance = round(
-                (float) $account->initial_balance + (float) $receitas - (float) $despesas,
+                (float) $account->initial_balance
+                    + (float) $receitas - (float) $despesas
+                    + $recebidoEmTransferencias - $enviadoEmTransferencias,
                 2
             );
         } else {
