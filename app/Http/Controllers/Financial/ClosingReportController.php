@@ -8,9 +8,8 @@ use App\Models\Event;
 use App\Models\FinancialTransaction;
 use App\Services\Financial\CultoOfferingReportService;
 use App\Services\Financial\MatrixFinancialReportService;
-use App\Services\Financial\PdfSignatureService;
 use App\Services\Financial\WeeklyCashClosingService;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\FinancialNotificationService;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -133,47 +132,40 @@ class ClosingReportController extends Controller
         ]);
     }
 
-    public function weeklyGenerate(Request $request, WeeklyCashClosingService $service)
+    public function weeklyGenerate(Request $request, WeeklyCashClosingService $service, FinancialNotificationService $notifications)
     {
         $this->authorize('financial.fechamento.generate');
 
         $week = $service->weekFor($request->input('week_date', now()->toDateString()));
         $closing = $service->generate($week['start'], $week['end']);
+        $whatsapp = $notifications->notificarFechamentoSemanal($closing, auth()->id());
 
-        return redirect()
+        $message = 'Fechamento da semana '.$week['start']->format('d/m').' a '.$week['end']->format('d/m/Y').' gerado.';
+        if ($whatsapp['success'] ?? false) {
+            $message .= ' Enviado ao grupo dos tesoureiros.';
+        }
+
+        $redirect = redirect()
             ->route('financial.reports.weekly-closing', ['week_date' => $week['start']->toDateString()])
-            ->with('success', 'Fechamento da semana '.$week['start']->format('d/m').' a '.$week['end']->format('d/m/Y').' gerado.')
+            ->with('success', $message)
             ->with('download_closing_id', $closing->id);
+
+        if (! ($whatsapp['success'] ?? false) && filled($whatsapp['error'] ?? null)) {
+            $redirect->with('warning', 'WhatsApp: '.$whatsapp['error']);
+        }
+
+        return $redirect;
     }
 
-    public function weeklyPdf(CashClosing $cashClosing, WeeklyCashClosingService $service, PdfSignatureService $signatures): Response
+    public function weeklyPdf(CashClosing $cashClosing, WeeklyCashClosingService $service): Response
     {
         $this->authorize('financial.fechamento.view');
 
-        $live = $service->liveTotals($cashClosing->period_start, $cashClosing->period_end);
-        $binary = Pdf::loadView('financial.reports.pdf.weekly-closing', [
-            'closing' => $cashClosing,
-            'live' => $live,
-            'generatedBy' => $cashClosing->generatedByUser?->name ?: auth()->user()?->name,
-            'logoPath' => $this->logoPath(),
-        ] + $signatures->forPdf())->setPaper('a4', 'portrait')->output();
-
         $filename = 'fechamento-semanal-'.$cashClosing->period_start->format('Y-m-d').'.pdf';
 
-        return response($binary, 200, [
+        return response($service->pdfBinary($cashClosing), 200, [
             'Content-Type' => 'application/pdf',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
-    }
-
-    private function logoPath(): ?string
-    {
-        foreach ([public_path('img/img/LOG SS AZUL.png'), public_path('img/logo.png')] as $path) {
-            if (is_file($path)) {
-                return $path;
-            }
-        }
-
-        return null;
     }
 }

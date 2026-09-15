@@ -66,13 +66,19 @@ class FinancialTransactionPolicy
 
     public function sendReceipt(User $user, FinancialTransaction $transaction): bool
     {
-        if ($transaction->type !== 'receita') {
-            return false;
+        if ($transaction->type === 'receita') {
+            return $user->is_admin
+                || $user->hasPermission('financial.receitas.view')
+                || $user->hasPermission('financial.receitas.manage');
         }
 
-        return $user->is_admin
-            || $user->hasPermission('financial.receitas.view')
-            || $user->hasPermission('financial.receitas.manage');
+        if ($transaction->type === 'despesa') {
+            return $user->is_admin
+                || $user->hasPermission('financial.despesas.view')
+                || $user->hasPermission('financial.despesas.manage');
+        }
+
+        return false;
     }
 
     public function duplicate(User $user, FinancialTransaction $transaction): bool

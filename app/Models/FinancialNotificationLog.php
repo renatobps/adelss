@@ -13,6 +13,7 @@ class FinancialNotificationLog extends Model
     public const TYPE_EXPENSE_DUE_REMINDER_SECOND = 'expense_due_reminder_second';
     public const TYPE_SMART_SUMMARY = 'smart_summary';
     public const TYPE_MP_MOVEMENT = 'mp_movement_treasury';
+    public const TYPE_WEEKLY_CLOSING = 'weekly_closing';
 
     protected $fillable = [
         'financial_transaction_id',

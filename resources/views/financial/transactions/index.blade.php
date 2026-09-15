@@ -21,6 +21,7 @@
     $canDeleteReceitas = $isAdmin || $user->hasPermission('financial.receitas.delete') || $user->hasPermission('financial.receitas.manage');
     $canDeleteDespesas = $isAdmin || $user->hasPermission('financial.despesas.delete') || $user->hasPermission('financial.despesas.manage');
     $canViewReceitas = $isAdmin || $user->hasPermission('financial.receitas.view') || $user->hasPermission('financial.receitas.manage');
+    $canViewDespesas = $isAdmin || $user->hasPermission('financial.despesas.view') || $user->hasPermission('financial.despesas.manage');
     $whatsappReceiptEnabled = config('financial.whatsapp.dizimo_receipt_enabled', true);
 @endphp
 
@@ -2506,7 +2507,7 @@
         button.addEventListener('click', function() {
             const transactionId = this.dataset.transactionId;
             const btn = this;
-            if (!confirm('Enviar comprovante por WhatsApp para o membro?')) {
+            if (!confirm('Enviar o recibo por WhatsApp para o membro?')) {
                 return;
             }
 

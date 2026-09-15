@@ -36,7 +36,7 @@
                 <i class="bx bx-receipt me-2"></i>Recibo
             </button>
         </li>
-        @if($canViewReceitas && $isReceita && $transaction->is_paid && $transaction->member_id)
+        @if($transaction->is_paid && $transaction->member_id && (($isReceita && $canViewReceitas) || (!$isReceita && ($canViewDespesas ?? false))))
         <li>
             <button type="button"
                     class="dropdown-item send-receipt-whatsapp"

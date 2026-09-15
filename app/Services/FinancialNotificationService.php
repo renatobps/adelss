@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Models\CashClosing;
 use App\Models\FinancialAutomation;
 use App\Models\FinancialCategory;
 use App\Models\FinancialNotificationLog;
 use App\Models\FinancialTransaction;
+use App\Models\FinancialTransactionAttachment;
 use App\Models\Member;
 use App\Services\Financial\PdfSignatureService;
 use App\Support\FinancialReceiptLogo;
@@ -14,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class FinancialNotificationService
 {
@@ -78,6 +81,71 @@ class FinancialNotificationService
         }
 
         if (!($resultado['success'] ?? false)) {
+            $resultado = $this->whatsappService->enviarMensagem($member->phone, $mensagem);
+        }
+
+        $this->registrarLog(
+            $transaction,
+            FinancialNotificationLog::TYPE_RECEIPT_MEMBER,
+            $member,
+            $mensagem,
+            $resultado,
+            $triggeredByUserId
+        );
+
+        return $resultado;
+    }
+
+    /**
+     * Envia o recibo de uma despesa paga a um membro (anexo assinado ou PDF do sistema).
+     *
+     * @return array{success: bool, error?: string}
+     */
+    public function enviarReciboDespesaMembro(
+        FinancialTransaction $transaction,
+        ?int $triggeredByUserId = null,
+        bool $force = false
+    ): array {
+        $transaction->loadMissing(['member', 'category', 'attachments']);
+
+        if ($transaction->type !== 'despesa' || ! $transaction->is_paid) {
+            return ['success' => false, 'error' => 'Só enviamos recibo de despesa já paga.'];
+        }
+
+        $member = $transaction->member;
+        if (! $member) {
+            return ['success' => false, 'error' => 'Esta despesa não foi paga a um membro cadastrado.'];
+        }
+        if (empty($member->phone)) {
+            return ['success' => false, 'error' => 'Membro sem telefone cadastrado.'];
+        }
+
+        if (! $force && $this->jaNotificado($transaction->id, FinancialNotificationLog::TYPE_RECEIPT_MEMBER, $member->id)) {
+            return ['success' => false, 'error' => 'Recibo já enviado para este membro.'];
+        }
+
+        $mensagem = $this->montarMensagemReciboDespesa($transaction);
+        $resultado = ['success' => false, 'error' => 'Falha ao enviar o recibo.'];
+        $anexo = $transaction->attachments->sortByDesc('id')->first();
+
+        if ($anexo) {
+            $resultado = $this->enviarAnexoRecibo((string) $member->phone, $anexo, $mensagem);
+        }
+
+        if (! ($resultado['success'] ?? false) && config('financial.whatsapp.send_pdf_receipt', true)) {
+            $pdfPath = $this->gerarPdfRecibo($transaction);
+            if ($pdfPath) {
+                $resultado = $this->whatsappService->enviarDocumentoArquivo(
+                    $member->phone,
+                    $pdfPath,
+                    'recibo-'.$transaction->id.'.pdf',
+                    $mensagem
+                );
+                @unlink($pdfPath);
+            }
+        }
+
+        if (! ($resultado['success'] ?? false)) {
             $resultado = $this->whatsappService->enviarMensagem($member->phone, $mensagem);
         }
 
@@ -257,6 +325,61 @@ class FinancialNotificationService
         }
 
         return $sent;
+    }
+
+    /**
+     * Envia o fechamento semanal de caixa para o grupo WhatsApp da tesouraria.
+     *
+     * @return array{success: bool, error?: string}
+     */
+    public function notificarFechamentoSemanal(CashClosing $closing, ?int $triggeredByUserId = null): array
+    {
+        try {
+            if (! Schema::hasTable('financial_automations')) {
+                return ['success' => false, 'error' => 'Automações financeiras indisponíveis.'];
+            }
+            $automation = FinancialAutomation::mpTreasuryGroup();
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+
+        if (! $automation->enabled) {
+            return ['success' => false, 'error' => 'Automação do grupo da tesouraria desabilitada.'];
+        }
+
+        $groupJid = $automation->whatsappGroupJid();
+        if ($groupJid === '' || ! str_contains($groupJid, '@g.us')) {
+            return ['success' => false, 'error' => 'Selecione o grupo WhatsApp da tesouraria em Financeiro → Automações.'];
+        }
+
+        $mensagem = $this->montarMensagemFechamentoSemanal($closing);
+        $pdfPath = app(\App\Services\Financial\WeeklyCashClosingService::class)->writePdfTemp($closing);
+        $resultado = ['success' => false, 'error' => 'Falha ao enviar o fechamento.'];
+
+        if ($pdfPath) {
+            $resultado = $this->whatsappService->enviarDocumentoArquivo(
+                $groupJid,
+                $pdfPath,
+                'fechamento-semanal-'.$closing->period_start->format('Y-m-d').'.pdf',
+                $mensagem
+            );
+            @unlink($pdfPath);
+        }
+
+        if (! ($resultado['success'] ?? false)) {
+            $resultado = $this->whatsappService->enviarMensagem($groupJid, $mensagem);
+        }
+
+        $this->registrarLogDestino(
+            null,
+            FinancialNotificationLog::TYPE_WEEKLY_CLOSING,
+            $groupJid,
+            $mensagem,
+            $resultado,
+            $triggeredByUserId
+        );
+
+        return $resultado;
     }
 
     public function notificarDespesasVencendo(bool $force = false): array
@@ -697,6 +820,59 @@ class FinancialNotificationService
         ]);
     }
 
+    private function montarMensagemReciboDespesa(FinancialTransaction $transaction): string
+    {
+        $nome = $transaction->member?->name ?? 'Membro';
+        $categoria = $transaction->category?->name ?? ($transaction->description ?: 'pagamento');
+        $valor = number_format((float) $transaction->amount, 2, ',', '.');
+        $data = $transaction->transaction_date?->format('d/m/Y') ?? now()->format('d/m/Y');
+
+        return implode("\n", [
+            '🙏 *ADEL São Sebastião*',
+            '',
+            "Olá, *{$nome}*!",
+            '',
+            "Segue o recibo do pagamento de *{$categoria}* no valor de *R$ {$valor}* em {$data}.",
+        ]);
+    }
+
+    /**
+     * @return array{success: bool, error?: string}
+     */
+    private function enviarAnexoRecibo(
+        string $phone,
+        FinancialTransactionAttachment $attachment,
+        string $mensagem
+    ): array {
+        $disk = Storage::disk('public');
+        if (! $disk->exists($attachment->file_path)) {
+            return ['success' => false, 'error' => 'Arquivo do recibo não encontrado.'];
+        }
+
+        $absolute = $disk->path($attachment->file_path);
+        if (! is_file($absolute)) {
+            return ['success' => false, 'error' => 'Arquivo do recibo não encontrado.'];
+        }
+
+        $mime = strtolower((string) ($attachment->file_type ?: mime_content_type($absolute) ?: ''));
+        $name = $attachment->file_name ?: basename($attachment->file_path);
+
+        if (str_starts_with($mime, 'image/')) {
+            $conteudo = @file_get_contents($absolute);
+            if ($conteudo === false) {
+                return ['success' => false, 'error' => 'Não foi possível ler a imagem do recibo.'];
+            }
+
+            return $this->whatsappService->enviarImagemBase64(
+                $phone,
+                'data:'.$mime.';base64,'.base64_encode($conteudo),
+                $mensagem
+            );
+        }
+
+        return $this->whatsappService->enviarDocumentoArquivo($phone, $absolute, $name, $mensagem);
+    }
+
     private function contributionThanksAutomation(): ?FinancialAutomation
     {
         try {
@@ -976,6 +1152,26 @@ class FinancialNotificationService
             ->where('status', 'sent')
             ->whereDate('created_at', today())
             ->exists();
+    }
+
+    private function montarMensagemFechamentoSemanal(CashClosing $closing): string
+    {
+        $fmt = fn (float $v) => 'R$ '.number_format($v, 2, ',', '.');
+        $inicio = $closing->period_start->format('d/m/Y');
+        $fim = $closing->period_end->format('d/m/Y');
+
+        return implode("\n", [
+            '📊 *ADEL São Sebastião*',
+            '',
+            '*Fechamento semanal de caixa*',
+            "*Período:* {$inicio} a {$fim}",
+            '',
+            '🟢 *Entradas:* '.$fmt((float) $closing->total_receitas),
+            '🔴 *Saídas:* '.$fmt((float) $closing->total_despesas),
+            '💰 *Saldo:* '.$fmt((float) $closing->saldo),
+            '',
+            'Segue o PDF do fechamento.',
+        ]);
     }
 
     /**

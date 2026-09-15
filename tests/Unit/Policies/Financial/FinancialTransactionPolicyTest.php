@@ -43,13 +43,23 @@ class FinancialTransactionPolicyTest extends TestCase
         $this->assertFalse($this->policy->update($user, $transaction));
     }
 
-    public function test_envio_de_comprovante_exige_permissao_de_receita(): void
+    public function test_envio_de_comprovante_de_receita_exige_permissao_de_receita(): void
     {
         $user = $this->userWithPermissions(['financial.despesas.manage']);
         $receita = new FinancialTransaction(['type' => 'receita']);
         $despesa = new FinancialTransaction(['type' => 'despesa']);
 
         $this->assertFalse($this->policy->sendReceipt($user, $receita));
+        $this->assertTrue($this->policy->sendReceipt($user, $despesa));
+    }
+
+    public function test_envio_de_recibo_de_despesa_exige_permissao_de_despesa(): void
+    {
+        $user = $this->userWithPermissions(['financial.receitas.view']);
+        $receita = new FinancialTransaction(['type' => 'receita']);
+        $despesa = new FinancialTransaction(['type' => 'despesa']);
+
+        $this->assertTrue($this->policy->sendReceipt($user, $receita));
         $this->assertFalse($this->policy->sendReceipt($user, $despesa));
     }
 

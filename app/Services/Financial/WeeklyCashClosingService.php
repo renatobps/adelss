@@ -7,6 +7,7 @@ use App\Models\FinancialTransaction;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class WeeklyCashClosingService
 {
@@ -88,6 +89,57 @@ class WeeklyCashClosingService
             'generated_by' => Auth::id(),
             'generated_at' => now(),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function pdfViewData(CashClosing $closing): array
+    {
+        $closing->loadMissing('generatedByUser');
+
+        return [
+            'closing' => $closing,
+            'live' => $this->liveTotals($closing->period_start, $closing->period_end),
+            'generatedBy' => $closing->generatedByUser?->name,
+            'logoPath' => $this->logoPath(),
+        ] + app(PdfSignatureService::class)->forPdf();
+    }
+
+    public function pdfBinary(CashClosing $closing): string
+    {
+        return Pdf::loadView('financial.reports.pdf.weekly-closing', $this->pdfViewData($closing))
+            ->setPaper('a4', 'portrait')
+            ->output();
+    }
+
+    public function writePdfTemp(CashClosing $closing): ?string
+    {
+        try {
+            $binary = $this->pdfBinary($closing);
+            $dir = storage_path('app/temp/receipts');
+            if (! is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+
+            $path = $dir.DIRECTORY_SEPARATOR.'fechamento-semanal-'.$closing->id.'-'.time().'.pdf';
+            file_put_contents($path, $binary);
+
+            return is_file($path) ? $path : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function logoPath(): ?string
+    {
+        foreach ([public_path('img/img/LOG SS AZUL.png'), public_path('img/logo.png')] as $path) {
+            if (is_file($path)) {
+                return $path;
+            }
+        }
+
+        return null;
     }
 
     /**

@@ -659,12 +659,38 @@ class TransactionController extends Controller
     public function sendReceiptWhatsApp(FinancialTransaction $transaction)
     {
         $this->authorize('sendReceipt', $transaction);
-        $transaction->load(['member', 'category']);
+        $transaction->load(['member', 'category', 'attachments']);
+
+        if ($transaction->type === 'despesa') {
+            try {
+                $result = $this->financialNotificationService->enviarReciboDespesaMembro(
+                    $transaction,
+                    Auth::id(),
+                    true
+                );
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::error('Falha ao enviar recibo de despesa', [
+                    'transaction_id' => $transaction->id,
+                    'error' => $e->getMessage(),
+                ]);
+
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Não foi possível enviar o recibo. '.$e->getMessage(),
+                ], 500);
+            }
+
+            if (! ($result['success'] ?? false) && empty($result['error'])) {
+                $result['error'] = 'Não foi possível enviar o recibo. Confira o WhatsApp em Notificações → Configuração WPP.';
+            }
+
+            return response()->json($result, ($result['success'] ?? false) ? 200 : 422);
+        }
 
         if ($transaction->type !== 'receita') {
             return response()->json([
                 'success' => false,
-                'error' => 'Somente receitas possuem comprovante para membro.',
+                'error' => 'Somente receitas e despesas pagas a um membro possuem recibo para WhatsApp.',
             ], 422);
         }
 
