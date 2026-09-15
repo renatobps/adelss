@@ -222,4 +222,36 @@ class MercadoPagoPaymentMovementsTest extends TestCase
         $this->assertSame('9', $cached['items'][0]['id']);
         Http::assertNothingSent();
     }
+
+    public function test_falha_ao_gravar_cache_nao_esconde_os_movimentos(): void
+    {
+        Http::fake([
+            'https://api.mercadopago.com/v1/payments/search*' => Http::response([
+                'paging' => ['total' => 1, 'limit' => 50, 'offset' => 0],
+                'results' => [[
+                    'id' => 1,
+                    'status' => 'approved',
+                    'transaction_amount' => 100,
+                    'transaction_amount_refunded' => 0,
+                    'date_approved' => '2026-09-09T12:00:00.000-03:00',
+                    'description' => 'Dízimo',
+                    'payment_method_id' => 'pix',
+                    'payer' => ['email' => 'a@example.com'],
+                ]],
+            ], 200),
+            'https://api.mercadopago.com/*' => Http::response(['results' => []], 200),
+        ]);
+
+        Cache::shouldReceive('get')->zeroOrMoreTimes()->andReturn(null);
+        Cache::shouldReceive('has')->zeroOrMoreTimes()->andReturn(false);
+        Cache::shouldReceive('put')->zeroOrMoreTimes()->andThrow(new \ErrorException(
+            'file_put_contents(/code/storage/framework/cache/data/eb/09/eb09a62f9450db158120cf34213325f473030146): Failed to open stream: Permission denied'
+        ));
+
+        $movements = app(MercadoPagoService::class)->getPaymentMovements(true);
+
+        $this->assertNull($movements['error']);
+        $this->assertSame(100.0, $movements['in_total']);
+        $this->assertCount(1, $movements['items']);
+    }
 }

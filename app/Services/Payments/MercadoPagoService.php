@@ -128,7 +128,7 @@ class MercadoPagoService
     {
         $cacheKey = 'mercadopago.account_balance';
         if (! $fresh) {
-            $cached = Cache::get($cacheKey);
+            $cached = $this->cacheGet($cacheKey);
             if (is_array($cached) && array_key_exists('available', $cached)) {
                 return $cached;
             }
@@ -142,7 +142,7 @@ class MercadoPagoService
         $payload = $this->requestBalancePayload($token);
         $balance = $this->normalizeBalance($payload);
 
-        Cache::put($cacheKey, $balance, now()->addSeconds(45));
+        $this->cachePut($cacheKey, $balance, now()->addSeconds(45));
 
         return $balance;
     }
@@ -160,7 +160,7 @@ class MercadoPagoService
      */
     public function getCachedPaymentMovements(int $days = 30, int $limit = 50): ?array
     {
-        $cached = Cache::get($this->paymentMovementsCacheKey($days, $limit));
+        $cached = $this->cacheGet($this->paymentMovementsCacheKey($days, $limit));
         if (! is_array($cached) || ! array_key_exists('items', $cached)) {
             return null;
         }
@@ -214,7 +214,7 @@ class MercadoPagoService
 
         try {
             $payload = $this->requestPaymentMovements($token, $days, $limit, $refreshOutflowReports);
-            Cache::put($this->paymentMovementsCacheKey($days, $limit), $payload, now()->addSeconds(20));
+            $this->cachePut($this->paymentMovementsCacheKey($days, $limit), $payload, now()->addSeconds(20));
 
             return $payload;
         } catch (\Throwable $e) {
@@ -598,11 +598,11 @@ class MercadoPagoService
 
     private function requestSettlementReport(string $token, int $days): bool
     {
-        if (Cache::has('mercadopago.settlement_report_requested')) {
+        if ($this->cacheHas('mercadopago.settlement_report_requested')) {
             return false;
         }
 
-        Cache::put('mercadopago.settlement_report_requested', true, now()->addSeconds(90));
+        $this->cachePut('mercadopago.settlement_report_requested', true, now()->addSeconds(90));
 
         $headers = [
             'Authorization' => 'Bearer '.$token,
@@ -924,11 +924,11 @@ class MercadoPagoService
 
     private function requestReleaseReport(string $token, int $days): void
     {
-        if (Cache::has('mercadopago.release_report_requested')) {
+        if ($this->cacheHas('mercadopago.release_report_requested')) {
             return;
         }
 
-        Cache::put('mercadopago.release_report_requested', true, now()->addSeconds(90));
+        $this->cachePut('mercadopago.release_report_requested', true, now()->addSeconds(90));
 
         $headers = [
             'Authorization' => 'Bearer '.$token,
@@ -1156,5 +1156,44 @@ class MercadoPagoService
     private function normalizeResource(mixed $resource): array
     {
         return json_decode(json_encode($resource, JSON_THROW_ON_ERROR), true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    private function cacheGet(string $key): mixed
+    {
+        try {
+            return Cache::get($key);
+        } catch (\Throwable $e) {
+            $this->logCacheFailure('leitura', $key, $e);
+
+            return null;
+        }
+    }
+
+    private function cacheHas(string $key): bool
+    {
+        try {
+            return Cache::has($key);
+        } catch (\Throwable $e) {
+            $this->logCacheFailure('leitura', $key, $e);
+
+            return false;
+        }
+    }
+
+    private function cachePut(string $key, mixed $value, \DateTimeInterface|\DateInterval|int $ttl): void
+    {
+        try {
+            Cache::put($key, $value, $ttl);
+        } catch (\Throwable $e) {
+            $this->logCacheFailure('gravação', $key, $e);
+        }
+    }
+
+    private function logCacheFailure(string $operacao, string $key, \Throwable $e): void
+    {
+        Log::warning('Cache do Mercado Pago indisponível para '.$operacao, [
+            'key' => $key,
+            'message' => $e->getMessage(),
+        ]);
     }
 }

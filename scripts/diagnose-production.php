@@ -14,6 +14,19 @@ $checks = [
     'APP_KEY definida' => fn () => (string) config('app.key') !== '',
     'storage/logs gravável' => fn () => is_dir(storage_path('logs')) && is_writable(storage_path('logs')),
     'storage/framework/sessions gravável' => fn () => is_dir(storage_path('framework/sessions')) && is_writable(storage_path('framework/sessions')),
+    'storage/framework/cache gravável' => function () {
+        $dir = storage_path('framework/cache/data');
+        if (! is_dir($dir) || ! is_writable($dir)) {
+            return false;
+        }
+        $probe = $dir.DIRECTORY_SEPARATOR.'.adelss-write-probe';
+        $ok = @file_put_contents($probe, 'ok') !== false;
+        if ($ok) {
+            @unlink($probe);
+        }
+
+        return $ok;
+    },
     'bootstrap/cache gravável' => fn () => is_dir(base_path('bootstrap/cache')) && is_writable(base_path('bootstrap/cache')),
     'public/storage existe' => fn () => file_exists(public_path('storage')) || is_link(public_path('storage')),
 ];

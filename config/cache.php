@@ -39,6 +39,9 @@ return [
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
+            // Cron roda como root e o PHP-FPM como www-data; 0666 permite os dois
+            // sobrescreverem o mesmo arquivo de cache.
+            'permission' => 0666,
         ],
 
         'memcached' => [
