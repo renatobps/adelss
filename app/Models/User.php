@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -22,6 +23,7 @@ class User extends Authenticatable
         'password',
         'is_admin',
         'member_id',
+        'must_change_password',
     ];
 
     /**
@@ -42,7 +44,43 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'is_admin' => 'boolean',
+        'must_change_password' => 'boolean',
     ];
+
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function permissionKeys(): array
+    {
+        if ($this->is_admin) {
+            return ['*'];
+        }
+
+        if (! $this->relationLoaded('permissions')) {
+            $this->load('permissions');
+        }
+
+        $keys = $this->permissions->pluck('key');
+
+        if ($this->member) {
+            if (! $this->member->relationLoaded('role')) {
+                $this->member->load('role.permissions');
+            } elseif ($this->member->role && ! $this->member->role->relationLoaded('permissions')) {
+                $this->member->role->load('permissions');
+            }
+
+            if ($this->member->role) {
+                $keys = $keys->merge($this->member->role->permissions->pluck('key'));
+            }
+        }
+
+        return $keys->filter()->unique()->values()->all();
+    }
 
     /**
      * Relacionamento opcional com Member (membro)

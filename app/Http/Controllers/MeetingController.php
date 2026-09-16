@@ -3,12 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Meeting;
-use App\Models\MeetingAttendance;
 use App\Models\Pgi;
+use App\Services\Pgis\MeetingAttendanceService;
 use App\Services\Pgis\PgiDashboardService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class MeetingController extends Controller
 {
@@ -232,48 +231,7 @@ class MeetingController extends Controller
             'visitors.*.phone.max' => 'O telefone do visitante não pode ter mais de 30 caracteres.',
         ]);
 
-        // Só aceita membros que realmente pertencem a este PGI.
-        $memberIds = $pgi->members()
-            ->whereIn('id', $validated['participants'] ?? [])
-            ->pluck('id')
-            ->all();
-
-        DB::transaction(function () use ($meeting, $memberIds, $validated, $request) {
-            $meeting->attendances()->delete();
-
-            foreach ($memberIds as $memberId) {
-                MeetingAttendance::create([
-                    'meeting_id' => $meeting->id,
-                    'member_id' => $memberId,
-                    'type' => 'participant',
-                ]);
-            }
-
-            foreach ($validated['visitors'] ?? [] as $visitor) {
-                $name = trim((string) ($visitor['name'] ?? ''));
-
-                if ($name === '') {
-                    continue;
-                }
-
-                MeetingAttendance::create([
-                    'meeting_id' => $meeting->id,
-                    'visitor_name' => $name,
-                    'visitor_phone' => trim((string) ($visitor['phone'] ?? '')) ?: null,
-                    'type' => 'visitor',
-                ]);
-            }
-
-            if ($request->has('notes')) {
-                $meeting->notes = $validated['notes'] ?? null;
-            }
-
-            $meeting->attendance_registered_at = now();
-            $meeting->attendance_registered_by = auth()->id();
-            $meeting->save();
-
-            $meeting->updateCounters();
-        });
+        app(MeetingAttendanceService::class)->save($pgi, $meeting, $validated, $request->user());
 
         return redirect()->route('pgis.meetings.show', [$pgi, $meeting])
             ->with('success', 'Chamada registrada com sucesso!');

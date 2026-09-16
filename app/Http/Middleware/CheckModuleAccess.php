@@ -19,6 +19,10 @@ class CheckModuleAccess
         $user = Auth::user();
 
         if (!$user) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['error' => 'Não autenticado.'], 401);
+            }
+
             return redirect()->route('login');
         }
 

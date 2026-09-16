@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Hash;
 
 class MemberUserService
 {
+    public const DEFAULT_PASSWORD = '123456';
+
     public function normalizeEmail(?string $email): ?string
     {
         if ($email === null || trim($email) === '') {
@@ -36,8 +38,10 @@ class MemberUserService
 
         if ($password !== null && $password !== '') {
             $user->password = Hash::make($password);
-        } elseif (!$user->exists || $forceDefaultPassword) {
-            $user->password = Hash::make('123456');
+            $user->must_change_password = false;
+        } elseif (! $user->exists || $forceDefaultPassword) {
+            $user->password = Hash::make(self::DEFAULT_PASSWORD);
+            $user->must_change_password = true;
         }
 
         if ($user->is_admin === null) {

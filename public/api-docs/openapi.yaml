@@ -1,0 +1,380 @@
+openapi: 3.0.3
+info:
+  title: ADELSS API v1
+  description: |
+    API do app (Android/iOS). Autenticação por token Sanctum.
+
+    1. Chame `POST /api/v1/login`.
+    2. Copie `data.token`.
+    3. Em Authorize, cole o token (sem a palavra Bearer).
+    4. Se `must_change_password` for true, chame `POST /api/v1/password` antes das demais rotas.
+  version: 1.0.0
+servers:
+  - url: http://127.0.0.1:8001
+    description: Local (artisan serve --port=8001)
+  - url: http://127.0.0.1:8000
+    description: Local (porta padrão)
+  - url: https://adelss.com.br
+    description: Produção
+tags:
+  - name: Auth
+  - name: Perfil
+  - name: Escalas
+  - name: PGI
+  - name: Agenda
+  - name: Financeiro
+paths:
+  /api/v1/me/home:
+    get:
+      tags: [Perfil]
+      summary: Tela inicial (próximas escalas, eventos, PGI)
+      responses:
+        "200":
+          description: Agregado para o home do app
+  /api/v1/login:
+    post:
+      tags: [Auth]
+      summary: Login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: voce@igreja.com
+                password:
+                  type: string
+                  example: suaSenha
+                device_name:
+                  type: string
+                  example: Postman
+                platform:
+                  type: string
+                  enum: [android, ios]
+                fcm_token:
+                  type: string
+      responses:
+        "200":
+          description: Token e perfil
+        "401":
+          description: E-mail ou senha inválidos
+  /api/v1/logout:
+    post:
+      tags: [Auth]
+      summary: Encerrar sessão (revoga o token atual)
+      responses:
+        "200":
+          description: Token revogado
+  /api/v1/password:
+    post:
+      tags: [Auth]
+      summary: Trocar senha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password, password_confirmation]
+              properties:
+                current_password:
+                  type: string
+                  description: Obrigatório se must_change_password for false
+                password:
+                  type: string
+                  minLength: 8
+                password_confirmation:
+                  type: string
+      responses:
+        "200":
+          description: Senha atualizada
+        "422":
+          description: Senha inválida ou igual à padrão
+  /api/v1/password/forgot:
+    post:
+      tags: [Auth]
+      summary: Pedir e-mail para redefinir senha
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        "200":
+          description: Sempre 200 (não revela se o e-mail existe)
+  /api/v1/me:
+    get:
+      tags: [Perfil]
+      summary: Usuário, permissões, membro e módulos
+      responses:
+        "200":
+          description: Perfil
+  /api/v1/devices:
+    post:
+      tags: [Perfil]
+      summary: Registrar token FCM do aparelho
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, platform]
+              properties:
+                token:
+                  type: string
+                platform:
+                  type: string
+                  enum: [android, ios]
+                device_name:
+                  type: string
+      responses:
+        "201":
+          description: Dispositivo salvo
+    delete:
+      tags: [Perfil]
+      summary: Remover token FCM
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+      responses:
+        "200":
+          description: Removido
+  /api/v1/me/schedules:
+    get:
+      tags: [Escalas]
+      summary: Minhas próximas escalas
+      parameters:
+        - in: query
+          name: from
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: until
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Lista unificada (service, monthly, moriah)
+        "403":
+          description: Conta sem membro vinculado
+  /api/v1/me/schedules/service/{assignment}/confirm:
+    post:
+      tags: [Escalas]
+      summary: Confirmar escala de serviço
+      parameters:
+        - $ref: "#/components/parameters/assignmentId"
+      responses:
+        "200":
+          description: Confirmada
+        "404":
+          description: Não é a sua escala
+  /api/v1/me/schedules/monthly/{assignment}/confirm:
+    post:
+      tags: [Escalas]
+      summary: Confirmar escala mensal de culto
+      parameters:
+        - $ref: "#/components/parameters/assignmentId"
+      responses:
+        "200":
+          description: Confirmada
+  /api/v1/me/schedules/moriah/{assignment}/confirm:
+    post:
+      tags: [Escalas]
+      summary: Confirmar escala Moriah
+      parameters:
+        - $ref: "#/components/parameters/assignmentId"
+      responses:
+        "200":
+          description: Confirmada
+  /api/v1/me/schedules/moriah/{assignment}/reject:
+    post:
+      tags: [Escalas]
+      summary: Recusar escala Moriah
+      parameters:
+        - $ref: "#/components/parameters/assignmentId"
+      responses:
+        "200":
+          description: Recusada
+  /api/v1/me/pgi:
+    get:
+      tags: [PGI]
+      summary: Meu PGI
+      responses:
+        "200":
+          description: Dados do grupo
+        "404":
+          description: Sem PGI
+  /api/v1/me/pgi/meetings:
+    get:
+      tags: [PGI]
+      summary: Reuniões do meu PGI
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Lista
+    post:
+      tags: [PGI]
+      summary: Criar reunião (líder)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [meeting_date]
+              properties:
+                meeting_date:
+                  type: string
+                  format: date
+                subject:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        "201":
+          description: Reunião criada
+        "403":
+          description: Não é líder
+  /api/v1/me/pgi/meetings/{meeting}/attendance:
+    get:
+      tags: [PGI]
+      summary: Lista da chamada (líder)
+      parameters:
+        - in: path
+          name: meeting
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Membros do PGI e presentes
+    put:
+      tags: [PGI]
+      summary: Salvar chamada (líder)
+      parameters:
+        - in: path
+          name: meeting
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                participants:
+                  type: array
+                  items:
+                    type: integer
+                visitors:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      phone:
+                        type: string
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: Chamada salva
+  /api/v1/financial/summary:
+    get:
+      tags: [Financeiro]
+      summary: Resumo do mês (tesoureiro)
+      responses:
+        "200":
+          description: Entradas, saídas e saldos
+        "403":
+          description: Sem permissão financeira
+  /api/v1/me/pgi/meetings/{meeting}:
+    get:
+      tags: [PGI]
+      summary: Detalhe da reunião (com presenças)
+      parameters:
+        - in: path
+          name: meeting
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reunião
+  /api/v1/agenda/events:
+    get:
+      tags: [Agenda]
+      summary: Eventos do período
+      parameters:
+        - in: query
+          name: start
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: end
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Próximos 45 dias se start/end vazios
+  /api/v1/agenda/events/{event}:
+    get:
+      tags: [Agenda]
+      summary: Detalhe do evento
+      parameters:
+        - in: path
+          name: event
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Evento
+components:
+  parameters:
+    assignmentId:
+      in: path
+      name: assignment
+      required: true
+      schema:
+        type: integer
+      description: Valor de assignment_id devolvido em GET /me/schedules
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+security:
+  - bearerAuth: []

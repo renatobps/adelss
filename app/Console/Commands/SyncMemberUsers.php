@@ -43,7 +43,7 @@ class SyncMemberUsers extends Command
             $created++;
         }
 
-        $this->info("Usuários criados: {$created}. Senha inicial: 123456");
+        $this->info("Usuários criados: {$created}. Senha inicial: 123456 (troca obrigatória no app).");
 
         return self::SUCCESS;
     }

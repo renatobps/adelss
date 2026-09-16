@@ -16,6 +16,10 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/redefinir-senha/{token}', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'show'])
+    ->name('password.reset');
+Route::post('/redefinir-senha', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'update'])
+    ->name('password.update');
 
 Route::get('/evento/{slug}', [PublicEventController::class, 'show'])->name('events.public.show');
 Route::post('/evento/{slug}/inscricao', [PublicEventController::class, 'register'])->name('events.public.register');
