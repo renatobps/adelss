@@ -131,7 +131,14 @@ class FinancialAccount extends Model
             ->first();
     }
 
-    public function currentBalance(): float
+    /**
+     * Entradas e saídas que compõem o saldo disponível desta conta.
+     *
+     * Despesa paga em dinheiro (conta do tipo caixa) entra na saída.
+     *
+     * @return array{inflow: float, outflow: float}
+     */
+    public function ledgerFlow(): array
     {
         $receitas = (float) $this->transactions()
             ->where('type', 'receita')
@@ -146,8 +153,16 @@ class FinancialAccount extends Model
         $recebidoEmTransferencias = (float) $this->transfersIn()->sum('amount');
         $enviadoEmTransferencias = (float) $this->transfersOut()->sum('amount');
 
-        return (float) $this->initial_balance
-            + $receitas - $despesas
-            + $recebidoEmTransferencias - $enviadoEmTransferencias;
+        return [
+            'inflow' => round($receitas + $recebidoEmTransferencias, 2),
+            'outflow' => round($despesas + $enviadoEmTransferencias, 2),
+        ];
+    }
+
+    public function currentBalance(): float
+    {
+        $flow = $this->ledgerFlow();
+
+        return round((float) $this->initial_balance + $flow['inflow'] - $flow['outflow'], 2);
     }
 }

@@ -413,18 +413,23 @@ class AccountController extends Controller
         $receitas = $account->getAttribute('paid_receitas_sum');
         $despesas = $account->getAttribute('paid_despesas_sum');
         if ($receitas !== null || $despesas !== null) {
-            $recebidoEmTransferencias = (float) $account->getAttribute('transfers_in_sum');
-            $enviadoEmTransferencias = (float) $account->getAttribute('transfers_out_sum');
-
-            $account->current_balance = round(
-                (float) $account->initial_balance
-                    + (float) $receitas - (float) $despesas
-                    + $recebidoEmTransferencias - $enviadoEmTransferencias,
+            $inflow = round(
+                (float) $receitas + (float) $account->getAttribute('transfers_in_sum'),
+                2
+            );
+            $outflow = round(
+                (float) $despesas + (float) $account->getAttribute('transfers_out_sum'),
                 2
             );
         } else {
-            $account->current_balance = $account->currentBalance();
+            $flow = $account->ledgerFlow();
+            $inflow = $flow['inflow'];
+            $outflow = $flow['outflow'];
         }
+
+        $account->inflow_total = $inflow;
+        $account->outflow_total = $outflow;
+        $account->current_balance = round((float) $account->initial_balance + $inflow - $outflow, 2);
         $account->balance_source = 'ledger';
     }
 }

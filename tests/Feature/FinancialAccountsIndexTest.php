@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Http\Controllers\Financial\AccountController;
 use App\Models\FinancialAccount;
+use App\Models\FinancialTransaction;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
@@ -201,6 +202,41 @@ class FinancialAccountsIndexTest extends TestCase
         $this->assertSame('application/pdf', $pdf->headers->get('content-type'));
         $this->assertStringStartsWith('%PDF', $pdf->getContent());
         Http::assertNothingSent();
+    }
+
+    public function test_despesa_paga_em_dinheiro_sai_do_saldo_do_caixa(): void
+    {
+        $caixa = FinancialAccount::create([
+            'name' => 'Caixa',
+            'type' => FinancialAccount::TYPE_CAIXA,
+            'initial_balance' => 500,
+            'color' => '#ef4444',
+            'is_active' => true,
+        ]);
+
+        FinancialTransaction::create([
+            'account_id' => $caixa->id,
+            'type' => 'despesa',
+            'amount' => 120,
+            'is_paid' => true,
+        ]);
+        FinancialTransaction::create([
+            'account_id' => $caixa->id,
+            'type' => 'despesa',
+            'amount' => 40,
+            'is_paid' => false,
+        ]);
+
+        $this->actingAs($this->admin());
+        $data = app(AccountController::class)
+            ->index(Request::create('/financial/accounts', 'GET'))
+            ->getData();
+
+        $account = collect($data['accounts'])->firstWhere('id', $caixa->id);
+
+        $this->assertEquals(120.0, (float) $account->outflow_total);
+        $this->assertEquals(380.0, (float) $account->current_balance);
+        $this->assertEquals(380.0, $caixa->fresh()->currentBalance());
     }
 
     private function admin(): User

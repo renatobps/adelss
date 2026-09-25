@@ -96,10 +96,21 @@ class StoreDespesaPayeeTest extends TestCase
             $table->timestamps();
             $table->softDeletes();
         });
+
+        Schema::create('financial_transfers', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('from_account_id');
+            $table->unsignedBigInteger('to_account_id');
+            $table->date('transfer_date');
+            $table->decimal('amount', 15, 2);
+            $table->timestamps();
+            $table->softDeletes();
+        });
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('financial_transfers');
         Schema::dropIfExists('financial_accounts');
         Schema::dropIfExists('financial_categories');
         Schema::dropIfExists('financial_transaction_attachments');
@@ -151,6 +162,31 @@ class StoreDespesaPayeeTest extends TestCase
             ->assertSessionHasErrors('attachments');
 
         $this->assertSame(0, FinancialTransaction::count());
+    }
+
+    public function test_despesa_paga_em_dinheiro_retira_do_saldo_disponivel_do_caixa(): void
+    {
+        $this->actingAsAdmin();
+        $caixa = FinancialAccount::create([
+            'name' => 'Caixa',
+            'type' => FinancialAccount::TYPE_CAIXA,
+            'initial_balance' => 500,
+            'color' => '#ef4444',
+            'is_active' => true,
+        ]);
+
+        $this->post(route('financial.transactions.store.despesa'), [
+            'transaction_date' => now()->toDateString(),
+            'description' => 'Compra de material',
+            'amount' => 80,
+            'is_paid' => 1,
+            'member_id' => 'other',
+            'received_from_other' => 'Papelaria Central',
+            'account_id' => $caixa->id,
+        ])->assertRedirect(route('financial.transactions.index'));
+
+        $this->assertEquals(420.0, $caixa->fresh()->currentBalance());
+        $this->assertEquals(80.0, $caixa->fresh()->ledgerFlow()['outflow']);
     }
 
     public function test_despesa_exige_escolher_pix_ou_dinheiro(): void

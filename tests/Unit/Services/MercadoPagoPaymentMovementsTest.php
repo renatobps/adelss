@@ -68,6 +68,89 @@ class MercadoPagoPaymentMovementsTest extends TestCase
         $this->assertFalse($movements['truncated']);
     }
 
+    public function test_caixinha_do_mercado_pago_nao_entra_no_saldo(): void
+    {
+        $csv = implode("\n", [
+            'DATE,SOURCE_ID,RECORD_TYPE,DESCRIPTION,NET_DEBIT_AMOUNT,NET_CREDIT_AMOUNT,GROSS_AMOUNT,MP_FEE_AMOUNT,PAYMENT_METHOD,OPERATION_TAGS',
+            '2026-09-20T20:02:00.000-03:00,179079837301,release,reserve_for_payment,28.00,0,28.00,0,account_money,',
+            '2026-09-09T10:00:00.000-03:00,99,release,payout,40.00,0,40.00,0,pix,',
+        ]);
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) use ($csv) {
+            $url = $request->url();
+            if (str_contains($url, '/v1/payments/search')) {
+                return Http::response([
+                    'paging' => ['total' => 4, 'limit' => 50, 'offset' => 0],
+                    'results' => [
+                        [
+                            'id' => 10,
+                            'status' => 'approved',
+                            'transaction_amount' => 100,
+                            'date_approved' => '2026-09-21T12:00:00.000-03:00',
+                            'description' => 'Dízimo',
+                            'payment_method_id' => 'pix',
+                            'payer' => ['id' => 55, 'email' => 'membro@example.com'],
+                            'collector_id' => 10,
+                        ],
+                        [
+                            'id' => 179079837301,
+                            'status' => 'approved',
+                            'transaction_amount' => 28,
+                            'date_approved' => '2026-09-20T20:02:00.000-03:00',
+                            'description' => '',
+                            'payment_method_id' => 'account_money',
+                            'payer' => ['id' => 10, 'email' => 'admin.adelss@gmail.com'],
+                            'collector_id' => 10,
+                        ],
+                        [
+                            'id' => 180809573352,
+                            'status' => 'approved',
+                            'transaction_amount' => 225.91,
+                            'date_approved' => '2026-09-25T10:35:00.000-03:00',
+                            'description' => '',
+                            'payment_method_id' => 'account_money',
+                            'operation_type' => 'money_transfer',
+                            'payer' => ['id' => 10, 'email' => 'admin.adelss@gmail.com'],
+                            'collector_id' => 10,
+                        ],
+                        [
+                            'id' => 77,
+                            'status' => 'approved',
+                            'transaction_amount' => 15,
+                            'date_approved' => '2026-09-18T09:00:00.000-03:00',
+                            'description' => 'Oferta no saldo',
+                            'payment_method_id' => 'account_money',
+                            'payer' => ['id' => 88, 'email' => 'outro@example.com'],
+                            'collector_id' => 10,
+                        ],
+                    ],
+                ], 200);
+            }
+            if (str_contains($url, 'release_report/search')) {
+                return Http::response([
+                    'paging' => ['total' => 1],
+                    'results' => [['file_name' => 'adelss-release.csv', 'status' => 'enabled']],
+                ], 200);
+            }
+            if (str_contains($url, 'adelss-release.csv')) {
+                return Http::response($csv, 200, ['Content-Type' => 'text/csv']);
+            }
+
+            return Http::response(['ok' => true], 200);
+        });
+
+        $movements = app(MercadoPagoService::class)->getPaymentMovements(true);
+        $descriptions = array_column($movements['items'], 'description');
+
+        $this->assertSame(115.0, $movements['in_total']);
+        $this->assertSame(40.0, $movements['out_total']);
+        $this->assertNotContains('reserve_for_payment', $descriptions);
+        $this->assertNotContains('Pagamento 179079837301', $descriptions);
+        $this->assertNotContains('Pagamento 180809573352', $descriptions);
+        $this->assertContains('Dízimo', $descriptions);
+        $this->assertContains('Oferta no saldo', $descriptions);
+    }
+
     public function test_inclui_saque_do_relatorio_de_liberacoes(): void
     {
         $csv = implode("\n", [

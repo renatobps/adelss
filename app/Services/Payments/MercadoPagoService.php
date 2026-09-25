@@ -319,6 +319,10 @@ class MercadoPagoService
      */
     private function mapPaymentMovement(array $payment): ?array
     {
+        if ($this->isInternalReservePayment($payment)) {
+            return null;
+        }
+
         $status = strtolower((string) ($payment['status'] ?? ''));
         $direction = match ($status) {
             'approved' => 'in',
@@ -372,6 +376,36 @@ class MercadoPagoService
             'occurred_at' => $when?->toIso8601String(),
             'occurred_at_label' => $when?->format('d/m/Y H:i') ?? '—',
         ];
+    }
+
+    /**
+     * Movimento da caixinha (reserva) do Mercado Pago: a conta paga a si mesma com saldo.
+     * Reservar e resgatar não são entrada nem saída — o dinheiro já estava na conta.
+     *
+     * @param  array<string, mixed>  $payment
+     */
+    private function isInternalReservePayment(array $payment): bool
+    {
+        $method = strtolower((string) ($payment['payment_method_id'] ?? ''));
+        $type = strtolower((string) ($payment['payment_type_id'] ?? ''));
+        $usesAccountMoney = in_array($method, ['account_money', 'available_money'], true)
+            || in_array($type, ['account_money', 'available_money'], true);
+
+        if (! $usesAccountMoney) {
+            return false;
+        }
+
+        $operation = strtolower((string) ($payment['operation_type'] ?? ''));
+        if (in_array($operation, ['money_transfer', 'account_fund'], true)) {
+            return true;
+        }
+
+        $payerId = data_get($payment, 'payer.id');
+        $collectorId = $payment['collector_id'] ?? data_get($payment, 'collector.id');
+
+        return $payerId !== null && $payerId !== ''
+            && $collectorId !== null && $collectorId !== ''
+            && (string) $payerId === (string) $collectorId;
     }
 
     private function paymentMethodLabel(string $method): string
@@ -820,7 +854,7 @@ class MercadoPagoService
 
             $description = strtolower(trim($this->csvColumn($cols, $index, 'DESCRIPTION')));
             if ($description === 'payment'
-                || $description === 'reserve_for_payout'
+                || str_starts_with($description, 'reserve_')
                 || str_starts_with($description, 'pre_payout')
                 || str_starts_with($description, 'pos_payout')) {
                 continue;

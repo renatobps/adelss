@@ -123,6 +123,19 @@
                                         <div class="financial-account-card__flow-out" data-mp-out-total>{{ $fmt($mpMovements['out_total'] ?? 0) }}</div>
                                     </div>
                                 </div>
+                            @elseif($account->type === \App\Models\FinancialAccount::TYPE_CAIXA)
+                                <hr class="financial-account-card__divider">
+                                <div class="financial-account-card__flow">
+                                    <div>
+                                        <div class="financial-account-card__label">Entradas</div>
+                                        <div class="financial-account-card__flow-in">{{ $fmt($account->inflow_total ?? 0) }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="financial-account-card__label">Saídas</div>
+                                        <div class="financial-account-card__flow-out">{{ $fmt($account->outflow_total ?? 0) }}</div>
+                                    </div>
+                                </div>
+                                <p class="text-muted small mb-0 mt-2">Despesa paga em dinheiro sai deste saldo.</p>
                             @endif
                         </div>
 
