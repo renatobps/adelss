@@ -356,7 +356,7 @@ class CampaignReminderService
         try {
             $sponsor->loadMissing(['campaign.department', 'installments']);
 
-            $pdf = Pdf::loadView('financial.campaigns.pdf.carne', [
+            $pdf = Pdf::loadView('eventos.campaigns.pdf.carne', [
                 'campaign' => $sponsor->campaign,
                 'groups' => [['sponsor' => $sponsor, 'installments' => $sponsor->installments]],
             ])->setPaper('a4');

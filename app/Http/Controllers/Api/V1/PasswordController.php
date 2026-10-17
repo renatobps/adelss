@@ -65,9 +65,13 @@ class PasswordController extends Controller
             'email.email' => 'Informe um e-mail válido.',
         ]);
 
-        Password::sendResetLink([
-            'email' => strtolower(trim((string) $request->input('email'))),
-        ]);
+        try {
+            Password::sendResetLink([
+                'email' => strtolower(trim((string) $request->input('email'))),
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         return ApiResponse::success([
             'sent' => true,

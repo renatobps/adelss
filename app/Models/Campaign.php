@@ -76,6 +76,23 @@ class Campaign extends Model
         return $this->hasMany(CampaignReminderLog::class);
     }
 
+    /** Gastos do evento (módulo Gestor de Eventos). */
+    public function expenses(): HasMany
+    {
+        return $this->hasMany(CampaignExpense::class);
+    }
+
+    public function totalExpenses(): float
+    {
+        return (float) $this->expenses()->sum('amount');
+    }
+
+    /** Arrecadado menos gastos registrados. */
+    public function balance(): float
+    {
+        return $this->totalRaised() - $this->totalExpenses();
+    }
+
     /** Configuração de lembretes efetiva (própria ou herdada do padrão global). */
     public function reminderSettings(): CampaignReminderSetting
     {

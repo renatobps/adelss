@@ -61,7 +61,9 @@ class MeHomeController extends Controller
             'next_schedules' => $nextSchedules,
             'next_events' => $events,
             'pgi' => $pgi,
-            'can_view_financial' => $user->can('financial.view-summary'),
+            'can_view_financial' => $user->can('financial.access-module') || $user->can('financial.view-summary'),
+            'can_view_members' => $user->can('viewAny', \App\Models\Member::class),
+            'can_create_members' => $user->can('create', \App\Models\Member::class),
         ]);
     }
 }

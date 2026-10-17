@@ -161,14 +161,11 @@ class ModuleMenu
         $canViewContacts = $can('financial.contacts.view', 'financial.contacts.manage');
         $canViewCostCenters = $can('financial.cost-centers.view', 'financial.cost-centers.manage');
         $canViewFinReports = $can('financial.reports.view', 'financial.reports.manage');
-        $canViewCampanhas = $can('financial.campanhas.view', 'financial.campanhas.manage');
-        if ($isAdmin || $canViewReceitas || $canViewDespesas || $canViewFinCategories || $canViewAccounts || $canViewContacts || $canViewCostCenters || $canViewFinReports || $canViewCampanhas) {
+        if ($isAdmin || $canViewReceitas || $canViewDespesas || $canViewFinCategories || $canViewAccounts || $canViewContacts || $canViewCostCenters || $canViewFinReports) {
             if ($isAdmin || $canViewReceitas || $canViewDespesas) {
                 $financialUrl = route('financial.summary');
             } elseif ($canViewFinReports) {
                 $financialUrl = route('financial.reports.index');
-            } elseif ($canViewCampanhas) {
-                $financialUrl = route('financial.campaigns.index');
             } elseif ($canViewAccounts) {
                 $financialUrl = route('financial.accounts.index');
             } elseif ($canViewFinCategories) {
@@ -185,6 +182,19 @@ class ModuleMenu
                 'icon' => 'bx bx-dollar',
                 'url' => $financialUrl,
                 'patterns' => ['financial.*'],
+                'category' => self::CATEGORY_MODULES,
+            ];
+        }
+
+        // Gestor de Eventos (campanhas de arrecadação e gastos dos eventos)
+        if ($isAdmin || $can('eventos.campanhas.view', 'eventos.campanhas.manage')) {
+            $items[] = [
+                'key' => 'eventos',
+                'label' => 'Gestor de Eventos',
+                'short_label' => 'Eventos',
+                'icon' => 'bx bx-party',
+                'url' => route('eventos.campaigns.index'),
+                'patterns' => ['eventos.*'],
                 'category' => self::CATEGORY_MODULES,
             ];
         }

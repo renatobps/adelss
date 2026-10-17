@@ -358,22 +358,12 @@ class PermissionSeeder extends Seeder
                         ['name' => 'Gerar fechamento', 'key' => 'financial.fechamento.generate'],
                     ],
                 ],
-                // Campanhas de arrecadação (independentes da contabilidade)
-                [
-                    'name' => 'Campanhas',
-                    'key' => 'financial.campanhas.manage',
-                    'description' => 'Permissões para gerenciar campanhas de arrecadação',
-                    'actions' => [
-                        ['name' => 'Ver', 'key' => 'financial.campanhas.view'],
-                        ['name' => 'Adicionar', 'key' => 'financial.campanhas.create'],
-                        ['name' => 'Editar', 'key' => 'financial.campanhas.edit'],
-                        ['name' => 'Excluir', 'key' => 'financial.campanhas.delete'],
-                        ['name' => 'Registrar pagamento', 'key' => 'financial.campanhas.pagar'],
-                        ['name' => 'Estornar pagamento', 'key' => 'financial.campanhas.estornar'],
-                    ],
-                ],
             ],
         ];
+
+        // Campanhas saíram do Financeiro para o módulo Gestor de Eventos: renomeia as
+        // chaves antigas (preservando os vínculos com cargos/usuários) antes da limpeza.
+        $this->renameCampaignPermissions();
 
         // Criar módulo principal
         $financialModulePermission = Permission::updateOrCreate(
@@ -1002,6 +992,69 @@ class PermissionSeeder extends Seeder
             ->whereNotIn('key', $rifasValidKeys)
             ->delete();
 
+        // Módulo Gestor de Eventos (campanhas de arrecadação e gastos dos eventos)
+        $eventosModule = [
+            'module' => 'Gestor de Eventos',
+            'name' => 'Módulo Gestor de Eventos',
+            'children' => [
+                [
+                    'name' => 'Campanhas e Gastos',
+                    'key' => 'eventos.campanhas.manage',
+                    'description' => 'Permissões para gerenciar campanhas de arrecadação e os gastos dos eventos',
+                    'actions' => [
+                        ['name' => 'Ver', 'key' => 'eventos.campanhas.view'],
+                        ['name' => 'Adicionar', 'key' => 'eventos.campanhas.create'],
+                        ['name' => 'Editar', 'key' => 'eventos.campanhas.edit'],
+                        ['name' => 'Excluir', 'key' => 'eventos.campanhas.delete'],
+                        ['name' => 'Registrar pagamento', 'key' => 'eventos.campanhas.pagar'],
+                        ['name' => 'Estornar pagamento', 'key' => 'eventos.campanhas.estornar'],
+                    ],
+                ],
+            ],
+        ];
+
+        $eventosModulePermission = Permission::updateOrCreate(
+            ['key' => 'eventos.module'],
+            [
+                'module' => $eventosModule['module'],
+                'name' => $eventosModule['name'],
+                'description' => 'Permissões relacionadas ao módulo Gestor de Eventos',
+                'parent_id' => null,
+            ]
+        );
+
+        $eventosValidKeys = ['eventos.module'];
+        foreach ($eventosModule['children'] as $group) {
+            $eventosValidKeys[] = $group['key'];
+
+            $groupPermission = Permission::updateOrCreate(
+                ['key' => $group['key']],
+                [
+                    'module' => $eventosModule['module'],
+                    'name' => $group['name'],
+                    'description' => $group['description'],
+                    'parent_id' => $eventosModulePermission->id,
+                ]
+            );
+
+            foreach ($group['actions'] as $action) {
+                $eventosValidKeys[] = $action['key'];
+                Permission::updateOrCreate(
+                    ['key' => $action['key']],
+                    [
+                        'module' => $eventosModule['module'],
+                        'name' => $action['name'],
+                        'description' => $group['name'] . ' - ' . $action['name'],
+                        'parent_id' => $groupPermission->id,
+                    ]
+                );
+            }
+        }
+
+        Permission::where('module', 'Gestor de Eventos')
+            ->whereNotIn('key', $eventosValidKeys)
+            ->delete();
+
         // Módulo Página Principal
         $homePageModule = [
             'module' => 'Página Principal',
@@ -1255,6 +1308,27 @@ class PermissionSeeder extends Seeder
         $roleIds = DB::table('permission_role')->where('permission_id', $reportViewId)->pluck('role_id');
         foreach ($roleIds as $roleId) {
             MemberRole::query()->find($roleId)?->permissions()->syncWithoutDetaching($ids->all());
+        }
+    }
+
+    /**
+     * financial.campanhas.* -> eventos.campanhas.*: mantém o mesmo registro (e, portanto,
+     * os vínculos em permission_role/permission_user), apenas trocando chave e módulo.
+     * Idempotente: se a chave nova já existir, a antiga é descartada.
+     */
+    private function renameCampaignPermissions(): void
+    {
+        $old = Permission::where('key', 'like', 'financial.campanhas.%')->get();
+
+        foreach ($old as $permission) {
+            $newKey = 'eventos.' . substr($permission->key, strlen('financial.'));
+
+            if (Permission::where('key', $newKey)->exists()) {
+                $permission->delete();
+                continue;
+            }
+
+            $permission->update(['key' => $newKey, 'module' => 'Gestor de Eventos']);
         }
     }
 }

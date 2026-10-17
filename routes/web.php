@@ -55,6 +55,7 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/modules/rifas.php';
     require __DIR__.'/modules/pgis.php';
     require __DIR__.'/modules/financial.php';
+    require __DIR__.'/modules/eventos.php';
     require __DIR__.'/modules/discipleship.php';
     require __DIR__.'/modules/ensino.php';
     require __DIR__.'/modules/agenda.php';

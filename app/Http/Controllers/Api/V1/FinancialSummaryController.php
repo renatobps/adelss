@@ -3,58 +3,78 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Models\FinancialAccount;
-use App\Models\FinancialTransaction;
+use App\Policies\Eventos\CampaignPolicy;
+use App\Services\Api\FinancialModuleService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class FinancialSummaryController extends Controller
 {
-    public function show(Request $request): JsonResponse
+    use ResolvesFinancialApi;
+
+    public function __construct(private FinancialModuleService $module) {}
+
+    public function module(Request $request): JsonResponse
     {
-        if (! $request->user()->can('financial.view-summary')) {
-            return ApiResponse::error('Você não tem acesso ao resumo financeiro.', 403, [
-                'code' => 'financial_forbidden',
-            ]);
+        if ($denied = $this->guardFinancial($request, 'financial.access-module')) {
+            return $denied;
         }
 
-        $start = now()->startOfMonth();
-        $end = now()->endOfMonth();
-
-        $entradas = (float) FinancialTransaction::receitas()
-            ->where('is_paid', true)
-            ->whereBetween('transaction_date', [$start, $end])
-            ->sum('amount');
-
-        $saidas = (float) FinancialTransaction::despesas()
-            ->where('is_paid', true)
-            ->whereBetween('transaction_date', [$start, $end])
-            ->sum('amount');
-
-        $accounts = FinancialAccount::query()
-            ->where('is_active', true)
-            ->orderBy('name')
-            ->get()
-            ->map(fn (FinancialAccount $account) => [
-                'id' => $account->id,
-                'name' => $account->name,
-                'label' => $account->paymentOptionLabel(),
-                'type' => $account->type,
-                'balance' => round($account->currentBalance(), 2),
-            ])
-            ->all();
+        $caps = $this->module->capabilities($request->user());
 
         return ApiResponse::success([
-            'period' => [
-                'start' => $start->toDateString(),
-                'end' => $end->toDateString(),
-                'label' => $start->translatedFormat('F Y'),
-            ],
-            'in_total' => round($entradas, 2),
-            'out_total' => round($saidas, 2),
-            'result' => round($entradas - $saidas, 2),
-            'accounts' => $accounts,
+            'capabilities' => $caps,
+            'nav' => $this->module->nav($caps),
         ]);
+    }
+
+    public function show(Request $request): JsonResponse
+    {
+        if ($denied = $this->guardFinancial($request, 'financial.view-summary')) {
+            return $denied;
+        }
+
+        $period = (string) $request->query('period', '1month');
+        $allowed = ['today', '7days', '1month', 'last_month', '3months'];
+        if (! in_array($period, $allowed, true)) {
+            $period = '1month';
+        }
+
+        return ApiResponse::success($this->module->summary($period));
+    }
+
+    public function options(Request $request): JsonResponse
+    {
+        if ($denied = $this->guardFinancial($request, 'financial.access-module')) {
+            return $denied;
+        }
+
+        $options = $this->module->options();
+        $options['members'] = \App\Models\Member::query()
+            ->orderBy('name')
+            ->limit(80)
+            ->get(['id', 'name'])
+            ->map(fn ($row) => ['id' => $row->id, 'name' => $row->name])
+            ->all();
+
+        return ApiResponse::success($options);
+    }
+
+    public function reports(Request $request): JsonResponse
+    {
+        if ($denied = $this->guardFinancial($request, 'financial.view-reports')) {
+            return $denied;
+        }
+
+        $start = (string) $request->query('start_date', now()->startOfMonth()->toDateString());
+        $end = (string) $request->query('end_date', now()->endOfMonth()->toDateString());
+
+        return ApiResponse::success($this->module->reports($start, $end));
+    }
+
+    public static function campaignAllowed(\App\Models\User $user, string $action = 'view'): bool
+    {
+        return app(CampaignPolicy::class)->action($user, $action);
     }
 }

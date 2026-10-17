@@ -251,6 +251,7 @@
                         || request()->routeIs('departments.*')
                         || request()->routeIs('voluntarios.*');
                     $isRifasModule = request()->routeIs('rifas.*');
+                    $isEventosModule = request()->routeIs('eventos.*');
                     $isMoriahModule = request()->routeIs('moriah.*');
                     $isDiscipleshipModule = request()->routeIs('discipleship.*');
                 @endphp
@@ -385,6 +386,9 @@
                 @endif
                 @if($isRifasModule)
                     @include('rifas.partials.module-nav')
+                @endif
+                @if($isEventosModule)
+                    @include('eventos.partials.module-nav')
                 @endif
                 @if($isMoriahModule)
                     @include('moriah.partials.module-nav')

@@ -95,7 +95,7 @@ class CampaignReceiptService
             $installment->loadMissing('sponsor.campaign.department');
             $sponsor = $installment->sponsor;
 
-            $pdf = Pdf::loadView('financial.campaigns.pdf.carne', [
+            $pdf = Pdf::loadView('eventos.campaigns.pdf.carne', [
                 'campaign' => $sponsor->campaign,
                 'groups' => [
                     ['sponsor' => $sponsor, 'installments' => collect([$installment])],

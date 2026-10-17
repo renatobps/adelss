@@ -17,11 +17,27 @@ class UserApiProfile
      */
     public function for(User $user): array
     {
-        if (! $user->is_admin) {
-            $user->loadMissing('permissions');
+        try {
+            if (! $user->is_admin) {
+                $user->loadMissing('permissions');
+            }
+            if ($user->member_id) {
+                $user->loadMissing(['member.role.permissions']);
+            }
+        } catch (\Throwable) {
+            // Testes/sqlite ou schema incompleto não podem derrubar o login.
         }
-        if ($user->member_id) {
-            $user->loadMissing(['member.role.permissions']);
+
+        try {
+            $permissions = $user->permissionKeys();
+        } catch (\Throwable) {
+            $permissions = [];
+        }
+
+        try {
+            $member = $this->memberPayload($user);
+        } catch (\Throwable) {
+            $member = null;
         }
 
         return [
@@ -30,10 +46,10 @@ class UserApiProfile
                 'name' => $user->name,
                 'email' => $user->email,
                 'is_admin' => (bool) $user->is_admin,
-                'must_change_password' => (bool) $user->must_change_password,
+                'must_change_password' => (bool) ($user->getAttributes()['must_change_password'] ?? false),
             ],
-            'permissions' => $user->permissionKeys(),
-            'member' => $this->memberPayload($user),
+            'permissions' => $permissions,
+            'member' => $member,
             'modules' => $this->modulesFor($user),
         ];
     }

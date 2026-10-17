@@ -66,6 +66,11 @@ class CheckModuleAccess
                     ->authorize($request, $user, $denyAccess);
                 break;
 
+            case 'eventos':
+                $denied = app(\App\Services\Authorization\EventosRouteAuthorizer::class)
+                    ->authorize($request, $user, $denyAccess);
+                break;
+
             case 'servico':
                 $denied = app(\App\Services\Authorization\ServicoRouteAuthorizer::class)
                     ->authorize($request, $user, $denyAccess);

@@ -19,6 +19,7 @@ servers:
 tags:
   - name: Auth
   - name: Perfil
+  - name: Membros
   - name: Escalas
   - name: PGI
   - name: Agenda
@@ -31,6 +32,93 @@ paths:
       responses:
         "200":
           description: Agregado para o home do app
+  /api/v1/me/profile:
+    get:
+      tags: [Perfil]
+      summary: Meu perfil completo (dados, totais de dízimo/oferta, ensino e discipulado)
+      responses:
+        "200":
+          description: Perfil do membro autenticado
+        "403":
+          description: Conta sem membro vinculado
+    put:
+      tags: [Perfil]
+      summary: Atualizar os próprios dados (não altera status, PGI, cargo nem departamentos)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                gender:
+                  type: string
+                  enum: [M, F]
+                marital_status:
+                  type: string
+                  enum: [solteiro, casado, divorciado, viuvo, uniao_estavel]
+                birth_date:
+                  type: string
+                  format: date
+                marriage_date:
+                  type: string
+                  format: date
+                cpf:
+                  type: string
+                rg:
+                  type: string
+                address:
+                  type: string
+                city:
+                  type: string
+                state:
+                  type: string
+                  maxLength: 2
+                zip_code:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: Perfil atualizado
+        "422":
+          description: Validação
+  /api/v1/me/contributions:
+    get:
+      tags: [Perfil]
+      summary: Dízimos e ofertas do membro
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 30
+            maximum: 50
+      responses:
+        "200":
+          description: Totais e lançamentos
+  /api/v1/me/ensino:
+    get:
+      tags: [Perfil]
+      summary: Turmas em que o membro é aluno ou professor
+      responses:
+        "200":
+          description: Lista de turmas
+  /api/v1/me/discipleship:
+    get:
+      tags: [Perfil]
+      summary: Ciclos de discipulado do membro
+      responses:
+        "200":
+          description: Ciclos em que o membro é discipulado e em que discipula
   /api/v1/login:
     post:
       tags: [Auth]
@@ -309,15 +397,230 @@ paths:
       responses:
         "200":
           description: Chamada salva
+  /api/v1/financial/module:
+    get:
+      tags: [Financeiro]
+      summary: Capacidades e atalhos do módulo (12 funções)
+      responses:
+        "200":
+          description: Nav e flags de permissão
+        "403":
+          description: Sem acesso ao módulo
   /api/v1/financial/summary:
     get:
       tags: [Financeiro]
-      summary: Resumo do mês (tesoureiro)
+      summary: Resumo do período (hoje, 7 dias, mês, trimestre)
+      parameters:
+        - in: query
+          name: period
+          schema:
+            type: string
+            enum: [today, 7days, 1month, last_month, 3months]
       responses:
         "200":
           description: Entradas, saídas e saldos
         "403":
           description: Sem permissão financeira
+  /api/v1/financial/options:
+    get:
+      tags: [Financeiro]
+      summary: Contas, categorias, fornecedores e centros de custo
+      responses:
+        "200":
+          description: Opções para formulários
+  /api/v1/financial/transactions:
+    get:
+      tags: [Financeiro]
+      summary: Listar transações do período
+      responses:
+        "200":
+          description: Lista paginada com resumo
+    post:
+      tags: [Financeiro]
+      summary: Lançar receita ou despesa
+      responses:
+        "201":
+          description: Criada
+  /api/v1/financial/transactions/{transaction}/attachments:
+    post:
+      tags: [Financeiro]
+      summary: Enviar recibos/anexos (imagem ou PDF, até 5, 10 MB cada)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "201":
+          description: Anexos salvos
+        "422":
+          description: Arquivo inválido ou limite atingido
+  /api/v1/financial/receipts:
+    get:
+      tags: [Financeiro]
+      summary: Recibos (arquivos, pendentes, receitas)
+      parameters:
+        - in: query
+          name: tab
+          schema:
+            type: string
+            enum: [arquivos, pendentes, receitas]
+        - in: query
+          name: period
+          schema:
+            type: string
+            enum: [today, 7days, 1month, last_month, 3months]
+      responses:
+        "200":
+          description: Itens da aba
+  /api/v1/financial/transactions/{transaction}/receipt:
+    get:
+      tags: [Financeiro]
+      summary: PDF do recibo oficial (dízimo, oferta ou prebenda)
+      responses:
+        "200":
+          description: application/pdf
+  /api/v1/financial/transactions/{transaction}/attachments/{attachment}:
+    get:
+      tags: [Financeiro]
+      summary: Abrir o arquivo do comprovante
+      responses:
+        "200":
+          description: Arquivo
+        "404":
+          description: Arquivo ausente no servidor
+    delete:
+      tags: [Financeiro]
+      summary: Remover um anexo do lançamento
+      responses:
+        "200":
+          description: Removido
+  /api/v1/financial/accounts:
+    get:
+      tags: [Financeiro]
+      summary: Contas, caixas e transferências recentes
+      responses:
+        "200":
+          description: Saldos
+  /api/v1/financial/categories:
+    get:
+      tags: [Financeiro]
+      summary: Categorias de receita e despesa
+      responses:
+        "200":
+          description: Lista
+  /api/v1/financial/contacts:
+    get:
+      tags: [Financeiro]
+      summary: Fornecedores e contatos
+      responses:
+        "200":
+          description: Lista
+  /api/v1/financial/cost-centers:
+    get:
+      tags: [Financeiro]
+      summary: Centros de custo
+      responses:
+        "200":
+          description: Lista
+  /api/v1/financial/fixed-expenses:
+    get:
+      tags: [Financeiro]
+      summary: Despesas fixas do mês
+      responses:
+        "200":
+          description: Itens e geração do mês
+  /api/v1/financial/campaigns:
+    get:
+      tags: [Financeiro]
+      summary: Campanhas de arrecadação
+      responses:
+        "200":
+          description: Lista
+  /api/v1/financial/reports:
+    get:
+      tags: [Financeiro]
+      summary: Relatório por categoria no período
+      responses:
+        "200":
+          description: Totais e breakdown
+  /api/v1/financial/automations:
+    get:
+      tags: [Financeiro]
+      summary: Automações da tesouraria
+      responses:
+        "200":
+          description: Lista com toggle
+  /api/v1/members:
+    get:
+      tags: [Membros]
+      summary: Listar membros (quem tem permissão do módulo, não precisa ser admin)
+      parameters:
+        - in: query
+          name: search
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lista paginada
+        "403":
+          description: Sem permissão
+    post:
+      tags: [Membros]
+      summary: Cadastrar membro
+      responses:
+        "201":
+          description: Criado
+  /api/v1/members/options:
+    get:
+      tags: [Membros]
+      summary: Status, PGIs, cargos e departamentos
+      responses:
+        "200":
+          description: Opções para o formulário
+  /api/v1/members/{member}:
+    get:
+      tags: [Membros]
+      summary: Ficha do membro
+      parameters:
+        - in: path
+          name: member
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Perfil completo
+    put:
+      tags: [Membros]
+      summary: Atualizar membro (status, PGI e cargo só com permissão de edição)
+      parameters:
+        - in: path
+          name: member
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Atualizado
   /api/v1/me/pgi/meetings/{meeting}:
     get:
       tags: [PGI]

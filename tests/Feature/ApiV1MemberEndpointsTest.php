@@ -61,9 +61,91 @@ class ApiV1MemberEndpointsTest extends TestCase
             $table->string('name');
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
+            $table->string('gender', 1)->nullable();
+            $table->string('marital_status')->nullable();
+            $table->date('birth_date')->nullable();
+            $table->date('marriage_date')->nullable();
+            $table->date('membership_date')->nullable();
+            $table->string('photo_url')->nullable();
+            $table->string('cpf')->nullable();
+            $table->string('rg')->nullable();
+            $table->string('address')->nullable();
+            $table->string('city')->nullable();
+            $table->string('state', 2)->nullable();
+            $table->string('zip_code')->nullable();
+            $table->text('notes')->nullable();
+            $table->decimal('latitude', 10, 7)->nullable();
+            $table->decimal('longitude', 10, 7)->nullable();
+            $table->timestamp('geocoded_at')->nullable();
             $table->string('status')->default('ativo');
+            $table->unsignedBigInteger('department_id')->nullable();
             $table->unsignedBigInteger('pgi_id')->nullable();
             $table->unsignedBigInteger('role_id')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('financial_categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('type')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('financial_accounts', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('financial_transactions', function (Blueprint $table) {
+            $table->id();
+            $table->string('type')->nullable();
+            $table->date('transaction_date')->nullable();
+            $table->string('description')->nullable();
+            $table->decimal('amount', 12, 2)->default(0);
+            $table->boolean('is_paid')->default(true);
+            $table->unsignedBigInteger('member_id')->nullable();
+            $table->unsignedBigInteger('category_id')->nullable();
+            $table->unsignedBigInteger('account_id')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('classes', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->unsignedBigInteger('school_id')->nullable();
+            $table->string('schedule')->nullable();
+            $table->string('status')->nullable();
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('class_students', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('class_id');
+            $table->unsignedBigInteger('member_id');
+            $table->timestamps();
+        });
+
+        Schema::create('discipleship_cycles', function (Blueprint $table) {
+            $table->id();
+            $table->string('nome');
+            $table->timestamps();
+            $table->softDeletes();
+        });
+
+        Schema::create('discipleship_members', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('cycle_id')->nullable();
+            $table->unsignedBigInteger('member_id');
+            $table->unsignedBigInteger('discipulador_id')->nullable();
+            $table->string('status')->default('ativo');
+            $table->date('data_inicio')->nullable();
+            $table->date('data_fim')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });
@@ -413,6 +495,150 @@ class ApiV1MemberEndpointsTest extends TestCase
             ->getJson('/api/v1/me/schedules')
             ->assertForbidden()
             ->assertJsonPath('code', 'member_required');
+    }
+
+    public function test_perfil_completo_edicao_contribuicoes_ensino_e_discipulado(): void
+    {
+        $dizimo = \App\Models\FinancialCategory::query()->create(['name' => 'Dízimo']);
+        $oferta = \App\Models\FinancialCategory::query()->create(['name' => 'Oferta']);
+        $conta = \App\Models\FinancialAccount::query()->create(['name' => 'Caixa']);
+
+        \App\Models\FinancialTransaction::query()->create([
+            'member_id' => $this->member->id,
+            'category_id' => $dizimo->id,
+            'account_id' => $conta->id,
+            'transaction_date' => now()->subDays(3)->toDateString(),
+            'description' => 'Dízimo março',
+            'amount' => 150.50,
+            'is_paid' => true,
+        ]);
+        \App\Models\FinancialTransaction::query()->create([
+            'member_id' => $this->member->id,
+            'category_id' => $oferta->id,
+            'account_id' => $conta->id,
+            'transaction_date' => now()->subDay()->toDateString(),
+            'description' => 'Oferta',
+            'amount' => 40,
+            'is_paid' => true,
+        ]);
+
+        $turma = \App\Models\Turma::query()->create([
+            'name' => 'Discipulado 1',
+            'schedule' => 'Domingo 9h',
+            'status' => 'ativa',
+        ]);
+        $this->member->turmas()->attach($turma->id);
+
+        $mentor = User::query()->create([
+            'name' => 'Pastor',
+            'email' => 'pastor@igreja.test',
+            'password' => Hash::make('secret123'),
+            'is_admin' => false,
+            'must_change_password' => false,
+        ]);
+
+        \App\Models\Discipleship\DiscipleshipMember::query()->create([
+            'member_id' => $this->member->id,
+            'cycle_id' => \App\Models\Discipleship\DiscipleshipCycle::query()->create(['nome' => 'Ciclo 2026'])->id,
+            'discipulador_id' => $mentor->id,
+            'status' => 'ativo',
+            'data_inicio' => now()->subMonths(2)->toDateString(),
+        ]);
+
+        $this->auth()->getJson('/api/v1/me/profile')
+            ->assertOk()
+            ->assertJsonPath('data.member.name', 'Ana')
+            ->assertJsonPath('data.member.status', 'ativo')
+            ->assertJsonPath('data.ensino_count', 1)
+            ->assertJsonPath('data.discipleship_count', 1)
+            ->assertJsonPath('data.contributions.dizimo_total', 150.5)
+            ->assertJsonPath('data.contributions.oferta_total', 40);
+
+        $updated = $this->auth()->putJson('/api/v1/me/profile', [
+            'name' => 'Ana Silva',
+            'email' => 'ana@igreja.test',
+            'phone' => '61988887777',
+            'gender' => 'F',
+            'marital_status' => 'casado',
+            'city' => 'Brasília',
+            'state' => 'DF',
+            'status' => 'inativo',
+            'pgi_id' => 99,
+        ]);
+        $updated->assertOk()
+            ->assertJsonPath('data.member.name', 'Ana Silva')
+            ->assertJsonPath('data.member.phone', '61988887777')
+            ->assertJsonPath('data.member.gender', 'F')
+            ->assertJsonPath('data.member.status', 'ativo')
+            ->assertJsonPath('data.member.pgi_id', null);
+
+        $this->assertSame('Ana Silva', $this->user->fresh()->name);
+
+        $this->auth()->getJson('/api/v1/me/contributions')
+            ->assertOk()
+            ->assertJsonPath('data.dizimo_total', 150.5)
+            ->assertJsonPath('data.items.0.description', 'Oferta');
+
+        $this->auth()->getJson('/api/v1/me/ensino')
+            ->assertOk()
+            ->assertJsonPath('data.0.name', 'Discipulado 1')
+            ->assertJsonPath('data.0.role', 'aluno');
+
+        $this->auth()->getJson('/api/v1/me/discipleship')
+            ->assertOk()
+            ->assertJsonPath('data.being_discipled.0.cycle', 'Ciclo 2026')
+            ->assertJsonPath('data.being_discipled.0.mentor', 'Pastor');
+    }
+
+    public function test_modulo_de_membros_nao_depende_de_admin_para_existir_mas_respeita_permissao(): void
+    {
+        $this->auth()->getJson('/api/v1/members')
+            ->assertForbidden()
+            ->assertJsonPath('code', 'members_forbidden');
+
+        $this->auth()->getJson('/api/v1/members/'.$this->member->id)
+            ->assertOk()
+            ->assertJsonPath('data.member.name', 'Ana');
+
+        $admin = User::query()->create([
+            'name' => 'Secretaria',
+            'email' => 'secretaria@igreja.test',
+            'password' => Hash::make('secret123'),
+            'is_admin' => true,
+            'must_change_password' => false,
+        ]);
+        $this->flushHeaders();
+        $this->actingAs($admin, 'sanctum')->getJson('/api/v1/members')
+            ->assertOk()
+            ->assertJsonPath('data.can_create', true)
+            ->assertJsonPath('data.items.0.name', 'Ana');
+
+        $created = $this->actingAs($admin, 'sanctum')->postJson('/api/v1/members', [
+            'name' => 'Bruno Costa',
+            'email' => 'bruno@igreja.test',
+            'phone' => '61911112222',
+            'status' => 'visitante',
+        ]);
+        $created->assertCreated()
+            ->assertJsonPath('data.member.name', 'Bruno Costa')
+            ->assertJsonPath('data.member.status', 'visitante');
+
+        $id = $created->json('data.member.id');
+        $this->actingAs($admin, 'sanctum')->putJson('/api/v1/members/'.$id, [
+            'name' => 'Bruno Costa',
+            'status' => 'ativo',
+            'phone' => '61911112222',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.member.status', 'ativo');
+
+        $this->actingAs($admin, 'sanctum')->getJson('/api/v1/members/options')
+            ->assertOk()
+            ->assertJsonPath('data.statuses.0.value', 'ativo');
+
+        $this->actingAs($admin, 'sanctum')->getJson('/api/v1/me/home')
+            ->assertOk()
+            ->assertJsonPath('data.can_view_members', true);
     }
 
     private function auth(): self
