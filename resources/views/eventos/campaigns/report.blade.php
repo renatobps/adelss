@@ -22,9 +22,13 @@
         border-radius: 14px;
         padding: 1.25rem 1.5rem;
         position: relative;
-        overflow: hidden;
+        overflow: visible;
+        z-index: 3;
     }
-    .pc-hero::after {
+    .pc-hero-deco {
+        position: absolute; inset: 0; overflow: hidden; border-radius: 14px; pointer-events: none;
+    }
+    .pc-hero-deco::after {
         content: "";
         position: absolute; right: -40px; top: -60px;
         width: 220px; height: 220px; border-radius: 50%;
@@ -32,6 +36,8 @@
         opacity: .18;
     }
     .pc-hero h4 { color: #FFFFFF; font-weight: 600; margin: 0; }
+    .pc-hero .pc-actions { position: relative; z-index: 4; }
+    .pc-hero .dropdown-menu { z-index: 1080; }
     .pc-hero .pc-hero-meta { color: rgba(255,255,255,.72); font-size: .85rem; }
     .pc-hero .pc-hero-meta i { opacity: .8; }
     .pc-hero .badge { font-weight: 500; }
@@ -167,6 +173,7 @@
 
     {{-- Cabeçalho --}}
     <div class="pc-hero mb-3" style="--pc-accent: {{ $accent }}">
+        <div class="pc-hero-deco" aria-hidden="true"></div>
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 position-relative" style="z-index: 1">
             <div>
                 <div class="pc-hero-meta mb-1"><i class="bx bx-receipt me-1"></i>Prestação de contas</div>
@@ -184,10 +191,10 @@
             </div>
             <div class="pc-actions d-flex gap-2 flex-wrap">
                 <div class="btn-group">
-                    <button type="button" class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button type="button" class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" data-bs-popper-config='{"strategy":"fixed"}' aria-expanded="false">
                         <i class="bx bxs-file-pdf me-1 text-danger"></i>Exportar PDF
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 300px;">
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 280px;">
                         <li>
                             <a class="dropdown-item py-2" href="{{ route('eventos.campaigns.report.pdf', $pdfParams) }}">
                                 <div class="fw-semibold"><i class="bx bx-detail me-1 text-danger"></i>Completo</div>
