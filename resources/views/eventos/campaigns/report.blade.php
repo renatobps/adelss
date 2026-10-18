@@ -214,7 +214,7 @@
                     <i class="bx bxs-spreadsheet me-1"></i>Exportar Excel
                 </a>
                 <a href="{{ route('eventos.campaigns.expenses.index', $campaign) }}" class="btn btn-outline-light btn-sm">
-                    <i class="bx bx-receipt me-1"></i>Gastos
+                    <i class="bx bx-transfer me-1"></i>Transações
                 </a>
             </div>
         </div>
@@ -241,7 +241,7 @@
                             {{ $from?->format('d/m/Y') ?? 'início' }} → {{ $to?->format('d/m/Y') ?? 'hoje' }}
                         </span>
                     @else
-                        <span class="text-muted small"><i class="bx bx-info-circle me-1"></i>Sem período: o extrato e os gastos mostram todo o histórico da campanha.</span>
+                        <span class="text-muted small"><i class="bx bx-info-circle me-1"></i>Sem período: o extrato e as transações mostram todo o histórico da campanha.</span>
                     @endif
                 </div>
             </form>
@@ -267,10 +267,10 @@
             <div class="pc-kpi" style="--pc-color: #1FA855">
                 <div class="d-flex align-items-center gap-2 mb-2">
                     <span class="pc-kpi-icon"><i class="bx bx-trending-up"></i></span>
-                    <span class="pc-kpi-label">Arrecadado</span>
+                    <span class="pc-kpi-label">Total arrecadado</span>
                 </div>
-                <div class="pc-kpi-value pc-text-success">{{ $money($metrics['raised']) }}</div>
-                <div class="pc-kpi-sub mt-1">{{ $payments->count() }} recebimento(s) no período</div>
+                <div class="pc-kpi-value pc-text-success">{{ $money($metrics['raised'] + $metrics['income']) }}</div>
+                <div class="pc-kpi-sub mt-1">Patrocinadores: {{ $money($metrics['raised']) }}<br>Receitas extras: {{ $money($metrics['income']) }}</div>
             </div>
         </div>
         <div class="col-6 col-lg-4 col-xl-2">
@@ -310,7 +310,7 @@
                     <span class="pc-kpi-label">Saldo</span>
                 </div>
                 <div class="pc-kpi-value {{ $balancePositive ? 'pc-text-primary' : 'pc-text-danger' }}">{{ $money($metrics['balance']) }}</div>
-                <div class="pc-kpi-sub mt-1">arrecadado − gastos</div>
+                <div class="pc-kpi-sub mt-1">patrocinadores + receitas extras − gastos</div>
             </div>
         </div>
     </div>
@@ -321,7 +321,7 @@
             <div class="pc-flow h-100 d-flex align-items-center justify-content-around flex-wrap px-2">
                 <div class="pc-flow-item">
                     <div class="pc-flow-label">Arrecadado</div>
-                    <div class="pc-flow-value pc-text-success">{{ $money($metrics['raised']) }}</div>
+                    <div class="pc-flow-value pc-text-success">{{ $money($metrics['raised'] + $metrics['income']) }}</div>
                 </div>
                 <div class="pc-flow-op">−</div>
                 <div class="pc-flow-item">
@@ -530,6 +530,69 @@
                         <tr>
                             <td colspan="5" class="ps-3">Total recebido {{ $hasPeriod ? 'no período' : '' }} ({{ $payments->count() }} parcela(s))</td>
                             <td class="pc-num pe-3 pc-text-success">{{ $money($payments->sum('amount')) }}</td>
+                        </tr>
+                    </tfoot>
+                @endif
+            </table>
+        </div>
+    </section>
+
+    {{-- Receitas extras --}}
+    <section class="card pc-card mb-3">
+        <header class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h5 class="card-title-sm"><i class="bx bx-trending-up"></i>Receitas extras</h5>
+                <p class="card-subtitle">Doações externas, vendas e outras arrecadações, em ordem cronológica.</p>
+            </div>
+            <a href="{{ route('eventos.campaigns.expenses.index', ['campaign' => $campaign->id, 'kind' => 'receita']) }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bx bx-plus me-1"></i>Registrar receita
+            </a>
+        </header>
+        <div class="table-responsive">
+            <table class="table pc-table align-middle">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Data</th>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Doador / Origem</th>
+                        <th>Forma</th>
+                        <th class="text-center">Comprovantes</th>
+                        <th class="pc-num pe-3">Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($incomes as $income)
+                        <tr>
+                            <td class="ps-3 text-nowrap">{{ $income->expense_date?->format('d/m/Y') }}</td>
+                            <td>
+                                <div class="pc-name">{{ $income->description }}</div>
+                                @if($income->notes)
+                                    <div class="pc-sub">{{ \Illuminate\Support\Str::limit($income->notes, 70) }}</div>
+                                @endif
+                            </td>
+                            <td><span class="pc-pill pc-pill--cat">{{ $income->categoryLabel() }}</span></td>
+                            <td>{{ $income->supplier ?: '—' }}</td>
+                            <td>{{ $income->payment_method ? $income->paymentMethodLabel() : '—' }}</td>
+                            <td class="text-center">
+                                @foreach($income->attachments as $attachment)
+                                    <a href="{{ route('eventos.campaigns.expenses.attachment', $attachment) }}" target="_blank" rel="noopener"
+                                       class="btn btn-sm btn-outline-secondary py-0 px-1" title="{{ $attachment->file_name }}">
+                                        <i class="bx {{ $attachment->isImage() ? 'bx-image' : 'bxs-file-pdf' }}"></i>
+                                    </a>
+                                @endforeach
+                            </td>
+                            <td class="pc-num pe-3 pc-text-success fw-semibold">{{ $money($income->amount) }}</td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7"><div class="pc-empty"><i class="bx bx-receipt"></i>Nenhuma receita extra no período.</div></td></tr>
+                    @endforelse
+                </tbody>
+                @if($incomes->isNotEmpty())
+                    <tfoot>
+                        <tr>
+                            <td colspan="6" class="ps-3">Total de receitas extras {{ $hasPeriod ? 'no período' : '' }} ({{ $incomes->count() }} lançamento(s))</td>
+                            <td class="pc-num pe-3 pc-text-success">{{ $money($incomes->sum('amount')) }}</td>
                         </tr>
                     </tfoot>
                 @endif

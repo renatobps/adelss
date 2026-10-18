@@ -76,7 +76,7 @@ class Campaign extends Model
         return $this->hasMany(CampaignReminderLog::class);
     }
 
-    /** Gastos do evento (módulo Gestor de Eventos). */
+    /** Lançamentos do evento (gastos e receitas extras). */
     public function expenses(): HasMany
     {
         return $this->hasMany(CampaignExpense::class);
@@ -84,13 +84,19 @@ class Campaign extends Model
 
     public function totalExpenses(): float
     {
-        return (float) $this->expenses()->sum('amount');
+        return (float) $this->expenses()->gastos()->sum('amount');
     }
 
-    /** Arrecadado menos gastos registrados. */
+    /** Entradas fora das parcelas dos patrocinadores (doação externa, venda, etc.). */
+    public function totalExtraIncome(): float
+    {
+        return (float) $this->expenses()->receitas()->sum('amount');
+    }
+
+    /** Parcelas pagas + receitas extras menos gastos. */
     public function balance(): float
     {
-        return $this->totalRaised() - $this->totalExpenses();
+        return $this->totalRaised() + $this->totalExtraIncome() - $this->totalExpenses();
     }
 
     /** Configuração de lembretes efetiva (própria ou herdada do padrão global). */
@@ -135,7 +141,9 @@ class Campaign extends Model
             return 0.0;
         }
 
-        return round(min(100, ($this->totalRaised() / $base) * 100), 1);
+        $raised = $this->totalRaised() + $this->totalExtraIncome();
+
+        return round(min(100, ($raised / $base) * 100), 1);
     }
 
     public function overdueInstallments(): HasManyThrough

@@ -46,7 +46,7 @@
     <div class="row">
         @foreach($campaigns as $campaign)
             @php
-                $raised = $campaign->totalRaised();
+                $raised = $campaign->totalRaised() + (float) ($campaign->income_sum_amount ?? 0);
                 $progress = $campaign->progressPercentage();
                 $statusBadge = match($campaign->status) {
                     'ativa' => 'bg-success',
@@ -89,8 +89,10 @@
                             <small class="text-muted">
                                 <i class="bx bx-user me-1"></i>{{ $campaign->sponsors_count }} patrocinador(es)
                                 <span class="mx-1">·</span>
-                                <a href="{{ route('eventos.campaigns.expenses.index', $campaign) }}" class="text-danger text-decoration-none" title="Gastos do evento">
-                                    <i class="bx bx-trending-down me-1"></i>R$ {{ number_format((float) ($campaign->expenses_sum_amount ?? 0), 2, ',', '.') }} gastos
+                                <a href="{{ route('eventos.campaigns.expenses.index', $campaign) }}" class="text-decoration-none" title="Transações do evento">
+                                    <span class="text-success"><i class="bx bx-trending-up me-1"></i>R$ {{ number_format((float) ($campaign->income_sum_amount ?? 0), 2, ',', '.') }}</span>
+                                    <span class="text-muted mx-1">/</span>
+                                    <span class="text-danger"><i class="bx bx-trending-down me-1"></i>R$ {{ number_format((float) ($campaign->expenses_sum_amount ?? 0), 2, ',', '.') }}</span>
                                 </a>
                             </small>
                             <a href="{{ route('eventos.campaigns.show', $campaign) }}" class="btn btn-sm btn-outline-primary">Abrir</a>

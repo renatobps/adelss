@@ -1,19 +1,21 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Models\Campaign;
 use App\Http\Controllers\Eventos\CampaignController;
 use App\Http\Controllers\Eventos\CampaignExpenseController;
 use App\Http\Controllers\Eventos\CampaignSponsorController;
 use App\Http\Controllers\Eventos\CampaignInstallmentController;
 use App\Http\Controllers\Eventos\CampaignReminderController;
 
-// Módulo Gestor de Eventos: campanhas de arrecadação e gastos dos eventos
+// Módulo Gestor de Eventos: campanhas de arrecadação e transações dos eventos
 // (independentes da contabilidade do módulo Financeiro).
 Route::prefix('eventos')->name('eventos.')->middleware('module.access:eventos')->group(function () {
     Route::get('/', fn () => redirect()->route('eventos.campaigns.index'))->name('index');
 
-    // Gastos de todos os eventos
-    Route::get('/gastos', [CampaignExpenseController::class, 'all'])->name('expenses.all');
+    // Transações (gastos e receitas extras) de todos os eventos
+    Route::get('/transacoes', [CampaignExpenseController::class, 'all'])->name('expenses.all');
+    Route::get('/gastos', fn () => redirect()->route('eventos.expenses.all', request()->query(), 301))->name('expenses.legacy');
 
     Route::prefix('campanhas')->name('campaigns.')->group(function () {
         Route::get('/', [CampaignController::class, 'index'])->name('index');
@@ -41,12 +43,16 @@ Route::prefix('eventos')->name('eventos.')->middleware('module.access:eventos')-
         Route::get('/parcelas/{installment}/recibo', [CampaignInstallmentController::class, 'receipt'])->name('installments.receipt');
         Route::post('/parcelas/{installment}/reenviar', [CampaignInstallmentController::class, 'resendReceipt'])->name('installments.resend');
 
-        // Gastos do evento (com comprovante obrigatório)
-        Route::get('/{campaign}/gastos', [CampaignExpenseController::class, 'index'])->whereNumber('campaign')->name('expenses.index');
-        Route::post('/{campaign}/gastos', [CampaignExpenseController::class, 'store'])->whereNumber('campaign')->name('expenses.store');
-        Route::put('/gastos/{expense}', [CampaignExpenseController::class, 'update'])->name('expenses.update');
-        Route::delete('/gastos/{expense}', [CampaignExpenseController::class, 'destroy'])->name('expenses.destroy');
-        Route::get('/gastos/comprovantes/{attachment}', [CampaignExpenseController::class, 'attachment'])->name('expenses.attachment');
+        // Transações do evento (gastos com comprovante obrigatório; receitas extras opcionais)
+        Route::get('/{campaign}/transacoes', [CampaignExpenseController::class, 'index'])->whereNumber('campaign')->name('expenses.index');
+        Route::post('/{campaign}/transacoes', [CampaignExpenseController::class, 'store'])->whereNumber('campaign')->name('expenses.store');
+        Route::put('/transacoes/{expense}', [CampaignExpenseController::class, 'update'])->name('expenses.update');
+        Route::delete('/transacoes/{expense}', [CampaignExpenseController::class, 'destroy'])->name('expenses.destroy');
+        Route::get('/transacoes/comprovantes/{attachment}', [CampaignExpenseController::class, 'attachment'])->name('expenses.attachment');
+        Route::get('/{campaign}/gastos', fn (Campaign $campaign) => redirect()->route('eventos.campaigns.expenses.index', ['campaign' => $campaign->id] + request()->query(), 301))->whereNumber('campaign')->name('expenses.legacy.index');
+        Route::put('/gastos/{expense}', [CampaignExpenseController::class, 'update'])->name('expenses.legacy.update');
+        Route::delete('/gastos/{expense}', [CampaignExpenseController::class, 'destroy'])->name('expenses.legacy.destroy');
+        Route::get('/gastos/comprovantes/{attachment}', [CampaignExpenseController::class, 'attachment'])->name('expenses.legacy.attachment');
 
         Route::get('/{campaign}', [CampaignController::class, 'show'])->whereNumber('campaign')->name('show');
         Route::get('/{campaign}/editar', [CampaignController::class, 'edit'])->whereNumber('campaign')->name('edit');

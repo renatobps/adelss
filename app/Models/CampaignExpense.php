@@ -2,16 +2,26 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Gasto de um evento/campanha (ex.: comida, aluguel de chácara, decoração).
- * Todo gasto precisa de pelo menos um comprovante anexado.
+ * Lançamento de um evento/campanha: gasto (saída) ou receita extra (entrada
+ * fora das parcelas dos patrocinadores — doação externa, venda, rifa, etc.).
+ * Gastos exigem comprovante anexado; receitas, não.
  */
 class CampaignExpense extends Model
 {
+    public const KIND_GASTO = 'gasto';
+    public const KIND_RECEITA = 'receita';
+
+    public const KINDS = [
+        self::KIND_GASTO => 'Gasto',
+        self::KIND_RECEITA => 'Receita',
+    ];
+
     public const CATEGORIES = [
         'alimentacao' => 'Alimentação',
         'aluguel' => 'Aluguel / Espaço',
@@ -24,6 +34,16 @@ class CampaignExpense extends Model
         'outros' => 'Outros',
     ];
 
+    public const INCOME_CATEGORIES = [
+        'doacao_externa' => 'Doação externa',
+        'doacao_avulsa' => 'Doação avulsa',
+        'venda' => 'Venda / cantina',
+        'rifa' => 'Rifa / sorteio',
+        'ingresso' => 'Ingresso',
+        'patrocinio_avulso' => 'Patrocínio avulso',
+        'outros' => 'Outros',
+    ];
+
     public const PAYMENT_METHODS = [
         'dinheiro' => 'Dinheiro',
         'pix' => 'PIX',
@@ -33,6 +53,7 @@ class CampaignExpense extends Model
 
     protected $fillable = [
         'campaign_id',
+        'kind',
         'description',
         'category',
         'amount',
@@ -63,13 +84,40 @@ class CampaignExpense extends Model
         return $this->hasMany(CampaignExpenseAttachment::class);
     }
 
+    public function isIncome(): bool
+    {
+        return $this->kind === self::KIND_RECEITA;
+    }
+
+    public function isExpense(): bool
+    {
+        return $this->kind !== self::KIND_RECEITA;
+    }
+
+    public function kindLabel(): string
+    {
+        return self::KINDS[$this->kind] ?? ucfirst((string) $this->kind);
+    }
+
     public function categoryLabel(): string
     {
-        return self::CATEGORIES[$this->category] ?? ucfirst((string) $this->category);
+        $map = $this->isIncome() ? self::INCOME_CATEGORIES : self::CATEGORIES;
+
+        return $map[$this->category] ?? ucfirst((string) $this->category);
     }
 
     public function paymentMethodLabel(): string
     {
         return self::PAYMENT_METHODS[$this->payment_method] ?? ($this->payment_method ? ucfirst($this->payment_method) : '—');
+    }
+
+    public function scopeGastos(Builder $query): Builder
+    {
+        return $query->where('kind', self::KIND_GASTO);
+    }
+
+    public function scopeReceitas(Builder $query): Builder
+    {
+        return $query->where('kind', self::KIND_RECEITA);
     }
 }

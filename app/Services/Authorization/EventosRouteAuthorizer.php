@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Autorização do módulo Gestor de Eventos (campanhas de arrecadação e gastos).
+ * Autorização do módulo Gestor de Eventos (campanhas de arrecadação e transações).
  * Mapeia cada rota para a ação eventos.campanhas.{view|create|edit|delete|pagar|estornar}.
  */
 class EventosRouteAuthorizer
@@ -37,12 +37,14 @@ class EventosRouteAuthorizer
             'eventos.campaigns.update',
             'eventos.campaigns.sponsors.update',
             'eventos.campaigns.expenses.update',
+            'eventos.campaigns.expenses.legacy.update',
             'eventos.campaigns.reminders.global.update',
             'eventos.campaigns.reminders.update',
             'eventos.campaigns.reminders.toggle-sponsor' => 'edit',
             'eventos.campaigns.destroy',
             'eventos.campaigns.sponsors.destroy',
-            'eventos.campaigns.expenses.destroy' => 'delete',
+            'eventos.campaigns.expenses.destroy',
+            'eventos.campaigns.expenses.legacy.destroy' => 'delete',
             'eventos.campaigns.installments.pay',
             'eventos.campaigns.installments.pay-batch',
             'eventos.campaigns.installments.resend',
@@ -54,10 +56,10 @@ class EventosRouteAuthorizer
         };
 
         $labels = [
-            'view' => 'visualizar campanhas e gastos de eventos',
-            'create' => 'criar campanhas, adicionar patrocinadores ou registrar gastos',
-            'edit' => 'editar campanhas ou gastos',
-            'delete' => 'excluir registros de campanhas ou gastos',
+            'view' => 'visualizar campanhas e transações de eventos',
+            'create' => 'criar campanhas, adicionar patrocinadores ou registrar transações',
+            'edit' => 'editar campanhas ou transações',
+            'delete' => 'excluir registros de campanhas ou transações',
             'pagar' => 'registrar pagamentos e cobranças de campanhas',
             'estornar' => 'estornar pagamentos de campanhas',
         ];

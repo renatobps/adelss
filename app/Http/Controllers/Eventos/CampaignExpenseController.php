@@ -15,15 +15,15 @@ use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Gastos dos eventos: cada lançamento pertence a uma campanha e exige
- * ao menos um comprovante (nota fiscal, recibo, foto) anexado.
+ * Transações do evento: gastos (comprovante obrigatório) e receitas extras
+ * (doação externa, venda, rifa — comprovante opcional).
  */
 class CampaignExpenseController extends Controller
 {
     private const MAX_FILES = 5;
     private const MAX_FILE_KB = 10240; // 10MB
 
-    /** Gastos de uma campanha específica (com formulário de cadastro). */
+    /** Transações de uma campanha específica (com formulário de cadastro). */
     public function index(Request $request, Campaign $campaign)
     {
         $campaign->load('department');
@@ -43,13 +43,15 @@ class CampaignExpenseController extends Controller
             'expenses' => $expenses,
             'filters' => $filters,
             'totals' => $totals,
-            'byCategory' => $this->byCategory($campaign),
+            'byCategory' => $this->byCategory($campaign, CampaignExpense::KIND_GASTO),
+            'byIncomeCategory' => $this->byCategory($campaign, CampaignExpense::KIND_RECEITA),
             'categories' => CampaignExpense::CATEGORIES,
+            'incomeCategories' => CampaignExpense::INCOME_CATEGORIES,
             'paymentMethods' => CampaignExpense::PAYMENT_METHODS,
         ]);
     }
 
-    /** Visão consolidada de gastos de todos os eventos (menu "Gastos" do módulo). */
+    /** Visão consolidada de transações de todos os eventos. */
     public function all(Request $request)
     {
         $filters = $this->filters($request);
@@ -67,7 +69,8 @@ class CampaignExpenseController extends Controller
             ->withQueryString();
 
         $campaigns = Campaign::query()
-            ->withSum('expenses as expenses_total', 'amount')
+            ->withSum(['expenses as expenses_total' => fn ($q) => $q->gastos()], 'amount')
+            ->withSum(['expenses as income_total' => fn ($q) => $q->receitas()], 'amount')
             ->withCount('expenses')
             ->orderByDesc('created_at')
             ->get();
@@ -77,14 +80,17 @@ class CampaignExpenseController extends Controller
             'campaigns' => $campaigns,
             'selectedCampaign' => $campaignId,
             'filters' => $filters,
-            'grandTotal' => (float) CampaignExpense::query()->sum('amount'),
+            'grandTotalExpenses' => (float) CampaignExpense::query()->gastos()->sum('amount'),
+            'grandTotalIncome' => (float) CampaignExpense::query()->receitas()->sum('amount'),
             'categories' => CampaignExpense::CATEGORIES,
+            'incomeCategories' => CampaignExpense::INCOME_CATEGORIES,
         ]);
     }
 
     public function store(Request $request, Campaign $campaign): RedirectResponse
     {
-        $data = $this->validateExpense($request, requireReceipt: true);
+        $kind = $this->requestedKind($request);
+        $data = $this->validateExpense($request, $kind, requireReceipt: $kind === CampaignExpense::KIND_GASTO);
 
         DB::transaction(function () use ($campaign, $data, $request) {
             $expense = $campaign->expenses()->create([
@@ -95,24 +101,26 @@ class CampaignExpenseController extends Controller
             $this->storeAttachments($expense, $request->file('attachments', []));
         });
 
+        $label = $kind === CampaignExpense::KIND_RECEITA ? 'Receita registrada.' : 'Gasto registrado com comprovante.';
+
         return redirect()
             ->route('eventos.campaigns.expenses.index', $campaign)
-            ->with('success', 'Gasto registrado com comprovante.');
+            ->with('success', $label);
     }
 
     public function update(Request $request, CampaignExpense $expense): RedirectResponse
     {
         $expense->load('attachments');
+        $kind = $this->requestedKind($request);
 
         $removeIds = collect($request->input('remove_attachments', []))
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->all();
 
-        // O gasto não pode ficar sem comprovante: se o usuário remover todos
-        // os existentes, precisa anexar ao menos um novo.
         $remaining = $expense->attachments->whereNotIn('id', $removeIds)->count();
-        $data = $this->validateExpense($request, requireReceipt: $remaining === 0);
+        $requireReceipt = $kind === CampaignExpense::KIND_GASTO && $remaining === 0;
+        $data = $this->validateExpense($request, $kind, requireReceipt: $requireReceipt);
 
         DB::transaction(function () use ($expense, $data, $request, $removeIds) {
             $expense->update($this->expenseAttributes($data));
@@ -127,7 +135,7 @@ class CampaignExpenseController extends Controller
 
         return redirect()
             ->route('eventos.campaigns.expenses.index', $expense->campaign_id)
-            ->with('success', 'Gasto atualizado.');
+            ->with('success', 'Lançamento atualizado.');
     }
 
     public function destroy(CampaignExpense $expense): RedirectResponse
@@ -143,7 +151,7 @@ class CampaignExpenseController extends Controller
 
         return redirect()
             ->route('eventos.campaigns.expenses.index', $campaignId)
-            ->with('success', 'Gasto excluído.');
+            ->with('success', 'Lançamento excluído.');
     }
 
     /** Entrega o comprovante (inline para imagens/PDF, download para o resto). */
@@ -165,16 +173,19 @@ class CampaignExpenseController extends Controller
     // ------------------------------------------------------------------
 
     /**
-     * @return array{q:string,category:string,from:?string,to:?string}
+     * @return array{q:string,kind:string,category:string,from:?string,to:?string}
      */
     private function filters(Request $request): array
     {
         $text = fn (string $key) => is_string($v = $request->query($key)) ? trim($v) : '';
+        $kind = $text('kind');
         $category = $text('category');
+        $allCategories = CampaignExpense::CATEGORIES + CampaignExpense::INCOME_CATEGORIES;
 
         return [
             'q' => $text('q'),
-            'category' => array_key_exists($category, CampaignExpense::CATEGORIES) ? $category : '',
+            'kind' => array_key_exists($kind, CampaignExpense::KINDS) ? $kind : '',
+            'category' => array_key_exists($category, $allCategories) ? $category : '',
             'from' => $text('from') ?: null,
             'to' => $text('to') ?: null,
         ];
@@ -187,6 +198,9 @@ class CampaignExpenseController extends Controller
             $query->where(fn ($q) => $q->where('description', 'like', $term)
                 ->orWhere('supplier', 'like', $term)
                 ->orWhere('notes', 'like', $term));
+        }
+        if ($filters['kind'] !== '') {
+            $query->where('kind', $filters['kind']);
         }
         if ($filters['category'] !== '') {
             $query->where('category', $filters['category']);
@@ -202,27 +216,30 @@ class CampaignExpenseController extends Controller
     }
 
     /**
-     * @return array{spent:float,raised:float,balance:float,count:int}
+     * @return array{spent:float,income:float,raised:float,balance:float,count:int}
      */
     private function totals(Campaign $campaign): array
     {
         $spent = $campaign->totalExpenses();
+        $income = $campaign->totalExtraIncome();
         $raised = $campaign->totalRaised();
 
         return [
             'spent' => $spent,
+            'income' => $income,
             'raised' => $raised,
-            'balance' => $raised - $spent,
+            'balance' => $raised + $income - $spent,
             'count' => $campaign->expenses()->count(),
         ];
     }
 
     /**
-     * @return array<string, float>  categoria => total
+     * @return array<string, float>
      */
-    private function byCategory(Campaign $campaign): array
+    private function byCategory(Campaign $campaign, string $kind): array
     {
         return $campaign->expenses()
+            ->where('kind', $kind)
             ->selectRaw('category, SUM(amount) as total')
             ->groupBy('category')
             ->orderByDesc('total')
@@ -231,12 +248,24 @@ class CampaignExpenseController extends Controller
             ->all();
     }
 
-    private function validateExpense(Request $request, bool $requireReceipt): array
+    private function requestedKind(Request $request): string
     {
+        $kind = (string) $request->input('kind', CampaignExpense::KIND_GASTO);
+
+        return array_key_exists($kind, CampaignExpense::KINDS) ? $kind : CampaignExpense::KIND_GASTO;
+    }
+
+    private function validateExpense(Request $request, string $kind, bool $requireReceipt): array
+    {
+        $isIncome = $kind === CampaignExpense::KIND_RECEITA;
+        $categories = $isIncome ? CampaignExpense::INCOME_CATEGORIES : CampaignExpense::CATEGORIES;
+        $noun = $isIncome ? 'receita' : 'gasto';
+
         return $request->validate(
             [
+                'kind' => 'required|in:' . implode(',', array_keys(CampaignExpense::KINDS)),
                 'description' => 'required|string|max:255',
-                'category' => 'required|in:' . implode(',', array_keys(CampaignExpense::CATEGORIES)),
+                'category' => 'required|in:' . implode(',', array_keys($categories)),
                 'amount' => 'required|numeric|min:0.01',
                 'expense_date' => 'required|date',
                 'supplier' => 'nullable|string|max:255',
@@ -248,14 +277,15 @@ class CampaignExpenseController extends Controller
                 'remove_attachments.*' => 'integer',
             ],
             [
-                'description.required' => 'Informe a descrição do gasto.',
-                'category.required' => 'Selecione a categoria do gasto.',
-                'amount.required' => 'Informe o valor do gasto.',
-                'amount.min' => 'O valor do gasto deve ser maior que zero.',
-                'expense_date.required' => 'Informe a data do gasto.',
+                'kind.required' => 'Informe se o lançamento é gasto ou receita.',
+                'description.required' => "Informe a descrição da {$noun}.",
+                'category.required' => "Selecione a categoria da {$noun}.",
+                'amount.required' => "Informe o valor da {$noun}.",
+                'amount.min' => "O valor da {$noun} deve ser maior que zero.",
+                'expense_date.required' => "Informe a data da {$noun}.",
                 'attachments.required' => 'Anexe ao menos um comprovante de despesa (nota, recibo ou foto).',
                 'attachments.min' => 'Anexe ao menos um comprovante de despesa (nota, recibo ou foto).',
-                'attachments.max' => 'Máximo de ' . self::MAX_FILES . ' comprovantes por gasto.',
+                'attachments.max' => 'Máximo de ' . self::MAX_FILES . ' comprovantes por lançamento.',
                 'attachments.*.mimes' => 'Comprovantes devem ser imagens (JPG, PNG, WEBP, HEIC) ou PDF.',
                 'attachments.*.max' => 'Cada comprovante pode ter no máximo 10MB.',
             ]
@@ -265,6 +295,7 @@ class CampaignExpenseController extends Controller
     private function expenseAttributes(array $data): array
     {
         return [
+            'kind' => $data['kind'],
             'description' => $data['description'],
             'category' => $data['category'],
             'amount' => $data['amount'],

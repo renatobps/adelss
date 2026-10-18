@@ -11,8 +11,8 @@
             'active' => request()->routeIs('eventos.campaigns.*') && !request()->routeIs('eventos.campaigns.expenses.*'),
         ] : null,
         $canViewCampaigns ? [
-            'label' => 'Gastos',
-            'icon' => 'bx bx-receipt',
+            'label' => 'Transações',
+            'icon' => 'bx bx-transfer',
             'url' => route('eventos.expenses.all'),
             'active' => request()->routeIs('eventos.expenses.*') || request()->routeIs('eventos.campaigns.expenses.*'),
         ] : null,
@@ -21,7 +21,7 @@
 
 @include('partials.module-nav', [
     'title' => 'Gestor de Eventos',
-    'subtitle' => 'Campanhas de arrecadação e controle de gastos dos eventos',
+    'subtitle' => 'Campanhas de arrecadação e transações dos eventos',
     'items' => $items,
     'columns' => 2,
 ])

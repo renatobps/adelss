@@ -74,8 +74,8 @@
     </div>
     <div class="d-flex gap-2 flex-wrap">
         @if($canCreate)
-            <a href="{{ route('eventos.campaigns.expenses.index', $campaign) }}" class="btn btn-outline-danger btn-sm">
-                <i class="bx bx-minus-circle me-1"></i>Registrar gasto
+            <a href="{{ route('eventos.campaigns.expenses.index', $campaign) }}" class="btn btn-outline-primary btn-sm">
+                <i class="bx bx-transfer me-1"></i>Transações
             </a>
         @endif
         <a href="{{ route('eventos.campaigns.report', $campaign) }}" class="btn btn-outline-primary btn-sm">
@@ -117,12 +117,13 @@
         $cards = [
             ['label' => 'Meta', 'value' => $metrics['goal'] > 0 ? 'R$ ' . number_format($metrics['goal'], 2, ',', '.') : 'Sem meta', 'icon' => 'bx bx-target-lock', 'color' => 'primary', 'hex' => '#0088CC', 'filter' => null],
             ['label' => 'Previsão', 'value' => 'R$ ' . number_format($metrics['expected'], 2, ',', '.'), 'icon' => 'bx bx-line-chart', 'color' => 'primary', 'hex' => '#0088CC', 'filter' => null, 'hint' => 'Soma de todas as parcelas dos patrocinadores (pagas + a receber)'],
-            ['label' => 'Arrecadado', 'value' => 'R$ ' . number_format($metrics['raised'], 2, ',', '.'), 'icon' => 'bx bx-trending-up', 'color' => 'success', 'hex' => '#1FA855', 'filter' => 'quitado'],
+            ['label' => 'Patrocinadores pagos', 'value' => 'R$ ' . number_format($metrics['raised'], 2, ',', '.'), 'icon' => 'bx bx-trending-up', 'color' => 'success', 'hex' => '#1FA855', 'filter' => 'quitado'],
+            ['label' => 'Receitas extras', 'value' => 'R$ ' . number_format($metrics['income'], 2, ',', '.'), 'icon' => 'bx bx-donate-heart', 'color' => 'success', 'hex' => '#1FA855', 'filter' => null, 'href' => route('eventos.campaigns.expenses.index', ['campaign' => $campaign->id, 'kind' => 'receita']), 'hint' => 'Doações externas, vendas e outras arrecadações'],
             ['label' => 'A receber', 'value' => 'R$ ' . number_format($metrics['pending'], 2, ',', '.'), 'icon' => 'bx bx-time-five', 'color' => 'warning', 'hex' => '#F5A623', 'filter' => 'em_dia'],
             ['label' => 'Em atraso', 'value' => 'R$ ' . number_format($metrics['overdue'], 2, ',', '.'), 'icon' => 'bx bx-error-circle', 'color' => 'danger', 'hex' => '#DC3545', 'filter' => 'em_atraso'],
             ['label' => 'Patrocinadores', 'value' => $metrics['sponsors'], 'icon' => 'bx bx-user', 'color' => 'info', 'hex' => '#0088CC', 'filter' => 'todos'],
             ['label' => 'Gastos', 'value' => 'R$ ' . number_format($metrics['expenses'], 2, ',', '.'), 'icon' => 'bx bx-trending-down', 'color' => 'danger', 'hex' => '#DC3545', 'filter' => null, 'href' => route('eventos.campaigns.expenses.index', $campaign), 'hint' => 'Despesas do evento registradas com comprovante'],
-            ['label' => 'Saldo', 'value' => 'R$ ' . number_format($metrics['balance'], 2, ',', '.'), 'icon' => 'bx bx-wallet', 'color' => $metrics['balance'] >= 0 ? 'success' : 'danger', 'hex' => $metrics['balance'] >= 0 ? '#1FA855' : '#DC3545', 'filter' => null, 'hint' => 'Arrecadado menos gastos'],
+            ['label' => 'Saldo', 'value' => 'R$ ' . number_format($metrics['balance'], 2, ',', '.'), 'icon' => 'bx bx-wallet', 'color' => $metrics['balance'] >= 0 ? 'success' : 'danger', 'hex' => $metrics['balance'] >= 0 ? '#1FA855' : '#DC3545', 'filter' => null, 'hint' => 'Patrocinadores mais receitas extras menos gastos'],
         ];
     @endphp
     @foreach($cards as $card)

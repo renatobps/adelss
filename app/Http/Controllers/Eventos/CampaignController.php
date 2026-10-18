@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Eventos;
 
 use App\Http\Controllers\Controller;
 use App\Models\Campaign;
+use App\Models\CampaignExpense;
 use App\Models\CampaignInstallment;
 use App\Models\CampaignReminderLog;
 use App\Models\CampaignSponsor;
@@ -21,7 +22,8 @@ class CampaignController extends Controller
         $campaigns = Campaign::query()
             ->with('department')
             ->withCount('sponsors')
-            ->withSum('expenses', 'amount')
+            ->withSum(['expenses as expenses_sum_amount' => fn ($q) => $q->gastos()], 'amount')
+            ->withSum(['expenses as income_sum_amount' => fn ($q) => $q->receitas()], 'amount')
             ->orderByDesc('created_at')
             ->get();
 
@@ -98,8 +100,9 @@ class CampaignController extends Controller
             'progress' => $campaign->progressPercentage(),
             'sponsors' => $campaign->sponsors()->count(),
             'expenses' => $campaign->totalExpenses(),
+            'income' => $campaign->totalExtraIncome(),
         ];
-        $metrics['balance'] = $metrics['raised'] - $metrics['expenses'];
+        $metrics['balance'] = $metrics['raised'] + $metrics['income'] - $metrics['expenses'];
 
         return view('eventos.campaigns.show', [
             'campaign' => $campaign,
@@ -262,8 +265,10 @@ class CampaignController extends Controller
         $data['logoPath'] = public_path('img/img/LOG SS AZUL.png');
         // modo=simplificado: tabela de patrocinadores só com nome e valor pago.
         $data['simplified'] = $request->query('modo') === 'simplificado';
-        // Comprovantes dos gastos do período, anexados nas últimas folhas.
-        $data['receipts'] = ExpenseReceiptPdfImages::build($data['expenses']);
+        // Comprovantes dos gastos e receitas extras do período, anexados nas últimas folhas.
+        $data['receipts'] = ExpenseReceiptPdfImages::build(
+            $data['expenses']->concat($data['incomes'])->values()
+        );
 
         $pdf = Pdf::loadView('eventos.campaigns.pdf.report', $data)->setPaper('a4');
 
@@ -285,10 +290,11 @@ class CampaignController extends Controller
             fputcsv($out, [], ';');
 
             fputcsv($out, ['RESUMO GERAL'], ';');
-            fputcsv($out, ['Meta', 'Arrecadado', 'A receber', 'Em atraso', '% atingido', 'Patrocinadores', 'Gastos', 'Saldo'], ';');
+            fputcsv($out, ['Meta', 'Arrecadado (patrocinadores)', 'Receitas extras', 'A receber', 'Em atraso', '% atingido', 'Patrocinadores', 'Gastos', 'Saldo'], ';');
             fputcsv($out, [
                 number_format($data['metrics']['goal'], 2, ',', '.'),
                 number_format($data['metrics']['raised'], 2, ',', '.'),
+                number_format($data['metrics']['income'] ?? 0, 2, ',', '.'),
                 number_format($data['metrics']['pending'], 2, ',', '.'),
                 number_format($data['metrics']['overdue'], 2, ',', '.'),
                 number_format($data['metrics']['progress'], 1, ',', '.') . '%',
@@ -332,6 +338,21 @@ class CampaignController extends Controller
                     $installment->installment_number,
                     number_format((float) $installment->amount, 2, ',', '.'),
                     $installment->paymentMethodLabel(),
+                ], ';');
+            }
+            fputcsv($out, [], ';');
+
+            fputcsv($out, ['RECEITAS EXTRAS'], ';');
+            fputcsv($out, ['Data', 'Descrição', 'Categoria', 'Doador / origem', 'Forma de pagamento', 'Comprovantes', 'Valor'], ';');
+            foreach ($data['incomes'] as $income) {
+                fputcsv($out, [
+                    $income->expense_date?->format('d/m/Y'),
+                    $income->description,
+                    $income->categoryLabel(),
+                    $income->supplier ?: '',
+                    $income->paymentMethodLabel(),
+                    $income->attachments->count(),
+                    number_format((float) $income->amount, 2, ',', '.'),
                 ], ';');
             }
             fputcsv($out, [], ';');
@@ -409,17 +430,22 @@ class CampaignController extends Controller
             'em_atraso' => $sponsorRows->where('situacao_key', 'em_atraso')->count(),
         ];
 
-        // Gastos do evento no mesmo período (pela data do gasto).
-        $expensesQuery = $campaign->expenses()->with('attachments')->orderBy('expense_date')->orderBy('id');
+        $entriesQuery = $campaign->expenses()->with('attachments')->orderBy('expense_date')->orderBy('id');
         if ($from) {
-            $expensesQuery->whereDate('expense_date', '>=', $from->toDateString());
+            $entriesQuery->whereDate('expense_date', '>=', $from->toDateString());
         }
         if ($to) {
-            $expensesQuery->whereDate('expense_date', '<=', $to->toDateString());
+            $entriesQuery->whereDate('expense_date', '<=', $to->toDateString());
         }
-        $expenses = $expensesQuery->get();
+        $entries = $entriesQuery->get();
+        $expenses = $entries->where('kind', CampaignExpense::KIND_GASTO)->values();
+        $incomes = $entries->where('kind', CampaignExpense::KIND_RECEITA)->values();
 
         $expensesByCategory = $expenses
+            ->groupBy('category')
+            ->map(fn ($group) => (float) $group->sum('amount'))
+            ->sortDesc();
+        $incomesByCategory = $incomes
             ->groupBy('category')
             ->map(fn ($group) => (float) $group->sum('amount'))
             ->sortDesc();
@@ -427,15 +453,29 @@ class CampaignController extends Controller
         $metrics = [
             'goal' => (float) ($campaign->goal_amount ?? 0),
             'raised' => $campaign->totalRaised(),
+            'income' => $campaign->totalExtraIncome(),
             'pending' => $campaign->totalPending(),
             'overdue' => $campaign->totalOverdue(),
             'progress' => $campaign->progressPercentage(),
             'sponsors' => $campaign->sponsors->count(),
             'expenses' => $campaign->totalExpenses(),
         ];
-        $metrics['balance'] = $metrics['raised'] - $metrics['expenses'];
+        $metrics['balance'] = $metrics['raised'] + $metrics['income'] - $metrics['expenses'];
 
-        return compact('campaign', 'metrics', 'byMethod', 'sponsorRows', 'statusCounts', 'payments', 'expenses', 'expensesByCategory', 'from', 'to');
+        return compact(
+            'campaign',
+            'metrics',
+            'byMethod',
+            'sponsorRows',
+            'statusCounts',
+            'payments',
+            'expenses',
+            'incomes',
+            'expensesByCategory',
+            'incomesByCategory',
+            'from',
+            'to'
+        );
     }
 
     private function validateCampaign(Request $request): array

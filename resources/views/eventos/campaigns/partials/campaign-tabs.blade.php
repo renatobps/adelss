@@ -1,4 +1,4 @@
-{{-- Menu interno da campanha: Visão geral | Gastos | Prestação de contas | Lembretes --}}
+{{-- Menu interno da campanha: Visão geral | Transações | Prestação de contas | Lembretes --}}
 @php
     $active = $active ?? 'visao';
     $tabUser = Auth::user();
@@ -8,7 +8,7 @@
 
     $tabs = array_values(array_filter([
         ['key' => 'visao', 'label' => 'Visão geral', 'icon' => 'bx bx-donate-heart', 'url' => route('eventos.campaigns.show', $campaign)],
-        ['key' => 'gastos', 'label' => 'Gastos', 'icon' => 'bx bx-receipt', 'url' => route('eventos.campaigns.expenses.index', $campaign)],
+        ['key' => 'gastos', 'label' => 'Transações', 'icon' => 'bx bx-transfer', 'url' => route('eventos.campaigns.expenses.index', $campaign)],
         ['key' => 'prestacao', 'label' => 'Prestação de contas', 'icon' => 'bx bx-bar-chart-alt-2', 'url' => route('eventos.campaigns.report', $campaign)],
         $tabCanEdit ? ['key' => 'lembretes', 'label' => 'Lembretes', 'icon' => 'bx bx-bell', 'url' => route('eventos.campaigns.reminders.edit', $campaign)] : null,
     ]));

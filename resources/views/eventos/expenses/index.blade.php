@@ -1,30 +1,30 @@
 @extends('layouts.porto')
 
-@section('title', 'Gastos dos eventos')
+@section('title', 'Transações dos eventos')
 
-@section('page-title', 'Gastos dos eventos')
+@section('page-title', 'Transações dos eventos')
 
 @section('breadcrumbs')
     <li><a href="{{ route('eventos.campaigns.index') }}">Gestor de Eventos</a></li>
-    <li><span>Gastos</span></li>
+    <li><span>Transações</span></li>
 @endsection
 
 @section('content')
 @php
     $money = fn ($v) => 'R$ ' . number_format((float) $v, 2, ',', '.');
-    $hasFilters = $filters['q'] !== '' || $filters['category'] !== '' || $filters['from'] || $filters['to'] || $selectedCampaign > 0;
+    $hasFilters = $filters['q'] !== '' || $filters['kind'] !== '' || $filters['category'] !== '' || $filters['from'] || $filters['to'] || $selectedCampaign > 0;
 @endphp
 
 @include('eventos.campaigns.partials.alerts')
 
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <div>
-        <h4 class="mb-0">Gastos de todos os eventos</h4>
-        <small class="text-muted">Visão consolidada. Para registrar um gasto, abra a campanha do evento correspondente.</small>
+        <h4 class="mb-0">Transações de todos os eventos</h4>
+        <small class="text-muted">Visão consolidada. Para registrar uma transação, abra a campanha do evento correspondente.</small>
     </div>
     <div class="text-end">
-        <div class="text-muted small">Total gasto (todos os eventos)</div>
-        <strong class="fs-5 text-danger">{{ $money($grandTotal) }}</strong>
+        <div class="text-muted small">Todos os eventos — receitas extras / gastos</div>
+        <strong class="fs-5 text-success">{{ $money($grandTotalIncome) }}</strong> / <strong class="fs-5 text-danger">{{ $money($grandTotalExpenses) }}</strong>
     </div>
 </div>
 
@@ -48,9 +48,10 @@
                                     <small class="{{ $isSel ? '' : 'text-muted' }}">{{ $c->expenses_count }} lançamento(s)</small>
                                 </div>
                                 <div class="text-end ms-2 text-nowrap">
-                                    <strong>{{ $money($c->expenses_total ?? 0) }}</strong>
+                                    <div class="text-success">Receitas: {{ $money($c->income_total ?? 0) }}</div>
+                                    <div>Gastos: {{ $money($c->expenses_total ?? 0) }}</div>
                                     <div>
-                                        <a href="{{ route('eventos.campaigns.expenses.index', $c) }}" class="small {{ $isSel ? 'text-white' : '' }}" title="Abrir gastos do evento">
+                                        <a href="{{ route('eventos.campaigns.expenses.index', $c) }}" class="small {{ $isSel ? 'text-white' : '' }}" title="Abrir transações do evento">
                                             gerenciar <i class="bx bx-right-arrow-alt"></i>
                                         </a>
                                     </div>
@@ -72,9 +73,15 @@
                         <input type="hidden" name="campaign" value="{{ $selectedCampaign }}">
                     @endif
                     <input type="search" name="q" class="form-control form-control-sm" style="width: 170px" placeholder="Buscar..." value="{{ $filters['q'] }}">
+                    <select name="kind" class="form-select form-select-sm" style="width: 140px" aria-label="Tipo de transação">
+                        <option value="">Todos os tipos</option>
+                        @foreach(\App\Models\CampaignExpense::KINDS as $value => $label)
+                            <option value="{{ $value }}" @selected($filters['kind'] === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
                     <select name="category" class="form-select form-select-sm" style="width: 160px">
                         <option value="">Todas categorias</option>
-                        @foreach($categories as $value => $label)
+                        @foreach($categories + $incomeCategories as $value => $label)
                             <option value="{{ $value }}" @selected($filters['category'] === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
@@ -89,7 +96,7 @@
 
             @if($expenses->isEmpty())
                 <div class="card-body">
-                    <p class="text-muted text-center py-4 mb-0">Nenhum gasto encontrado.</p>
+                    <p class="text-muted text-center py-4 mb-0">Nenhuma transação encontrada.</p>
                 </div>
             @else
                 <div class="table-responsive">
@@ -97,6 +104,7 @@
                         <thead>
                             <tr>
                                 <th class="ps-3">Data</th>
+                                <th>Tipo</th>
                                 <th>Evento</th>
                                 <th>Descrição</th>
                                 <th>Categoria</th>
@@ -108,6 +116,7 @@
                             @foreach($expenses as $expense)
                                 <tr>
                                     <td class="ps-3 text-nowrap">{{ $expense->expense_date->format('d/m/Y') }}</td>
+                                    <td><span class="badge bg-{{ $expense->isIncome() ? 'success' : 'danger' }}">{{ $expense->kindLabel() }}</span></td>
                                     <td><a href="{{ route('eventos.campaigns.expenses.index', $expense->campaign_id) }}" class="text-decoration-none">{{ $expense->campaign?->name ?? '—' }}</a></td>
                                     <td>
                                         {{ $expense->description }}
@@ -124,14 +133,14 @@
                                             </a>
                                         @endforeach
                                     </td>
-                                    <td class="text-end pe-3 text-nowrap"><strong class="text-danger">{{ $money($expense->amount) }}</strong></td>
+                                    <td class="text-end pe-3 text-nowrap"><strong class="text-{{ $expense->isIncome() ? 'success' : 'danger' }}">{{ $expense->isIncome() ? '+' : '−' }} {{ $money($expense->amount) }}</strong></td>
                                 </tr>
                             @endforeach
                         </tbody>
                         <tfoot>
                             <tr class="table-light">
-                                <td colspan="5" class="ps-3"><strong>Total da página ({{ $expenses->total() }} lançamento(s) no filtro)</strong></td>
-                                <td class="text-end pe-3"><strong>{{ $money($expenses->getCollection()->sum('amount')) }}</strong></td>
+                                <td colspan="6" class="ps-3"><strong>Saldo das transações nesta página ({{ $expenses->total() }} lançamento(s) no filtro)</strong></td>
+                                <td class="text-end pe-3"><strong>{{ $money($expenses->getCollection()->sum(fn ($entry) => $entry->isIncome() ? (float) $entry->amount : -(float) $entry->amount)) }}</strong></td>
                             </tr>
                         </tfoot>
                     </table>

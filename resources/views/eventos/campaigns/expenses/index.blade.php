@@ -1,14 +1,14 @@
 @extends('layouts.porto')
 
-@section('title', 'Gastos — ' . $campaign->name)
+@section('title', 'Transações — ' . $campaign->name)
 
-@section('page-title', 'Gastos do evento')
+@section('page-title', 'Transações do evento')
 
 @section('breadcrumbs')
     <li><a href="{{ route('eventos.campaigns.index') }}">Gestor de Eventos</a></li>
     <li><a href="{{ route('eventos.campaigns.index') }}">Campanhas</a></li>
     <li><a href="{{ route('eventos.campaigns.show', $campaign) }}">{{ $campaign->name }}</a></li>
-    <li><span>Gastos</span></li>
+    <li><span>Transações</span></li>
 @endsection
 
 @section('content')
@@ -22,7 +22,7 @@
     $canEdit = $canManage('edit');
     $canDelete = $canManage('delete');
     $money = fn ($v) => 'R$ ' . number_format((float) $v, 2, ',', '.');
-    $hasFilters = $filters['q'] !== '' || $filters['category'] !== '' || $filters['from'] || $filters['to'];
+    $hasFilters = $filters['q'] !== '' || $filters['kind'] !== '' || $filters['category'] !== '' || $filters['from'] || $filters['to'];
 @endphp
 
 @include('eventos.campaigns.partials.alerts')
@@ -31,11 +31,11 @@
 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
     <div>
         <h4 class="mb-0">{{ $campaign->name }}</h4>
-        <small class="text-muted">Registre cada saída do evento (comida, aluguel, decoração...) com o comprovante da despesa.</small>
+        <small class="text-muted">Registre gastos e receitas de doações externas, vendas e outras arrecadações. Receitas têm comprovante opcional.</small>
     </div>
     @if($canCreate)
         <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#expenseModal" data-mode="create">
-            <i class="bx bx-plus me-1"></i>Registrar gasto
+            <i class="bx bx-plus me-1"></i>Registrar transação
         </button>
     @endif
 </div>
@@ -44,14 +44,15 @@
 <div class="row mb-1">
     @php
         $cards = [
-            ['label' => 'Arrecadado', 'value' => $money($totals['raised']), 'icon' => 'bx bx-trending-up', 'color' => 'success'],
+            ['label' => 'Patrocinadores', 'value' => $money($totals['raised']), 'icon' => 'bx bx-user', 'color' => 'success'],
+            ['label' => 'Receitas extras', 'value' => $money($totals['income']), 'icon' => 'bx bx-trending-up', 'color' => 'success'],
             ['label' => 'Total gasto', 'value' => $money($totals['spent']), 'icon' => 'bx bx-trending-down', 'color' => 'danger'],
             ['label' => 'Saldo', 'value' => $money($totals['balance']), 'icon' => 'bx bx-wallet', 'color' => $totals['balance'] >= 0 ? 'primary' : 'danger'],
             ['label' => 'Lançamentos', 'value' => $totals['count'], 'icon' => 'bx bx-receipt', 'color' => 'info'],
         ];
     @endphp
     @foreach($cards as $card)
-        <div class="col-6 col-xl-3 mb-3">
+        <div class="col-6 col-lg mb-3">
             <section class="card h-100">
                 <div class="card-body py-3 d-flex align-items-center gap-2">
                     <i class="{{ $card['icon'] }} fs-3 text-{{ $card['color'] }} flex-shrink-0"></i>
@@ -67,8 +68,8 @@
 
 <div class="row">
     <div class="col-lg-4 mb-3">
-        <section class="card h-100">
-            <header class="card-header"><h5 class="mb-0"><i class="bx bx-pie-chart-alt-2 me-2"></i>Por categoria</h5></header>
+        <section class="card">
+            <header class="card-header"><h5 class="mb-0"><i class="bx bx-pie-chart-alt-2 me-2"></i>Gastos por categoria</h5></header>
             <div class="card-body p-0">
                 @if(empty($byCategory))
                     <p class="text-muted text-center py-4 mb-0">Nenhum gasto registrado.</p>
@@ -78,7 +79,7 @@
                             @foreach($byCategory as $cat => $total)
                                 <tr>
                                     <td class="ps-3">
-                                        <a href="{{ route('eventos.campaigns.expenses.index', ['campaign' => $campaign->id, 'category' => $cat]) }}" class="text-decoration-none">
+                                        <a href="{{ route('eventos.campaigns.expenses.index', ['campaign' => $campaign->id, 'kind' => 'gasto', 'category' => $cat]) }}" class="text-decoration-none">
                                             {{ $categories[$cat] ?? ucfirst($cat) }}
                                         </a>
                                     </td>
@@ -94,6 +95,19 @@
                 @endif
             </div>
         </section>
+        <section class="card mt-3">
+            <header class="card-header"><h5 class="mb-0">Receitas por categoria</h5></header>
+            <div class="card-body">
+                @forelse($byIncomeCategory as $cat => $total)
+                    <div class="d-flex justify-content-between gap-2 mb-2">
+                        <a href="{{ route('eventos.campaigns.expenses.index', ['campaign' => $campaign->id, 'kind' => 'receita', 'category' => $cat]) }}">{{ $incomeCategories[$cat] ?? ucfirst($cat) }}</a>
+                        <strong class="text-success">{{ $money($total) }}</strong>
+                    </div>
+                @empty
+                    <p class="text-muted mb-0">Nenhuma receita extra registrada.</p>
+                @endforelse
+            </div>
+        </section>
     </div>
 
     <div class="col-lg-8 mb-3">
@@ -102,9 +116,15 @@
                 <h5 class="mb-0"><i class="bx bx-list-ul me-2"></i>Lançamentos</h5>
                 <form method="GET" class="d-flex flex-wrap gap-2 align-items-center">
                     <input type="search" name="q" class="form-control form-control-sm" style="width: 170px" placeholder="Buscar..." value="{{ $filters['q'] }}">
+                    <select name="kind" class="form-select form-select-sm" style="width: 140px" aria-label="Tipo de transação">
+                        <option value="">Todos os tipos</option>
+                        @foreach(\App\Models\CampaignExpense::KINDS as $value => $label)
+                            <option value="{{ $value }}" @selected($filters['kind'] === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
                     <select name="category" class="form-select form-select-sm" style="width: 160px">
                         <option value="">Todas categorias</option>
-                        @foreach($categories as $value => $label)
+                        @foreach($categories + $incomeCategories as $value => $label)
                             <option value="{{ $value }}" @selected($filters['category'] === $value)>{{ $label }}</option>
                         @endforeach
                     </select>
@@ -121,9 +141,9 @@
                 <div class="card-body">
                     <p class="text-muted text-center py-4 mb-0">
                         @if($hasFilters)
-                            Nenhum gasto encontrado com os filtros aplicados.
+                            Nenhuma transação encontrada com os filtros aplicados.
                         @else
-                            Nenhum gasto registrado ainda. Clique em <strong>Registrar gasto</strong> para lançar a primeira despesa com o comprovante.
+                            Nenhuma transação registrada ainda. Clique em <strong>Registrar transação</strong> para lançar um gasto ou uma receita.
                         @endif
                     </p>
                 </div>
@@ -133,9 +153,10 @@
                         <thead>
                             <tr>
                                 <th class="ps-3">Data</th>
+                                <th>Tipo</th>
                                 <th>Descrição</th>
                                 <th>Categoria</th>
-                                <th>Fornecedor</th>
+                                <th>Fornecedor / Doador / Origem</th>
                                 <th class="text-center">Comprovantes</th>
                                 <th class="text-end">Valor</th>
                                 <th class="text-end pe-3"></th>
@@ -150,6 +171,7 @@
                                 @endphp
                                 <tr>
                                     <td class="ps-3 text-nowrap">{{ $expense->expense_date->format('d/m/Y') }}</td>
+                                    <td><span class="badge bg-{{ $expense->isIncome() ? 'success' : 'danger' }}">{{ $expense->kindLabel() }}</span></td>
                                     <td>
                                         <div>{{ $expense->description }}</div>
                                         @if($expense->notes)
@@ -173,11 +195,12 @@
                                             @endforeach
                                         </div>
                                     </td>
-                                    <td class="text-end text-nowrap"><strong class="text-danger">{{ $money($expense->amount) }}</strong></td>
+                                    <td class="text-end text-nowrap"><strong class="text-{{ $expense->isIncome() ? 'success' : 'danger' }}">{{ $expense->isIncome() ? '+' : '−' }} {{ $money($expense->amount) }}</strong></td>
                                     <td class="text-end pe-3 text-nowrap">
                                         @if($canEdit)
                                             <button type="button" class="btn btn-sm btn-outline-secondary js-edit-expense"
                                                     data-action="{{ route('eventos.campaigns.expenses.update', $expense) }}"
+                                                    data-kind="{{ $expense->kind }}"
                                                     data-description="{{ $expense->description }}"
                                                     data-category="{{ $expense->category }}"
                                                     data-amount="{{ number_format((float) $expense->amount, 2, '.', '') }}"
@@ -190,7 +213,7 @@
                                         @endif
                                         @if($canDelete)
                                             <form method="POST" action="{{ route('eventos.campaigns.expenses.destroy', $expense) }}" class="d-inline"
-                                                  onsubmit="return confirm('Excluir este gasto e seus comprovantes?');">
+                                                  onsubmit="return confirm('Excluir esta transação e seus comprovantes?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Excluir"><i class="bx bx-trash"></i></button>
@@ -202,8 +225,8 @@
                         </tbody>
                         <tfoot>
                             <tr class="table-light">
-                                <td colspan="5" class="ps-3"><strong>Total {{ $hasFilters ? 'filtrado' : '' }} ({{ $expenses->total() }} lançamento(s))</strong></td>
-                                <td class="text-end"><strong>{{ $money($expenses->getCollection()->sum('amount')) }}</strong></td>
+                                <td colspan="6" class="ps-3"><strong>Saldo das transações nesta página ({{ $expenses->total() }} lançamento(s) no filtro)</strong></td>
+                                <td class="text-end"><strong>{{ $money($expenses->getCollection()->sum(fn ($entry) => $entry->isIncome() ? (float) $entry->amount : -(float) $entry->amount)) }}</strong></td>
                                 <td></td>
                             </tr>
                         </tfoot>
@@ -218,7 +241,7 @@
 </div>
 
 @if($canCreate || $canEdit)
-<!-- Modal: registrar / editar gasto -->
+<!-- Modal: registrar / editar transação -->
 <div class="modal fade" id="expenseModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <form method="POST" id="expenseForm" action="{{ route('eventos.campaigns.expenses.store', $campaign) }}" class="modal-content" enctype="multipart/form-data">
@@ -226,20 +249,28 @@
             <input type="hidden" name="_method" id="expenseMethod" value="POST">
             <input type="hidden" name="form_action" id="expFormAction" value="{{ route('eventos.campaigns.expenses.store', $campaign) }}">
             <div class="modal-header">
-                <h5 class="modal-title" id="expenseModalTitle">Registrar gasto</h5>
+                <h5 class="modal-title" id="expenseModalTitle">Registrar transação</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label" for="expKind">Tipo de transação *</label>
+                    <select name="kind" id="expKind" class="form-select" required>
+                        @foreach(\App\Models\CampaignExpense::KINDS as $value => $label)
+                            <option value="{{ $value }}" @selected(old('kind', 'gasto') === $value)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="row">
                     <div class="col-md-8 mb-3">
                         <label class="form-label">Descrição *</label>
                         <input type="text" name="description" id="expDescription" class="form-control" required maxlength="255"
-                               placeholder="Ex: Aluguel da chácara, lanche das crianças..." value="{{ old('description') }}">
+                               placeholder="Ex: Aluguel da chácara, doação externa, venda na cantina..." value="{{ old('description') }}">
                     </div>
                     <div class="col-md-4 mb-3">
                         <label class="form-label">Categoria *</label>
                         <select name="category" id="expCategory" class="form-select" required>
-                            @foreach($categories as $value => $label)
+                            @foreach((old('kind') === 'receita' ? $incomeCategories : $categories) as $value => $label)
                                 <option value="{{ $value }}" @selected(old('category', 'outros') === $value)>{{ $label }}</option>
                             @endforeach
                         </select>
@@ -252,7 +283,7 @@
                                placeholder="0,00" value="{{ old('amount') }}">
                     </div>
                     <div class="col-md-3 mb-3">
-                        <label class="form-label">Data do gasto *</label>
+                        <label class="form-label">Data da transação *</label>
                         <input type="date" name="expense_date" id="expDate" class="form-control" required value="{{ old('expense_date', now()->toDateString()) }}">
                     </div>
                     <div class="col-md-3 mb-3">
@@ -265,7 +296,7 @@
                         </select>
                     </div>
                     <div class="col-md-3 mb-3">
-                        <label class="form-label">Fornecedor / Pago a</label>
+                        <label class="form-label" id="expSupplierLabel">Fornecedor / Pago a</label>
                         <input type="text" name="supplier" id="expSupplier" class="form-control" maxlength="255" placeholder="Opcional" value="{{ old('supplier') }}">
                     </div>
                 </div>
@@ -275,7 +306,7 @@
                 </div>
 
                 <div class="mb-0">
-                    <label class="form-label">Comprovante de despesa * <small class="text-muted fw-normal">(nota fiscal, recibo ou foto — JPG, PNG, WEBP, HEIC ou PDF, até 10MB cada, máx. 5)</small></label>
+                    <label class="form-label"><span id="expReceiptLabel">Comprovante de despesa *</span> <small class="text-muted fw-normal">(nota fiscal, recibo ou foto — JPG, PNG, WEBP, HEIC ou PDF, até 10MB cada, máx. 5)</small></label>
                     <div id="expExistingAttachments" class="d-flex flex-wrap gap-2 mb-2"></div>
                     <div class="d-flex flex-wrap gap-2 mb-2">
                         <button type="button" class="btn btn-outline-secondary btn-sm" id="expPickFiles">
@@ -296,7 +327,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-primary" id="expSubmit"><i class="bx bx-save me-1"></i>Salvar gasto</button>
+                <button type="submit" class="btn btn-primary" id="expSubmit"><i class="bx bx-save me-1"></i>Salvar transação</button>
             </div>
         </form>
     </div>
@@ -320,6 +351,22 @@ document.addEventListener('DOMContentLoaded', function () {
     const cameraInput = document.getElementById('expFilesCamera');
     const filesList = document.getElementById('expFilesList');
     const requiredMsg = document.getElementById('expFilesRequired');
+    const kind = document.getElementById('expKind');
+    const category = document.getElementById('expCategory');
+    const categories = { gasto: @json($categories), receita: @json($incomeCategories) };
+
+    function updateKind(selectedCategory = category.value) {
+        const isIncome = kind.value === 'receita';
+        category.replaceChildren();
+        Object.entries(categories[kind.value]).forEach(([value, label]) => {
+            category.add(new Option(label, value));
+        });
+        category.value = Object.hasOwn(categories[kind.value], selectedCategory) ? selectedCategory : 'outros';
+        document.getElementById('expSupplierLabel').textContent = isIncome ? 'Doador / Origem da receita' : 'Fornecedor / Pago a';
+        document.getElementById('expReceiptLabel').textContent = isIncome ? 'Comprovante (opcional)' : 'Comprovante de despesa *';
+        requiredMsg.classList.add('d-none');
+    }
+    kind.addEventListener('change', () => updateKind());
 
     // Acumula arquivos de várias seleções (galeria + câmera) no input real.
     let dt = new DataTransfer();
@@ -365,7 +412,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     form.addEventListener('submit', function (event) {
-        if (dt.files.length === 0 && remainingExisting() === 0) {
+        if (kind.value === 'gasto' && dt.files.length === 0 && remainingExisting() === 0) {
             event.preventDefault();
             requiredMsg.classList.remove('d-none');
         }
@@ -378,6 +425,8 @@ document.addEventListener('DOMContentLoaded', function () {
         renderFiles();
         existingBox.innerHTML = '';
         document.getElementById('expDate').value = '{{ now()->toDateString() }}';
+        kind.value = @json($filters['kind'] ?: 'gasto');
+        updateKind('outros');
     }
 
     function openCreate() {
@@ -385,7 +434,7 @@ document.addEventListener('DOMContentLoaded', function () {
         form.action = storeAction;
         formAction.value = storeAction;
         method.value = 'POST';
-        title.textContent = 'Registrar gasto';
+        title.textContent = 'Registrar transação';
     }
 
     function openEdit(btn) {
@@ -393,7 +442,9 @@ document.addEventListener('DOMContentLoaded', function () {
         form.action = btn.dataset.action;
         formAction.value = btn.dataset.action;
         method.value = 'PUT';
-        title.textContent = 'Editar gasto';
+        title.textContent = 'Editar transação';
+        kind.value = btn.dataset.kind || 'gasto';
+        updateKind(btn.dataset.category || 'outros');
         document.getElementById('expDescription').value = btn.dataset.description || '';
         document.getElementById('expCategory').value = btn.dataset.category || 'outros';
         document.getElementById('expAmount').value = btn.dataset.amount || '';
@@ -433,7 +484,9 @@ document.addEventListener('DOMContentLoaded', function () {
         form.action = @json(old('form_action')) || storeAction;
         method.value = @json(old('_method', 'POST'));
         formAction.value = form.action;
-        title.textContent = method.value === 'PUT' ? 'Editar gasto' : 'Registrar gasto';
+        kind.value = @json(old('kind', 'gasto'));
+        updateKind(@json(old('category', 'outros')));
+        title.textContent = method.value === 'PUT' ? 'Editar transação' : 'Registrar transação';
         bootstrap.Modal.getOrCreateInstance(modalEl).show();
         requiredMsg.classList.toggle('d-none', !@json($errors->has('attachments') || $errors->has('attachments.*')));
     @endif

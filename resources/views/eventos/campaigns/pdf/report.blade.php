@@ -17,10 +17,11 @@
 
     $money = fn ($v) => 'R$ ' . number_format((float) $v, 2, ',', '.');
     $expenses = $expenses ?? collect();
+    $incomes = $incomes ?? collect();
     $expensesByCategory = $expensesByCategory ?? collect();
     $statusCounts = $statusCounts ?? ['quitado' => 0, 'em_dia' => 0, 'em_atraso' => 0];
     $expensesTotal = (float) ($metrics['expenses'] ?? 0);
-    $balance = (float) ($metrics['balance'] ?? ($metrics['raised'] - $expensesTotal));
+    $balance = (float) ($metrics['balance'] ?? ($metrics['raised'] + ($metrics['income'] ?? 0) - $expensesTotal));
     $balancePositive = $balance >= 0;
     $hasPeriod = $from || $to;
     $raisedSum = max(0.01, (float) $byMethod->sum());
@@ -253,7 +254,7 @@
         <tr>
             <td>
                 @if($hasPeriod)
-                    Período dos pagamentos e gastos: <b>{{ $from?->format('d/m/Y') ?? 'início' }}</b> a <b>{{ $to?->format('d/m/Y') ?? 'hoje' }}</b>
+                    Período dos pagamentos e transações: <b>{{ $from?->format('d/m/Y') ?? 'início' }}</b> a <b>{{ $to?->format('d/m/Y') ?? 'hoje' }}</b>
                 @else
                     Período: <b>todo o histórico da campanha</b>
                 @endif
@@ -275,9 +276,9 @@
             </td>
             <td>
                 <div class="kpi k-arrec">
-                    <div class="lbl">Arrecadado</div>
-                    <div class="val">{{ $money($metrics['raised']) }}</div>
-                    <div class="sub">{{ $payments->count() }} recebimento(s)</div>
+                    <div class="lbl">Total arrecadado</div>
+                    <div class="val">{{ $money($metrics['raised'] + $metrics['income']) }}</div>
+                    <div class="sub">Patrocinadores: {{ $money($metrics['raised']) }}<br>Receitas extras: {{ $money($metrics['income']) }}</div>
                 </div>
             </td>
             <td>
@@ -305,7 +306,7 @@
                 <div class="kpi k-saldo">
                     <div class="lbl">Saldo</div>
                     <div class="val">{{ $money($balance) }}</div>
-                    <div class="sub">arrecadado − gastos</div>
+                    <div class="sub">patrocinadores + receitas − gastos</div>
                 </div>
             </td>
         </tr>
@@ -315,8 +316,8 @@
     <table class="flow">
         <tr>
             <td>
-                <div class="lbl">Arrecadado</div>
-                <div class="val c-success">{{ $money($metrics['raised']) }}</div>
+                <div class="lbl">Total arrecadado</div>
+                <div class="val c-success">{{ $money($metrics['raised'] + $metrics['income']) }}</div>
             </td>
             <td class="op">−</td>
             <td>
@@ -512,6 +513,48 @@
     </table>
 
     {{-- Gastos --}}
+    <h2>Receitas extras <span class="sub">— doações externas e outras arrecadações</span></h2>
+    <table class="dados">
+        <thead>
+            <tr>
+                <th style="width: 11%;">Data</th>
+                <th>Descrição</th>
+                <th style="width: 13%;">Categoria</th>
+                <th style="width: 16%;">Doador / Origem</th>
+                <th style="width: 11%;">Forma</th>
+                <th class="center" style="width: 9%;">Comprov.</th>
+                <th class="num" style="width: 14%;">Valor</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($incomes as $income)
+                <tr class="{{ $loop->even ? 'zebra' : '' }}">
+                    <td>{{ $income->expense_date?->format('d/m/Y') }}</td>
+                    <td>
+                        <span class="bold">{{ PdfText::stripEmoji($income->description) }}</span>
+                        @if($income->notes)<div class="muted">{{ \Illuminate\Support\Str::limit(PdfText::stripEmoji($income->notes), 80) }}</div>@endif
+                    </td>
+                    <td><span class="tag tag-cat">{{ $income->categoryLabel() }}</span></td>
+                    <td>{{ $income->supplier ? PdfText::stripEmoji($income->supplier) : '—' }}</td>
+                    <td>{{ $income->paymentMethodLabel() }}</td>
+                    <td class="center">{{ $income->attachments->count() }}</td>
+                    <td class="num c-success bold">{{ $money($income->amount) }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="7" class="empty">Nenhuma receita extra no período.</td></tr>
+            @endforelse
+        </tbody>
+        @if($incomes->isNotEmpty())
+            <tfoot>
+                <tr class="total">
+                    <td colspan="6">Total de receitas extras{{ $hasPeriod ? ' no período' : '' }} ({{ $incomes->count() }} lançamento(s))</td>
+                    <td class="num c-success">{{ $money($incomes->sum('amount')) }}</td>
+                </tr>
+            </tfoot>
+        @endif
+    </table>
+
+    {{-- Gastos --}}
     <h2>Gastos do evento <span class="sub">— despesas registradas com comprovante</span></h2>
     <table class="dados">
         <thead>
@@ -574,9 +617,9 @@
     @php($receipts = $receipts ?? [])
     @if(count($receipts) > 0)
         <div class="anexos-capa">
-            <h2>Anexos — comprovantes de gastos <span class="sub">— {{ count($receipts) }} comprovante(s) de {{ $expenses->count() }} gasto(s)</span></h2>
+            <h2>Anexos — comprovantes das transações <span class="sub">— {{ count($receipts) }} comprovante(s) de {{ $expenses->count() + $incomes->count() }} transação(ões)</span></h2>
             <p class="anexos-intro">
-                Cada comprovante (nota fiscal, recibo ou foto) é apresentado em uma folha, identificado pelo gasto a que pertence.
+                Cada comprovante (nota fiscal, recibo ou foto) é apresentado em uma folha, identificado pela transação a que pertence.
                 A numeração abaixo corresponde à ordem dos anexos.
             </p>
             <table class="indice" style="width: 100%;">
@@ -584,7 +627,7 @@
                     <tr>
                         <th style="width: 7%;">Anexo</th>
                         <th style="width: 12%;">Data</th>
-                        <th>Gasto</th>
+                        <th>Transação</th>
                         <th style="width: 16%;">Categoria</th>
                         <th style="width: 20%;">Arquivo</th>
                         <th class="num" style="width: 14%;">Valor</th>
@@ -598,7 +641,7 @@
                             <td>{{ PdfText::stripEmoji($r['expense']->description) }}@if($r['total'] > 1) <span class="muted">({{ $r['index'] }}/{{ $r['total'] }})</span>@endif</td>
                             <td>{{ $r['expense']->categoryLabel() }}</td>
                             <td class="muted">{{ \Illuminate\Support\Str::limit($r['attachment']->file_name, 28) }}</td>
-                            <td class="num c-danger bold">{{ $money($r['expense']->amount) }}</td>
+                            <td class="num {{ $r['expense']->isIncome() ? 'c-success' : 'c-danger' }} bold">{{ $money($r['expense']->amount) }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -614,7 +657,7 @@
                             <span class="num-badge">Anexo {{ $loop->iteration }}</span>
                         </td>
                         <td style="width: 31%;">
-                            <div class="lbl">Gasto</div>
+                            <div class="lbl">{{ $exp->kindLabel() }}</div>
                             <div class="val">{{ PdfText::stripEmoji($exp->description) }}</div>
                         </td>
                         <td style="width: 13%;">
@@ -626,12 +669,12 @@
                             <div class="val">{{ $exp->categoryLabel() }}</div>
                         </td>
                         <td style="width: 14%;">
-                            <div class="lbl">Fornecedor</div>
+                            <div class="lbl">{{ $exp->isIncome() ? 'Doador / Origem' : 'Fornecedor' }}</div>
                             <div class="val">{{ $exp->supplier ? PdfText::stripEmoji($exp->supplier) : '—' }}</div>
                         </td>
                         <td style="width: 14%; text-align: right;">
                             <div class="lbl">Valor</div>
-                            <div class="val c-danger">{{ $money($exp->amount) }}</div>
+                            <div class="val {{ $exp->isIncome() ? 'c-success' : 'c-danger' }}">{{ $money($exp->amount) }}</div>
                         </td>
                     </tr>
                 </table>
@@ -653,7 +696,7 @@
 
                 <div class="anexo-file">
                     {{ $r['attachment']->file_name }} • {{ $r['attachment']->humanSize() }}
-                    @if($r['total'] > 1) • comprovante {{ $r['index'] }} de {{ $r['total'] }} deste gasto @endif
+                    @if($r['total'] > 1) • comprovante {{ $r['index'] }} de {{ $r['total'] }} desta transação @endif
                 </div>
             </div>
         @endforeach
