@@ -157,6 +157,7 @@
         default => 'pc-pill--neutral',
     };
     $methodColors = ['pix' => '#0088CC', 'dinheiro' => '#1FA855', 'cartao' => '#6F42C1', 'outro' => '#8A97A3'];
+    $pdfParams = array_merge(['campaign' => $campaign->id], request()->only('from', 'to'));
 @endphp
 
 @include('eventos.campaigns.partials.alerts')
@@ -182,9 +183,26 @@
                 </div>
             </div>
             <div class="pc-actions d-flex gap-2 flex-wrap">
-                <a href="{{ route('eventos.campaigns.report.pdf', array_merge(['campaign' => $campaign->id], request()->only('from', 'to'))) }}" class="btn btn-light btn-sm">
-                    <i class="bx bxs-file-pdf me-1 text-danger"></i>Exportar PDF
-                </a>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-light btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bx bxs-file-pdf me-1 text-danger"></i>Exportar PDF
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm" style="min-width: 300px;">
+                        <li>
+                            <a class="dropdown-item py-2" href="{{ route('eventos.campaigns.report.pdf', $pdfParams) }}">
+                                <div class="fw-semibold"><i class="bx bx-detail me-1 text-danger"></i>Completo</div>
+                                <div class="small text-muted ms-4">Patrocinadores com telefone, parcelas, comprometido, pago, pendente e situação.</div>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item py-2" href="{{ route('eventos.campaigns.report.pdf', $pdfParams + ['modo' => 'simplificado']) }}">
+                                <div class="fw-semibold"><i class="bx bx-list-ul me-1 text-danger"></i>Simplificado</div>
+                                <div class="small text-muted ms-4">Patrocinadores apenas com nome e valor pago.</div>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
                 <a href="{{ route('eventos.campaigns.report.excel', array_merge(['campaign' => $campaign->id], request()->only('from', 'to'))) }}" class="btn btn-outline-light btn-sm">
                     <i class="bx bxs-spreadsheet me-1"></i>Exportar Excel
                 </a>

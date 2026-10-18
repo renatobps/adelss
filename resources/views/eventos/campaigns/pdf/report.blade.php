@@ -200,6 +200,25 @@
     }
     .pdf-footer .page-num:after { content: counter(page); }
     .avoid-break { page-break-inside: avoid; }
+
+    /* ---------- Anexos: comprovantes ---------- */
+    .anexos-capa { page-break-before: always; }
+    .anexos-capa h2 { margin-top: 0; }
+    .anexos-intro { font-size: 8.5px; color: #6C757D; margin: 0 0 8px 0; }
+    .anexo { page-break-before: always; page-break-inside: avoid; }
+    .anexo-head { width: 100%; background: #F7F9FB; border: 1px solid #EEF0F2; border-left: 4px solid #E4572E; margin-bottom: 6px; }
+    .anexo-head td { padding: 6px 8px; vertical-align: top; }
+    .anexo-head .lbl { font-size: 7px; text-transform: uppercase; letter-spacing: .5px; color: #8A97A3; }
+    .anexo-head .val { font-size: 9px; color: #2E353E; font-weight: bold; }
+    .anexo-head .num-badge { display: inline-block; background: #2E353E; color: #FFFFFF; font-size: 8px; font-weight: bold; padding: 3px 8px; border-radius: 8px; white-space: nowrap; }
+    .anexo-img { text-align: center; }
+    .anexo-img img { border: 1px solid #EEF0F2; }
+    .anexo-file { font-size: 7.5px; color: #8A97A3; text-align: center; margin-top: 4px; }
+    .anexo-placeholder { border: 1px dashed #B9C4CE; background: #FBFCFD; padding: 28px 16px; text-align: center; color: #6C757D; font-size: 9px; }
+    .anexo-placeholder .big { font-size: 22px; font-weight: bold; color: #DC3545; margin-bottom: 6px; }
+    .anexo-placeholder a { color: #0088CC; text-decoration: none; word-break: break-all; }
+    table.indice td { padding: 3px 6px; border-bottom: 1px solid #EEF0F2; font-size: 8.5px; }
+    table.indice th { background: #2E353E; color: #FFFFFF; font-size: 7.5px; text-transform: uppercase; padding: 4px 6px; text-align: left; }
 </style>
 </head>
 <body>
@@ -370,6 +389,37 @@
     </table>
 
     {{-- Patrocinadores --}}
+    @if($simplified ?? false)
+    <h2>Patrocinadores <span class="sub">— valor pago por patrocinador</span></h2>
+    <table class="dados">
+        <thead>
+            <tr>
+                <th style="width: 6%;" class="center">#</th>
+                <th>Patrocinador</th>
+                <th class="num" style="width: 22%;">Pago</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($sponsorRows as $row)
+                <tr class="{{ $loop->even ? 'zebra' : '' }}">
+                    <td class="center muted">{{ $loop->iteration }}</td>
+                    <td class="bold">{{ PdfText::stripEmoji($row['name']) }}</td>
+                    <td class="num c-success bold">{{ $money($row['paid']) }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="3" class="empty">Nenhum patrocinador.</td></tr>
+            @endforelse
+        </tbody>
+        @if($sponsorRows->isNotEmpty())
+            <tfoot>
+                <tr class="total">
+                    <td colspan="2">Total pago ({{ $sponsorRows->count() }} patrocinador(es))</td>
+                    <td class="num c-success">{{ $money($sponsorRows->sum('paid')) }}</td>
+                </tr>
+            </tfoot>
+        @endif
+    </table>
+    @else
     <h2>Patrocinadores <span class="sub">— situação considerando todas as parcelas da campanha</span></h2>
     <table class="dados">
         <thead>
@@ -422,6 +472,7 @@
         <span class="st st-dia">Em dia</span> parcelas pendentes dentro do prazo &nbsp;
         <span class="st st-atraso">Em atraso</span> há parcela vencida sem pagamento
     </p>
+    @endif
 
     {{-- Extrato de recebimentos --}}
     <h2>Extrato de recebimentos <span class="sub">— parcelas pagas em ordem cronológica</span></h2>
@@ -518,6 +569,95 @@
             </td>
         </tr>
     </table>
+
+    {{-- Anexos: comprovantes dos gastos --}}
+    @php($receipts = $receipts ?? [])
+    @if(count($receipts) > 0)
+        <div class="anexos-capa">
+            <h2>Anexos — comprovantes de gastos <span class="sub">— {{ count($receipts) }} comprovante(s) de {{ $expenses->count() }} gasto(s)</span></h2>
+            <p class="anexos-intro">
+                Cada comprovante (nota fiscal, recibo ou foto) é apresentado em uma folha, identificado pelo gasto a que pertence.
+                A numeração abaixo corresponde à ordem dos anexos.
+            </p>
+            <table class="indice" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th style="width: 7%;">Anexo</th>
+                        <th style="width: 12%;">Data</th>
+                        <th>Gasto</th>
+                        <th style="width: 16%;">Categoria</th>
+                        <th style="width: 20%;">Arquivo</th>
+                        <th class="num" style="width: 14%;">Valor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($receipts as $r)
+                        <tr>
+                            <td class="bold">{{ $loop->iteration }}</td>
+                            <td>{{ $r['expense']->expense_date?->format('d/m/Y') }}</td>
+                            <td>{{ PdfText::stripEmoji($r['expense']->description) }}@if($r['total'] > 1) <span class="muted">({{ $r['index'] }}/{{ $r['total'] }})</span>@endif</td>
+                            <td>{{ $r['expense']->categoryLabel() }}</td>
+                            <td class="muted">{{ \Illuminate\Support\Str::limit($r['attachment']->file_name, 28) }}</td>
+                            <td class="num c-danger bold">{{ $money($r['expense']->amount) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        @foreach($receipts as $r)
+            @php($exp = $r['expense'])
+            <div class="anexo">
+                <table class="anexo-head">
+                    <tr>
+                        <td style="width: 12%; text-align: center; vertical-align: middle;">
+                            <span class="num-badge">Anexo {{ $loop->iteration }}</span>
+                        </td>
+                        <td style="width: 31%;">
+                            <div class="lbl">Gasto</div>
+                            <div class="val">{{ PdfText::stripEmoji($exp->description) }}</div>
+                        </td>
+                        <td style="width: 13%;">
+                            <div class="lbl">Data</div>
+                            <div class="val">{{ $exp->expense_date?->format('d/m/Y') }}</div>
+                        </td>
+                        <td style="width: 16%;">
+                            <div class="lbl">Categoria</div>
+                            <div class="val">{{ $exp->categoryLabel() }}</div>
+                        </td>
+                        <td style="width: 14%;">
+                            <div class="lbl">Fornecedor</div>
+                            <div class="val">{{ $exp->supplier ? PdfText::stripEmoji($exp->supplier) : '—' }}</div>
+                        </td>
+                        <td style="width: 14%; text-align: right;">
+                            <div class="lbl">Valor</div>
+                            <div class="val c-danger">{{ $money($exp->amount) }}</div>
+                        </td>
+                    </tr>
+                </table>
+
+                @if($r['embeddable'])
+                    <div class="anexo-img">
+                        <img src="{{ $r['src'] }}" alt="Comprovante" style="width: {{ $r['width_mm'] }}mm; height: {{ $r['height_mm'] }}mm;">
+                    </div>
+                @else
+                    <div class="anexo-placeholder">
+                        <div class="big">{{ $r['attachment']->isImage() ? 'IMG' : 'PDF' }}</div>
+                        <div class="bold" style="color: #2E353E; margin-bottom: 4px;">{{ $r['attachment']->file_name }}</div>
+                        <div>{{ $r['reason'] }}</div>
+                        <div style="margin-top: 8px;">
+                            <a href="{{ route('eventos.campaigns.expenses.attachment', $r['attachment']) }}">{{ route('eventos.campaigns.expenses.attachment', $r['attachment']) }}</a>
+                        </div>
+                    </div>
+                @endif
+
+                <div class="anexo-file">
+                    {{ $r['attachment']->file_name }} • {{ $r['attachment']->humanSize() }}
+                    @if($r['total'] > 1) • comprovante {{ $r['index'] }} de {{ $r['total'] }} deste gasto @endif
+                </div>
+            </div>
+        @endforeach
+    @endif
 
 </body>
 </html>

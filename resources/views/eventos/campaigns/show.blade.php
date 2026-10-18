@@ -335,9 +335,17 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="mb-0">
+                <div class="mb-3">
                     <label class="form-label">Data do pagamento</label>
                     <input type="datetime-local" name="paid_at" class="form-control" value="{{ now()->format('Y-m-d\TH:i') }}">
+                </div>
+                <div class="mb-0" id="payAmountWrap">
+                    <label class="form-label">Valor pago <span class="text-muted fw-normal">(opcional)</span></label>
+                    <div class="input-group">
+                        <span class="input-group-text">R$</span>
+                        <input type="text" name="amount" id="payAmount" class="form-control" inputmode="decimal" autocomplete="off">
+                    </div>
+                    <div class="form-text" id="payAmountHelp"></div>
                 </div>
                 <div class="alert alert-info py-2 px-3 mt-3 mb-0">
                     <i class="bx bxl-whatsapp me-1"></i>
@@ -547,6 +555,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const payForm = document.getElementById('payForm');
     const payModalLabel = document.getElementById('payModalLabel');
     const payBatchInputs = document.getElementById('payBatchInputs');
+    const payAmountWrap = document.getElementById('payAmountWrap');
+    const payAmount = document.getElementById('payAmount');
+    const payAmountHelp = document.getElementById('payAmountHelp');
 
     function refreshBatchButtons() {
         document.querySelectorAll('.js-batch-pay').forEach(function (btn) {
@@ -568,6 +579,12 @@ document.addEventListener('DOMContentLoaded', function () {
             payForm.action = payBtn.dataset.action;
             payModalLabel.textContent = payBtn.dataset.label;
             payBatchInputs.innerHTML = '';
+            if (payAmountWrap) {
+                payAmountWrap.classList.remove('d-none');
+                payAmount.value = '';
+                payAmount.placeholder = payBtn.dataset.amount || '';
+                payAmountHelp.textContent = 'Deixe em branco para registrar o valor da parcela (R$ ' + (payBtn.dataset.amount || '') + '). Informe outro valor se o patrocinador pagou a mais ou a menos.';
+            }
             payModal.show();
             return;
         }
@@ -580,6 +597,11 @@ document.addEventListener('DOMContentLoaded', function () {
             payForm.action = '{{ route('eventos.campaigns.installments.pay-batch') }}';
             payModalLabel.textContent = ids.length + ' parcela(s) selecionada(s) serão marcadas como pagas.';
             payBatchInputs.innerHTML = ids.map(id => '<input type="hidden" name="installment_ids[]" value="' + id + '">').join('');
+            if (payAmountWrap) {
+                // Em lote cada parcela mantém o próprio valor.
+                payAmountWrap.classList.add('d-none');
+                payAmount.value = '';
+            }
             payModal.show();
             return;
         }

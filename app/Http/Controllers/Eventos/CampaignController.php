@@ -8,6 +8,7 @@ use App\Models\CampaignInstallment;
 use App\Models\CampaignReminderLog;
 use App\Models\CampaignSponsor;
 use App\Models\Department;
+use App\Support\ExpenseReceiptPdfImages;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -259,10 +260,16 @@ class CampaignController extends Controller
     {
         $data = $this->buildReportData($request, $campaign);
         $data['logoPath'] = public_path('img/img/LOG SS AZUL.png');
+        // modo=simplificado: tabela de patrocinadores só com nome e valor pago.
+        $data['simplified'] = $request->query('modo') === 'simplificado';
+        // Comprovantes dos gastos do período, anexados nas últimas folhas.
+        $data['receipts'] = ExpenseReceiptPdfImages::build($data['expenses']);
 
         $pdf = Pdf::loadView('eventos.campaigns.pdf.report', $data)->setPaper('a4');
 
-        return $pdf->download('prestacao-contas-' . \Illuminate\Support\Str::slug($campaign->name) . '.pdf');
+        $suffix = $data['simplified'] ? '-simplificado' : '';
+
+        return $pdf->download('prestacao-contas-' . \Illuminate\Support\Str::slug($campaign->name) . $suffix . '.pdf');
     }
 
     public function reportExcel(Request $request, Campaign $campaign)

@@ -21,22 +21,44 @@ class CampaignInstallmentController extends Controller
      */
     public function pay(Request $request, CampaignInstallment $installment)
     {
+        // Aceita "1.234,56" ou "1234.56" no valor pago (campo opcional).
+        if ($request->filled('amount')) {
+            $raw = trim((string) $request->input('amount'));
+            if (str_contains($raw, ',')) {
+                $raw = str_replace(['R$', ' ', '.'], '', $raw);
+                $raw = str_replace(',', '.', $raw);
+            }
+            $request->merge(['amount' => $raw]);
+        }
+
         $data = $request->validate(
             [
                 'payment_method' => 'required|in:dinheiro,pix,cartao,outro',
                 'paid_at' => 'nullable|date',
+                'amount' => 'nullable|numeric|min:0.01|max:9999999.99',
             ],
-            ['payment_method.required' => 'Informe a forma de pagamento.']
+            [
+                'payment_method.required' => 'Informe a forma de pagamento.',
+                'amount.numeric' => 'Informe um valor pago válido (ex.: 40,00).',
+                'amount.min' => 'O valor pago deve ser maior que zero.',
+            ]
         );
 
         if ($installment->isPaid()) {
             return $this->redirectBack($installment)->with('error', 'Esta parcela já está paga.');
         }
 
-        $this->markAsPaid($installment, $data['payment_method'], $data['paid_at'] ?? null);
+        $this->markAsPaid(
+            $installment,
+            $data['payment_method'],
+            $data['paid_at'] ?? null,
+            isset($data['amount']) ? (float) $data['amount'] : null
+        );
 
-        $envio = $this->receiptService->enviarComprovante($installment->fresh(['sponsor.campaign']));
-        $message = "Parcela {$installment->installment_number} registrada como paga (recibo {$installment->fresh()->receipt_number}).";
+        $installment = $installment->fresh(['sponsor.campaign']);
+        $envio = $this->receiptService->enviarComprovante($installment);
+        $valor = 'R$ ' . number_format((float) $installment->amount, 2, ',', '.');
+        $message = "Parcela {$installment->installment_number} registrada como paga no valor de {$valor} (recibo {$installment->receipt_number}).";
 
         if ($envio['success']) {
             return $this->redirectBack($installment)->with('success', $message . ' Comprovante enviado por WhatsApp.');
@@ -165,18 +187,28 @@ class CampaignInstallmentController extends Controller
         return $this->redirectBack($installment)->with('error', 'Falha ao reenviar o comprovante: ' . ($envio['error'] ?? 'erro desconhecido'));
     }
 
-    private function markAsPaid(CampaignInstallment $installment, string $paymentMethod, ?string $paidAt): void
+    /**
+     * @param  float|null  $amount  Valor efetivamente pago; quando informado substitui o valor
+     *                              da parcela (patrocinador pode pagar a mais ou a menos).
+     */
+    private function markAsPaid(CampaignInstallment $installment, string $paymentMethod, ?string $paidAt, ?float $amount = null): void
     {
-        DB::transaction(function () use ($installment, $paymentMethod, $paidAt) {
+        DB::transaction(function () use ($installment, $paymentMethod, $paidAt, $amount) {
             $campaign = $installment->sponsor->campaign;
 
-            $installment->update([
+            $attributes = [
                 'status' => CampaignInstallment::STATUS_PAGO,
                 'paid_at' => $paidAt ? \Illuminate\Support\Carbon::parse($paidAt) : now(),
                 'paid_by' => Auth::id(),
                 'payment_method' => $paymentMethod,
                 'receipt_number' => $campaign->nextReceiptNumber(),
-            ]);
+            ];
+
+            if ($amount !== null && round($amount, 2) !== round((float) $installment->amount, 2)) {
+                $attributes['amount'] = round($amount, 2);
+            }
+
+            $installment->update($attributes);
         });
     }
 

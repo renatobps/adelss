@@ -103,6 +103,7 @@
                             @if(!$installment->isPaid() && $installment->status !== CampaignInstallment::STATUS_CANCELADO && $canPay)
                                 <button type="button" class="btn btn-success btn-sm js-pay-installment"
                                         data-action="{{ route('eventos.campaigns.installments.pay', $installment) }}"
+                                        data-amount="{{ number_format((float) $installment->amount, 2, ',', '.') }}"
                                         data-label="Parcela {{ $installment->installment_number }}/{{ $totalCount }} — {{ $sponsor->name }} — R$ {{ number_format((float) $installment->amount, 2, ',', '.') }}">
                                     <i class="bx bx-check"></i> Pagar
                                 </button>
