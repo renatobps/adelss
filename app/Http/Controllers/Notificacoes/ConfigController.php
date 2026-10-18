@@ -19,16 +19,29 @@ class ConfigController extends Controller
     public function index()
     {
         $this->authorize('notificacoes.view');
-        $configurado = $this->whatsapp->isConfigurado();
-        $instanciaSelecionada = $this->whatsapp->getActiveInstanceName();
         $instanciaPadrao = trim((string) (config('whatsapp.instance_name') ?? ''));
-        $instanciaId = $this->whatsapp->getActiveInstanceId();
 
-        $connectionLogs = WhatsAppConnectionLog::query()
-            ->orderByDesc('checked_at')
-            ->orderByDesc('id')
-            ->limit(20)
-            ->get();
+        try {
+            $configurado = $this->whatsapp->isConfigurado();
+            $instanciaSelecionada = $this->whatsapp->getActiveInstanceName();
+            $instanciaId = $this->whatsapp->getActiveInstanceId();
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp config: falha ao ler instância ativa', ['error' => $e->getMessage()]);
+            $configurado = false;
+            $instanciaSelecionada = '';
+            $instanciaId = '';
+        }
+
+        try {
+            $connectionLogs = WhatsAppConnectionLog::query()
+                ->orderByDesc('checked_at')
+                ->orderByDesc('id')
+                ->limit(20)
+                ->get();
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp config: falha ao ler logs de conexão', ['error' => $e->getMessage()]);
+            $connectionLogs = collect();
+        }
 
         return view('notificacoes.config.index', compact(
             'configurado',

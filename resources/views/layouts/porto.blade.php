@@ -214,14 +214,18 @@
                     $whatsappBannerLog = null;
                     $whatsappBannerUser = Illuminate\Support\Facades\Auth::user();
                     if ($whatsappBannerUser && ($whatsappBannerUser->is_admin || $whatsappBannerUser->hasPermission('notificacoes.manage') || $whatsappBannerUser->hasPermission('notificacoes.view'))) {
-                        $whatsappBannerLog = Illuminate\Support\Facades\Cache::remember(
-                            'whatsapp.last_connection_log',
-                            60,
-                            fn () => App\Models\WhatsAppConnectionLog::query()
-                                ->orderByDesc('checked_at')
-                                ->orderByDesc('id')
-                                ->first()
-                        );
+                        try {
+                            $whatsappBannerLog = Illuminate\Support\Facades\Cache::remember(
+                                'whatsapp.last_connection_log',
+                                60,
+                                fn () => App\Models\WhatsAppConnectionLog::query()
+                                    ->orderByDesc('checked_at')
+                                    ->orderByDesc('id')
+                                    ->first()
+                            );
+                        } catch (\Throwable $e) {
+                            $whatsappBannerLog = null;
+                        }
                     }
                 @endphp
                 @if($whatsappBannerLog && !$whatsappBannerLog->isOnline())
@@ -229,7 +233,9 @@
                         <i class="bx bx-error-circle fs-4 flex-shrink-0"></i>
                         <div>
                             <strong>O WhatsApp está desconectado</strong> — notificações não estão sendo enviadas
-                            (verificado às {{ $whatsappBannerLog->checked_at->format('H:i') }}).
+                            @if($whatsappBannerLog->checked_at)
+                                (verificado às {{ $whatsappBannerLog->checked_at->format('H:i') }}).
+                            @endif
                             <a href="{{ route('notificacoes.config.index') }}" class="alert-link">Clique aqui para reconectar</a>.
                         </div>
                     </div>

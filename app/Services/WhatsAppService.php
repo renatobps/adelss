@@ -81,7 +81,7 @@ class WhatsAppService
 
         $fromDb = $this->getPersistedSetting(self::DB_KEY_INSTANCE_NAME);
         if ($fromDb !== '') {
-            Cache::forever(self::ACTIVE_INSTANCE_CACHE_KEY, $fromDb);
+            $this->cacheForever(self::ACTIVE_INSTANCE_CACHE_KEY, $fromDb);
 
             return $fromDb;
         }
@@ -110,7 +110,7 @@ class WhatsAppService
 
         $fromDb = $this->getPersistedSetting(self::DB_KEY_INSTANCE_ID);
         if ($fromDb !== '') {
-            Cache::forever(self::ACTIVE_INSTANCE_ID_CACHE_KEY, $fromDb);
+            $this->cacheForever(self::ACTIVE_INSTANCE_ID_CACHE_KEY, $fromDb);
 
             return $fromDb;
         }
@@ -155,7 +155,7 @@ class WhatsAppService
         $fromDb = $this->getPersistedSetting(self::DB_KEY_INSTANCE_TOKEN);
         $dbId = $this->getPersistedSetting(self::DB_KEY_INSTANCE_ID);
         if ($fromDb !== '' && ($instanceId === '' || $dbId === $instanceId)) {
-            Cache::forever(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY, $fromDb);
+            $this->cacheForever(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY, $fromDb);
 
             return $fromDb;
         }
@@ -165,7 +165,7 @@ class WhatsAppService
             $token = trim((string) ($instance['token'] ?? ''));
             if ($token !== '') {
                 if ($instanceId === $this->resolveInstanceId()) {
-                    Cache::forever(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY, $token);
+                    $this->cacheForever(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY, $token);
                     $this->persistSetting(self::DB_KEY_INSTANCE_TOKEN, $token, 'Token da instância WhatsApp ativa');
                 }
 
@@ -322,14 +322,14 @@ class WhatsAppService
             return;
         }
 
-        Cache::forever(self::ACTIVE_INSTANCE_ID_CACHE_KEY, $id);
+        $this->cacheForever(self::ACTIVE_INSTANCE_ID_CACHE_KEY, $id);
         if ($name !== '') {
-            Cache::forever(self::ACTIVE_INSTANCE_CACHE_KEY, $name);
+            $this->cacheForever(self::ACTIVE_INSTANCE_CACHE_KEY, $name);
         }
         if ($token !== '') {
-            Cache::forever(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY, $token);
+            $this->cacheForever(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY, $token);
         } else {
-            Cache::forget(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY);
+            $this->cacheForget(self::ACTIVE_INSTANCE_TOKEN_CACHE_KEY);
         }
 
         $this->persistSetting(self::DB_KEY_INSTANCE_ID, $id, 'UUID da instância WhatsApp ativa (selecionada na UI)');
@@ -338,6 +338,30 @@ class WhatsAppService
         }
         if ($token !== '') {
             $this->persistSetting(self::DB_KEY_INSTANCE_TOKEN, $token, 'Token da instância WhatsApp ativa (selecionada na UI)');
+        }
+    }
+
+    private function cacheForever(string $key, mixed $value): void
+    {
+        try {
+            Cache::forever($key, $value);
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp: falha ao gravar cache', [
+                'key' => $key,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function cacheForget(string $key): void
+    {
+        try {
+            Cache::forget($key);
+        } catch (\Throwable $e) {
+            Log::warning('WhatsApp: falha ao limpar cache', [
+                'key' => $key,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 
@@ -1228,8 +1252,8 @@ class WhatsAppService
             $createdName = (string) ($data['name'] ?? $name);
             $createdId = (string) ($data['id'] ?? '');
             if ($createdId !== '') {
-                Cache::forever(self::ACTIVE_INSTANCE_CACHE_KEY, $createdName);
-                Cache::forever(self::ACTIVE_INSTANCE_ID_CACHE_KEY, $createdId);
+                $this->cacheForever(self::ACTIVE_INSTANCE_CACHE_KEY, $createdName);
+                $this->cacheForever(self::ACTIVE_INSTANCE_ID_CACHE_KEY, $createdId);
             }
 
             return ['success' => true, 'data' => $body];
