@@ -12,7 +12,9 @@ class StudyFormQuestion extends Model
     use HasFactory;
 
     public const TYPE_DISSERTATIVE = 'dissertative';
+
     public const TYPE_MULTIPLE_CHOICE = 'multiple_choice';
+
     public const TYPE_TRUE_FALSE = 'true_false';
 
     protected $fillable = [
@@ -24,11 +26,13 @@ class StudyFormQuestion extends Model
         'correct_answer',
         'is_required',
         'sort_order',
+        'review_required',
     ];
 
     protected $casts = [
         'options' => 'array',
         'is_required' => 'boolean',
+        'review_required' => 'boolean',
     ];
 
     public function form(): BelongsTo
@@ -54,5 +58,18 @@ class StudyFormQuestion extends Model
     {
         return in_array($this->type, [self::TYPE_MULTIPLE_CHOICE, self::TYPE_TRUE_FALSE], true)
             && filled($this->correct_answer);
+    }
+
+    public function answerLabel(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return 'Não respondida';
+        }
+
+        if ($this->type === self::TYPE_TRUE_FALSE) {
+            return $value === 'true' ? 'Verdadeiro' : 'Falso';
+        }
+
+        return collect($this->options ?? [])->firstWhere('key', $value)['text'] ?? $value;
     }
 }

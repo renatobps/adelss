@@ -1,0 +1,37 @@
+{
+  "01:1": {"fragments": [{"page": 7, "start": "Nos estudos superiores", "end": "Espírito Santo.", "include_end": true}]},
+  "01:2": {"fragments": [{"page": 19, "start": "3.3 - O QUE NÓS CHAMAMOS DE BÍBLIA", "end": "Portanto"}]},
+  "01:3": {"fragments": [
+    {"page": 45, "start": "FICOU ASSIM CONSTITUÍDA", "end": "• PENTATEUCO"},
+    {"page": 46, "start": "NOVO TESTAMENTO 27", "end": "• EV ANGELHOS"}
+  ]},
+  "01:4": {"fragments": [{"page": 9, "start": "Toda Escritura", "end": "GREGO THEOPNEUSTOS", "include_end": true}]},
+  "01:5": {"fragments": [{"page": 10, "start": "* ANJOS", "end": "profetas”", "include_end": true}]},
+  "01:6:a": {"fragments": [{"page": 16, "start": "Interpretação é", "end": "de forma ortodoxa.", "include_end": true}]},
+  "01:6:b": {"fragments": [{"page": 16, "start": "Iluminação é", "end": "através dos séculos.", "include_end": true}]},
+  "01:6:c": {"fragments": [{"page": 16, "start": "Inspiração descreve", "end": "Num grau inferior"}]},
+  "01:6:d": {"fragments": [{"page": 16, "start": "Inspiração descreve", "end": "Na Bíblia"}, {"page": 16, "start": "Orientação descreve", "end": "através dos séculos.", "include_end": true}]},
+  "01:7": {"fragments": [{"page": 21, "start": "4.3 - AS LÍNGUAS ORIGINAIS DA BÍBLIA", "end": "A. O hebraico"}]},
+  "01:8": {"fragments": [{"page": 45, "start": "FICOU ASSIM CONSTITUÍDA", "end": "Malaquias.", "include_end": true}]},
+  "01:9": {"fragments": [{"page": 46, "start": "NOVO TESTAMENTO 27", "end": "XI– OS LIVROS APÓCRIFOS"}]},
+  "01:10": {"fragments": [
+    {"page": 68, "start": "A. Escribas.", "end": "A. Escribas.", "include_end": true},
+    {"page": 68, "start": "B. Fariseus.", "end": "B. Fariseus.", "include_end": true},
+    {"page": 68, "start": "C. Saduceus.", "end": "C. Saduceus.", "include_end": true},
+    {"page": 69, "start": "D. Publicanos.", "end": "D. Publicanos.", "include_end": true},
+    {"page": 69, "start": "E. Essênios.", "end": "E. Essênios.", "include_end": true},
+    {"page": 69, "start": "F. Samaritanos.", "end": "F. Samaritanos.", "include_end": true},
+    {"page": 70, "start": "G. Herodianos.", "end": "G. Herodianos.", "include_end": true}
+  ]},
+  "02:7:a": {"fragments": [{"page": 47, "start": "A palavra “sacerdote”", "end": "(Êx 19.22; 30.20).", "include_end": true}]},
+  "08:2": {"fragments": [{"page": 7, "start": "PSICOLOGIA", "end": "Ela se preocupa"}, {"page": 7, "start": "SOCIOLOGIA", "end": "Especialmente a sociologia"}, {"page": 8, "start": "ENGENHARIA", "end": "ECONOMIA"}]},
+  "08:4": {"fragments": [{"page": 12, "start": "b) Humildemente", "end": "d) Dócil"}]},
+  "08:7": {"fragments": [{"page": 22, "start": "a) Consagrar-se", "end": "NOTA: CASO"}]},
+  "08:8": {"fragments": [{"page": 29, "start": "DEPARTAMENTO DE EV ANGELIZAÇÃO", "end": "Folhetos", "include_end": true}, {"page": 30, "start": " Livros específicos", "end": "Planejamento"}]},
+  "12:1": {"fragments": [{"page": 15, "start": "“Evangelho” é", "end": "boa notícia”", "include_end": true}]},
+  "15:3:a": false,
+  "15:3:b": false,
+  "19:9": false,
+  "19:10": false,
+  "21:1": {"fragments": [{"page": 15, "start": "O termo “Escola Dominical”", "end": "sistema.", "include_end": true}]}
+}

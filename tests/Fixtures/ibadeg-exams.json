@@ -1,0 +1,5659 @@
+[
+  {
+    "num": "01",
+    "title": "INTRODUÇÃO BÍBLICA",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. Nos estudos anteriores a Bibliologia é chamada de ISAGOGE termo grego que significa?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Conduzir para fora",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Conduzir para dentro",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Conduzir para frente",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Conduzir para baixo",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. A palavra Bíblia Significa?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Coleção de Livros",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Escritas Sagradas",
+            "correct": "C",
+            "uncertain": true
+          },
+          {
+            "letter": "c",
+            "text": "Antigo Testamento",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "A palavra de Deus",
+            "correct": "E",
+            "uncertain": true
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. A Bíblia Sagrada versão de João Ferreira de Almeida está dividida em?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Três testamentos e 73 livros",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Dois testamentos e 73 livros",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Três testamentos e 66 livros",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Dois testamentos e 66 livros",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. O termo grego que define inspiração é THEOPNEUSTOS; e significa?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Soprado por Deus",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Escrito por Deus",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Advertido por Deus",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Ensinado por Deus",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. Inspiração é a forma pela qual Deus fala aos homens mediante seus profetas e pode ser através de?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Sonhos e visões",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Vozes",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Milagres",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Anjos",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Interpretação é o processo pelo qual o estudante, procura compreender e interpretar a mensagem de Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Iluminação descreve a superintendência do Espírito de Deus sobre a transmissão e prevenção do texto Bíblico.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Inspiração é o efeito na mente dos escritores, da operação do Espírito Santo de Deus.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Orientação descreve a influencia do Espírito de Deus sobre os escritores dos vários livros da Bíblia.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. A Bíblia Sagrada foi escrita originalmente nas seguintes línguas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Grego",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Latim",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Aramaico",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Hebraico",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. O antigo testamento está dividido em nossas bíblias em:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Três grandes grupos de livros.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Cinco grandes grupos de livros.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Quatro grandes grupos de livros.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Oito grandes grupos de livros.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. O novo testamento está dividido em nossas bíblias em:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Evangelhos, Histórico, Epístolas Paulinas e Apocalipse.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Evangelhos, Atos, Epístolas e Apocalipse.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Evangelhos, Atos, Epístolas Paulinas, Epístolas Universais e Revelação.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Evangelhos, Atos, Epístolas Universais e Apocalipse.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. Eram seitas política religiosa nos tempos do Novo Testamento:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Maometismo, Escribas, Fariseus, Saduceus, Publicanos, Essênios, Samaritanos e Herodianos.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Herodianos, Samaritanos, Essênios, Saduceus, Publicanos, Fariseus e Escribas.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Catolicismo, Judaísmo, Cristianismo, Islamismo, Hinduísmo, Farisaísmo.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Escribas, Fariseus, Saduceus, Essênios, Publicanos, Budismo, Samaritanos e Herodianos.",
+            "correct": "E"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "02",
+    "title": "PENTATEUCO",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O Pentateuco é a chave de entrada da Bíblia, é uma monumental narração teológica das origens do mundo, do homem e do povo.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "De acordo com a história, o Egito foi um lugar de muitas alegrias para o povo de Deus?",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "No livro de levítico que se encontra a chamada “regra áurea”, que foi considerada um dos pilares de toda a lei pelo próprio Jesus.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "A denominação “Gênesis” foi dada pelos tradutores das Escrituras para o grego (a Septuaginta), uma vez que a mensagem desse livro é precisamente a das “origens”, das “genealogias” não só do mundo, como também do homem e da nação Israelita.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Se os Israelitas houvessem prestado atenção as advertências de Moisés, teriam sido salvos de grandes padecimentos através de sua história.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Moisés se limitou a repetir as regras e normas que Deus havia revelado ao seu povo.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "O conceito do amor não é um dos maiores temas do Deuteronômio.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "O livro de Deuteronômio é, precisamente, a repetição da lei e de todos os eventos mais importantes e corridos durante a peregrinação de Israel no deserto.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O Senhor resumiu todos mandamentos quando falou aos sacerdotes sobre o primeiro e grande mandamento.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O pecado de Nadabe e Abiu foi agir nas coisas de Deus sem, procurar conhecer a mente de Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O autor do Pentateuco não leva o leitor para alem do limite do tempo, e nem para a eternidade insondável, embora não lhe faltaram palavras quando procurava dar uma idéia do estado de coisas antes do limite do tempo.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Sob o sistema Mosaico, era necessário ser membro da tribo de Levi para ser um sacerdote.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "As cidades de refugio não são ilustrações de Cristo abrigando o pecador diante do Juízo.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "A pedagogia divina e a rica experiência religiosa de Israel no deserto tornaram-se um modelo de inspiração para todos os tempos.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O que nos parece mais importante no ato da criação, é a forma como Deus age e não coloca nada em ordem.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Com relação ao uso do santo óleo da unção, consagrarás o tabernáculo e os seu utensílios de adoração, para que possam ser santíssimos; tudo o que neles tocar será santo.”",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O motivo do censo a porção da terra distribuída é determinada pelo tamanho da tribo.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Os símbolos da manifestação da glória de Deus não estão todos presentes: nuvem, fogo e shekinah.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "O tema do livro de levítico é santidade de Deus e é a parte do Pentateuco que mais se assemelha a outros livros sagrados da Antiguidade, onde a ritualística e a formalidade eram notas características.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Os levitas não devem ser incluídos no censo regular, pois Deus os adotou de maneira especial e os fez supervisores do tabernáculo.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Quando Deus na sua Onisciência criou critérios específicos na criação do homem do pó da terra, ele estava dizendo literalmente, que este homem era uma criatura de dois mundos; ambos, a terra e os céus têm direito sobre ele.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Quando os espias retornaram de Canaã com histórias de gigantes e cidades muradas, o povo estava prestes a escolher um capitão e voltar para o Egito.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "No antigo Testamento, Deus não ordenou um Sacerdócio que representasse seu povo diante dele.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "O Novo Testamento lembra os episódios da serpente de bronze (Jo 3.14s), da revolta de Coré (2Tm 2.19; Jd 11), de Balaão (2Pd 2.15s; Ap 2.14), a fidelidade de Moisés e a incompreensão do povo (Hb 3,2 – 4,7).",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A palavra “Sacerdote” significa “distanciar-se”.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O Êxodo trata do período da história de Israel que vai desde a morte de José (Gn 50) até a construção do santuário junto ao monte Sinai.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Melquisedeque é um dos personagens mais misteriosos da literatura bíblica.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Somos chamados para sermos “um sacerdócio santo e para oferecermos sacrifícios espirituais agradáveis a Deus por Jesus Cristo” (1Pe 2.5)",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O segundo livro do Pentateuco se chama “Êxodo”, nome que em grego significa “chegada”, por se ocupar da chegada de Israel do Egito.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O livro de Êxodo salienta a participação direta de Deus na história humana, como ele vai a longas distancias para alcançar aqueles a quem ama.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Alguém já disse que “a mulher foi tirada da cabeça do homem para governar sobre ele, mas do seu lado, de sob seu braço, para ser protegida, e de perto do seu coração, para ser amada\".",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "O livro de Êxodo se inicia com a criação do homem, no Éden, termina com os filhos de Israel olhando para o interior de um caixão de defunto, no Egito – não, porém, sem a promessa de que um dia todos sairiam de lá.",
+            "correct": "E",
+            "uncertain": true
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O segundo dia. O Senhor criou a terra e o reino vegetal. Deus continua a dar forma ao mundo, pelo processo de diferenciação.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O primeiro dia. Disse Deus: Haja luz. Com facilidade incrível e ação deliberada, o Deus onipotente criou a luz.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O quinto dia. Criação dos animais terrestre e das pessoas. 1°. As criaturas brutas: animais domésticos e selvagens Gn 1.24-31; 2.7-20.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "O quarto dia. A criação do sol, da lua, e das estrelas. Uma vez mais a descrição é geocêntrica, sem nenhum constrangimento.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas. Três marcos na vida de Abraão; ( Gn 12.1-3,8 )",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "As promessas.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A tenda.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O Altar.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Se fosse possível classificar a Bíblia e dividir as suas partes em grau de importância, para todos os povos e nações, por tradição os judeus diriam que sua parte mais importante e fundamental seria o Pentateuco.",
+            "correct": "C"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "03",
+    "title": "LIVROS HISTÓRICOS",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O livro de Josué, parte de onde Moisés parou os registros em Deuteronômio.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "É provável que Josué tenha começado a comandar a Israel com a idade de 89 anos.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Moises tirou da escravidão o povo de Deus. E Josué conduziu à terra da promessa.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Moralmente, as pessoas eram depravadas; a anarquia e a brutalidade eram comuns.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O povo de Israel estava sem pátria por mais de quatrocentos anos (Gn 15.13).",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Israel ficou perambulando sem rumo no deserto por mais de quarenta anos.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O livro de Josué é chamado de profetas anteriores.",
+            "correct": "E",
+            "uncertain": true
+          },
+          {
+            "letter": "d",
+            "text": "Josué tinha sido um auxiliar achegado e amigo fiel de Moisés durante os quarenta anos da peregrinação de Israel no deserto (Êx 17.18; 24.13; 32.17-19; Nm 13.8-16)",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Um dos aspectos da natureza de Cristo revelada em Josué é o da promessa cumprida.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Deus, em sua graça e fidelidade, sustentou e preservou seu povo tirando-os do deserto e levando-os à terra prometida.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Josué disse o que Israel deveria fazer (24.14-24).",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Ele não fará o mesmo por nós através de Cristo, que é a promessa.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Os juízes, a quem o senhor escolheu e ungiu com o seu Espírito, eram militares, civis e Eclesiastes.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Canaã, liderada por Josué, registrando as condições em Canaã durante o período dos juízes, mas também antecipa o estabelecimento da monarquia em Israel.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Antes da conquista de Jerusalém por Davi, tem o apoio de dois fatos: As palavras “naqueles dias, não havia rei em Israel”(17.6). A declaração de que “os jebuseus habitaram com os filhos de Benjamim em Jerusalém até ao dia de hoje” (1.21)",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O livro de Juízes, descrevem os caminhos rebeldes de Israel na terra Prometida e mostram como o senhor se relacionou com a nação naquele período.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. O livro de Juízes registra quatro ciclos principais da apostasia de Israel, a saber:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A tendência natural do povo de Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A história da salvação retrata o povo crente como um povo que não procura aprender.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A rebelião e a incredulidade são coisas graves.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Deus é um Deus misericordioso.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Deus sempre faculta um novo começo pela graça, mediante a nossa fé.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Israel como um todo afastou-se da obediência sincera à palavra de Deus, e a tribo de Benjamim não afundou na apostasia total.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Aparentemente, o propósito final do livro de juízes é ilustrar as consequências da apostasia e anarquia nos dias em que “não havia rei em Israel”.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Ao recusar-se a castigar esses membros iníquos do seu grupo, a tribo inteira demonstrou: que a justiça nada valia para eles, e que perdera toda a sensibilidade moral e a lealdade à lei de Deus.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Boaz não (comprou) as terras da família que Noemi vendera, e as restituiu à linhagem de Elimeleque.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Os episódios relatados no livro de Rute se passaram durante o período de juízes.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Boaz representa uma das mais dramáticas figuras do AT que antecipa a obra redentora de Jesus.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "As ações de Boaz efetuam a participação de Rute nas benção de Israel, mas não incluem na linhagem familiar do Messias.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Israel havia sido governado por juízes ate que Deus levantou um homem chamado Samuel em momentos cruciais da história da nação.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Em meio a essa confusa política religiosa surge Samuel, o milagroso filho de Ana.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O templo de Siló fora profanado e o sacerdócio se mostra corrupto e imoral.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O livro de Samuel “engloba sua vida e ministério até sua morte”.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "II Reis retoma a história trágica do “reino dividido” quando Acazias está no trono de Israel e Josafá governando sobre Judá.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "I Reis; O autor ora está falando do reino do norte, Israel, ora do reino do sul, Judá, traçando simultaneamente suas histórias.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A antiga tradição judaica do Talmude declara que Jeremias tenha escrito Reis.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Esse famoso profeta pregou em Jerusalém só depois da sua queda.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Os dois últimos capítulos de I Crônicas recordam os últimos dias de Davi.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O próprio Esdras era um sacerdote, um “escriba das palavras, dos mandamentos do SENHOR”.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Amã manipula o rei para que execute os judeus.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Ester arriscou sua vida por amor do seu povo.",
+            "correct": "C"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "04",
+    "title": "LIVROS POÉTICOS",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "De modo geral, não é uma verdade que a educação diligente de pais piedosos influencie os filhos a seguirem nessa linha nos anos posteriores.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O livro de Provérbios tem os seguintes títulos: (em hebraico): Shir ha-shirim, um superlativo absoluto que poderíamos chamar de \"Cantíssimo\". *Título na Septuaginta: Asma Asmaton. *Título em Latim: Canticum Canticorum. *Em Português: Cântico dos Cânticos ou Cantares.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "A poesia, especialmente na forma de cântico ou hino, ocupa um importante lugar na literatura dos Hebreus.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Os exilados da Babilônia eram insistentemente convidados por seus captores que entoassem suas canções, sobre cuja fama devem ter ouvido (Sl 137:3).",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O salmo 23 fala do Senhor como Pastor que, conduz nossas vidas sempre um caminho seguro e protegido.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A sunamita não é uma moça modesta. \"Sou apenas um açafrão da planície costeira\", diz ela. Seu amado pastor a julga incomparável: \"Como lírio entre as plantas espinhosas, assim é minha companheira entre as filhas\"2:1-2.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "A sunamita relembra o tempo em que seu pastor respondeu à sua chamada e a convidou a passear nas colinas na primavera, Ct 2:3-3:5.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Salomão escreveu três mil provérbios e foram seus cânticos mil e cinco (1 RS 4.32).",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Quando a rainha de Sabá viu a sabedoria e a prosperidade de Salomão, ela disse: \"Não se me contou nem mesmo a metade\".",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O livro de Eclesiastes é um monologo dramático, apresentando as complicadas experiências da vida; estas vozes estão em conflito, porem representam ou retratam o conflito de uma simples alma em guerra consigo mesma.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Cantares de Salomão diz que o mundo inteiro não era digno do dia em que este sublime Cântico foi dado a Israel.",
+            "correct": "C",
+            "uncertain": true
+          },
+          {
+            "letter": "d",
+            "text": "Deus realmente pune o nosso pecado, mais há muitas pessoas que sofrem sem que a causa seja exatamente esta.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Uma das características mais edificantes do Livro dos Salmos é sua visão em Deus. Há momentos em que os salmos falam de dor, de tristeza, de dúvida, de inimigos, de perigos, mas há também os salmos que falam de alegria, de conforto, de certeza, de comunhão.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Os salmistas são pessoas que tem comunhão com Deus e mostram todo o seu relacionamento em forma de palavras.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "No livro de Cantares, o acróstico da fase final faz uma descrição clássica da esposa capaz.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Salmos de confiança (33, por exemplo). Estes salmos fazem afirmações fortes de confiança pessoal em Deus.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Salmos de lamento. Uma maior dimensão da adoração israelita foi o lamento, aspecto ausente muitas vezes nos cultos modernos, a despeito do profundo senso de estar ferido ou em agonia levado aos cultos por muitas pessoas.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Eliú não é o teólogo jovem do tipo que se acha ter todas as respostas.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Portanto, os salmos 10 e 71 podem ser atribuídos a Davi, o salmo 43, aos filhos de Coré, e o salmo 91, a Moisés.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Elifaz não se mostra um místico, afirmando ter recebido seu argumento de \"um espírito\" em \"visões noturnas\".",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "No Israel antigo, as pessoas não se dedicavam somente a obter a sabedoria, como também a ensinar outras pessoas a obtê-la.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Alguns afirmam que num conjunto de escritos, tal como os Salmos que abarcam muitos séculos, não se pode esperar nenhum sistema uniforme.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Alguns não foram inspirados por Deus para ajudar a escrever porções do Antigo Testamento.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Sabedoria é uma categoria de literatura que não é familiar à maioria dos cristãos atuais.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Alguns expositores preferem dividir os salmos em categorias baseadas tanto nos temas tratados neles como na sua aplicação atual.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Há índices que o Salmo 119 talvez fosse escrito pelo jovem príncipe Ezequias.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Visto que Davi compôs muitos deles e organizou os músicos levitas em 24 grupos de serviço, é razoável concluir que ele tenha começado uma coleção desses cânticos a não serem usados no santuário.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Compilação de 150 cânticos sagrados, muitos deles baseados nas experiências pessoais de Davi e de outros que não foram servos de Deus.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Todo o livro de Eclesiastes, Salomão começou com uma avaliação negativista da vida como vaidade, algo irrelevante, mas no fim ele concluiu com sábio conselho, a indicar onde se pode encontrar o sentido da vida.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Salomão não congratula os mortos, porque estão livres de \"todos os atos de opressão que se praticam debaixo do sol\".",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Os provérbios encorajam os pais a que cumpram com diligencia suas responsabilidades, confiando o futuro na graça e na soberania de Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "A rainha diz ao rei Salomão pode ficar com a sua riqueza! Ela se contenta com seu único vinhedo, pois ama alguém que lhe é exclusivamente querido.",
+            "correct": "E",
+            "uncertain": true
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Deus o inspirou a compor este cântico para o proveito dos leitores da Bíblia e das eras futuras.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Salomão retorna com grande pompa a Jerusalém, e o povo admira o seu cortejo. Nessa hora cruciante, o amado pastor abandona a sunamita.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "O rei Salomão se aproxima da sunamita. Novamente lhe diz quão bela ela é, mais bela do que \"sessenta rainhas e oitenta concubinas\" e ela não o rejeita.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Um simples olhar dele para ela faz o coração dele bater mais rápido. Suas expressões de afeto são melhores do que o vinho, sua fragrância é como uma fragrância do Líbano e a sua pele é como um paraíso de romãs.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O livro de cantares termina com um convite da sunamita ao seu amado, lembrando os primeiros dias felizes de vida em comum.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A sunamita relembra ter conhecido seu amado debaixo de uma macieira e declara o seu inquebrável amor por ele.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "As amistosas mulheres de Jerusalém os encorajam, dizendo: \"Comei, companheiros! Bebei e embriagai-vos com expressões de afeto!\"",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Ela o revê subir os montes pulando de alegria. A sunamita o ouve gritar para ela: \"Levante, vem, ó companheira minha, minha bela, e vem\".",
+            "correct": "C"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "05",
+    "title": "PROFETAS MAIORES",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A nossa atuação deve ser de expectativa e esperança.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A Súplica de Daniel pela restauração de Israel.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Todos os seres humanos pertencerão a duas categorias básicas: os salvos e os perdidos.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Não devemos saber esperar o que Deus prometeu.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Tanto Jeremias como Isaías não levaram mensagens de condenação ao povo de Israel que abandonaram a verdadeira fé.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "A visão do vale de ossos simboliza a morte nacional de Israel e a sua ressurreição futura, quando os reinos de Judá e Israel estiverem unidos, e a nação inteira ligada a Jeová por um pacto eterno.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A visão de Daniel do homem vestido de linho que trouxe consolação.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Saiba que os maiores bens que possuímos é sermos barro, ou seja, a matéria prima que o senhor quer usar.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A chamada de Ezequiel foi precedida por uma visão da gloria do Senhor. E sua mensagem foi de condenação a um povo desobediente.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A aparição, as dores e a glória do Messias. Jesus, o Messias, o Servo de Deus, cumpriria com perfeição à vontade de Deus e por isso seria grandemente exaltado (At.2.33; Fp 2.9; Cl 3.1; Hb 1.3; 8.1.)",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Além de pregar mensagens Isaías dramatizava suas mensagens: a. Colocou nome simbólico de suas mensagens principais sobre seus filhos (7.3 e 8.3). b. Levou consigo o seu filho de nome profético ao encontro do rei para intensificar o peso da mensagem falada (7.3). c. Tomou uma tabua grande e escreveu nela em caracteres legíveis uma mensagem para criar curiosidade e fazer conhecer a mensagem (8.1-2) d. Em certa ocasião andava nu e descalço pela cidade por três anos como sinal e portanto contra a confiança política falsa no Egito e na Etiópia (20.3).",
+            "correct": "E",
+            "uncertain": true
+          },
+          {
+            "letter": "d",
+            "text": "A restaurada comunidade israelita: as preparações de Israel para a época messiânica (40-48). a. O novo templo (40.1; 44.8) b. Os deveres dos sacerdotes (44.9-31) c. Os deveres do príncipe (45-46) d. O rio da vida que ocorrerá quando Israel tiver cumprido os planos divinos (47).",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A função de Jeremias não era advertir o seu povo e as nações sobre a necessidade de arrependimento e mudança de vida.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O verso 5 mostra como Deus vocacionou Jeremias. Ele precisa de servos ainda hoje.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A missão de Ezequiel não é renovada. Depois que Jerusalém foi tomada, ele pode falar claramente em vez de pregar por meio de sinais e símbolos. Os falsos profetas são repreendidos.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Jeremias teve a responsabilidade em manter viva a chama da esperança. O desafio era maior para ele porque havia muitos falsos profetas que anunciavam uma mensagem agradável aos ouvidos de sua geração sofrida.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Muitas das visões de Jeremias são cenas do cotidiano, cenas comuns que passariam despercebidas aos olhos de qualquer um.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A visão sobre um Carneiro e um Bode (550/49 a.C.): segundo os versos 20 e 212 o carneiro com dois chifres representa os reis da Média e da Pérsia enquanto o Bode representa o rei da Grécia (Alexandre), o chifre grande entre os olhos é o primeiro rei Alexandre.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Os sonhos e projetos que ele tinha feito para sua nação começavam a desmoronar porque o Senhor lhe ordenara anunciar aos reis e ao povo que haveria de executar a sua justiça sobre eles. Sim Jeremias não estava frustrado.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Sabedoria Mundana X Sabedoria Celestial: Daniel interpreta a visão de Nabucodonosor referente a grande estátua (o capítulo 2).",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Nos capítulos 58 a 66 – o pensamento principal não é o estabelecimento do reino universal de Deus e seu triunfo sobre toda forma do mal.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O capítulo 61 descreve a dupla missão do Messias.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A mensagem de Isaías gira em torno de três grandes temas: Deus e sua obra; Deus e o Povo Pecador; Deus e o messianismo.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O rei celeste tem um representante na terra.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Deus tem o controle absoluto sobre o seu povo da mesma maneira, e dirige o seu destino de acordo com seus planos.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A Soberba de Nabucodonosor X A Soberania de Deus: Daniel interpreta o sonho de Nabucodonosor sobre a grande árvore cortada até a sua cepa; o rei fora de si, é expulso do meio dos homens até aprender que o Altíssimo tem domínio sobre o reino dos homens.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Relativamente às condições políticas, morais e religiosas de Jerusalém e de Judá nos tempos de Isaías, temos notícias abundantes em 2 Rs. 15-20 e 2 Crôn. 26-32, além das reflexões do presente livro.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "A vontade de Deus era que a nação de Judá correspondesse à palavra escrita pela renuncia a seus maus caminhos e recebimento do perdão, e assim evitasse o juízo divino por causa da sua iniquidade (vv. 3,6,7).",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Os judeus ainda hoje usam este livro para exprimir o seu pesar pelo sofrimento e dispersão de Israel.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O oleiro não desiste não se desespera. Determinado em sua tarefa, não insiste no trabalho.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Podemos resumir o conteúdo deste livro na apresentação das desolações de Jerusalém, o resultado de seus pecados e o castigo de um Deus fiel, que visava conduzi-los ao arrependimento.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Jeremias ficou impressionado com o controle que o oleiro tinha sobre o barro.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A humanidade será dividida em duas partes.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Daniel recebeu revelação da \"escritura da, verdade\" (10.21) e é esta que deve normatizar nossa esperança e compreensão do presente e do futuro.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Cada um de nós deve transformar sua \"fornalha\" em lugar de testemunho. Esta é uma mensagem para aqueles que trabalham em ambientes que cobram o testemunho vibrante.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Não se pode mudar aquilo que Deus estabeleceu: isto não é determinismo, mas é a soberania de Deus.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A missão de Ezequiel é renovada. Depois que Jerusalém foi tomada, ele pode falar claramente em vez de pregar por meio de sinais e símbolos.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Ezequiel corta o cabelo para simbolizar a destruição do povo de Jerusalém por fome, pestilência e espada.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A glória de Jeová volta a habilitar no templo milenial do qual encontramos uma descrição detalhada nos capítulos 40 a 48.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "A maioria dos estudiosos conservadores admite que Ezequiel estivesse no exílio durante todo o seu ministério.",
+            "correct": "C"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "06",
+    "title": "PROFETAS MENORES",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O Senhor preparará a vitória final do seu povo sobre o ímpios.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O dia do julgamento é uma realidade decretada por Deus e dele os injustos não escaparão (soberbos e ímpios).",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Devemos evitar a maledicência entre nós que servimos ao Senhor, pois ele está atento às nossas ações.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Os dízimos serviriam para a manutenção da casa de Deus e habitavam os homens a fazerem prova de Deus.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O povo foi acusado de quebrar o pacto dos seus antepassados no aspecto de agir de modo indigno nas questões ligadas à família.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Os homens que não devolvem os dízimos (que pertencem a Deus) ou não contribuem para as ofertas alçadas, são ladrões.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O povo tem enfadado a Deus pelas suas palavras.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Deus pediu a Jonas, o profeta, para levantar-se e ir 1500km para o oriente, e Nínive, uma cidade dos temidos e odiados assírios.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O livro de Miquéias, ainda falta à bela ordem de Amós.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Deus não escolhe falar aos seus servos através de um mensageiro.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Joel não profetizou numa época de grande devastação de toda a terra de Judá.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Se Jonas escreveu o livro que leva o seu nome, o mesmo seria, obviamente, datado durante o reinado de Jeroboão II.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Israel havia semeado o vento do pecado e da idolatria; agora, ceifaria as tormentas das investidas assírias.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A infidelidade de Israel para com o Senhor está descrita por Oséias em termo de uma esposa que voltou as costas para o marido fiel.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O nome Oséias significa suplantador.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "A falta do conhecimento pessoal de Deus destruía os israelitas.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Amós não começa com uma série de acusações contra sete vizinhos de Israel.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O livro de Amós não é basicamente uma mensagem de julgamento.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "O livro de Jonas, embora tenha sido colocado entre os profetas do Cânon, não é diferente dos outros livros proféticos.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Miquéias não profetizou sob os mesmos monarcas que Isaías.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Naum, cujo nome significa \"confortador\" ou \"cheio de conforto\", não é desconhecido, a não ser pelo breve titulo que inicia sua profecia.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Duas referencias a Cristo no livro do Ageu são destacadas.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Obadias é o menor livro do antigo testamento.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Apesar do seu histórico não profissional, Amós foi chamado para entregar a mensagem de Deus ao reino do Norte, Israel.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Os dois irmãos gêmeos Esaú e Jacó não se dividiram em disputa.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Um triste comentário de Zacarias 7.12 não recorda ao povo sua rebelião contra as palavras do Senhor dos profetas.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Por causa da rebelião do povo, Deus lhe enviaria doenças e enfermidades.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Uma vez Oséias usa a frase \"o espírito de luxuria\", e uma vez, \"o espírito da prostituição\".",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Os ensinamentos de Paulo acerca de Cristo como o Noivo e a igreja como a Noiva não correspondem à cerimônia de casamento.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Deus não atenderia à oração de Israel, até que este reconhecesse sua culpa, aceitasse o castigo e buscasse com sinceridade a ajuda divina.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Construção de altares, no Norte de Israel, foi ordem de Deus.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "O argumento dos vaticínios de Miquéias é, portanto, semelhante aos de Isaías.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Deus manda uma tempestade para golpear o navio e causar circunstancia que conduzem Jonas ao seu chamado missionário.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Finalmente, Amós não promete restauração para Israel.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "O profeta não vê um tempo futuro, \"depois\", quando o Espírito de Deus for derramado \"sobre toda a carne\".",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Então, os endomitas juntaram-se aos babilônios contra seus parentes e ajudaram a profanar a terra de Israel.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "No livro de Jonas, pode ser encontrada a semente do farisaísmo do Novo Testamento.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O tema central do livro de Amós é que o povo de Israel havia quebrado seu concerto com Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "À medida que o jovem Josias foi tomando conta das rédeas do governo, a ameaça assíria não foi diminuindo.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Ageu não levou uma mensagem destinada a tratar decisivamente do desencorajamento.",
+            "correct": "E"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "07",
+    "title": "TEOLOGIA PASTORAL",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "É prova de sabedoria colocar novos convertidos em posição de liderança.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Uma pessoa sóbria mostra-se tranquila e calma em seu juízo, bem como clara em sua maneira de pensar e em sua perspectiva.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Os conceitos de liderança são desenvolvidos a partir dos padrões estabelecidos para anciões ou bispos, supervisores e os diáconos.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "As palavras “homens de boa reputação” referem-se a homens sobre quem não se podia testificar favoravelmente, cujas vidas vinham sendo observadas pelos demais crentes.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "“Então enquanto temos oportunidade, façamos o mal a todos, mas principalmente aos domésticos da fé.” Gl 6:10.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "“Vós servos, obedecei a vossos senhores segundo a carne, com temor e tremor, na sinceridade de vosso coração, como a Cristo”.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Disse-lhe o seu Senhor: muito bem meu servo bom e fiel, sobre o pouco foste fiel, sobre o pouco te colocarei, entra no gozo do teu Senhor.”",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Os servos verdadeiros são fiéis ao seu ministério.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O pastor que não se importa com a comunicação, cria para si e para a igreja prejuízos.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A comunicação entre o homem e Deus é a oração.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A liderança do ministério deve ter por alvo a glória de Deus e não a vantagem pessoal do líder.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Paulo deu esse conselho a seu discípulo, Timóteo: “Ora, é necessário que o servo do Senhor viva a contender, e não deve ser brando para com todos.”",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Uma estratégia bem feita ajuda o pastor a ser paciente quando as coisas não vão bem.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O bom líder desenvolve boa estratégia, logo, toda estratégia e composta de: Objetivos, Alvos, Prioridades, Planejamento e Diretrizes.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Ética significa: estudo dos juízos de apreciação referentes à conduta humana suscetível de qualificação do ponto de vista do bem e do mal, seja relativamente à determinada sociedade, seja de modo absoluto.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O obreiro precisa ser ético nos momento difíceis da sua vida. Tais como: ser transferido de uma igreja para a outra. Não ficar murmurando no púlpito, reclamando da liderança da igreja. Não sugerir que seu sucessor é menos qualificado que você.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O pastor não deve conformar com os padrões deste mundo.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O pastor deve conformar com os padrões deste mundo.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "O pastor ético faz tudo para glória de Deus e para si próprio.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "O pastor ético faz tudo pela glória de Deus.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque com \"X\" a(s) alternativa(s) correta(s).",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O Espírito Santo é a primeira pessoa da Trindade.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Filho, Consolador Mt. 3:16 e 28:19.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Ele é uma personalidade com quem podemos nos comunicar e nos familiarizar. Fp 2:1 e 2 Co 13:13.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O Espírito Santo é a terceira pessoa da Trindade.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque com \"X\" a(s) alternativa(s) correta(s).",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Fogo – Que limpa e refrigera At. 2:3/ Is 4:4/ Ex 13:21-22.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Terra – Invisível, indescobrível, indispensável, dá vida, irresistível. At. 2:2.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Água – Regenera limpa, da vida, dessedenta. Jo 7:38-39/ Is 44:3.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Pomba – Purifica e refina. Mt 3:16-17/ Jo 1:32.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque com \"X\" a(s) alternativa(s) correta(s).",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Glorifica a Cristo, não a si mesmo.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Possui o espírito de ambição e é pacífico. Gl 6:1-2.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Se envergonha de Jesus Cristo, não crê nele e nem fala dele. Rm 1:16",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Fala a verdade, não engana, não é hipócrita.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque com \"X\" a(s) alternativa(s) correta(s).",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Pregação é a comunicação da verdade de Deus através de seu servo para satisfazer as necessidades das pessoas.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "As escrituras não afirmam em nenhuma de suas passagens, que prover entretenimento para as pessoas é uma função da igreja.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "“importa antes obedecer a Deus que aos homens”.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O trabalho de aconselhamento exige sigilo e reserva absoluta.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O papel do líder é ser exemplo e possuir qualidades que beneficie a si mesmo e não de seus liderados.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O pastor precisa estar atento a palavra de seu amigo. Nos casos de aconselhamento reside uma possibilidade muito grande para os que confiam em Deus.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "O pastor precisa não ter controle dos casos que atende e ir avaliando seus efeitos.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Os problemas mais frequentes que chegam aos pastores são: matrimoniais, Desentendimento entre pais e filhos, Dificuldades econômicas, Contendas entre irmãos na fé e etc...",
+            "correct": "C"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "08",
+    "title": "ADMINISTRAÇÃO ECLESIASTICA",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas. De acordo com o dicionário AURÉLIO o significado da palavra administrar pode ser:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Prevaricar",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Conferir",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Gerir",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Ministrar",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas. Para o bom desempenho administrativo há uma interatividade da administração com outras disciplinas. Delas destacamos:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Psicologia",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Engenharia",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Sociologia",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Navegação",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas. No gráfico da pirâmide administrativa, encontramos o volume de autoridade de cada um que é representada por:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Alta administração",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Baixa Administração",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Administração média",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Supervisão Administrativa",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas. Dentre as formas corretas de se administrar uma igreja, destacamos:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Humildemente",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Autoritariamente",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Fielmente",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Arbitrariamente",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas. A realidade do trabalho do administrador é ajudar as pessoas a crescer. Então, administrar é:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Prever",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Comandar",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Controlar",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Organizar",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas. Ao chegar um campo para fundar uma igreja, o obreiro deve evitar:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Aproximar-se das autoridades locais.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Procurar o melhor local para sediar as suas atividades ministeriais.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Isolamento",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Complexo de Inferioridade",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas. Todos os membros devem saber que precisam:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Consagrar-se e santificar-se.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Honrar, respeitar e sustentar a obra com dízimos e ofertas.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Participar da Santa Ceia",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Levar almas a Cristo",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas. Na descriminação do organograma de uma igreja encontramos no departamento de evangelização os seguintes materiais:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Instrumentos musicais",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Livros específicos",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Folhetos",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Audiovisuais",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas. Porque uma Igreja deve ter estatuto?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Uma igreja sem estatuto não pode pregar o evangelho.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Uma igreja sem estatuto não pode ser representada juridicamente.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Uma igreja sem estatuto é como uma igreja fantasma, (não existe).",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Uma igreja sem estatuto não pode inscrever-se no CNPJ.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas. Uma Igreja sem inscrição no CNPJ estará impedida:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "De inscrever-se no INSS, FGTS, PIS; não podendo recolher estas obrigações sociais.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "De ter um pastor presidente.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "De efetuar transações comerciais a prazo.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "De ter empregado registrado.",
+            "correct": "C"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "09",
+    "title": "GEOGRAFIA E ARQUEOLOGIA BÍBLICA",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as afirmações corretas e \"E\" para as afirmações erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Geografia Geral: Estuda as paisagens e formação dos povos bíblicos e suas migrações.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Geografia Bíblica: Estuda as paisagens e a formação dos povos bíblicos e suas migrações.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Arqueologia: E a ciência que estuda a superfície terrestre e seus fenômenos humanos econômicos, físicos e políticos.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Geografia Bíblica: Estuda os monumentos e vestígios (restos de materiais/ físicos) da civilizações bíblicas.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "A geografia bíblica como a geral, se divide em quatro áreas distintas que são:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Humana.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Econômica.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Física.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Política.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Na área política podemos citar:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Palestina no tempo dos Hebreus.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Reinos vegetais, animais e minerais.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Planícies, planaltos e desertos.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Palestina no tempo dos reinos divididos.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Na área humana podemos citar:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Países do mundo Bíblico.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Nações Cananéias.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Habitantes primitivos.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Povos vizinhos da palestina.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "single",
+        "instruction": "Marque com \"X\" a resposta correta. Terra \"entre rios\" é uma denominação para qual civilização?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Hebraica."
+          },
+          {
+            "letter": "b",
+            "text": "Mesopotâmia."
+          },
+          {
+            "letter": "c",
+            "text": "Fenícia."
+          },
+          {
+            "letter": "d",
+            "text": "Grega."
+          }
+        ],
+        "correctLetter": "b"
+      },
+      {
+        "n": 6,
+        "type": "single",
+        "instruction": "Marque com \"X\" a resposta correta. Em qual dos rios abaixo selecionados, foi encontrado Moises?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Nilo."
+          },
+          {
+            "letter": "b",
+            "text": "Eufrates."
+          },
+          {
+            "letter": "c",
+            "text": "Tigre."
+          },
+          {
+            "letter": "d",
+            "text": "Jordão."
+          }
+        ],
+        "correctLetter": "a"
+      },
+      {
+        "n": 7,
+        "type": "single",
+        "instruction": "Marque com \"X\" a resposta correta. Qual das sentenças abaixo identifica a divindade de Canaã?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Astarote, Baal e Dagom."
+          },
+          {
+            "letter": "b",
+            "text": "Nebo, Baal e Astarote."
+          },
+          {
+            "letter": "c",
+            "text": "Astarote, Baal e Baal-Zebude."
+          },
+          {
+            "letter": "d",
+            "text": "Adrameleque, Quemás e Baal."
+          }
+        ],
+        "correctLetter": "c"
+      },
+      {
+        "n": 8,
+        "type": "single",
+        "instruction": "Marque com \"X\" a resposta correta. Quantos anos viveu Adão antes de pecar?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Nenhuma das alternativas abaixo."
+          },
+          {
+            "letter": "b",
+            "text": "130 anos."
+          },
+          {
+            "letter": "c",
+            "text": "800 anos."
+          },
+          {
+            "letter": "d",
+            "text": "930 anos."
+          }
+        ],
+        "correctLetter": "a"
+      },
+      {
+        "n": 9,
+        "type": "single",
+        "instruction": "Marque com \"X\" a resposta correta. Quais dos acontecimentos acima ocorreram no período interbíblico?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Abolição da idolatria."
+          },
+          {
+            "letter": "b",
+            "text": "O Êxodo."
+          },
+          {
+            "letter": "c",
+            "text": "O Cativeiro Israelita."
+          },
+          {
+            "letter": "d",
+            "text": "O surgimento das sinagogas."
+          }
+        ],
+        "correctLetter": "d"
+      },
+      {
+        "n": 10,
+        "type": "single",
+        "instruction": "Marque com \"X\" a resposta correta. Qual o nome do Imperador romano na época em que Jesus nasceu?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Augusto Cesar."
+          },
+          {
+            "letter": "b",
+            "text": "Pôncio Pilatos."
+          },
+          {
+            "letter": "c",
+            "text": "Herodes."
+          },
+          {
+            "letter": "d",
+            "text": "Tibério César."
+          }
+        ],
+        "correctLetter": "a"
+      },
+      {
+        "n": 11,
+        "type": "single",
+        "instruction": "Marque com \"X\" a resposta correta. Qual o nome do calendário mais utilizado no ocidente?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Calendário lunar."
+          },
+          {
+            "letter": "b",
+            "text": "Calendário Gregoriano."
+          },
+          {
+            "letter": "c",
+            "text": "Calendário solar."
+          },
+          {
+            "letter": "d",
+            "text": "Calendário Juliano."
+          }
+        ],
+        "correctLetter": "b"
+      },
+      {
+        "n": 12,
+        "type": "fill",
+        "instruction": "_________________________________ é a principal fonte de estudos da geografia Bíblica.",
+        "answer": "A Bíblia"
+      },
+      {
+        "n": 13,
+        "type": "fill",
+        "instruction": "_________________________________ é uma expressão para identificar a região banhada pelos rios Nilo, Jordão, Eufrates e Tigre.",
+        "answer": "O Fértil Crescente"
+      },
+      {
+        "n": 14,
+        "type": "fill",
+        "instruction": "_________________________________ é a ciência que estuda os mapas.",
+        "answer": "A Cartografia"
+      },
+      {
+        "n": 15,
+        "type": "fill",
+        "instruction": "_________________________________ eram sinais usados pelos sírios para representar ideias.",
+        "answer": "Os ideogramas"
+      },
+      {
+        "n": 16,
+        "type": "fill",
+        "instruction": "_________________________________ era a nacionalidade de Alexandre “O grande”.",
+        "answer": "Macedônio (da Macedônia)"
+      },
+      {
+        "n": 17,
+        "type": "fill",
+        "instruction": "A Assíria foi fundada por ________________ que era filho de _____________________ que era filho da _____________________.",
+        "answer": "Assur / Sem / Noé"
+      },
+      {
+        "n": 18,
+        "type": "fill",
+        "instruction": "_________________________________ foi o principal motivo da vinda dos israelitas para o Egito.",
+        "answer": "A grande seca (fome) que assolou a Palestina"
+      },
+      {
+        "n": 19,
+        "type": "fill",
+        "instruction": "_________________________________ fundou a cidade de Nínive, onde Senaqueribe construiu um imenso palácio ornado de ostóstatos.",
+        "answer": "Ninrode"
+      },
+      {
+        "n": 20,
+        "type": "fill",
+        "instruction": "_________________________________ foi o rei da Assíria, que mais humilhou os judeus, blasfemou contra Deus e sistiou Jerusalém no reinado de Ezequias, por volta dos anos 704 a 681.",
+        "answer": "Senaqueribe"
+      },
+      {
+        "n": 21,
+        "type": "match",
+        "instruction": "Relacione a coluna \"B\" de acordo com a coluna \"A\".",
+        "left": [
+          {
+            "key": "1",
+            "text": "Cidadania Romana"
+          },
+          {
+            "key": "2",
+            "text": "General Tito"
+          },
+          {
+            "key": "3",
+            "text": "Herodes Agripa I"
+          },
+          {
+            "key": "4",
+            "text": "Concílio de Jerusalém"
+          },
+          {
+            "key": "5",
+            "text": "Tiago"
+          },
+          {
+            "key": "6",
+            "text": "Antioquia"
+          }
+        ],
+        "right": [
+          {
+            "text": "Pontos de partida da segunda viagem missionária",
+            "answerKey": "6"
+          },
+          {
+            "text": "Primeira assembléia cristã.",
+            "answerKey": "4"
+          },
+          {
+            "text": "Destruiu Jerusalém.",
+            "answerKey": "2"
+          },
+          {
+            "text": "Líder da igreja de Jerusalém.",
+            "answerKey": "5"
+          },
+          {
+            "text": "Neto de Herodes “O Grande”.",
+            "answerKey": "3"
+          },
+          {
+            "text": "Privilégio Concedido por Júlio César aos habitantes de Tarso.",
+            "answerKey": "1"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "10",
+    "title": "TEOLOGIA SISTEMÁTICA I",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Teologia é o estudo das coisas relativas ao conhecimento de Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Bibliografia é o estudo das Sagradas Escrituras.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Cristologia é o estudo das doutrinas de Cristo.",
+            "correct": "E",
+            "uncertain": true
+          },
+          {
+            "letter": "d",
+            "text": "Cristologia é o estudo acerca de Cristo.",
+            "correct": "C",
+            "uncertain": true
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. Conceitos de teologia:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A teologia dogmática ensina as coisas a praticar.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "A teologia moral descreve as paixões, as virtudes, os vícios e os meios de conformarmos a vida com os preceitos e os conselhos evangélicos.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "A Parenética se ocupa da prédica.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Moral ensina as coisas a praticar.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. A teologia também pode ser:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Herética",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Apologética",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Irônica",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Polêmica",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. Literalmente a palavra doutrina define:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Os dogmas do Cristianismo.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "As verdades apresentadas em credo.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "“Ensino” ou “Instrução”.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Ponto de vista crítico do homem",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. O cristão deve estudar a Bíblia por quê?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Ela alimenta a nossa alma.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "É uma determinação do próprio Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Ela enriquece espiritualmente a vida do cristão",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Não muda natureza humana.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. Onde podemos encontrar evidencias da existência de Deus?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Na criação.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Nos livros de astrologia.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Na história da humanidade.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Na natureza humana.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. Significados dos nomes redentores de Deus:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Jeová-Shalom – O Senhor é a nossa paz.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Jeová-Tsidkonu – O Senhor nossa justiça.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Jeová-Ra-ah – O Senhor que prova.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Jeová-Jireh – O Senhor que sara.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. São atributos morais de Deus:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Onisciência.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Bondade.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Onipresença.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Imutabilidade.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. Comprovam a eternidade de Cristo:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Nascimento virginal de Maria.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Existia antes da criação do mundo.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Existia antes de Abraão.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Co-existia com Deus como afirma (João 1:1).",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas. Provas da natureza humana de Jesus cristo.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Resistiu a fome (Mt 4:2)",
+            "correct": "C",
+            "uncertain": true
+          },
+          {
+            "letter": "b",
+            "text": "Ele chorou (Jo 11:35)",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Teve sede (Jo 19:28)",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Sentiu-se cansado (Jo 4:6)",
+            "correct": "C"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "11",
+    "title": "TEOLOGIA SISTEMÁTICA II",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque “C” para as afirmações corretas e “E” para as afirmações erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Pneumatologia é estudo da doutrina do Espírito Santo.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O Espírito Santo pré-existia como a terceira pessoa da divindade.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Parakleto significa orientador de acordo com (Jo 14:16 e 17).",
+            "correct": "E",
+            "uncertain": true
+          },
+          {
+            "letter": "d",
+            "text": "Como pessoa o Espírito Santo convence o mundo – de acordo com (Jo 15:26).",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque “C” para as afirmações corretas e “E” para as afirmações erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "As escrituras não ensinam sobre a divindade do Espírito Santo.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Por divindade do Espírito Santo entende-se que Ele é um com Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Fazem parte das obras divinas do Espírito Santo a criação e a transmissão da vida.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O Espírito Santo é o hálito de Deus, a vida que dele sai para vivificar.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque “C” para as afirmações corretas e “E” para as afirmações erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Água, fogo, vento, selo e óleo são símbolos do Espírito Santo.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Obras do Espírito Santo em relação aos crentes Ele sela, fortalece, habita no crente e ilumina.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Não são frutos do Espírito Santo: Amor, alegria, paz, bondade, mansidão, felicidade e Domínio próprio.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Moisés profetizou sobre o derramamento do Espírito.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque “C” para as afirmações corretas e “E” para as afirmações erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Profetizaram sobre o batismo com o Espírito Santo: profeta Joel, Isaías, João Batista e Jesus.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O falar em línguas é um sinal visível do batismo com o Espírito Santo.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A promessa do batismo com o Espírito Santo foi só para os primeiros discípulos de Cristo.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Derramamento, batismo, enchimento são palavras que identificam o batismo com o Espírito Santo.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque “C” para as afirmações corretas e “E” para as afirmações erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Sociologia também é definida como a ciência cuja finalidade é descrever o ser humano.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "A ciência que busca a verdade dos objetivos permanentes é a antropologia.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Não há características que possam distinguir o ser humano dos outros animais.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "O ser humano é um animal pensante.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "fill_multi",
+        "instruction": "Complete as frases abaixo:",
+        "parts": [
+          {
+            "letter": "a",
+            "prompt": "O corpo humano possui _________ ossos.",
+            "answer": "206"
+          },
+          {
+            "letter": "b",
+            "prompt": "Cada pulsação do coração humano desloca _________ gramas de sangue.",
+            "answer": "44"
+          },
+          {
+            "letter": "c",
+            "prompt": "O homem respira _________ vezes por hora.",
+            "answer": "1.200"
+          },
+          {
+            "letter": "d",
+            "prompt": "O corpo humano foi avaliado pelos financistas em: ______________________.",
+            "answer": "US$ 6 milhões de dólares"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque “C” para as afirmações corretas e “E” para as afirmações erradas. O homem é um ser tricotômico (ou seja) é formado de:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Espírito, carne e corpo.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Alma, espírito e corpo.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Espírito, alma e corpo.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Corpo, espírito e alma.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "fill_multi",
+        "instruction": "Complete as sentenças abaixo:",
+        "parts": [
+          {
+            "letter": "a",
+            "prompt": "______________________ é a ciência que estuda a doutrina do pecado.",
+            "answer": "Hamartiologia"
+          },
+          {
+            "letter": "b",
+            "prompt": "______________________ é a ciência que estuda a doutrina do homem.",
+            "answer": "Antropologia"
+          },
+          {
+            "letter": "c",
+            "prompt": "______________________ teve origem no mundo angelical.",
+            "answer": "O pecado"
+          },
+          {
+            "letter": "d",
+            "prompt": "______________________ é considerado uma ofensa contra Deus.",
+            "answer": "O pecado",
+            "uncertain": true
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque “C” para as afirmações corretas e “E” para as afirmações erradas. É considerado pecado imperdoável a luz da bíblia sagrada.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Assassinato",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Apostasia",
+            "correct": "E",
+            "uncertain": true
+          },
+          {
+            "letter": "c",
+            "text": "Blasfêmia contra o Espírito Santo.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Não aceitar o sacrifício de Cristo na cruz do calvário.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "fill_multi",
+        "instruction": "Complete as sentenças abaixo:",
+        "parts": [
+          {
+            "letter": "a",
+            "prompt": "O pecado que o crente pode cometer é considerado por __________________ ou __________________.",
+            "answer": "um desastre espiritual / uma exceção (e não mais uma regra)",
+            "uncertain": true
+          },
+          {
+            "letter": "b",
+            "prompt": "Se dissermos que não temos pecado __________________ a nós mesmos e não há verdade em nós.",
+            "answer": "enganamo-nos"
+          },
+          {
+            "letter": "c",
+            "prompt": "Segundo Romanos 8:21 o que leva o crente a pratica do pecado? _____________________.",
+            "answer": "A natureza pecaminosa"
+          },
+          {
+            "letter": "d",
+            "prompt": "No trato com o pecado, o que Paulo recomenda em 1ª Timoteo 5:22 ________________________________________.",
+            "answer": "Evitá-lo (fugir do pecado)"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "12",
+    "title": "EVANGELHOS",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Nenhuma das alternativas está correta.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Evangelho é uma palavra grega que significa “Ele voltará”.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Evangelho é uma palavra de origem Hebraica que significa “boa noticia”",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Evangelho é uma palavra Aramaica que significa “boas novas”.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Nenhuma das alternativas estão corretas.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "“Sinóticos”, são os evangelhos de Mateus, Marcos e Lucas, já que eles são coincidentes e estudados em conjunto.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A palavra “Sinóticos” significa: construção paralela dos quatro evangelhos, porque suas seções são coincidentes e podem ser estudadas em conjunto.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Mateus, Marcos e Lucas apresentam Jesus começando seu ministério depois de João batista.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "match",
+        "instruction": "Enumere a 2ª coluna de acordo com a primeira:",
+        "left": [
+          {
+            "key": "1",
+            "text": "A hipótese dos fragmentos."
+          },
+          {
+            "key": "2",
+            "text": "A hipótese da tradição."
+          },
+          {
+            "key": "3",
+            "text": "A hipótese da utilização."
+          },
+          {
+            "key": "4",
+            "text": "A hipótese do evangelho originário."
+          }
+        ],
+        "right": [
+          {
+            "text": "Suposição de que existia uma dependência literária pela utilização comum do livro de Marcos.",
+            "answerKey": "3"
+          },
+          {
+            "text": "Existe um evangelho originário, descrito em aramaico.",
+            "answerKey": "4"
+          },
+          {
+            "text": "Oral e pré-literário que se tornou escrita por causa da necessidade da missão.",
+            "answerKey": "2"
+          },
+          {
+            "text": "Junção de varias histórias de Jesus que foram recompiladas.",
+            "answerKey": "1"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Papias dizia que Mateus havia escrito seu evangelho a partir das memórias de Pedro.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Um dito é aquela palavra de Jesus que não tem qualquer ligação com o contexto histórico ou literário conhecido.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O propósito principal dos Evangelhos é mostrar os usos e costumes da igreja primitiva.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Entre outras coisas, a demora em se escrever os evangelhos se deu devido à expectativa escatológica da igreja.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Teologicamente é correto afirmar que o Evangelho segundo Marcos foi o ultimo dos evangelhos a ser escritos.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O autor do Evangelho segundo Marcos, na verdade chama-se João Marcos.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "No início, a crucificação era somente para escravos e criminosos.",
+            "correct": "C",
+            "uncertain": true
+          },
+          {
+            "letter": "d",
+            "text": "A dieta dos Judeus eram constituídas principalmente de carnes assadas e cozidas.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O evangelho de Marcos foi escrito em Hebraico.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "A palavra chave de Marcos é: Servo.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Marcos não se preocupava em mostrar como prioridade, o cumprimento do velho testamento.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O evangelho de Marcos não traz nenhuma polemica sobre acréscimos no cap. 16.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque “C” para as questões corretas e “E” para as questões incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O principal interesse de Lucas é pela história da Salvação, a historia do que Deus realizou em Jesus para trazer a salvação aos pecadores.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Os livros de Lucas e Atos tem autores diferentes.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Lucas era claramente uma pessoa culta, capaz de escrever em vários estilos.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O nome “Teófilo” significa: “inimigo de Deus”.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "match",
+        "instruction": "Enumere a segunda coluna de acordo com a primeira:",
+        "left": [
+          {
+            "key": "1",
+            "text": "Leprosos."
+          },
+          {
+            "key": "2",
+            "text": "Publicanos e pecadores."
+          },
+          {
+            "key": "3",
+            "text": "Samaritanos."
+          },
+          {
+            "key": "4",
+            "text": "O ladrão na cruz."
+          }
+        ],
+        "right": [
+          {
+            "text": "Lc 10.33.",
+            "answerKey": "3"
+          },
+          {
+            "text": "Lc 17.12 – Narrativa exclusiva.",
+            "answerKey": "1"
+          },
+          {
+            "text": "Lc 23.43 – Narrativa exclusiva.",
+            "answerKey": "4"
+          },
+          {
+            "text": "Lc 17.12.",
+            "answerKey": "2"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "fill_multi",
+        "instruction": "Indique a referencia bíblica dos textos seguintes:",
+        "parts": [
+          {
+            "letter": "a",
+            "prompt": "Parábola da Dracma perdida: Lucas __________ verso(s) ____________.",
+            "answer": "15, versículo(s) 8-10",
+            "uncertain": true
+          },
+          {
+            "letter": "b",
+            "prompt": "Filhas de Jerusalém: Lucas __________ verso(s) ____________.",
+            "answer": "23, versículo(s) 27"
+          },
+          {
+            "letter": "c",
+            "prompt": "O choro de Jesus por Jerusalém: Lucas __________ verso(s) _________.",
+            "answer": "19, versículo(s) 41-44",
+            "uncertain": true
+          },
+          {
+            "letter": "d",
+            "prompt": "Parábola do Filho Pródigo: Lucas __________ verso(s) ____________.",
+            "answer": "15, versículo(s) 11-32",
+            "uncertain": true
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "match",
+        "instruction": "Enumere a segunda coluna de acordo com a primeira:",
+        "left": [
+          {
+            "key": "1",
+            "text": "FARISEUS"
+          },
+          {
+            "key": "2",
+            "text": "SADUCEUS"
+          },
+          {
+            "key": "3",
+            "text": "ESCRIBAS"
+          },
+          {
+            "key": "4",
+            "text": "HERODIANOS"
+          },
+          {
+            "key": "5",
+            "text": "ESSÊNIOS"
+          },
+          {
+            "key": "6",
+            "text": "ZELOTES"
+          },
+          {
+            "key": "7",
+            "text": "SINÉDRIO"
+          }
+        ],
+        "right": [
+          {
+            "text": "Rabinos, doutores e mestres da lei.",
+            "answerKey": "3"
+          },
+          {
+            "text": "Superior tribunal dos Judeus.",
+            "answerKey": "7"
+          },
+          {
+            "text": "Pertenciam a classe média leiga e faziam oposição ao helenismo na cultura Judaica.",
+            "answerKey": "1"
+          },
+          {
+            "text": "Extremamente legalistas, viviam em comunidades monásticas e usavam roupas brancas, como símbolo da pureza pessoal.",
+            "answerKey": "5"
+          },
+          {
+            "text": "Classe dos aristocratas, os quais tinham muita influencia política.",
+            "answerKey": "2"
+          },
+          {
+            "text": "Apoiavam a dinastia dos Herodes e ao governo romano.",
+            "answerKey": "4"
+          },
+          {
+            "text": "Revolucionários dedicados à derrubada do domínio romano.",
+            "answerKey": "6"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "13",
+    "title": "ATOS DOS APÓSTOLOS",
+    "questions": [
+      {
+        "n": 1,
+        "type": "single",
+        "instruction": "Marque com um \"X\" a afirmativa correta. Lucas deixou de exercer a medicina para acompanhar:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "João Marcos"
+          },
+          {
+            "letter": "b",
+            "text": "Pedro"
+          },
+          {
+            "letter": "c",
+            "text": "Barnabé"
+          },
+          {
+            "letter": "d",
+            "text": "Paulo"
+          }
+        ],
+        "correctLetter": "d"
+      },
+      {
+        "n": 2,
+        "type": "single",
+        "instruction": "Marque com um \"X\" a afirmativa correta. O capitulo 27 de Atos descreve a viagem de Paulo a:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Beréia"
+          },
+          {
+            "letter": "b",
+            "text": "Roma"
+          },
+          {
+            "letter": "c",
+            "text": "Antioquia"
+          },
+          {
+            "letter": "d",
+            "text": "Pérgamo"
+          }
+        ],
+        "correctLetter": "b"
+      },
+      {
+        "n": 3,
+        "type": "single",
+        "instruction": "Marque com um \"X\" a afirmativa correta. O sermão de Pedro resultou na aceitação da palavra e batismo de quase:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Três mil pessoas"
+          },
+          {
+            "letter": "b",
+            "text": "Duas mil pessoas"
+          },
+          {
+            "letter": "c",
+            "text": "Cinco mil pessoas"
+          },
+          {
+            "letter": "d",
+            "text": "N.D.A"
+          }
+        ],
+        "correctLetter": "a"
+      },
+      {
+        "n": 4,
+        "type": "fill",
+        "instruction": "A cura de um coxo de nascença é registrada em qual capítulo do livro de Atos?",
+        "answer": "Capítulo 3 (Atos 3:1-10)"
+      },
+      {
+        "n": 5,
+        "type": "single",
+        "instruction": "Marque com um \"X\" a afirmativa correta. Conforme At 3.17, o Apóstolo Pedro convida:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Ao arrependimento e volta para Jesus."
+          },
+          {
+            "letter": "b",
+            "text": "Fazerem penitencia, afim de serem perdoados."
+          },
+          {
+            "letter": "c",
+            "text": "Fazer jejum, para mostrar arrependimento."
+          },
+          {
+            "letter": "d",
+            "text": "N.D.A"
+          }
+        ],
+        "correctLetter": "a"
+      },
+      {
+        "n": 6,
+        "type": "fill",
+        "instruction": "Em qual capítulo esta relatada a morte de Ananias e Safira?",
+        "answer": "Capítulo 5 (Atos 5:1-11)"
+      },
+      {
+        "n": 7,
+        "type": "fill",
+        "instruction": "A morte de Estevão está relatada em qual capítulo e versículo do livro de Atos?",
+        "answer": "Capítulo 7, versículo 59 (Atos 7:59-60)"
+      },
+      {
+        "n": 8,
+        "type": "fill",
+        "instruction": "A primeira perseguição da Igreja esta registrada no capítulo _______ de Atos.",
+        "answer": "8"
+      },
+      {
+        "n": 9,
+        "type": "fill",
+        "instruction": "O povo de Deus foi chamado cristão na cidade de _______________________.",
+        "answer": "Antioquia"
+      },
+      {
+        "n": 10,
+        "type": "fill",
+        "instruction": "A conversão de Saulo está registrada em qual capítulo do livro de Atos?",
+        "answer": "Capítulo 9 (Atos 9)"
+      },
+      {
+        "n": 11,
+        "type": "fill",
+        "instruction": "Lídia, a vendedora de púrpura da cidade de Tiatira, foi alcançada pelo Evangelho através da pregação do Apóstolo _________________________.",
+        "answer": "Paulo"
+      },
+      {
+        "n": 12,
+        "type": "fill",
+        "instruction": "Nas palavras dos Apóstolos Paulo e Silas, que precisava o carcereiro para se salvar?",
+        "answer": "Crer no Senhor Jesus Cristo, e será salvo, ele e a sua casa (Atos 16:31)."
+      },
+      {
+        "n": 13,
+        "type": "fill",
+        "instruction": "No capítulo 19 versículo 27 de Atos há dois motivos alegados por Demétrio para justificar sua atitude agressiva contra o Apóstolo Paulo. Que motivos são esses?",
+        "answer": "1) Que o ofício de fazer ídolos de prata (nichos de Diana) cairia em descrédito, prejudicando os lucros dos artífices; 2) Que o templo da grande deusa Diana seria desprezado, perdendo sua majestade e veneração."
+      },
+      {
+        "n": 14,
+        "type": "fill",
+        "instruction": "A resposta à pregação do Evangelho foi o crescimento da Igreja, com isto surgiu um problema registrado em Atos capítulo 6 versículo 1. Qual era este problema?",
+        "answer": "Houve uma murmuração dos gregos (helenistas) contra os hebreus, porque as viúvas gregas estavam sendo desprezadas/negligenciadas na distribuição diária (no ministério cotidiano)."
+      },
+      {
+        "n": 15,
+        "type": "fill",
+        "instruction": "E qual foi a solução, proposta e aceita?",
+        "answer": "Foram escolhidos sete homens (de boa reputação) para ajudarem os apóstolos, cuidando da distribuição diária, enquanto os apóstolos se dedicavam à oração e ao ministério da palavra."
+      },
+      {
+        "n": 16,
+        "type": "fill",
+        "instruction": "Quem foi o primeiro gentio no plano de Deus e receber a mensagem do Evangelho?",
+        "answer": "Cornélio"
+      },
+      {
+        "n": 17,
+        "type": "fill",
+        "instruction": "É correto afirmar que Antioquia tornou-se a sede da missão dos gentios?",
+        "answer": "Sim, é correto. Uma vez que a igreja se estabeleceu firmemente em Antioquia, a missão aos gentios passou a ser uma política bem estabelecida, lançada a partir da base de Antioquia."
+      },
+      {
+        "n": 18,
+        "type": "fill_multi",
+        "instruction": "Complete as colunas:",
+        "parts": [
+          {
+            "letter": "a",
+            "prompt": "O sacudir do pó das sandálias deu-se em Atos capítulo ________ e versículo _____________.",
+            "answer": "13 / 51 (Atos 13:51)",
+            "uncertain": true
+          },
+          {
+            "letter": "b",
+            "prompt": "Podemos afirmar que Lucas mostra dois padrões para _______________ e _________________ a igreja são eles: ____________________ e ____________________.",
+            "answer": "guiar / orientar / Atos 2:42-47 / Atos 4:32-37"
+          }
+        ]
+      },
+      {
+        "n": 19,
+        "type": "fill",
+        "instruction": "Segundo o autor os missionários trabalhavam?",
+        "answer": "Em equipe, viajando em grupos de três ou mais (Pedro e Felipe, caps. 8-10, foram exceções à regra)."
+      },
+      {
+        "n": 20,
+        "type": "fill",
+        "instruction": "Qual o nome da cidade onde Paulo pregou um sermão que durou toda noite até o amanhecer?",
+        "answer": "Trôade (Troas)",
+        "uncertain": true
+      }
+    ]
+  },
+  {
+    "num": "14",
+    "title": "EPISTOLAS PAULINAS I",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Uma exaltação da sabedoria humana seja a filosofia grega, ou a visão judaica do rei conquistador, é totalmente contrária ao caminho de Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O evangelho apresentando um messias crucificado parecia absurdo para eles, como se falasse de “gelo frio”.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Ciúme e a discórdia são sintomas da espiritualidade infantil dos coríntios.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "A família de Cléo disse a Paulo que a igreja estava desenvolvendo um espírito partidário, declarando fidelidade a vários pregadores famosos.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Deus os entregou a um sentido perverso – vs. 28.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Deus os entregou a concupiscência e idolatria – vs. 24-25.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Deus os entregou as paixões infames – vs. 26.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Note os quatro julgamentos de Deus.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Obediência – Adão desobedeceu a Deus nos fez pecadores; Cristo obedeceu a Deus e pela fé nele somos justos.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A GLÓRIA – não é a presença de Deus no tabernáculo.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "ABRAÃO – foi escolhido como pai da nação de Israel, mas Paulo nota que nem todos de Israel são verdadeiros filhos de Abraão.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Os judeus na época de Paulo não sabiam a diferença entre SABER a vontade de Deus e FAZER a vontade de Deus.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Os judeus rejeitaram seu Messias pelo menos três vezes.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Os judeus permitiram o rei Herodes matar o mensageiro de Deus, João o Batista.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Os judeus pediram a morte de Jesus.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Os judeus mesmos mataram Estevão.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Paulo recomenda que não é necessário PREGAR A PALAVRA DE DEUS para um pecador ser salvo.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O apostolo dos gentios escreve a Carta aos Gálatas entre 55 e 57.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Salvação não é difícil e é para todos.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O crente verdadeiro não tem somente esperança no futuro, mas também tem durante as tribulações do presente.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A igreja em corinto foi fundada pelo apóstolo Paulo durante a 2ª viagem missionária entre os anos 50 e 52 d.C.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Paulo ensina que a contribuição deve ser de acordo com a prosperidade da pessoa.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A verdadeira semente de Abraão é aquele que crê e não somente aqueles que tem sangue de Judeus.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O crente, as vezes, sofre neste mundo para ser glorificado no céu.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O segredo da vitória acha-se em três palavras.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Saber – 6:1-10",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Considerar – 6:11",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Apresentar – 6:12-23",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Antiga Aliança X Nova Aliança",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Letra Mata X Espírito Vivifica",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Condenação X Justiça",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Ministério da morte X Ministério do Espírito",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A formula da vida do crente é",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Provas + Cristo = Paciência",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Paciência + Cristo = Experiência",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Experiência + Cristo = Esperança",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Deus não escolheu Esaú, o primogênito, mas escolheu Jacó antes do seu nascimento.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A ofensa de Adão trouxe a condenação e a morte mas o Dom de Deus trouxe a Justificação e a vida.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Ajudando o outro a superar o pecado mostra o amor que cumpre tanto a lei de Moisés como a de Cristo.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "A profecia edificava os coríntios porque ensinava, consolava e exortava.",
+            "correct": "C"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "15",
+    "title": "EPISTOLAS PAULINAS II",
+    "questions": [
+      {
+        "n": 1,
+        "type": "match",
+        "instruction": "Assinale a coluna \"A\" de acordo com a coluna \"B\".",
+        "left": [
+          {
+            "key": "a",
+            "text": "O dia de Cristo"
+          },
+          {
+            "key": "b",
+            "text": "O dia do Senhor"
+          }
+        ],
+        "right": [
+          {
+            "text": "Começa imediatamente após o arrebatamento.",
+            "answerKey": "b"
+          },
+          {
+            "text": "Está associado ao arrebatamento.",
+            "answerKey": "a"
+          },
+          {
+            "text": "Está associado às recompensas e bênçãos.",
+            "answerKey": "a"
+          },
+          {
+            "text": "Está associado à ira e julgamento.",
+            "answerKey": "b"
+          }
+        ],
+        "uncertain": true
+      },
+      {
+        "n": 2,
+        "type": "single",
+        "instruction": "Assinale com \"X\" a alternativa correta. PAROUSIA é uma palavra grega que significa:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Senhor"
+          },
+          {
+            "letter": "b",
+            "text": "Paz"
+          },
+          {
+            "letter": "c",
+            "text": "Amor"
+          },
+          {
+            "letter": "d",
+            "text": "Vinda"
+          }
+        ],
+        "correctLetter": "d"
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O maior tormento do inferno será a separação eterna da presença de Deus.",
+            "correct": "C",
+            "uncertain": true
+          },
+          {
+            "letter": "b",
+            "text": "Em 2ª Tessalonicenses Paulo divide os pecadores em dois grupos: aqueles que rejeitaram o Evangelho e aqueles que não conhecem o Evangelho.",
+            "correct": "C",
+            "uncertain": true
+          },
+          {
+            "letter": "c",
+            "text": "No N.T. a igreja de Tessalônica geralmente era perseguida por causa dos seus pecados e mundanismos.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Deus deixou a igreja de Tessalônica sofrer perseguições para aumentar a sua fé.",
+            "correct": "C"
+          },
+          {
+            "letter": "e",
+            "text": "A palavra APOSTASIA significa literalmente partida.",
+            "correct": "C",
+            "uncertain": true
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "single",
+        "instruction": "Assinale com \"X\" a alternativa correta. Das seguintes, não é fato verídico sobre a família de Timóteo:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Sua avó se chamava Loide."
+          },
+          {
+            "letter": "b",
+            "text": "Seu pai era um rabino Judeu."
+          },
+          {
+            "letter": "c",
+            "text": "Sua Mãe se chamava Eunice."
+          },
+          {
+            "letter": "d",
+            "text": "Seu pai era um grego pagão."
+          }
+        ],
+        "correctLetter": "b"
+      },
+      {
+        "n": "4b",
+        "type": "single",
+        "instruction": "Timóteo era:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Jovem tímido."
+          },
+          {
+            "letter": "b",
+            "text": "Fiel, consciencioso e devotado a Deus."
+          },
+          {
+            "letter": "c",
+            "text": "Todas as alternativas estão corretas."
+          },
+          {
+            "letter": "d",
+            "text": "Fisicamente fraco, mais forte defensor da fé."
+          }
+        ],
+        "correctLetter": "c"
+      },
+      {
+        "n": "4c",
+        "type": "single",
+        "instruction": "O quarto capítulo de 1ª Timóteo adverte contra:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A apostasia causada por falsos mestres."
+          },
+          {
+            "letter": "b",
+            "text": "O amor ao dinheiro."
+          },
+          {
+            "letter": "c",
+            "text": "A discórdia no culto."
+          },
+          {
+            "letter": "d",
+            "text": "As acusações contra obreiros."
+          }
+        ],
+        "correctLetter": "a"
+      },
+      {
+        "n": 5,
+        "type": "fill",
+        "instruction": "Era um homem rico e leigo que congregava na igreja de Colossos:",
+        "answer": "Filemom"
+      },
+      {
+        "n": 6,
+        "type": "single",
+        "instruction": "A instrução que se encontra em Tito capítulo 2 é dirigida aos:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Líderes do mundo."
+          },
+          {
+            "letter": "b",
+            "text": "Membros do lar."
+          },
+          {
+            "letter": "c",
+            "text": "Líderes da igreja."
+          },
+          {
+            "letter": "d",
+            "text": "Todas as alternativas estão corretas."
+          }
+        ],
+        "correctLetter": "b"
+      },
+      {
+        "n": 7,
+        "type": "match",
+        "instruction": "Assinale a coluna \"A\" de acordo com a coluna \"B\".",
+        "left": [
+          {
+            "key": "a",
+            "text": "Lavrador."
+          },
+          {
+            "key": "b",
+            "text": "Vaso."
+          },
+          {
+            "key": "c",
+            "text": "Soldado."
+          },
+          {
+            "key": "d",
+            "text": "Obreiro."
+          },
+          {
+            "key": "e",
+            "text": "Atleta."
+          }
+        ],
+        "right": [
+          {
+            "text": "Honra e desonra (2ª Tm 2.20).",
+            "answerKey": "b"
+          },
+          {
+            "text": "Aprovado e não envergonhado (2ª Tm 2.15).",
+            "answerKey": "d"
+          },
+          {
+            "text": "Recebe os primeiros frutos (2ª Tm 2.6).",
+            "answerKey": "a"
+          },
+          {
+            "text": "Competidor de acordo com as regras para que não seja desqualificado (2ª Tm 2.5).",
+            "answerKey": "e"
+          },
+          {
+            "text": "Disposto a sofrer para obter vitória (2ª Tm 2.4).",
+            "answerKey": "c"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "fill",
+        "instruction": "Qual era o tema de Filemom?",
+        "answer": "Perdão e Reconciliação — um apelo de Paulo a Filemom para que recebesse de volta seu escravo fugitivo Onésimo como irmão no Senhor, e não como escravo desobediente."
+      },
+      {
+        "n": 9,
+        "type": "fill",
+        "instruction": "Muitos eruditos tem estudado o que nesta história?",
+        "answer": "O impressionante paralelo entre a história de Filemom/Onésimo e a intercessão de Cristo pelo pecador (Cristo intercede pelo pecador junto ao Pai, assim como Paulo intercedeu por Onésimo junto a Filemom)."
+      },
+      {
+        "n": 10,
+        "type": "fill",
+        "instruction": "Que marca o escravo fugitivo receberia e onde?",
+        "answer": "A letra F (do latim FUGITIVUS), marcada com ferro quente na testa."
+      }
+    ]
+  },
+  {
+    "num": "16",
+    "title": "EPISTOLAS UNIVERSAIS",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque “V” nas afirmações verdadeiras e “F” nas afirmações falsas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Conhecer um pouco da história do império romano ajuda a entender as Epístolas Universais.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Roma foi fundada por Rômulo e Remo filhos do deus mercúrio.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "A religião romana foi formada pela combinação de diversos cultos e várias influências.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "As Epístolas Universais foram escritas por Tiago e João.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "single",
+        "instruction": "Assinale a alternativa errada:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Judas faz advertência contra imoralidade."
+          },
+          {
+            "letter": "b",
+            "text": "Segundo Judas devemos sentir compaixão pelos pecadores."
+          },
+          {
+            "letter": "c",
+            "text": "Judas faz ampla descrição dos falsos mestres."
+          },
+          {
+            "letter": "d",
+            "text": "Judas compara os falsos mestres a Pastores."
+          }
+        ],
+        "correctLetter": "b",
+        "uncertain": true
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Assinale as alternativas corretas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O apóstolo Pedro afirma que a nossa eleição é fundamentada na presciência de Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Pedro não menciona a ressurreição dos crentes.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Pedro não tem a igreja como o verdadeiro Israel.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "match",
+        "instruction": "Enumere a segunda coluna de acordo com a primeira.",
+        "left": [
+          {
+            "key": "1",
+            "text": "Patrícios"
+          },
+          {
+            "key": "2",
+            "text": "Plebeus"
+          },
+          {
+            "key": "3",
+            "text": "Exército Romano"
+          },
+          {
+            "key": "4",
+            "text": "Senado Romano"
+          }
+        ],
+        "right": [
+          {
+            "text": "Não tinham linhagem aristocrática e não possuíam direitos políticos.",
+            "answerKey": "2"
+          },
+          {
+            "text": "Era formado por chefes de família e aconselhava os reis.",
+            "answerKey": "4"
+          },
+          {
+            "text": "Constituíam a classe dirigente na sociedade romana.",
+            "answerKey": "1"
+          },
+          {
+            "text": "Realizava as campanhas da expansão e defendia as fronteiras.",
+            "answerKey": "3"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque as alternativas corretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "As igrejas aplicavam a cada escrito pelo menos dois testes para determinar a aceitabilidade de cada epístola.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "No século IV d.C. o cristianismo tornou-se religião oficial.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "As epístolas universais proporcionam um pequeno panorama da igreja primitiva.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "A igreja primitiva teve a responsabilidade de examinar, analizar, escolher e preservar as Epístolas Universais.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque “V” nas afirmações verdadeiras e “F” nas afirmações falsas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A primeira epístola de João foi dirigida a uma igreja distintamente.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Os gnósticos negavam a encarnação de Cristo",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "João escreve sua epístola por volta do ano 69 d.C.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "As epístolas de João são a maior referencia para se aprender sobre o amor.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque “V” nas afirmações verdadeiras e “F” nas afirmações falsas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "As evidências levam a crer que o autor do Evangelho de João também é o autor das epístolas.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Os últimos dias de João foram em Éfeso?",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "João esteve presente no dia de pentecoste.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "João desfrutou de uma pequena comunhão com Jesus.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque “V” nas afirmações verdadeiras e “F” nas afirmações falsas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O sentido principal das ideias gnósticas consiste na narração do destino da alma.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "João diz pouca coisa sobre o pecado.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Quanto a escatologia de João temos um objetivo bastante conclusivo.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "O gnosticismo é um movimento posterior ao cristianismo.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque “X” nas respostas corretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A epístola de Tiago foi destinada as doze tribos que estavam dispersas em toda Ásia menor.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O historiador Hégesipo chama Tiago de justo.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O autor da epístola de Tiago é o filho de Alfeu.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Tiago escreveu a fim de encorajar companheiros judaicos cristãos.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Assinale as alternativas corretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Tiago condena os ricos porque suas riquezas foram mal adquiridas.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "As pessoas a quem Tiago escrevia tinham paz, sabedoria e justiça.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Tiago dá lugar a realização da extrema unção.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Tiago recomenda que os oprimidos aguardem com paciência ate a vinda do senhor.",
+            "correct": "C"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "17",
+    "title": "TEOLOGIA SISTEMÁTICA III",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Nos itens I, II e III a seguir marque “C” para as corretas e “E” para as erradas. I.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Soterologia – é a doutrina da salvação.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O verbo salvar e o substantivo salvação aparecem mais de 120 vezes na bíblia.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "A salvação começa com o homem e desde de a fundação do mundo.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "A palavra “presciência” vem do grego é usada com o significado de saber antecipadamente.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Nos itens I, II e III a seguir marque “C” para as corretas e “E” para as erradas. II.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O arrependimento é operado em três áreas conjuntas no ser humano: intelectualmente, emocionalmente e volitivamente.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Justificação é o ato pelo qual Deus declara justa a pessoa que a ele se achega através de Cristo.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Podemos ser justificados mesmo sem crermos em Deus.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Só é justificado quem for predestinado.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Nos itens I, II e III a seguir marque “C” para as corretas e “E” para as erradas. III. A salvação abençoa a vida do crente de quatro maneiras são elas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "justificação, regeneração, adoção e predestinação.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "regeneração, adoção, santificação e justificação.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "adoção, regeneração, glorificação e santificação.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "justificação, regeneração, glorificação e santificação.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "fill",
+        "instruction": "IV. a) A única menção aos Serafins nas páginas da bíblia fica no livro de __________.",
+        "answer": "Isaías"
+      },
+      {
+        "n": 5,
+        "type": "fill",
+        "instruction": "IV. b) O vocábulo hebraico Gabriel significa “____________________________”.",
+        "answer": "homem de Deus"
+      },
+      {
+        "n": 6,
+        "type": "fill",
+        "instruction": "IV. c) Anjo do Senhor ou anjo de Jeová são usualmente aparições de Cristo no Antigo Testamento.",
+        "answer": "",
+        "uncertain": true
+      },
+      {
+        "n": 7,
+        "type": "fill",
+        "instruction": "IV. d) Na consumação dos séculos _________________ bons e maus terão papel decisivo nos eventos finais.",
+        "answer": "anjos"
+      },
+      {
+        "n": 8,
+        "type": "fill",
+        "instruction": "V. a) A palavra “igreja” como aparece no Novo Testamento é uma tradução do grego _________________.",
+        "answer": "ekklesia"
+      },
+      {
+        "n": 9,
+        "type": "fill",
+        "instruction": "V. b) A palavra igreja empregada no sentido universal designa ____________________________________________________________.",
+        "answer": "o corpo de Cristo"
+      },
+      {
+        "n": 10,
+        "type": "fill",
+        "instruction": "V. c) De acordo com a bíblia ________________________________ sobre qual a igreja está edificada.",
+        "answer": "Cristo é a Pedra"
+      },
+      {
+        "n": 11,
+        "type": "fill",
+        "instruction": "V. d) Assim como a _________________________ do ministro de Cristo é grande, também na mesma proporção será sua _______________________________.",
+        "answer": "responsabilidade / recompensa"
+      }
+    ]
+  },
+  {
+    "num": "18",
+    "title": "TEOLOGIA SISTEMÁTICA IV",
+    "questions": [
+      {
+        "n": 1,
+        "type": "fill",
+        "instruction": "1) a) A palavra escatologia é formada de duas palavras gregas _________________________ e ____________________.",
+        "answer": "eschatos (último, fim) / logos (palavra, estudo)"
+      },
+      {
+        "n": 2,
+        "type": "fill",
+        "instruction": "1) b) Para se fazer um estudo das __________________________________ é preciso que se comece pelas primeiras.",
+        "answer": "dispensações",
+        "uncertain": true
+      },
+      {
+        "n": 3,
+        "type": "fill",
+        "instruction": "1) c) O _________________________________ se dará na 1ª fase da segunda vinda de Jesus Cristo.",
+        "answer": "arrebatamento (da Igreja)"
+      },
+      {
+        "n": 4,
+        "type": "fill",
+        "instruction": "1) d) Aí ocorrerá a ___________________________________ João 5:29.",
+        "answer": "ressurreição da vida"
+      },
+      {
+        "n": 5,
+        "type": "fill",
+        "instruction": "2) a) Na grande tribulação enquanto a igreja se regozija no céu, a terra será sacudida por _________________________________.",
+        "answer": "grandes catástrofes (resultantes dos juízos de Deus)"
+      },
+      {
+        "n": 6,
+        "type": "fill",
+        "instruction": "2) b) O que será que os salvos verão quando forem arrebatados __________________________________ 2° Co 5:10.",
+        "answer": "o Tribunal de Cristo"
+      },
+      {
+        "n": 7,
+        "type": "fill",
+        "instruction": "2) c) Logo após a grande tribulação Cristo voltará em glória e iniciará o ____________________________.",
+        "answer": "Reino Milenar (milênio)"
+      },
+      {
+        "n": 8,
+        "type": "fill",
+        "instruction": "2) d) No juízo final os termos usados para descrever o trono “______________ e ________________” salientaram Soberania e Santidade.",
+        "answer": "Grande / Branco"
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O Antigo Testamento é um celeiro de revelações a cerca de Jesus Cristo.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "“Tipo” é uma palavra que vem do grego e significa “molde” ou “sinal”.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Tipos de Cristo no livro do Êxodo: Adão – Abel – a arca de Noé – Abraão – Isaque.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "José foi o mais perfeito tipo de Cristo, apresentado no livro de Gênesis.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "No livro de Êxodo encontramos o Tabernáculo e seus utensílios como verdadeiros tipos de Cristo.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A Cortina do Átrio representa Cristo sobre a perspectiva humana.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O Altar de Bronze representa a morte vicária de Cristo.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "A Arca e o propiciatório representam Cristo entronizado.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 11,
+        "type": "ce",
+        "instruction": "Marque “C” para as alternativas corretas e “E” para as alternativas incorretas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A missão da igreja no mundo ainda continua sendo um mistério para o salvo.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Jesus Cristo não mandou pregar o evangelho a toda criatura.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Há quem pregue que as cidades são de origem humana, sem aprovação de Deus, alegando que a primeira cidade foi construída por um homicida (Caim).",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Um ponto favorável para missões urbanas é o excesso de entretenimentos.",
+            "correct": "E"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "19",
+    "title": "HOMILÉTICA",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. Para que seu sermão seja compreendido em público, em primeiro lugar:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A mensagem deve estar clara para você.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O sermão deve estar bem esboçado.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "O sermão deve ter boas ilustrações.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Todas estão corretas.",
+            "correct": "E"
+          }
+        ],
+        "uncertain": true
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. Qual deve ser seu primeiro objetivo ao pregar?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Convencer e persuadir as pessoas.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Ser compreendido.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Provar que a mensagem está baseada na bíblia.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Amaldiçoar o povo.",
+            "correct": "E"
+          }
+        ],
+        "uncertain": true
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. O que motiva as pessoas ao ouvirem o sermão?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Elas serem beneficiadas.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Você as convenceu com seus argumentos.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Deus é fiel em prover uma maneira para sairmos da tentação.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "O fato de ouvirem um pregador eloquente.",
+            "correct": "E"
+          }
+        ],
+        "uncertain": true
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. Os cientistas dizem que a pessoa focaliza em três coisas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Coisas que possuam valor – Aquilo que é de valor para ela.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Toda estão corretas.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Coisas que ameaçam – Aquilo que ameaça sua vida.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Coisas fora do comum – Aquilo que é extraordinário, espetacular.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. As pessoas que vão a igreja tem três necessidades básicas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Renovar a Fé.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Renovar a Esperança.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Todas estão corretas.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Restaurar o amor.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. O pregador diante do auditório:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Todas estão erradas.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Não comece com calma.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Não prossiga de modo modesto.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Não suba à plataforma bem preparado, mas dependente do Espírito Santo.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. Algumas regras de eloqüência.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Procurar ler o mais que puder sobre o assunto a ser exposto.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Conhecimento do público ouvinte.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Seriedade, pois o orador não é um animador de plateia.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Procura saber o tipo de reunião e o nível dos ouvintes.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. Eis alguns dos problemas que as pessoas enfrentam:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Solidão.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Sentimento de culpa.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Dificuldades financeiras.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Medo do futuro.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. As melhores ilustrações são adquiridas:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Nos livros.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "No futebol.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Nos jornais, revistas e noticiários.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Na observação da vida das pessoas e das circunstâncias.",
+            "correct": "C"
+          }
+        ],
+        "uncertain": true
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. O apelo eficaz é o que apela:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Só para a razão.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Para ambas.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Só para a emoção.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Todas estão erradas.",
+            "correct": "E"
+          }
+        ],
+        "uncertain": true
+      }
+    ]
+  },
+  {
+    "num": "20",
+    "title": "EDUCAÇÃO CRISTÃ",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. O que diferencia a educação cristã da educação secular?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A educação cristã é um processo de desenvolvimento espiritual e o objetivo de seu estudo é a Palavra de Deus.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A educação cristã precisa de um processo de desenvolvimento espiritual e o objetivo de seu estudo venha ser a Palavra de Deus.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "A educação Cristã não é um processo de desenvolvimento espiritual e o objetivo de seu estudo não é a palavra de Deus.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "A educação cristã nunca foi um processo de desenvolvimento espiritual e o objetivo de seu estudo é a Palavra de Deus.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Por toda a bíblia notamos o constante cuidado de Deus com a formação espiritual do seu povo.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A promessa contida em Isaías 54.13 não foi cumprida integralmente pelo peregrino de Nazaré.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "A educação cristã tem suas raízes no Antigo Testamento.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Deus espera que você ensine a sua família a guardar todas as coisas as que Jesus ordenou.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. Imediatamente após o Pentecostes (Atos 2. 1-47), surgiram 4 significativos sinais da igreja nascente.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O ensino constante da doutrina dos apóstolos.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "As pregações de Pedro.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "O partir do pão.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "A comunhão dos apóstolos com os pecadores.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. Mau comportamento em sala de aula:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Ensinamento inadequado.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Falta de entusiasmo do aluno.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Falta de disciplina na sala.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Complexo de rejeição ou inferioridade.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A palavra relevante não é aquele que chega no momento próprio, e nem de forma adequada e se revela inútil.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Foram os romanos que mais se dedicaram à arte da oratória, fazendo dela uma arte admirada essencial para expor os pensamentos da época.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Proposito geral da educação cristã é alcançar as almas para Cristo sem distinção de raça, cor ou posição social.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "A maioria das ciências humanas para seu conhecimento, desenvolve uma metodologia que nasce nas questões e perguntas.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas: Finalidade da Música.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Anunciar o evangelho dos apóstolos.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Louvor que agrada a Deus",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Não formar grupos musicais.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Preparar os ouvintes a mensagem de Deus.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A família deve viver diariamente momentos de comunhão.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A igreja deve ter comissão local de Educação.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Através da audição o aluno aprende melhor, geralmente lembra-se bem por longo prazo.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Deus tem uma visão missionária que abrange alcançar todos os quadrantes da terra de Israel.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. Pelo menos três mesas os Diáconos e as Diaconisas precisam servir.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A mesa do Senhor.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "A mesa do Pastor.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A mesa dos menos favorecidos.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Todas as alternativas estão corretas.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas. Entre os meios de evangelização, destacam-se:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Evangelismo em massa.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Evangelismo pessoal.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Cultos ao ar livre.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Distribuição de folhetos.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as questões corretas e \"E\" para as questões erradas.",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Um grande desastre na educação é um educador despreparado.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O ensino, a educação religiosa, a ministração da palavra, para que alcancem seus objetivos, precisam ser motivados pelo amor.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O objeto da pedagogia não é a educação.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "A Escola Dominical, até hoje, não tem sido um dos melhores meios encontrados, na amplificação do poder da igreja para alcançar os que estão sem Cristo.",
+            "correct": "E"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "num": "21",
+    "title": "ESCOLA BÍBLICA DOMINICAL",
+    "questions": [
+      {
+        "n": 1,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as alternativas corretas e \"E\" para as alternativas erradas. Sabemos que a Escola Bíblica Dominical muito contribui para o aperfeiçoamento dos crentes, mais é de valor ressaltar que a Escola foi fundada por quem e em que data?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "João Calvino – 1547 a 1597.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Rudolf Bultman – 1889 a 1962.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Robert Raikes – 1821 a 1913.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "John Wesley – 1745 a 1801.",
+            "correct": "E"
+          }
+        ],
+        "uncertain": true
+      },
+      {
+        "n": 2,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as alternativas corretas e \"E\" para as alternativas erradas. A educação religiosa é?",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "O ensino dado aos fieis de qualquer religião.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O ensino dado especificamente sobre a base cristã.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "O espirito anti-intelectualista.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Pretextos e contextos.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 3,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as alternativas corretas e \"E\" para as alternativas erradas. São problemas comuns enfrentados na maioria das Escolas Bíblicas Dominicais no país:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A frequência é superior a 80% dos cultos ou reuniões.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "A mesmice que tem gerado desânimo e cansaço.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "A falta de planejamento de crescimento e perspectivas para o médio e longo prazo.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "O material didático é adequado e significativo.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 4,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as alternativas corretas e \"E\" para as alternativas erradas. Em relação à organização administrativa da E.B.D, pode-se afirmar que:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "A coordenação pedagógica faz parte da organização administrativa da E.B.D.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Buscar o aprimoramento dos professores é atribuição do superintendente da E.B.D.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "É de competência da secretaria da E.B.D a guarda e o incentivo à arrecadação de recursos financeiros.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "A superintendência é a instância superior da E.B.D.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 5,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as alternativas corretas e \"E\" para as alternativas erradas. Segundo as leis do ensino, é correto afirmar que:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "É responsabilidade do aluno despertar disposição para o aprendizado.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O aluno deve prestar atenção com interesse a matéria a ser aprendida.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "O professor precisa aprender aquilo que se quer ensinar.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "Na atenção involuntária a mente se focaliza mediante seu próprio esforço.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 6,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as alternativas corretas e \"E\" para as alternativas erradas. Mediante o que foi estudado em relação ao ensino infantil podemos afirmar que:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "No mundo greco-romano, as crianças gozavam de estrema atenção e estima.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "O ensino infantil na E.B.D é um momento de puro entretenimento.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "Encontramos na Bíblia poucas passagens que nos orientam e nos ordenam a ensinar e evangelizar a criança.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "De acordo com o Antigo testamento as crianças são recebidas como uma benção no mundo judaico.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 7,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as alternativas corretas e \"E\" para as alternativas erradas. A lição bíblica é de extrema importância na E.B.D. Baseado neste assunto, é correto afirmar que:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "São etapas da lição: introdução, apresentação e encerramento.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O objetivo da lição é apenas levar a criança a ter uma experiência com Deus.",
+            "correct": "E"
+          },
+          {
+            "letter": "c",
+            "text": "A apresentação do professor não influencia no alcance de seus objetivos.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Muitos professores falham devido à dificuldade em exprimir-se adequadamente.",
+            "correct": "C"
+          }
+        ]
+      },
+      {
+        "n": 8,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as alternativas corretas e \"E\" para as alternativas erradas. Ao preparar a lição, o professor deve estar atento aos seguintes passos:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Ler previamente a série de lições.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "Planejar o uso de ajuda visual.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Visar um alvo com a lição, considerando suas próprias necessidades.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "Fazer um esboço da lição, baseando-se somente na Bíblia, pois é ela a maior fonte de sabedoria.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 9,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as alternativas corretas e \"E\" para as alternativas erradas. Ao estudar o capítulo sobre período de aula aprendemos princípios que podem determinar o sucesso da aula como:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Ao encerrar o período da aula é aconselhável que o professor estimule o interesse para a aula seguinte.",
+            "correct": "C"
+          },
+          {
+            "letter": "b",
+            "text": "O Espirito Santo é o grande motivador do professor e sem o seu auxilio não se pode atingir os alvos do ensino.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Ao ensinar a lição, o professor deve seguir estritamente o seu plano de aula, para não correr risco de se desviar do assunto.",
+            "correct": "E"
+          },
+          {
+            "letter": "d",
+            "text": "No início da aula, a atmosfera de reverencia e adoração não são fundamentais, pois a mesma virá com o desenvolver da aula.",
+            "correct": "E"
+          }
+        ]
+      },
+      {
+        "n": 10,
+        "type": "ce",
+        "instruction": "Marque \"C\" para as alternativas corretas e \"E\" para as alternativas erradas. Para manter a atenção dos alunos e atingir seus objetivos é importante lembrar que:",
+        "parts": [
+          {
+            "letter": "a",
+            "text": "Ao deparar-se com problemas de disciplina, o professor deve buscar resolvê-lo, sabendo que eles sempre são provenientes do aluno e sua família.",
+            "correct": "E"
+          },
+          {
+            "letter": "b",
+            "text": "Para sustentar a atenção da classe, o assunto da aula deve se relacionar com os interesses do aluno.",
+            "correct": "C"
+          },
+          {
+            "letter": "c",
+            "text": "Uma das maneiras de conservar a atenção da turma é o professor demonstrar que ele próprio tem real interesse na lição.",
+            "correct": "C"
+          },
+          {
+            "letter": "d",
+            "text": "As distrações são o maior inimigo da atenção e podem se tornar um problema complexo.",
+            "correct": "C"
+          }
+        ]
+      }
+    ]
+  }
+]

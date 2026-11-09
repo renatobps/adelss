@@ -24,7 +24,7 @@
     <div class="col-lg-8">
         <div class="card" style="border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Visualizar Estudo</h5>
+                <h5 class="mb-0">{{ $courseForms->isNotEmpty() ? 'Curso e disciplinas' : 'Visualizar Estudo' }}</h5>
                 <div>
                     <a href="{{ route('ensino.estudos.formularios.index', $estudo) }}" class="btn btn-outline-success btn-sm">
                         <i class="bx bx-list-check me-1"></i>Formulários
@@ -65,6 +65,9 @@
                         </div>
                     @endif
                 </div>
+                @if($courseForms->isNotEmpty())
+                    @include('ensino.estudos.partials.course')
+                @endif
             </div>
         </div>
     </div>

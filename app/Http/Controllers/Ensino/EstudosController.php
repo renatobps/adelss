@@ -73,7 +73,10 @@ class EstudosController extends Controller
     public function show(Study $estudo)
     {
         $this->authorize('view', $estudo);
-        return view('ensino.estudos.show', compact('estudo'));
+        $courseForms = $estudo->forms()->where('is_active', true)
+            ->whereNotNull('material_path')->withCount('questions')->orderBy('title')->get();
+
+        return view('ensino.estudos.show', compact('estudo', 'courseForms'));
     }
 
     public function edit(Study $estudo)

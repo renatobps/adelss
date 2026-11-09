@@ -75,6 +75,7 @@ class StudyFormController extends Controller
             'questions.*.options_text' => 'nullable|string',
             'questions.*.correct_answer' => 'nullable|string|max:1000',
             'questions.*.is_required' => 'nullable|boolean',
+            'questions.*.review_required' => 'nullable|boolean',
         ]);
 
         $questions = $request->input('questions', []);
@@ -156,6 +157,7 @@ class StudyFormController extends Controller
             'questions.*.options_text' => 'nullable|string',
             'questions.*.correct_answer' => 'nullable|string|max:1000',
             'questions.*.is_required' => 'nullable|boolean',
+            'questions.*.review_required' => 'nullable|boolean',
         ]);
 
 
@@ -302,6 +304,7 @@ class StudyFormController extends Controller
                 'options' => $options,
                 'correct_answer' => $question['correct_answer'] ?? null,
                 'is_required' => filter_var($question['is_required'] ?? true, FILTER_VALIDATE_BOOLEAN),
+                'review_required' => filter_var($question['review_required'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'sort_order' => $question['sort_order'] ?? $index,
             ]);
         }
@@ -335,6 +338,10 @@ class StudyFormController extends Controller
             } else {
                 $key = chr(97 + $i);
                 $text = trim((string) $opt);
+                if (preg_match('/^([a-zA-Z0-9_-]+)\s*::\s*(.*)$/u', $text, $match)) {
+                    $key = $match[1];
+                    $text = trim($match[2]);
+                }
             }
 
             if ($text === '') {

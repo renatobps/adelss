@@ -54,8 +54,9 @@
                             'theme' => $q->theme,
                             'type' => $q->type,
                             'correct_answer' => $q->correct_answer,
-                            'options_text' => collect($q->options ?? [])->pluck('text')->implode("\n"),
+                            'options_text' => collect($q->options ?? [])->map(fn ($opt) => $opt['key'].'::'.$opt['text'])->implode("\n"),
                             'is_required' => $q->is_required,
+                            'review_required' => $q->review_required,
                         ])->all()) as $i => $question)
                             @include('ensino.estudos.formularios._question-fields', ['index' => $i, 'question' => $question])
                         @endforeach

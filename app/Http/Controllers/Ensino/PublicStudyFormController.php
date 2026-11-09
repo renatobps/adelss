@@ -7,6 +7,8 @@ use App\Models\StudyForm;
 use App\Models\StudyFormAnswer;
 use App\Models\StudyFormQuestion;
 use App\Models\StudyFormSubmission;
+use App\Services\IbadegBookExcerpts;
+use App\Services\IbadegExamPresenter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -17,12 +19,43 @@ class PublicStudyFormController extends Controller
         $formulario = StudyForm::query()
             ->where('public_slug', $slug)
             ->where('is_active', true)
+            ->whereHas('study')
             ->with(['study', 'questions'])
             ->firstOrFail();
 
-        $sections = $this->buildSections($formulario);
+        return $this->formView($formulario);
+    }
 
-        return view('ensino.estudos.formularios.public', compact('formulario', 'sections'));
+    public function result(Request $request, string $slug)
+    {
+        $formulario = StudyForm::where('public_slug', $slug)->where('is_active', true)
+            ->whereHas('study')
+            ->with(['study', 'questions'])->firstOrFail();
+        // O resultado pertence à sessão que respondeu, sem IDs públicos enumeráveis.
+        $submission = $formulario->submissions()
+            ->whereKey($request->session()->get('study_form_results.'.$formulario->id))
+            ->with('answers.question')->firstOrFail();
+
+        return response($this->formView($formulario, $submission))
+            ->header('Cache-Control', 'private, no-store');
+    }
+
+    private function formView(StudyForm $formulario, ?StudyFormSubmission $submission = null)
+    {
+        if (str_starts_with($formulario->import_key ?? '', 'ibadeg-')) {
+            return view('ensino.estudos.formularios.ibadeg', [
+                'formulario' => $formulario,
+                'submission' => $submission,
+                'groups' => app(IbadegExamPresenter::class)->groups($formulario),
+                'bookExcerpts' => $submission ? app(IbadegBookExcerpts::class)->forForm($formulario) : [],
+            ]);
+        }
+
+        return view('ensino.estudos.formularios.public', [
+            'formulario' => $formulario,
+            'submission' => $submission,
+            'sections' => $submission ? [] : $this->buildSections($formulario),
+        ]);
     }
 
     /**
@@ -59,6 +92,7 @@ class PublicStudyFormController extends Controller
         $formulario = StudyForm::query()
             ->where('public_slug', $slug)
             ->where('is_active', true)
+            ->whereHas('study')
             ->with('questions')
             ->firstOrFail();
 
@@ -90,7 +124,7 @@ class PublicStudyFormController extends Controller
             'answers.*.required' => 'Esta pergunta é obrigatória.',
         ]);
 
-        DB::transaction(function () use ($formulario, $validated, $request) {
+        $submission = DB::transaction(function () use ($formulario, $validated, $request) {
             $score = 0;
             $maxScore = 0;
 
@@ -134,10 +168,13 @@ class PublicStudyFormController extends Controller
                 'score' => $maxScore > 0 ? $score : null,
                 'max_score' => $maxScore > 0 ? $maxScore : null,
             ]);
+
+            return $submission;
         });
 
+        $request->session()->put('study_form_results.'.$formulario->id, $submission->id);
+
         return redirect()
-            ->route('study.forms.public.show', $slug)
-            ->with('success', 'Respostas enviadas com sucesso! Obrigado, '.$validated['respondent_name'].'.');
+            ->route('study.forms.public.result', $slug);
     }
 }

@@ -27,6 +27,10 @@
 
         * { box-sizing: border-box; }
 
+        a { color: var(--accent-deep); }
+        .sf-hero a { color: #d2ffe5; }
+        .sf-question:target { outline: 2px solid var(--accent-deep); outline-offset: 6px; }
+
         html, body {
             margin: 0;
             min-height: 100%;
@@ -401,7 +405,12 @@
             <p class="sf-study">Estudo: {{ $formulario->study->name }}</p>
         @endif
 
-        @unless(session('success'))
+        @if($formulario->materialUrl())
+            <p><a href="{{ $formulario->materialUrl() }}" target="_blank" rel="noopener">Ler apostila (PDF)</a>
+            · <a href="{{ $formulario->examPdfUrl() }}" target="_blank" rel="noopener">Prova original (PDF)</a></p>
+        @endif
+
+        @unless($submission)
         <div class="sf-progress-wrap" id="progress-wrap">
             <div class="sf-progress-meta">
                 <span id="step-label">Identificação</span>
@@ -418,12 +427,8 @@
     </header>
 
     <main class="sf-card">
-        @if(session('success'))
-            <div class="sf-success-card">
-                <div class="sf-success-icon">✓</div>
-                <h2 class="sf-section-title">Respostas enviadas</h2>
-                <p class="sf-desc">{{ session('success') }}</p>
-            </div>
+        @if($submission)
+            @include('ensino.estudos.formularios.result')
         @else
             @if($errors->any())
                 <div class="sf-alert sf-alert-err">
@@ -517,7 +522,7 @@
     </main>
 </div>
 
-@unless(session('success'))
+@unless($submission)
 <nav class="sf-nav" id="quiz-nav">
     <div class="sf-nav-inner">
         <button type="button" class="sf-btn sf-btn-ghost sf-hidden" id="btn-prev">Voltar</button>
@@ -526,7 +531,7 @@
 </nav>
 @endunless
 
-@unless(session('success'))
+@unless($submission)
 <script>
 (function () {
     const panels = Array.from(document.querySelectorAll('.sf-panel'));

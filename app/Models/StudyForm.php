@@ -19,6 +19,9 @@ class StudyForm extends Model
         'description',
         'public_slug',
         'is_active',
+        'import_key',
+        'material_path',
+        'exam_pdf_path',
     ];
 
     protected $casts = [
@@ -43,6 +46,16 @@ class StudyForm extends Model
     public function publicUrl(): string
     {
         return url('/estudo-formulario/'.$this->public_slug);
+    }
+
+    public function materialUrl(): ?string
+    {
+        return $this->material_path ? asset('storage/'.$this->material_path) : null;
+    }
+
+    public function examPdfUrl(): ?string
+    {
+        return $this->exam_pdf_path ? asset('storage/'.$this->exam_pdf_path) : null;
     }
 
     public static function generateUniqueSlug(string $title): string

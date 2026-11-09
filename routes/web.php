@@ -29,6 +29,7 @@ Route::post('/evento/{slug}/inscricao/reenviar-comprovante', [PublicEventControl
 
 Route::get('/estudo-formulario/{slug}', [PublicStudyFormController::class, 'show'])->name('study.forms.public.show');
 Route::post('/estudo-formulario/{slug}/responder', [PublicStudyFormController::class, 'submit'])->name('study.forms.public.submit');
+Route::get('/estudo-formulario/{slug}/resultado', [PublicStudyFormController::class, 'result'])->name('study.forms.public.result');
 
 // Formularios de coleta de dados (modulo Midia), abertos sem login
 Route::get('/formulario/{slug}', [PublicMediaFormController::class, 'show'])->name('formularios.public.show');

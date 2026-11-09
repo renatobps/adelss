@@ -48,6 +48,7 @@
         <label class="form-label">Opções (uma por linha)</label>
         <textarea name="questions[{{ $index }}][options_text]" class="form-control" rows="4"
                   placeholder="São Paulo&#10;Rio de Janeiro&#10;Brasília">{{ $optionsText }}</textarea>
+        <div class="form-text">Para preservar identificadores como C/E ou números, use chave::texto (ex.: C::Certo). A resposta correta deve usar essa chave.</div>
     </div>
 
     <div class="form-check">
@@ -55,6 +56,12 @@
         <input class="form-check-input" type="checkbox" name="questions[{{ $index }}][is_required]" value="1"
                id="required_{{ $index }}" @checked($required)>
         <label class="form-check-label" for="required_{{ $index }}">Obrigatória</label>
+    </div>
+    <div class="form-check mt-2">
+        <input type="hidden" name="questions[{{ $index }}][review_required]" value="0">
+        <input class="form-check-input" type="checkbox" name="questions[{{ $index }}][review_required]" value="1"
+               id="review_{{ $index }}" @checked($question['review_required'] ?? false)>
+        <label class="form-check-label" for="review_{{ $index }}">Gabarito pendente de revisão pelo professor</label>
     </div>
 </div>
 
