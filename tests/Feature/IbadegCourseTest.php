@@ -265,4 +265,28 @@ class IbadegCourseTest extends TestCase
             ->assertSee('Ainda não há um trecho do livro associado com segurança a este item.')
             ->assertDontSee('Nos estudos superiores')->assertDontSee('Resposta correta:');
     }
+
+    public function test_deployment_migration_installs_bundled_course_without_an_external_source(): void
+    {
+        Storage::fake('public');
+        $migration = require database_path('migrations/2026_11_09_120200_install_bundled_ibadeg_course.php');
+        $migration->up();
+        $this->assertSame(1, Study::count());
+        $this->assertSame(21, StudyForm::count());
+        $this->assertSame(761, StudyFormQuestion::count());
+        $this->assertSame(43, count(Storage::disk('public')->allFiles('studies/ibadeg')));
+
+        $form = StudyForm::first();
+        $question = $form->questions()->first();
+        $submission = $form->submissions()->create(['respondent_name' => 'Aluno', 'score' => 1, 'max_score' => 1, 'submitted_at' => now()]);
+        $answer = $submission->answers()->create(['question_id' => $question->id, 'selected_option' => 'C', 'is_correct' => true]);
+
+        $this->artisan('ensino:import-ibadeg')->assertExitCode(0);
+        $migration->down();
+        $this->assertSame(1, Study::count());
+        $this->assertSame(21, StudyForm::count());
+        $this->assertSame(761, StudyFormQuestion::count());
+        $this->assertSame($question->id, $answer->fresh()->question->id);
+        $this->assertEquals(1, $submission->fresh()->score);
+    }
 }

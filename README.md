@@ -46,6 +46,8 @@ php artisan config:clear && php artisan config:cache
 php artisan view:clear
 ```
 
+O curso IBADEG está incluído no projeto e é cadastrado automaticamente pelas migrações, com as apostilas e provas. O script `bash scripts/deploy.sh` também prepara o storage e executa essas migrações. Detalhes em [`docs/CURSO_IBADEG.md`](docs/CURSO_IBADEG.md).
+
 ⚠️ O projeto roda com `config:cache`: **toda alteração no `.env` exige `config:clear && config:cache`**, e o código nunca deve usar `env()` fora de arquivos de config — detalhes em [`docs/INFRAESTRUTURA.md`](docs/INFRAESTRUTURA.md).
 
 ## Arquitetura em uma olhada

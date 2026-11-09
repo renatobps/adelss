@@ -2,15 +2,35 @@
 
 O curso fica em **Ensino → Estudos → Curso de Teologia — IBADEG**. Cada uma das 21 disciplinas tem apostila PDF, prova original PDF e formulário interativo. O PDF consolidado das provas fica no anexo do curso.
 
-Para importar em outro ambiente, disponibilize a pasta original com `LIVROS`, `PROVAS` e `SITE PROVAS/index.html`, execute as migrações e rode:
+O curso e seus materiais originais estão incluídos em `resources/courses/ibadeg`. A migração `2026_11_09_120200_install_bundled_ibadeg_course` cadastra o curso, as 21 provas e suas questões e copia os PDFs para o disco público. Assim, o deploy habitual já deixa o curso cadastrado no banco do servidor.
+
+No terminal do serviço da aplicação no EasyPanel:
+
+```bash
+cd /code
+git pull
+bash scripts/deploy.sh
+```
+
+Esse script executa `php artisan migrate --force`, prepara o link do storage, ajusta permissões e limpa os caches. Se o deploy já executa as migrações, o cadastro ocorre automaticamente na próxima implantação. O ID do curso é definido pelo banco de cada ambiente; acesse por **Ensino → Estudos**, sem fixar `/estudos/3` no servidor.
+
+Para reinstalar os arquivos ou cadastrar o curso manualmente, use:
+
+```bash
+php artisan ensino:import-ibadeg
+```
+
+Também é possível informar uma pasta externa com `LIVROS`, `PROVAS` e `SITE PROVAS/index.html`:
 
 ```powershell
 php artisan ensino:import-ibadeg 'D:\IBADEG'
 ```
 
-Os 43 PDFs são copiados por stream para o disco público, em `studies/ibadeg`. O servidor precisa servir `public/storage` (configuração padrão: `php artisan storage:link`). Esses arquivos devem acompanhar o backup/deploy do storage; não são versionados no Git.
+Os 43 PDFs originais são versionados em `resources/courses/ibadeg` e copiados por stream para o disco público, em `studies/ibadeg`. O servidor precisa servir `public/storage` (configuração padrão: `php artisan storage:link`). As cópias no storage continuam fora do Git e devem acompanhar o backup de dados da aplicação.
 
 A importação lê o JSON `EXAMS` da página fornecida sem executar JavaScript. Preserva os 235 enunciados em 761 itens: 699 objetivos e 62 abertos. Associa os PDFs pelo número da disciplina. A repetição do comando mantém os formulários, as questões e as tentativas já registradas; não sobrescreve edições dos professores.
+
+O rollback da migração de cadastro mantém o curso e as respostas dos alunos. A migração exige todos os PDFs válidos antes de cadastrar o conteúdo; um pacote incompleto interrompe o deploy com erro em vez de criar um curso com arquivos ausentes.
 
 A nota automática é `10 × acertos / itens objetivos com gabarito`. Cada item C/E e cada associação vale um ponto. As questões abertas ficam fora dessa nota, seguindo o HTML original, e mostram a resposta de referência quando disponível. Uma questão aberta do original está sem referência. Os avisos de gabarito incerto do original são preservados; precisam de revisão pedagógica.
 
@@ -38,4 +58,4 @@ Validação automatizada:
 php vendor/bin/phpunit tests/Feature/IbadegCourseTest.php
 ```
 
-A cópia JSON em `tests/Fixtures/ibadeg-exams.json` serve para testar o conjunto completo de questões. O teste cria PDFs temporários e usa SQLite em memória, sem alterar o banco da aplicação.
+A cópia JSON em `tests/Fixtures/ibadeg-exams.json` serve para testar o conjunto completo de questões. Os testes usam SQLite em memória e um disco público isolado, sem alterar o banco da aplicação. A instalação automática também é testada com os arquivos reais incluídos em `resources/courses/ibadeg`.

@@ -7,7 +7,7 @@ use Illuminate\Console\Command;
 
 class ImportIbadegCourse extends Command
 {
-    protected $signature = 'ensino:import-ibadeg {source : Diretório contendo LIVROS, PROVAS e SITE PROVAS}';
+    protected $signature = 'ensino:import-ibadeg {source? : Diretório contendo LIVROS, PROVAS e SITE PROVAS; por padrão usa o curso incluído no projeto}';
 
     protected $description = 'Importa o curso IBADEG com apostilas, provas e gabaritos, preservando tentativas existentes';
 

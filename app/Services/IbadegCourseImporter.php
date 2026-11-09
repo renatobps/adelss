@@ -13,8 +13,9 @@ class IbadegCourseImporter
 {
     public const COURSE_NAME = 'Curso de Teologia — IBADEG';
 
-    public function import(string $source): Study
+    public function import(?string $source = null): Study
     {
+        $source ??= resource_path('courses/ibadeg');
         $source = rtrim($source, '/\\');
         $html = $source.'/SITE PROVAS/index.html';
         if (! is_file($html)) {
