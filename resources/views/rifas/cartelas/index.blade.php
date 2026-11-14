@@ -15,6 +15,17 @@
     <a href="{{ route('rifas.show', $rifa) }}" class="btn btn-default">Voltar para números</a>
 </div>
 
+@include('rifas.partials.distribution')
+<form method="GET" class="d-flex gap-2 mb-3">
+    <label for="filter-seller" class="visually-hidden">Filtrar por vendedor responsável</label>
+    <select id="filter-seller" name="vendedor_id" class="form-control">
+        <option value="">Todos os vendedores responsáveis</option>
+        @foreach($vendedoresDistribuidos as $vendedor)
+            <option value="{{ $vendedor->id }}" @selected((string) request('vendedor_id') === (string) $vendedor->id)>{{ $vendedor->name }}</option>
+        @endforeach
+    </select>
+    <button type="submit" class="btn btn-default">Filtrar</button>
+</form>
 <div class="row">
     @foreach($cartelas as $cartela)
         <div class="col-md-4 mb-3">
@@ -23,6 +34,7 @@
                     <h2 class="card-title">{{ $cartela->identificador }}</h2>
                 </header>
                 <div class="card-body">
+                    <p>Vendedor responsável: <strong>{{ $cartela->vendedor?->name ?? 'Não atribuído' }}</strong></p>
                     <div class="d-grid" style="grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px;">
                         @foreach($cartela->numeros as $numero)
                             @if(auth()->user()->can('sell', $rifa))
@@ -36,7 +48,7 @@
                                     data-cartela-label="{{ $cartela->identificador }}"
                                     data-comprador-nome="{{ $numero->comprador_nome }}"
                                     data-comprador-telefone="{{ $numero->comprador_telefone }}"
-                                    data-vendedor-id="{{ $numero->vendedor_id }}"
+                                    data-vendedor-id="{{ $numero->vendedor_id ?: $cartela->vendedor_id }}"
                                     style="cursor: pointer;"
                                 >
                                     <div><strong>{{ $numero->numero }}</strong></div>
@@ -50,6 +62,20 @@
                             @endif
                         @endforeach
                     </div>
+                    <div class="mt-3 d-flex flex-wrap gap-2">
+                        <a href="{{ route('rifas.cartelas.pdf', [$rifa, $cartela]) }}" class="btn btn-sm btn-outline-primary">Baixar cartela em PDF</a>
+                        @can('update', $rifa)
+                            @if($cartela->vendedor && $cartela->vendedor->phone)
+                                <form method="POST" action="{{ route('rifas.cartelas.whatsapp', [$rifa, $cartela]) }}" onsubmit="if (!confirm('Enviar esta cartela para o WhatsApp do vendedor responsável?')) return false; this.querySelector('button').disabled = true;">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-success">{{ $cartela->whatsapp_enviado_em ? 'Reenviar por WhatsApp' : 'Enviar por WhatsApp' }}</button>
+                                </form>
+                            @else
+                                <small class="text-muted">Para enviar, é necessário um vendedor com telefone cadastrado.</small>
+                            @endif
+                        @endcan
+                    </div>
+                    @if($cartela->whatsapp_enviado_em)<p class="small text-muted mt-2 mb-0">Último envio: {{ $cartela->whatsapp_enviado_em->format('d/m/Y H:i') }}</p>@endif
                 </div>
             </section>
         </div>
@@ -299,6 +325,8 @@
                 }
 
                 preencherNumerosDaCartela(cartelaId, numeroId);
+                const vendedorSelect = document.querySelector('#modalVendaCartela select[name="vendedor_id"]');
+                if (vendedorSelect) vendedorSelect.value = vendedorId;
 
                 modal.show();
             });

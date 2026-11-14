@@ -14,7 +14,16 @@ class Cartela extends Model
     protected $fillable = [
         'rifa_id',
         'identificador',
+        'vendedor_id',
+        'whatsapp_enviado_em',
     ];
+
+    protected $casts = ['whatsapp_enviado_em' => 'datetime'];
+
+    public function vendedor(): BelongsTo
+    {
+        return $this->belongsTo(Member::class, 'vendedor_id');
+    }
 
     public function rifa(): BelongsTo
     {

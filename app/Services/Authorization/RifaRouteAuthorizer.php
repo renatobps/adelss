@@ -3,7 +3,7 @@
 namespace App\Services\Authorization;
 
 use App\Models\User;
-use App\Policies\Rifas\RifaPolicy;
+use App\Policies\RifaPolicy;
 use App\Policies\Rifas\RifaReportPolicy;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -26,6 +26,12 @@ class RifaRouteAuthorizer
 
         $routeName = $request->route()?->getName() ?? '';
         $action = $request->route()?->getActionMethod() ?? '';
+
+        if (in_array($routeName, ['rifas.cartelas.distribuir', 'rifas.cartelas.whatsapp', 'rifas.numeros.adicionar'], true)) {
+            return $this->rifaPolicy->update($user, new \App\Models\Rifa())
+                ? null
+                : $denyAccess('Acesso negado. Você não tem permissão para gerenciar a distribuição de cartelas.');
+        }
 
         if ($routeName === 'rifas.index' || $action === 'index'
             || $routeName === 'rifas.show' || $action === 'show'

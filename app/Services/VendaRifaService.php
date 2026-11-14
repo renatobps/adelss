@@ -13,6 +13,9 @@ class VendaRifaService
     public function registrarVendaRapida(Rifa $rifa, array $dados): RifaVenda
     {
         return DB::transaction(function () use ($rifa, $dados) {
+            if ($rifa->department_id && !$rifa->membrosVendedores()->whereKey($dados['vendedor_id'])->exists()) {
+                throw ValidationException::withMessages(['vendedor_id' => 'Selecione um membro ativo do departamento responsável por esta rifa.']);
+            }
             $numeroIds = $dados['numero_ids'];
             $statusFinal = $dados['status'] ?? 'vendido';
 

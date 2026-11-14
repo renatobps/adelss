@@ -28,7 +28,7 @@ class RegistrarVendaRapidaRequest extends FormRequest
             'comprador_telefone' => ['nullable', 'string', 'max:30'],
             'status' => ['nullable', 'in:reservado,vendido'],
             'numero_ids' => ['required', 'array', 'min:1'],
-            'numero_ids.*' => ['integer', 'exists:numeros_rifa,id'],
+            'numero_ids.*' => ['integer', 'distinct', 'exists:numeros_rifa,id'],
         ];
     }
 }

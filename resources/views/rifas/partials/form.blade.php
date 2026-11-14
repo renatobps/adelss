@@ -1,3 +1,16 @@
+<div class="mb-3">
+    <label for="rifa-department" class="form-label">Departamento responsável</label>
+    <select id="rifa-department" name="department_id" class="form-control">
+        <option value="">Sem distribuição automática</option>
+        @foreach($departments as $department)
+            <option value="{{ $department->id }}" @selected((string) old('department_id', ($rifa ?? null)?->department_id) === (string) $department->id)>{{ $department->name }}</option>
+        @endforeach
+    </select>
+    <small class="text-muted">Ao criar uma rifa ativa, as cartelas serão distribuídas de forma equilibrada entre os membros ativos deste departamento. Cada cartela fica com um único vendedor. O envio por WhatsApp é feito na tela de cartelas.</small>
+    @if(isset($rifa))
+        <p class="small text-muted mt-1">Para uma rifa existente, salve o departamento e use “Distribuir cartelas disponíveis”. O departamento não pode ser trocado depois de haver cartelas atribuídas.</p>
+    @endif
+</div>
 <div class="row">
     <div class="col-md-8 mb-3">
         <label class="form-label">Nome / Descrição da rifa</label>

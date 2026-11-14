@@ -17,6 +17,7 @@ class Rifa extends Model
         'numeros_por_cartela',
         'data_sorteio',
         'status',
+        'department_id',
     ];
 
     protected $casts = [
@@ -27,6 +28,23 @@ class Rifa extends Model
     public function numeros(): HasMany
     {
         return $this->hasMany(NumeroRifa::class);
+    }
+
+    public function department(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Department::class);
+    }
+
+    public function membrosVendedores(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = Member::query();
+        if ($this->department_id) {
+            $query->where('status', Member::STATUS_ATIVO);
+            $departmentId = $this->department_id;
+            $query->where(fn ($q) => $q->where('department_id', $departmentId)
+                ->orWhereHas('departments', fn ($departments) => $departments->where('departments.id', $departmentId)));
+        }
+        return $query->orderBy('name')->orderBy('id');
     }
 
     public function cartelas(): HasMany

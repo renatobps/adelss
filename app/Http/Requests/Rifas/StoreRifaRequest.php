@@ -22,6 +22,7 @@ class StoreRifaRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('departments', 'id')->where('status', 'ativo')->whereNull('deleted_at')],
             'nome' => ['required', 'string', 'max:255'],
             'quantidade_numeros' => ['required', 'integer', 'min:1', 'max:100000'],
             'valor_numero' => ['required', 'numeric', 'min:0.01'],

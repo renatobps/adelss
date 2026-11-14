@@ -23,6 +23,8 @@
     </div>
 </div>
 
+@include('rifas.partials.distribution')
+
 <div class="row">
     <div class="col-md-3">
         <section class="card card-featured-left card-featured-primary">

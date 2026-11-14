@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Rifas;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Rifas\StoreRifaRequest;
 use App\Http\Requests\Rifas\UpdateRifaRequest;
-use App\Models\Member;
+use App\Models\Department;
 use App\Models\NumeroRifa;
 use App\Models\Rifa;
 use App\Models\SorteioRifa;
@@ -44,7 +44,7 @@ class RifaController extends Controller
     {
         $this->authorize('create', Rifa::class);
 
-        return view('rifas.create');
+        return view('rifas.create', ['departments' => Department::active()->orderBy('name')->get()]);
     }
 
     public function store(StoreRifaRequest $request): RedirectResponse
@@ -88,7 +88,7 @@ class RifaController extends Controller
         ];
         $resumo['arrecadado'] = ($resumo['vendidos'] * (float) $rifa->valor_numero);
 
-        $vendedores = Member::query()->orderBy('name')->get(['id', 'name']);
+        $vendedores = $rifa->membrosVendedores()->get(['members.id', 'members.name']);
 
         return view('rifas.show', compact('rifa', 'numeros', 'resumo', 'vendedores'));
     }
@@ -97,14 +97,22 @@ class RifaController extends Controller
     {
         $this->authorize('update', $rifa);
 
-        return view('rifas.edit', compact('rifa'));
+        return view('rifas.edit', ['rifa' => $rifa, 'departments' => Department::query()->where(fn ($q) => $q->where('status', 'ativo')->orWhere('id', $rifa->department_id))->orderBy('name')->get()]);
     }
 
     public function update(UpdateRifaRequest $request, Rifa $rifa): RedirectResponse
     {
-        $rifa->update($request->validated());
+        $this->rifaService->atualizar($rifa, $request->validated());
 
         return redirect()->route('rifas.show', $rifa)->with('success', 'Rifa atualizada com sucesso.');
+    }
+
+    public function adicionarNumeros(Request $request, Rifa $rifa): RedirectResponse
+    {
+        $this->authorize('update', $rifa);
+        $dados = $request->validate(['quantidade' => ['required', 'integer', 'min:1', 'max:100000']]);
+        $this->rifaService->adicionarNumeros($rifa, (int) $dados['quantidade']);
+        return redirect()->route('rifas.cartelas.index', $rifa)->with('success', 'Novos números e cartelas adicionados. As cartelas anteriores foram preservadas.');
     }
 
     public function destroy(Rifa $rifa): RedirectResponse

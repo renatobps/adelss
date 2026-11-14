@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Rifas;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Rifas\AtualizarNumeroRifaRequest;
 use App\Http\Requests\Rifas\RegistrarVendaRapidaRequest;
-use App\Models\Member;
 use App\Models\NumeroRifa;
 use App\Models\Rifa;
 use App\Services\VendaRifaService;
@@ -28,7 +27,7 @@ class VendaRapidaController extends Controller
             ->orderBy('numero')
             ->get(['id', 'numero', 'status']);
 
-        $vendedores = Member::query()->orderBy('name')->get(['id', 'name']);
+        $vendedores = $rifa->membrosVendedores()->get(['members.id', 'members.name']);
 
         return view('rifas.vendas.rapida', compact('rifa', 'numerosDisponiveis', 'vendedores'));
     }

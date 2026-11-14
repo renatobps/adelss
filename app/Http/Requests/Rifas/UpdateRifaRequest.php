@@ -23,6 +23,7 @@ class UpdateRifaRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('departments', 'id')->whereNull('deleted_at')],
             'nome' => ['required', 'string', 'max:255'],
             'valor_numero' => ['required', 'numeric', 'min:0.01'],
             'data_sorteio' => ['nullable', 'date'],
