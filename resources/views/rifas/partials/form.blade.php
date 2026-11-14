@@ -1,16 +1,60 @@
 <div class="mb-3">
     <label for="rifa-department" class="form-label">Departamento responsável</label>
     <select id="rifa-department" name="department_id" class="form-control">
-        <option value="">Sem distribuição automática</option>
+        <option value="">Sem departamento — selecionar membros abaixo</option>
         @foreach($departments as $department)
             <option value="{{ $department->id }}" @selected((string) old('department_id', ($rifa ?? null)?->department_id) === (string) $department->id)>{{ $department->name }}</option>
         @endforeach
     </select>
-    <small class="text-muted">Ao criar uma rifa ativa, as cartelas serão distribuídas de forma equilibrada entre os membros ativos deste departamento. Cada cartela fica com um único vendedor. O envio por WhatsApp é feito na tela de cartelas.</small>
+    <small class="text-muted">Você pode usar somente o departamento, somente membros selecionados abaixo, ou as duas opções. Membros presentes nas duas listas não são duplicados na distribuição.</small>
     @if(isset($rifa))
         <p class="small text-muted mt-1">Para uma rifa existente, salve o departamento e use “Distribuir cartelas disponíveis”. O departamento não pode ser trocado depois de haver cartelas atribuídas.</p>
     @endif
 </div>
+@php
+    $vendedoresMarcados = collect(old('vendedor_ids', session()->hasOldInput('atualizar_vendedores') ? [] : (isset($rifa) ? $rifa->vendedoresSelecionados->pluck('id')->all() : [])))->map(fn ($id) => (string) $id)->all();
+@endphp
+<div class="mb-3">
+    <label for="rifa-member-search" class="form-label">Adicionar vendedores da lista de membros</label>
+    <input type="hidden" name="atualizar_vendedores" value="1">
+    <input type="search" id="rifa-member-search" class="form-control mb-2" placeholder="Buscar membro pelo nome" aria-controls="rifa-member-list">
+    <div id="rifa-member-list" class="border rounded p-3" style="max-height:260px;overflow-y:auto;">
+        @forelse($membrosDisponiveis as $membro)
+            <div class="form-check mb-2 js-rifa-member" data-name="{{ $membro->name }}">
+                <input class="form-check-input" type="checkbox" name="vendedor_ids[]" id="rifa-member-{{ $membro->id }}" value="{{ $membro->id }}" @checked(in_array((string) $membro->id, $vendedoresMarcados, true))>
+                <label class="form-check-label" for="rifa-member-{{ $membro->id }}">{{ $membro->name }}
+                    <small class="text-muted">{{ $membro->phone ? ' — '.$membro->phone : ' — sem telefone para WhatsApp' }}{{ $membro->status !== 'ativo' ? ' (inativo: não recebe novas cartelas)' : '' }}</small>
+                </label>
+            </div>
+        @empty
+            <p class="text-muted mb-0">Não há membros ativos cadastrados.</p>
+        @endforelse
+    </div>
+    <p id="rifa-member-count" class="small text-muted mt-2" aria-live="polite"></p>
+    <small class="text-muted">Ao criar uma rifa ativa, as cartelas serão distribuídas entre os membros ativos do departamento e os vendedores selecionados. Se nenhuma opção for escolhida, não haverá distribuição automática. Nas rifas existentes, salve e use “Distribuir cartelas disponíveis”; as cartelas já atribuídas serão preservadas.</small>
+</div>
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var search = document.getElementById('rifa-member-search');
+    var rows = document.querySelectorAll('.js-rifa-member');
+    var counter = document.getElementById('rifa-member-count');
+    var normalize = function (value) { return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase(); };
+    var update = function () {
+        var term = normalize(search.value.trim());
+        var selected = 0;
+        rows.forEach(function (row) {
+            row.hidden = !normalize(row.getAttribute('data-name')).includes(term);
+            if (row.querySelector('input').checked) selected++;
+        });
+        counter.textContent = selected + ' membro(s) selecionado(s) individualmente.';
+    };
+    search.addEventListener('input', update);
+    rows.forEach(function (row) { row.querySelector('input').addEventListener('change', update); });
+    update();
+});
+</script>
+@endpush
 <div class="row">
     <div class="col-md-8 mb-3">
         <label class="form-label">Nome / Descrição da rifa</label>

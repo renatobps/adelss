@@ -47,6 +47,7 @@ class RifaDistributionTest extends TestCase
             '2026_04_22_112744_create_rifas_table.php', '2026_04_22_112745_create_numeros_rifa_table.php',
             '2026_04_22_112745_create_rifa_vendas_table.php', '2026_04_22_112746_create_cartelas_table.php',
             '2026_04_22_112747_create_cartela_numero_table.php', '2026_11_14_130000_add_department_and_seller_to_rifas.php',
+            '2026_11_14_140000_create_rifa_vendedores_table.php',
         ] as $migration) (require database_path('migrations/'.$migration))->up();
         Http::preventStrayRequests();
     }
@@ -109,6 +110,105 @@ class RifaDistributionTest extends TestCase
         $rifa = $this->rifa();
         $this->assertSame(5, $rifa->cartelas()->whereNull('vendedor_id')->count());
         $this->assertSame(23, $rifa->numeros()->count());
+    }
+
+    public function test_individual_members_receive_cards_without_a_department_and_new_numbers_use_same_roster(): void
+    {
+        $ana = $this->member(null, 'Ana'); $bia = $this->member(null, 'Bia'); $this->member(null, 'Não selecionado');
+        $rifa = $this->rifa(null, ['vendedor_ids' => [$ana->id, $bia->id]]);
+        $this->assertNull($rifa->department_id);
+        $this->assertSame([$ana->id, $bia->id], $rifa->membrosVendedores(false)->pluck('members.id')->all());
+        $counts = $rifa->cartelas()->get()->countBy('vendedor_id');
+        $this->assertSame(3, $counts[$ana->id]); $this->assertSame(2, $counts[$bia->id]);
+        app(RifaService::class)->adicionarNumeros($rifa, 5);
+        $this->assertSame(3, $rifa->cartelas()->where('vendedor_id', $bia->id)->count());
+        $this->assertSame(0, $rifa->cartelas()->whereNull('vendedor_id')->count());
+        Http::assertNothingSent();
+    }
+
+    public function test_department_and_individual_member_lists_are_combined_without_duplicate_sellers(): void
+    {
+        $department = $this->department(); $ana = $this->member($department, 'Ana'); $bia = $this->member(null, 'Bia');
+        $rifa = $this->rifa($department, ['vendedor_ids' => [$ana->id, $bia->id]]);
+        $this->assertSame([$ana->id, $bia->id], $rifa->membrosVendedores(false)->pluck('members.id')->all());
+        $this->assertSame(2, $rifa->cartelas()->distinct()->count('vendedor_id'));
+        $this->assertSame(5, $rifa->cartelas()->count());
+    }
+
+    public function test_create_route_validates_and_persists_manual_sellers(): void
+    {
+        $ana = $this->member(null, 'Ana');
+        $this->actingAs($this->admin())->post(route('rifas.store'), [
+            'nome' => 'Rifa manual', 'quantidade_numeros' => 10, 'numeros_por_cartela' => 5,
+            'valor_numero' => 10, 'status' => 'ativa', 'vendedor_ids' => [$ana->id], 'atualizar_vendedores' => 1,
+        ])->assertSessionHasNoErrors()->assertRedirect(route('rifas.show', Rifa::firstOrFail()));
+        $rifa = Rifa::firstOrFail();
+        $this->assertSame(1, $rifa->vendedoresSelecionados()->count());
+        $this->assertSame(2, $rifa->cartelas()->where('vendedor_id', $ana->id)->count());
+        $this->get(route('rifas.edit', $rifa))->assertOk()->assertSee('Adicionar vendedores da lista de membros')
+            ->assertSee('id="rifa-member-'.$ana->id.'" value="'.$ana->id.'" checked', false);
+    }
+
+    public function test_manual_seller_selection_rejects_inactive_deleted_and_duplicate_ids_on_create(): void
+    {
+        $inactive = $this->member(null, 'Inativo', ['status' => 'inativo']);
+        $deleted = $this->member(null, 'Excluído'); $deleted->delete(); $active = $this->member(null, 'Ativo');
+        $this->actingAs($this->admin());
+        foreach ([[$inactive->id], [$deleted->id], [$active->id, $active->id]] as $ids) {
+            $this->post(route('rifas.store'), [
+                'nome' => 'Inválida', 'quantidade_numeros' => 10, 'numeros_por_cartela' => 5,
+                'valor_numero' => 10, 'status' => 'ativa', 'vendedor_ids' => $ids,
+            ])->assertSessionHasErrors();
+        }
+        $this->assertSame(0, Rifa::count());
+    }
+
+    public function test_edit_adds_members_for_future_distribution_without_reassigning_existing_cards(): void
+    {
+        $ana = $this->member(null, 'Ana'); $bia = $this->member(null, 'Bia');
+        $rifa = $this->rifa(null, ['vendedor_ids' => [$ana->id]]);
+        $previous = $rifa->cartelas()->pluck('vendedor_id', 'id')->all();
+        $this->actingAs($this->admin())->put(route('rifas.update', $rifa), [
+            'nome' => $rifa->nome, 'valor_numero' => 10, 'status' => 'ativa', 'atualizar_vendedores' => 1,
+            'vendedor_ids' => [$ana->id, $bia->id],
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame($previous, $rifa->cartelas()->pluck('vendedor_id', 'id')->all());
+        app(RifaService::class)->adicionarNumeros($rifa, 5);
+        $this->assertSame($bia->id, $rifa->cartelas()->latest('id')->first()->vendedor_id);
+    }
+
+    public function test_edit_omission_preserves_manual_roster_and_explicit_empty_selection_clears_it(): void
+    {
+        $ana = $this->member(null, 'Ana');
+        $rifa = $this->rifa(null, ['vendedor_ids' => [$ana->id], 'status' => 'finalizada']);
+        $data = ['nome' => $rifa->nome, 'valor_numero' => 10, 'status' => 'finalizada'];
+        $this->actingAs($this->admin())->put(route('rifas.update', $rifa), $data)->assertSessionHasNoErrors();
+        $this->assertSame(1, $rifa->vendedoresSelecionados()->count());
+        $this->put(route('rifas.update', $rifa), $data + ['atualizar_vendedores' => 1])->assertSessionHasNoErrors();
+        $this->assertSame(0, $rifa->vendedoresSelecionados()->count());
+    }
+
+    public function test_manually_selected_seller_can_sell_but_unselected_member_cannot(): void
+    {
+        $ana = $this->member(null, 'Ana'); $other = $this->member(null, 'Outro');
+        $rifa = $this->rifa(null, ['vendedor_ids' => [$ana->id]]);
+        $this->actingAs($this->admin());
+        $data = ['numero_ids' => [$rifa->numeros()->first()->id], 'comprador_nome' => 'Comprador'];
+        $this->post(route('rifas.vendas.rapida.store', $rifa), $data + ['vendedor_id' => $other->id])->assertSessionHasErrors('vendedor_id');
+        $this->post(route('rifas.vendas.rapida.store', $rifa), $data + ['vendedor_id' => $ana->id])->assertRedirect();
+        $this->assertSame(1, DB::table('rifa_vendas')->count());
+    }
+
+    public function test_removing_individual_selection_preserves_old_cards_and_excludes_seller_from_future_distribution(): void
+    {
+        $ana = $this->member(null, 'Ana'); $bia = $this->member(null, 'Bia');
+        $rifa = $this->rifa(null, ['vendedor_ids' => [$ana->id, $bia->id]]);
+        app(RifaService::class)->atualizar($rifa, ['vendedor_ids' => [$ana->id]]);
+        $this->assertSame([$ana->id], $rifa->membrosVendedores(false)->pluck('members.id')->all());
+        $this->assertSame([$ana->id, $bia->id], $rifa->membrosVendedores()->pluck('members.id')->all());
+        app(RifaService::class)->adicionarNumeros($rifa, 5);
+        $this->assertSame($ana->id, $rifa->cartelas()->latest('id')->first()->vendedor_id);
+        $this->assertSame(2, $rifa->cartelas()->where('vendedor_id', $bia->id)->count());
     }
 
     public function test_create_and_expand_routes_generate_and_distribute_new_cards(): void

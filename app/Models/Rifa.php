@@ -35,14 +35,33 @@ class Rifa extends Model
         return $this->belongsTo(Department::class);
     }
 
-    public function membrosVendedores(): \Illuminate\Database\Eloquent\Builder
+    public function vendedoresSelecionados(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Member::class, 'rifa_vendedores', 'rifa_id', 'member_id')->withTimestamps();
+    }
+
+    public function temDistribuicaoAutomatica(): bool
+    {
+        return (bool) $this->department_id || $this->vendedoresSelecionados()->exists();
+    }
+
+    public function membrosVendedores(bool $incluirDistribuidos = true): \Illuminate\Database\Eloquent\Builder
     {
         $query = Member::query();
-        if ($this->department_id) {
+        if ($this->temDistribuicaoAutomatica()) {
             $query->where('status', Member::STATUS_ATIVO);
             $departmentId = $this->department_id;
-            $query->where(fn ($q) => $q->where('department_id', $departmentId)
-                ->orWhereHas('departments', fn ($departments) => $departments->where('departments.id', $departmentId)));
+            $query->where(function ($q) use ($departmentId, $incluirDistribuidos) {
+                $q->whereIn('members.id', $this->vendedoresSelecionados()->select('members.id'));
+                if ($departmentId) {
+                    $q->orWhere('department_id', $departmentId)
+                        ->orWhereHas('departments', fn ($departments) => $departments->where('departments.id', $departmentId));
+                }
+                // Removing someone from future distribution never transfers their old cards.
+                if ($incluirDistribuidos) {
+                    $q->orWhereIn('members.id', $this->cartelas()->whereNotNull('vendedor_id')->select('vendedor_id'));
+                }
+            });
         }
         return $query->orderBy('name')->orderBy('id');
     }

@@ -23,6 +23,9 @@ class UpdateRifaRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'atualizar_vendedores' => ['sometimes', 'boolean'],
+            'vendedor_ids' => ['sometimes', 'array', 'max:10000'],
+            'vendedor_ids.*' => ['integer', 'distinct', \Illuminate\Validation\Rule::exists('members', 'id')->whereNull('deleted_at')],
             'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('departments', 'id')->whereNull('deleted_at')],
             'nome' => ['required', 'string', 'max:255'],
             'valor_numero' => ['required', 'numeric', 'min:0.01'],

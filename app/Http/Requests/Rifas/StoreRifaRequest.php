@@ -22,6 +22,9 @@ class StoreRifaRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'atualizar_vendedores' => ['sometimes', 'boolean'],
+            'vendedor_ids' => ['sometimes', 'array', 'max:10000'],
+            'vendedor_ids.*' => ['integer', 'distinct', \Illuminate\Validation\Rule::exists('members', 'id')->where('status', 'ativo')->whereNull('deleted_at')],
             'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('departments', 'id')->where('status', 'ativo')->whereNull('deleted_at')],
             'nome' => ['required', 'string', 'max:255'],
             'quantidade_numeros' => ['required', 'integer', 'min:1', 'max:100000'],

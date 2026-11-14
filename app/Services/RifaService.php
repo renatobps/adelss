@@ -11,10 +11,13 @@ class RifaService
     public function criarComNumerosECartelas(array $dados): Rifa
     {
         return DB::transaction(function () use ($dados) {
+            $vendedores = $dados['vendedor_ids'] ?? [];
+            unset($dados['vendedor_ids'], $dados['atualizar_vendedores']);
             $rifa = Rifa::create($dados);
+            $rifa->vendedoresSelecionados()->sync($vendedores);
 
             $this->gerarNumeros($rifa, 1, (int) $rifa->quantidade_numeros);
-            if ($rifa->department_id && $rifa->status === 'ativa') $this->distribuirCartelas($rifa);
+            if ($rifa->temDistribuicaoAutomatica() && $rifa->status === 'ativa') $this->distribuirCartelas($rifa);
             return $rifa;
         });
     }
@@ -23,6 +26,10 @@ class RifaService
     {
         DB::transaction(function () use ($rifa, $dados) {
             $locked = Rifa::whereKey($rifa->id)->lockForUpdate()->firstOrFail();
+            if (array_key_exists('vendedor_ids', $dados) || !empty($dados['atualizar_vendedores'])) {
+                $locked->vendedoresSelecionados()->sync($dados['vendedor_ids'] ?? []);
+            }
+            unset($dados['vendedor_ids'], $dados['atualizar_vendedores']);
             if (!empty($dados['department_id']) && (string) $dados['department_id'] !== (string) $locked->department_id
                 && !\App\Models\Department::active()->whereKey($dados['department_id'])->exists()) {
                 throw ValidationException::withMessages(['department_id' => 'Selecione um departamento ativo.']);
@@ -49,7 +56,7 @@ class RifaService
             }
             $this->gerarNumeros($locked, $ultimo + 1, $quantidade);
             $locked->update(['quantidade_numeros' => $locked->numeros()->count()]);
-            if ($locked->department_id) $this->distribuirCartelas($locked);
+            if ($locked->temDistribuicaoAutomatica()) $this->distribuirCartelas($locked);
         });
     }
 
@@ -57,12 +64,12 @@ class RifaService
     {
         return DB::transaction(function () use ($rifa) {
             $locked = Rifa::whereKey($rifa->id)->lockForUpdate()->firstOrFail();
-            if (!$locked->department_id || $locked->status !== 'ativa') {
-                throw ValidationException::withMessages(['department_id' => 'Selecione um departamento em uma rifa ativa para distribuir as cartelas.']);
+            if (!$locked->temDistribuicaoAutomatica() || $locked->status !== 'ativa') {
+                throw ValidationException::withMessages(['department_id' => 'Selecione um departamento ou membros vendedores em uma rifa ativa para distribuir as cartelas.']);
             }
-            $vendedores = $locked->membrosVendedores()->get(['members.id', 'members.name']);
+            $vendedores = $locked->membrosVendedores(false)->get(['members.id', 'members.name']);
             if ($vendedores->isEmpty()) {
-                throw ValidationException::withMessages(['department_id' => 'O departamento escolhido não possui membros ativos para receber cartelas.']);
+                throw ValidationException::withMessages(['department_id' => 'O departamento e os membros selecionados não possuem vendedores ativos para receber cartelas.']);
             }
             $cargas = $locked->cartelas()->whereNotNull('vendedor_id')->select('vendedor_id', DB::raw('COUNT(*) as total'))->groupBy('vendedor_id')->pluck('total', 'vendedor_id')->all();
             $cartelas = $locked->cartelas()->whereNull('vendedor_id')

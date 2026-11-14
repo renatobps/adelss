@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Rifas\StoreRifaRequest;
 use App\Http\Requests\Rifas\UpdateRifaRequest;
 use App\Models\Department;
+use App\Models\Member;
 use App\Models\NumeroRifa;
 use App\Models\Rifa;
 use App\Models\SorteioRifa;
@@ -44,7 +45,10 @@ class RifaController extends Controller
     {
         $this->authorize('create', Rifa::class);
 
-        return view('rifas.create', ['departments' => Department::active()->orderBy('name')->get()]);
+        return view('rifas.create', [
+            'departments' => Department::active()->orderBy('name')->get(),
+            'membrosDisponiveis' => $this->membrosParaSelecao(),
+        ]);
     }
 
     public function store(StoreRifaRequest $request): RedirectResponse
@@ -97,7 +101,19 @@ class RifaController extends Controller
     {
         $this->authorize('update', $rifa);
 
-        return view('rifas.edit', ['rifa' => $rifa, 'departments' => Department::query()->where(fn ($q) => $q->where('status', 'ativo')->orWhere('id', $rifa->department_id))->orderBy('name')->get()]);
+        return view('rifas.edit', [
+            'rifa' => $rifa->load('vendedoresSelecionados'),
+            'departments' => Department::query()->where(fn ($q) => $q->where('status', 'ativo')->orWhere('id', $rifa->department_id))->orderBy('name')->get(),
+            'membrosDisponiveis' => $this->membrosParaSelecao($rifa),
+        ]);
+    }
+
+    private function membrosParaSelecao(?Rifa $rifa = null)
+    {
+        return Member::query()->where(function ($q) use ($rifa) {
+            $q->where('status', Member::STATUS_ATIVO);
+            if ($rifa) $q->orWhereIn('members.id', $rifa->vendedoresSelecionados()->select('members.id'));
+        })->orderBy('name')->get(['members.id', 'members.name', 'members.phone', 'members.status']);
     }
 
     public function update(UpdateRifaRequest $request, Rifa $rifa): RedirectResponse
