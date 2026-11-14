@@ -45,7 +45,18 @@ class PublicEventController extends Controller
 
         $mercadoPagoPublicKey = (string) config('mercadopago.public_key', '');
 
-        return view('agenda.eventos.public.show', compact('event', 'customFields', 'mercadoPagoPublicKey'));
+        $view = match ($event->landing_template) {
+            'custom' => 'agenda.eventos.public.custom',
+            'filhos' => 'agenda.eventos.public.filhos',
+            default => 'agenda.eventos.public.show',
+        };
+        $nonce = bin2hex(random_bytes(24));
+        $page = view($view, compact('event', 'customFields', 'mercadoPagoPublicKey', 'nonce'));
+        if ($event->landing_template === 'custom') {
+            return response($page)->header('Content-Security-Policy', "script-src 'nonce-{$nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none'; form-action 'self'");
+        }
+
+        return $page;
     }
 
     public function register(Request $request, string $slug)

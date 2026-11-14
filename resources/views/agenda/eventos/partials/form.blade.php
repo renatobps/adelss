@@ -50,6 +50,50 @@
     }
 @endphp
 
+<section class="card mb-3">
+    <header class="card-header"><h2 class="card-title mb-0">Página pública do evento</h2></header>
+    <div class="card-body">
+        <label for="landing-template" class="form-label">Modelo da landing page</label>
+        <select id="landing-template" name="landing_template" class="form-select" aria-describedby="landing-template-help">
+            <option value="standard" @selected(old('landing_template', $e->landing_template ?? 'standard') === 'standard')>Padrão — usa a paleta e o tema configurados abaixo</option>
+            <option value="filhos" @selected(old('landing_template', $e->landing_template ?? 'standard') === 'filhos')>FILHOS — identidade visual da imersão de jovens</option>
+            <option value="custom" @selected(old('landing_template', $e->landing_template ?? 'standard') === 'custom')>Meu layout — enviar HTML ou colar código</option>
+        </select>
+        <p id="landing-template-help" class="text-muted mt-2 mb-0">O modelo FILHOS mantém a arte e os textos da imersão. Data, local, banner, apresentação, programação, palestrantes e inscrição usam o cadastro deste evento. A paleta e a fonte abaixo se aplicam ao modelo padrão.</p>
+        <details class="mt-3" @if(old('landing_template', $e->landing_template ?? '') === 'custom' || $errors->has('landing_html') || $errors->has('landing_html_file')) open @endif>
+            <summary class="fw-bold">Importar meu layout HTML</summary>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button type="button" id="load-filhos-layout" class="btn btn-outline-primary" data-layout-url="{{ asset('events/templates/filhos/filhos-integrado.html') }}">Carregar FILHOS integrado</button>
+                <a href="{{ asset('events/templates/filhos/filhos-integrado.html') }}" download="filhos-integrado.html" class="btn btn-outline-secondary">Baixar HTML de exemplo</a>
+            </div>
+            <p id="layout-import-status" class="small mt-2" role="status" aria-live="polite"></p>
+            <div class="mt-3">
+                <label for="landing-html-file" class="form-label">Enviar arquivo .html ou .htm (até 2 MB)</label>
+                <input id="landing-html-file" name="landing_html_file" type="file" accept=".html,.htm,text/html" class="form-control">
+                <small class="text-muted">Ou cole o código abaixo. Se enviar um arquivo, ele será usado no lugar do código.</small>
+            </div>
+            <div class="mt-3">
+                <label for="landing-html" class="form-label">Código HTML da página</label>
+                <textarea id="landing-html" name="landing_html" class="form-control font-monospace" rows="12" spellcheck="false" placeholder="<!DOCTYPE html>...">{{ old('landing_html', $e->landing_html ?? '') }}</textarea>
+            </div>
+            <p class="text-muted mt-2">Escolha “Meu layout” e salve para publicar. Use HTML com CSS no próprio arquivo e URLs completas para imagens e arquivos externos. Pastas locais e arquivos ZIP não são importados nesta opção.</p>
+            <p>O formulário oficial aparece dentro da área marcada com data-evento="inscricao". Para direcionar seus botões até ele, use <code>&lt;a href="#inscricao"&gt;Inscreva-se&lt;/a&gt;</code>.</p>
+            <p class="mb-1">Você também pode usar estes marcadores no HTML:</p>
+            <ul>
+                <li><code>@{{evento.titulo}}</code>, <code>@{{evento.data}}</code>, <code>@{{evento.local}}</code> e <code>@{{evento.preco}}</code>: informações do cadastro.</li>
+                <li><code>@{{palestrantes}}</code> e <code>@{{programacao}}</code>: listas atualizadas do evento.</li>
+                <li><code>@{{inscricao}}</code>: formulário completo de inscrição, incluindo os campos e pagamentos do evento.</li>
+            </ul>
+            <p>Para posicionar componentes mantendo o seu layout, use <code>&lt;div data-evento="inscricao"&gt;&lt;/div&gt;</code>, <code>&lt;div data-evento="palestrantes"&gt;&lt;/div&gt;</code> ou <code>&lt;div data-evento="programacao"&gt;&lt;/div&gt;</code>. Para textos, use <code>&lt;span data-evento="local"&gt;&lt;/span&gt;</code>. Também estão disponíveis: titulo, tema, descricao, data, data-longa, horario, preco, sobre (apresentação), banner e fotos-local.</p>
+            <small class="text-muted">O HTML e o CSS definem o visual. Scripts e formulários do arquivo são removidos; inscrição, pagamento, menu e compartilhamento usam os componentes do sistema. Se nenhuma área de inscrição for marcada, o formulário será acrescentado ao final.</small>
+        </details>
+        @if($e && $e->public_slug)
+            <a href="{{ route('events.public.show', $e->public_slug) }}" target="_blank" rel="noopener" class="btn btn-outline-primary mt-3">Abrir página pública salva <i class="fas fa-external-link-alt" aria-hidden="true"></i></a>
+            <small class="text-muted d-block mt-2">Salve o evento para visualizar a mudança de modelo.</small>
+        @endif
+    </div>
+</section>
+
 <div class="row">
     <div class="col-lg-6">
         <section class="card mb-3">
@@ -347,7 +391,8 @@
                                     <div><img src="{{ \App\Models\Event::publicStorageUrl($row['existing_photo']) }}" alt="" style="max-height:80px;border-radius:8px;"></div>
                                 @endif
                                 <input type="file" name="speakers[{{ $i }}][photo]" class="form-control form-control-sm mt-1" accept="image/*">
-                                <small class="text-muted d-block mt-1">Sugerido: 400x400 px.</small>
+                                <small class="text-muted d-block mt-1">Até 4 MB por foto. Sugerido: 400x400 px. Clique em Salvar para gravar.</small>
+                                @error('speakers.'.$i.'.photo')<small class="text-danger d-block" role="alert">{{ $message }}</small>@enderror
                             </div>
                             <div class="col-md-9">
                                 <input type="text" name="speakers[{{ $i }}][name]" class="form-control mb-2" placeholder="Nome" value="{{ $row['name'] ?? '' }}">
@@ -365,9 +410,28 @@
 @push('scripts')
 <script>
 (function() {
+    const loadLayout = document.getElementById('load-filhos-layout');
+    if (loadLayout) loadLayout.addEventListener('click', async function () {
+        const status = document.getElementById('layout-import-status');
+        const editor = document.getElementById('landing-html');
+        if (editor.value.trim() && !window.confirm('Substituir o código do editor pelo modelo FILHOS integrado? A mudança será publicada apenas ao salvar o evento.')) return;
+        loadLayout.disabled = true;
+        status.textContent = 'Carregando modelo…';
+        try {
+            const response = await fetch(loadLayout.dataset.layoutUrl);
+            if (!response.ok) throw new Error('Falha ao carregar modelo');
+            editor.value = await response.text();
+            document.getElementById('landing-template').value = 'custom';
+            document.getElementById('landing-html-file').value = '';
+            editor.closest('details').open = true;
+            status.textContent = 'FILHOS integrado carregado. Salve o evento para publicar com os dados cadastrados.';
+        } catch (error) {status.textContent = 'Não foi possível carregar o modelo. Tente novamente.';}
+        finally {loadLayout.disabled = false;}
+    });
+
     let si = {{ count($schedules) }};
     let fi = {{ count($regFields) }};
-    let pi = {{ count($speakers) }};
+    let pi = {{ empty($speakers) ? 0 : max(array_map('intval', array_keys($speakers))) + 1 }};
 
     document.getElementById('add-schedule')?.addEventListener('click', function() {
         var wrap = document.getElementById('schedule-rows');
@@ -410,7 +474,7 @@
         div.className = 'border rounded p-2 mb-2 speaker-row';
         div.innerHTML = '<div class="row g-2"><div class="col-md-3 text-center"><label class="form-label small">Foto</label>' +
             '<input type="file" name="speakers['+pi+'][photo]" class="form-control form-control-sm mt-1" accept="image/*">' +
-            '<small class="text-muted d-block mt-1">Sugerido: 400x400 px.</small></div>' +
+            '<small class="text-muted d-block mt-1">Até 4 MB por foto. Sugerido: 400x400 px. Clique em Salvar para gravar.</small></div>' +
             '<div class="col-md-9"><input type="text" name="speakers['+pi+'][name]" class="form-control mb-2" placeholder="Nome">' +
             '<textarea name="speakers['+pi+'][description]" class="form-control" rows="2" placeholder="Descrição"></textarea>' +
             '<button type="button" class="btn btn-outline-danger btn-sm mt-2 remove-row">Remover</button></div></div>';

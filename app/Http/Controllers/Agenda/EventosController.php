@@ -120,7 +120,7 @@ class EventosController extends Controller
     {
         $this->authorize('update', $event);
         try {
-            $data = $this->validateEvent($request);
+            $data = $this->validateEvent($request, $event);
 
             DB::transaction(function () use ($request, $data, $event) {
                 $event->fill($data['base']);
@@ -1082,7 +1082,7 @@ class EventosController extends Controller
         return $defaultHhMm.':00';
     }
 
-    private function validateEvent(Request $request): array
+    private function validateEvent(Request $request, ?Event $event = null): array
     {
         if ($request->input('category_id') === '' || $request->input('category_id') === null) {
             $request->merge(['category_id' => null]);
@@ -1103,6 +1103,13 @@ class EventosController extends Controller
             'subtitle_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'subtitle_font_family' => ['nullable', Rule::in(Event::allowedSubtitleFontFamilies())],
             'page_palette' => 'nullable|in:oceano,royal,sunset,forest,grape,rose',
+            'landing_template' => 'nullable|in:standard,filhos,custom',
+            'landing_html' => 'nullable|string|max:2097152',
+            'landing_html_file' => ['nullable', 'file', 'max:2048', function ($attribute, $file, $fail) {
+                if (! in_array(strtolower($file->getClientOriginalExtension()), ['html', 'htm'], true)) {
+                    $fail('Envie um arquivo HTML (.html ou .htm).');
+                }
+            }],
             'start_date' => 'required|date',
             'start_time' => 'nullable|date_format:H:i',
             'end_date' => 'nullable|date',
@@ -1149,7 +1156,22 @@ class EventosController extends Controller
             'speakers.*.existing_photo' => 'nullable|string|max:500',
         ];
 
-        $v = $request->validate($rules);
+        $v = $request->validate($rules, [
+            'speakers.*.photo.uploaded' => 'A foto não foi recebida pelo servidor. Confira upload_max_filesize e post_max_size no PHP e selecione o arquivo novamente.',
+            'speakers.*.photo.max' => 'Cada foto de palestrante pode ter no máximo 4 MB.',
+            'speakers.*.photo.image' => 'Envie uma imagem válida para a foto do palestrante.',
+        ]);
+
+        $landingHtml = $v['landing_html'] ?? $event?->landing_html;
+        if ($request->hasFile('landing_html_file')) {
+            $landingHtml = file_get_contents($request->file('landing_html_file')->getRealPath());
+        }
+        if ($landingHtml !== null && (! mb_check_encoding($landingHtml, 'UTF-8') || str_contains($landingHtml, "\0"))) {
+            throw ValidationException::withMessages(['landing_html' => 'O HTML deve usar a codificação UTF-8.']);
+        }
+        if (($v['landing_template'] ?? 'standard') === 'custom' && trim((string) $landingHtml) === '') {
+            throw ValidationException::withMessages(['landing_html' => 'Envie um arquivo HTML ou cole o código da página.']);
+        }
 
         $allDay = $request->boolean('all_day');
         if ($allDay) {
@@ -1177,6 +1199,8 @@ class EventosController extends Controller
             'subtitle_color' => $v['subtitle_color'] ?? null,
             'subtitle_font_family' => $v['subtitle_font_family'] ?? null,
             'page_palette' => $v['page_palette'] ?? null,
+            'landing_template' => $v['landing_template'] ?? 'standard',
+            'landing_html' => $landingHtml,
             'description' => $v['description'] ?? null,
             'about_html' => $v['about_html'] ?? null,
             'start_date' => $start,
@@ -1329,46 +1353,61 @@ class EventosController extends Controller
 
     private function syncSpeakers(Event $event, Request $request, bool $isUpdate = false): void
     {
-        $oldPhotoPaths = [];
-        if ($isUpdate) {
-            $event->load('speakers');
-            $oldPhotoPaths = $event->speakers->pluck('photo_path')->filter()->values()->all();
-            $event->speakers()->delete();
-        }
+        $oldPhotoPaths = $isUpdate
+            ? $event->speakers()->pluck('photo_path')->filter()->values()->all()
+            : [];
+        $prepared = [];
+        $uploadedPhotoPaths = [];
 
-        $rows = $request->input('speakers', []);
-        $order = 0;
-        $newPhotoPaths = [];
-        foreach ($rows as $i => $row) {
-            $name = trim((string) ($row['name'] ?? ''));
-            if ($name === '') {
-                continue;
-            }
-            $photoPath = null;
-            $file = $request->file("speakers.$i.photo");
-            if ($file && $file->isValid()) {
-                $photoPath = $file->store('events/speakers', 'public');
-            } elseif (! empty($row['existing_photo'])) {
-                $photoPath = $row['existing_photo'];
-            }
-            if ($photoPath) {
-                $newPhotoPaths[] = $photoPath;
-            }
-            EventSpeaker::create([
-                'event_id' => $event->id,
-                'name' => $name,
-                'description' => $row['description'] ?? null,
-                'photo_path' => $photoPath,
-                'sort_order' => $order++,
-            ]);
-        }
+        // Finish and verify uploads before deleting any existing speaker rows.
+        try {
+            foreach ($request->input('speakers', []) as $i => $row) {
+                $name = trim((string) ($row['name'] ?? ''));
+                if ($name === '') continue;
 
-        if ($isUpdate && $oldPhotoPaths) {
-            foreach ($oldPhotoPaths as $path) {
-                if ($path && ! in_array($path, $newPhotoPaths, true)) {
-                    Storage::disk('public')->delete($path);
+                $photoPath = !empty($row['existing_photo']) ? $row['existing_photo'] : null;
+                $file = $request->file("speakers.$i.photo");
+                if ($file) {
+                    if (!$file->isValid()) {
+                        throw ValidationException::withMessages([
+                            "speakers.$i.photo" => "A foto de {$name} não foi recebida. Confira o limite de upload do servidor e selecione o arquivo novamente.",
+                        ]);
+                    }
+                    try {
+                        $photoPath = $file->store('events/speakers', 'public');
+                        if (!is_string($photoPath) || $photoPath === '') {
+                            throw new \RuntimeException('O disco public não gravou a foto do palestrante.');
+                        }
+                        $uploadedPhotoPaths[] = $photoPath;
+                        if (!Storage::disk('public')->exists($photoPath)) {
+                            throw new \RuntimeException('A foto não foi encontrada após a gravação.');
+                        }
+                    } catch (\Throwable $exception) {
+                        report($exception);
+                        throw ValidationException::withMessages([
+                            "speakers.$i.photo" => "Não foi possível gravar a foto de {$name}. Verifique as permissões de storage/app/public/events/speakers no servidor. As fotos anteriores foram mantidas.",
+                        ]);
+                    }
                 }
+                $prepared[] = [
+                    'event_id' => $event->id,
+                    'name' => $name,
+                    'description' => $row['description'] ?? null,
+                    'photo_path' => $photoPath,
+                    'sort_order' => count($prepared),
+                ];
             }
+        } catch (\Throwable $exception) {
+            foreach ($uploadedPhotoPaths as $path) Storage::disk('public')->delete($path);
+            throw $exception;
+        }
+
+        if ($isUpdate) $event->speakers()->delete();
+        foreach ($prepared as $speaker) EventSpeaker::create($speaker);
+
+        $newPhotoPaths = array_column($prepared, 'photo_path');
+        foreach ($oldPhotoPaths as $path) {
+            if (!in_array($path, $newPhotoPaths, true)) Storage::disk('public')->delete($path);
         }
     }
 }

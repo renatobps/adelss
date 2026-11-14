@@ -27,6 +27,8 @@ class Event extends Model
         'subtitle_color',
         'subtitle_font_family',
         'page_palette',
+        'landing_template',
+        'landing_html',
         'banner_image',
         'about_html',
         'is_paid',
@@ -128,6 +130,12 @@ class Event extends Model
         }
         $path = preg_replace('#^(?:/+)?storage/+#', '', $path);
         $path = ltrim($path, '/');
+
+        // Local uploads belong to the server serving this request. The disk's
+        // configured URL may still point to an expired development tunnel.
+        if (config('filesystems.disks.public.driver', 'local') === 'local') {
+            return self::normalizePublicUrl('/storage/'.$path);
+        }
 
         $url = Storage::disk('public')->url($path);
 

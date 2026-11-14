@@ -1,1 +1,2 @@
 resources/courses/ibadeg/**/*.pdf binary
+scripts/*.sh text eol=lf
