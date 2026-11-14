@@ -8,6 +8,7 @@ use App\Models\Cartela;
 use App\Models\Rifa;
 use App\Services\RifaService;
 use App\Services\RifaCartelaWhatsappService;
+use App\Services\RifaCartelaMensagemService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +16,7 @@ use Illuminate\View\View;
 
 class CartelaController extends Controller
 {
-    public function index(Rifa $rifa, Request $request): View
+    public function index(Rifa $rifa, Request $request, RifaCartelaMensagemService $mensagens): View
     {
         $this->authorize('view', $rifa);
 
@@ -37,6 +38,7 @@ class CartelaController extends Controller
             ->whereIn('status', ['reservado', 'vendido'])
             ->orderBy('numero')
             ->get(['id', 'numero', 'status']);
+        $mensagemCartelasCadastrada = $request->user()->can('update', $rifa) ? $mensagens->cadastrada() : null;
 
         return view('rifas.cartelas.index', compact(
             'rifa',
@@ -44,7 +46,8 @@ class CartelaController extends Controller
             'vendedores',
             'numerosParaVenda',
             'numerosEditaveis',
-            'vendedoresDistribuidos'
+            'vendedoresDistribuidos',
+            'mensagemCartelasCadastrada'
         ));
     }
 
@@ -76,7 +79,7 @@ class CartelaController extends Controller
         return $this->gerarPdf($rifa, $cartela)->download('rifa-'.$rifa->id.'-cartela-'.$cartela->id.'.pdf');
     }
 
-    public function whatsapp(Rifa $rifa, Cartela $cartela, RifaCartelaWhatsappService $service): RedirectResponse
+    public function whatsapp(Request $request, Rifa $rifa, Cartela $cartela, RifaCartelaWhatsappService $service): RedirectResponse
     {
         $this->authorize('update', $rifa);
         abort_unless((int) $cartela->rifa_id === (int) $rifa->id, 404);
@@ -84,7 +87,8 @@ class CartelaController extends Controller
         if (!$cartela->vendedor || empty($cartela->vendedor->phone)) {
             return back()->with('error', 'Atribua um vendedor com telefone cadastrado a esta cartela.');
         }
-        $result = $service->enviar($rifa, $cartela->vendedor, new \Illuminate\Database\Eloquent\Collection([$cartela]));
+        $dados = $request->validate(['mensagem_tipo' => ['nullable', 'string', 'in:padrao,cadastrada']]);
+        $result = $service->enviar($rifa, $cartela->vendedor, new \Illuminate\Database\Eloquent\Collection([$cartela]), $dados['mensagem_tipo'] ?? 'padrao');
         return back()->with($result['success'] ? 'success' : 'error', $result['message']);
     }
 
@@ -106,7 +110,7 @@ class CartelaController extends Controller
         return response()->json(['destinatarios' => $destinatarios])->header('Cache-Control', 'no-store, private');
     }
 
-    public function whatsappVendedor(Rifa $rifa, Member $vendedor, RifaCartelaWhatsappService $service): \Illuminate\Http\JsonResponse
+    public function whatsappVendedor(Request $request, Rifa $rifa, Member $vendedor, RifaCartelaWhatsappService $service): \Illuminate\Http\JsonResponse
     {
         $this->authorize('update', $rifa);
         if (!$rifa->pix_chave || !$rifa->pix_recebedor) {
@@ -114,7 +118,8 @@ class CartelaController extends Controller
         }
         $cartelas = $rifa->cartelas()->where('vendedor_id', $vendedor->id)->orderBy('id')->get();
         abort_if($cartelas->isEmpty(), 404);
-        $result = $service->enviar($rifa, $vendedor, $cartelas);
+        $dados = $request->validate(['mensagem_tipo' => ['nullable', 'string', 'in:padrao,cadastrada']]);
+        $result = $service->enviar($rifa, $vendedor, $cartelas, $dados['mensagem_tipo'] ?? 'padrao');
         return response()->json($result, $result['success'] ? 200 : 422);
     }
 

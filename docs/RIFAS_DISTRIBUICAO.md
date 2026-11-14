@@ -77,6 +77,27 @@ continua disponível para registrar as vendas dessas cartelas, enquanto estiver 
 Gerenciar a distribuição, acrescentar números e enviar cartelas exige permissão
 de edição/gestão da rifa. Visualizar ou baixar a cartela exige acesso à rifa.
 
+## Configuração da mensagem
+
+No menu **Rifas → Configuração**, cadastre o texto que acompanhará o PDF.
+A mensagem vale para todas as rifas e pode usar as variáveis exibidas na tela:
+`{nome}`, `{rifa}`, `{cartelas}`, `{quantidade_cartelas}`, `{valor_numero}`,
+`{data_sorteio}`, `{chave_pix}` e `{recebedor_pix}`. Elas são substituídas como texto,
+sem executar código ou HTML. A mensagem pode ter até 2.000 caracteres.
+
+Antes do envio individual ou em lote, uma janela solicita a escolha entre
+**Mensagem padrão do sistema** e **Mensagem cadastrada**. A opção cadastrada
+fica desabilitada enquanto não houver um texto salvo. A escolha feita no lote
+vale para todos os seus destinatários. Cancelar a janela não envia mensagens.
+O PDF é anexado nas duas opções e mantém os dados PIX, mesmo que o texto
+personalizado não utilize as variáveis de pagamento.
+
+Gerenciar essa configuração exige a mesma permissão de edição/gestão de rifas.
+O texto usa a tabela já existente `configuracoes_mensagens`, com o tipo reservado
+`rifas_cartelas`; outros modelos de notificação não são alterados. Esta mudança
+não adiciona uma nova migração. A migração base dessa tabela é
+`2026_02_09_100006_create_configuracoes_mensagens_table.php`.
+
 ## Publicação por Git
 
 No servidor, como root, após obter o commit:

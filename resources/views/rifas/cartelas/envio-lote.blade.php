@@ -37,7 +37,8 @@ document.addEventListener('DOMContentLoaded', function () {
             var recipients = data.destinatarios;
             var eligible = recipients.filter(function (person) { return person.pode_enviar; });
             if (!eligible.length) throw new Error('Não há vendedores com cartelas atribuídas e telefone cadastrado para enviar.');
-            if (!confirm('Enviar as cartelas para ' + eligible.length + ' vendedor(es)? Cartelas enviadas anteriormente também serão reenviadas.')) {
+            var messageType = await window.rifaMensagemCartelas.escolher('Enviar as cartelas para ' + eligible.length + ' vendedor(es)? Cartelas enviadas anteriormente também serão reenviadas.');
+            if (!messageType) {
                 status.textContent = 'Envio cancelado antes de iniciar.'; return;
             }
             var sent = 0, failed = 0, skipped = 0;
@@ -52,7 +53,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     try {
                         var sendResponse = await fetch(person.url, {
                             method: 'POST', credentials: 'same-origin', redirect: 'error',
-                            headers: {'Accept': 'application/json', 'X-CSRF-TOKEN': button.dataset.csrf}
+                            headers: {'Accept': 'application/json', 'X-CSRF-TOKEN': button.dataset.csrf},
+                            body: new URLSearchParams({mensagem_tipo: messageType})
                         });
                         var result = await sendResponse.json();
                         if (!sendResponse.ok || !result.success) throw new Error(result.message || 'Envio não confirmado.');

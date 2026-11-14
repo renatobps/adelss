@@ -35,12 +35,18 @@
             'url' => route('rifas.relatorios.dashboard'),
             'active' => request()->routeIs('rifas.relatorios.*'),
         ] : null,
+        $user?->can('update', new \App\Models\Rifa()) ? [
+            'label' => 'Configuração',
+            'icon' => 'bx bx-cog',
+            'url' => route('rifas.configuracao.edit'),
+            'active' => request()->routeIs('rifas.configuracao.*'),
+        ] : null,
     ]));
 @endphp
 
 @include('partials.module-nav', [
     'title' => 'Rifas',
-    'subtitle' => 'Cadastro, vendas e relatórios',
+    'subtitle' => 'Cadastro, vendas, relatórios e configuração',
     'items' => $items,
-    'columns' => 3,
+    'columns' => 4,
 ])

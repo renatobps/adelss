@@ -9,6 +9,8 @@ use App\Http\Controllers\Rifas\VendaRapidaController;
 
 // Módulo de Rifas
 Route::prefix('rifas')->name('rifas.')->middleware('module.access:rifas')->group(function () {
+    Route::get('configuracao', [\App\Http\Controllers\Rifas\ConfiguracaoController::class, 'edit'])->name('configuracao.edit');
+    Route::put('configuracao', [\App\Http\Controllers\Rifas\ConfiguracaoController::class, 'update'])->name('configuracao.update');
     Route::get('/', [RifaController::class, 'index'])->name('index');
     Route::get('create', [RifaController::class, 'create'])->name('create');
     Route::post('/', [RifaController::class, 'store'])->name('store');

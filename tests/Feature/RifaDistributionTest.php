@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Cartela;
+use App\Models\ConfiguracaoMensagem;
 use App\Models\Department;
 use App\Models\Member;
 use App\Models\Permission;
 use App\Models\Rifa;
 use App\Models\User;
 use App\Services\RifaService;
+use App\Services\RifaCartelaMensagemService;
 use App\Services\VendaRifaService;
 use App\Services\WhatsAppService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -44,6 +46,7 @@ class RifaDistributionTest extends TestCase
             $t->unsignedBigInteger('department_role_id')->nullable(); $t->timestamps();
         });
         foreach ([
+            '2026_02_09_100006_create_configuracoes_mensagens_table.php',
             '2026_04_22_112744_create_rifas_table.php', '2026_04_22_112745_create_numeros_rifa_table.php',
             '2026_04_22_112745_create_rifa_vendas_table.php', '2026_04_22_112746_create_cartelas_table.php',
             '2026_04_22_112747_create_cartela_numero_table.php', '2026_11_14_130000_add_department_and_seller_to_rifas.php',
@@ -147,6 +150,84 @@ class RifaDistributionTest extends TestCase
         $this->actingAs($this->admin())->put(route('rifas.update', $rifa), ['nome' => 'Nome atualizado', 'valor_numero' => 10, 'status' => 'ativa'])->assertSessionHasNoErrors();
         $this->assertSame('Nome atualizado', $rifa->fresh()->nome);
         $this->assertNull($rifa->fresh()->pix_chave); $this->assertNull($rifa->fresh()->pix_recebedor);
+    }
+
+    public function test_configuration_menu_saves_message_without_changing_other_notification_templates(): void
+    {
+        ConfiguracaoMensagem::create(['tipo_notificacao' => 'outra_notificacao', 'template' => 'Não alterar', 'ativo' => true]);
+        $this->actingAs($this->admin())->get(route('rifas.configuracao.edit'))->assertOk()
+            ->assertSee('Configuração')->assertSee('Mensagem de envio das cartelas')->assertSee('{nome}');
+        $this->put(route('rifas.configuracao.update'), ['template' => "Olá, {nome}!\nSeguem suas cartelas de {rifa}.", 'tipo_notificacao' => 'outra_notificacao'])
+            ->assertSessionHasNoErrors()->assertRedirect(route('rifas.configuracao.edit'));
+        $this->assertSame("Olá, {nome}!\nSeguem suas cartelas de {rifa}.", ConfiguracaoMensagem::getTemplate(RifaCartelaMensagemService::TIPO));
+        $this->assertSame('Não alterar', ConfiguracaoMensagem::getTemplate('outra_notificacao'));
+    }
+
+    public function test_message_configuration_rejects_blank_unknown_variables_and_excessive_length(): void
+    {
+        $this->actingAs($this->admin());
+        foreach (['', 'Olá {nome_inexistente}', str_repeat('a', 2001)] as $text) {
+            $this->put(route('rifas.configuracao.update'), ['template' => $text])->assertSessionHasErrors('template');
+        }
+        $this->assertNull(ConfiguracaoMensagem::getTemplate(RifaCartelaMensagemService::TIPO));
+    }
+
+    public function test_custom_message_replaces_variables_as_plain_text(): void
+    {
+        $ana = $this->member(null, 'Ana');
+        $rifa = $this->rifa(null, ['vendedor_ids' => [$ana->id], 'pix_chave' => 'pix@example.test', 'pix_recebedor' => 'Titular', 'data_sorteio' => '2026-12-01']);
+        ConfiguracaoMensagem::create(['tipo_notificacao' => RifaCartelaMensagemService::TIPO,
+            'template' => '{nome}|{rifa}|{cartelas}|{quantidade_cartelas}|{valor_numero}|{data_sorteio}|{chave_pix}|{recebedor_pix}|<?php echo 123; ?>', 'ativo' => true]);
+        $message = app(RifaCartelaMensagemService::class)->gerar($rifa, $ana, $rifa->cartelas()->orderBy('id')->get(), 'cadastrada');
+        $this->assertSame('Ana|Rifa da Juventude|Cartela 1, Cartela 2, Cartela 3, Cartela 4, Cartela 5|5|R$ 10,00|01/12/2026|pix@example.test|Titular|<?php echo 123; ?>', $message);
+    }
+
+    public static function messageChoices(): array
+    {
+        return ['default single' => ['padrao', false], 'custom single' => ['cadastrada', false],
+            'default bulk' => ['padrao', true], 'custom bulk' => ['cadastrada', true]];
+    }
+
+    /** @dataProvider messageChoices */
+    public function test_single_and_bulk_sends_honor_message_choice(string $choice, bool $bulk): void
+    {
+        $department = $this->department(); $ana = $this->member($department, 'Ana'); $this->member($department, 'Bia');
+        $rifa = $this->rifa($department, ['pix_chave' => 'pix@example.test', 'pix_recebedor' => 'Titular']);
+        ConfiguracaoMensagem::create(['tipo_notificacao' => RifaCartelaMensagemService::TIPO,
+            'template' => 'Mensagem especial para {nome}: {rifa} ({quantidade_cartelas})', 'ativo' => true]);
+        $pdf = \Mockery::mock(\Barryvdh\DomPDF\PDF::class);
+        $pdf->shouldReceive('setPaper')->with('a4')->andReturnSelf(); $pdf->shouldReceive('output')->once()->andReturn('%PDF-test');
+        Pdf::shouldReceive('loadView')->once()->andReturn($pdf);
+        $whatsapp = \Mockery::mock(WhatsAppService::class);
+        $whatsapp->shouldReceive('isConfigurado')->once()->andReturn(true);
+        $whatsapp->shouldReceive('enviarDocumentoArquivo')->once()->with($ana->phone, \Mockery::any(), \Mockery::any(), \Mockery::on(function ($caption) use ($choice, $bulk) {
+            if ($choice === 'cadastrada') return $caption === 'Mensagem especial para Ana: Rifa da Juventude ('.($bulk ? '3' : '1').')';
+            return str_contains($caption, 'Olá, Ana!') && str_contains($caption, 'pix@example.test') && !str_contains($caption, 'Mensagem especial');
+        }))->andReturn(['success' => true]);
+        $this->app->instance(WhatsAppService::class, $whatsapp);
+        $this->actingAs($this->admin());
+        $url = $bulk ? route('rifas.cartelas.whatsapp-vendedor', [$rifa, $ana]) : route('rifas.cartelas.whatsapp', [$rifa, $rifa->cartelas()->where('vendedor_id', $ana->id)->first()]);
+        $response = $this->postJson($url, ['mensagem_tipo' => $choice]);
+        if ($bulk) $response->assertOk()->assertJson(['success' => true]);
+        else $response->assertRedirect()->assertSessionHas('success');
+        Http::assertNothingSent();
+    }
+
+    public function test_missing_custom_message_and_invalid_choice_never_send_anything(): void
+    {
+        $department = $this->department(); $ana = $this->member($department, 'Ana');
+        $rifa = $this->rifa($department, ['pix_chave' => 'pix@example.test', 'pix_recebedor' => 'Titular']);
+        $whatsapp = \Mockery::mock(WhatsAppService::class); $whatsapp->shouldNotReceive('enviarDocumentoArquivo');
+        $this->app->instance(WhatsAppService::class, $whatsapp);
+        Pdf::shouldReceive('loadView')->never();
+        $this->actingAs($this->admin());
+        foreach ([route('rifas.cartelas.whatsapp-vendedor', [$rifa, $ana]), route('rifas.cartelas.whatsapp', [$rifa, $rifa->cartelas()->first()])] as $url) {
+            foreach (['cadastrada', 'invalida', ['padrao']] as $choice) {
+                $this->postJson($url, ['mensagem_tipo' => $choice])->assertStatus(422)->assertJsonValidationErrors('mensagem_tipo');
+            }
+        }
+        $this->assertSame(0, $rifa->cartelas()->whereNotNull('whatsapp_enviado_em')->count());
+        Http::assertNothingSent();
     }
 
     public function test_individual_members_receive_cards_without_a_department_and_new_numbers_use_same_roster(): void
@@ -473,6 +554,8 @@ class RifaDistributionTest extends TestCase
         $this->getJson(route('rifas.cartelas.destinatarios', $rifa))->assertForbidden();
         $member = $this->member(null, 'Destinatário');
         $this->postJson(route('rifas.cartelas.whatsapp-vendedor', [$rifa, $member]))->assertForbidden();
+        $this->getJson(route('rifas.configuracao.edit'))->assertForbidden();
+        $this->putJson(route('rifas.configuracao.update'), ['template' => 'Não autorizado'])->assertForbidden();
         $this->assertSame(23, $rifa->numeros()->count());
     }
 

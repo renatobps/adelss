@@ -17,6 +17,7 @@
 
 @include('rifas.partials.distribution')
 @include('rifas.partials.pix')
+@include('rifas.cartelas.mensagem-modal')
 @include('rifas.cartelas.envio-lote')
 <form method="GET" class="d-flex gap-2 mb-3">
     <label for="filter-seller" class="visually-hidden">Filtrar por vendedor responsável</label>
@@ -68,8 +69,9 @@
                         <a href="{{ route('rifas.cartelas.pdf', [$rifa, $cartela]) }}" class="btn btn-sm btn-outline-primary">Baixar cartela em PDF</a>
                         @can('update', $rifa)
                             @if($cartela->vendedor && $cartela->vendedor->phone)
-                                <form method="POST" action="{{ route('rifas.cartelas.whatsapp', [$rifa, $cartela]) }}" onsubmit="if (!confirm('Enviar esta cartela para o WhatsApp do vendedor responsável?')) return false; this.querySelector('button').disabled = true;">
+                                <form method="POST" action="{{ route('rifas.cartelas.whatsapp', [$rifa, $cartela]) }}" class="js-rifa-cartela-whatsapp">
                                     @csrf
+                                    <input type="hidden" name="mensagem_tipo" value="padrao">
                                     <button type="submit" class="btn btn-sm btn-success">{{ $cartela->whatsapp_enviado_em ? 'Reenviar por WhatsApp' : 'Enviar por WhatsApp' }}</button>
                                 </form>
                             @else

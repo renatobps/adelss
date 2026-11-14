@@ -27,7 +27,7 @@ class RifaRouteAuthorizer
         $routeName = $request->route()?->getName() ?? '';
         $action = $request->route()?->getActionMethod() ?? '';
 
-        if (in_array($routeName, ['rifas.cartelas.distribuir', 'rifas.cartelas.whatsapp', 'rifas.cartelas.destinatarios', 'rifas.cartelas.whatsapp-vendedor', 'rifas.numeros.adicionar'], true)) {
+        if (str_starts_with($routeName, 'rifas.configuracao.') || in_array($routeName, ['rifas.cartelas.distribuir', 'rifas.cartelas.whatsapp', 'rifas.cartelas.destinatarios', 'rifas.cartelas.whatsapp-vendedor', 'rifas.numeros.adicionar'], true)) {
             return $this->rifaPolicy->update($user, new \App\Models\Rifa())
                 ? null
                 : $denyAccess('Acesso negado. Você não tem permissão para gerenciar a distribuição de cartelas.');
