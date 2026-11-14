@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>{{ $cartela->identificador }} — {{ $rifa->nome }}</title>
+    <title>Cartelas — {{ $rifa->nome }}</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; color: #182c42; font-size: 12px; }
         h1 { font-size: 24px; margin-bottom: 6px; }
@@ -15,6 +15,8 @@
     </style>
 </head>
 <body>
+    @foreach(($cartelas ?? collect([$cartela])) as $cartela)
+    <div @if(!$loop->first) style="page-break-before:always;" @endif>
     <div class="header">
         <h1>{{ $rifa->nome }}</h1>
         <strong>{{ $cartela->identificador }}</strong><br>
@@ -22,6 +24,7 @@
         Valor por número: R$ {{ number_format((float) $rifa->valor_numero, 2, ',', '.') }}<br>
         Sorteio: {{ $rifa->data_sorteio?->format('d/m/Y') ?? 'A definir' }}
     </div>
+    @include('rifas.partials.pix')
     <table>
         @foreach($cartela->numeros->chunk(5) as $linha)
             <tr>
@@ -33,5 +36,7 @@
         @endforeach
     </table>
     <p class="footer">Cartela destinada ao vendedor indicado. Situação dos números em {{ now()->format('d/m/Y H:i') }}. Consulte a organização para informações atualizadas.</p>
+    </div>
+    @endforeach
 </body>
 </html>

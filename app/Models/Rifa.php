@@ -18,6 +18,8 @@ class Rifa extends Model
         'data_sorteio',
         'status',
         'department_id',
+        'pix_chave',
+        'pix_recebedor',
     ];
 
     protected $casts = [

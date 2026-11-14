@@ -1,3 +1,17 @@
+<fieldset class="border rounded p-3 mb-3">
+    <legend class="float-none w-auto px-2" style="font-size:1rem;">Pagamento por PIX</legend>
+    <div class="row">
+        <div class="col-md-6 mb-2">
+            <label for="rifa-pix-key" class="form-label">Chave PIX</label>
+            <input type="text" id="rifa-pix-key" name="pix_chave" class="form-control" maxlength="255" value="{{ old('pix_chave', ($rifa ?? null)?->pix_chave) }}" placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória">
+        </div>
+        <div class="col-md-6 mb-2">
+            <label for="rifa-pix-receiver" class="form-label">Nome do recebedor</label>
+            <input type="text" id="rifa-pix-receiver" name="pix_recebedor" class="form-control" maxlength="120" value="{{ old('pix_recebedor', ($rifa ?? null)?->pix_recebedor) }}" placeholder="Nome do titular da conta">
+        </div>
+    </div>
+    <small class="text-muted">Informe o nome como aparece no banco. Esses dados serão exibidos nas cartelas e no envio por WhatsApp. Para cadastrar o PIX, preencha os dois campos.</small>
+</fieldset>
 <div class="mb-3">
     <label for="rifa-department" class="form-label">Departamento responsável</label>
     <select id="rifa-department" name="department_id" class="form-control">

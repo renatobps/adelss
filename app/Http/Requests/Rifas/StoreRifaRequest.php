@@ -27,6 +27,8 @@ class StoreRifaRequest extends FormRequest
             'vendedor_ids.*' => ['integer', 'distinct', \Illuminate\Validation\Rule::exists('members', 'id')->where('status', 'ativo')->whereNull('deleted_at')],
             'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('departments', 'id')->where('status', 'ativo')->whereNull('deleted_at')],
             'nome' => ['required', 'string', 'max:255'],
+            'pix_chave' => ['nullable', 'required_with:pix_recebedor', 'string', 'max:255'],
+            'pix_recebedor' => ['nullable', 'required_with:pix_chave', 'string', 'max:120'],
             'quantidade_numeros' => ['required', 'integer', 'min:1', 'max:100000'],
             'valor_numero' => ['required', 'numeric', 'min:0.01'],
             'numeros_por_cartela' => ['required', 'integer', 'min:1', 'lte:quantidade_numeros'],
@@ -39,6 +41,8 @@ class StoreRifaRequest extends FormRequest
     {
         return [
             'nome.required' => 'Informe o nome da rifa.',
+            'pix_chave.required_with' => 'Informe a chave PIX do recebedor.',
+            'pix_recebedor.required_with' => 'Informe o nome do recebedor da chave PIX.',
             'quantidade_numeros.required' => 'Informe a quantidade de números.',
             'valor_numero.required' => 'Informe o valor de cada número.',
             'numeros_por_cartela.required' => 'Informe a quantidade de números por cartela.',

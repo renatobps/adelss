@@ -16,6 +16,8 @@
 </div>
 
 @include('rifas.partials.distribution')
+@include('rifas.partials.pix')
+@include('rifas.cartelas.envio-lote')
 <form method="GET" class="d-flex gap-2 mb-3">
     <label for="filter-seller" class="visually-hidden">Filtrar por vendedor responsável</label>
     <select id="filter-seller" name="vendedor_id" class="form-control">

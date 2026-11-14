@@ -27,6 +27,8 @@ Route::prefix('rifas')->name('rifas.')->middleware('module.access:rifas')->group
     Route::get('{rifa}/cartelas', [RifaCartelaController::class, 'index'])->name('cartelas.index');
     Route::get('{rifa}/cartelas/imprimir', [RifaCartelaController::class, 'imprimir'])->name('cartelas.imprimir');
     Route::post('{rifa}/cartelas/distribuir', [RifaCartelaController::class, 'distribuir'])->name('cartelas.distribuir');
+    Route::get('{rifa}/cartelas/destinatarios', [RifaCartelaController::class, 'destinatarios'])->name('cartelas.destinatarios');
+    Route::post('{rifa}/cartelas/vendedor/{vendedor}/whatsapp', [RifaCartelaController::class, 'whatsappVendedor'])->middleware('throttle:120,1')->name('cartelas.whatsapp-vendedor');
     Route::get('{rifa}/cartelas/{cartela}/pdf', [RifaCartelaController::class, 'pdf'])->name('cartelas.pdf');
     Route::post('{rifa}/cartelas/{cartela}/whatsapp', [RifaCartelaController::class, 'whatsapp'])->middleware('throttle:10,1')->name('cartelas.whatsapp');
     Route::post('{rifa}/numeros/adicionar', [RifaController::class, 'adicionarNumeros'])->name('numeros.adicionar');

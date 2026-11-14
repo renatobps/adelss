@@ -48,6 +48,7 @@ class RifaDistributionTest extends TestCase
             '2026_04_22_112745_create_rifa_vendas_table.php', '2026_04_22_112746_create_cartelas_table.php',
             '2026_04_22_112747_create_cartela_numero_table.php', '2026_11_14_130000_add_department_and_seller_to_rifas.php',
             '2026_11_14_140000_create_rifa_vendedores_table.php',
+            '2026_11_14_150000_add_pix_details_to_rifas.php',
         ] as $migration) (require database_path('migrations/'.$migration))->up();
         Http::preventStrayRequests();
     }
@@ -110,6 +111,42 @@ class RifaDistributionTest extends TestCase
         $rifa = $this->rifa();
         $this->assertSame(5, $rifa->cartelas()->whereNull('vendedor_id')->count());
         $this->assertSame(23, $rifa->numeros()->count());
+    }
+
+    public function test_pix_key_and_receiver_are_saved_displayed_edited_and_can_be_cleared(): void
+    {
+        $data = ['nome' => 'Rifa PIX', 'quantidade_numeros' => 10, 'numeros_por_cartela' => 5, 'valor_numero' => 10, 'status' => 'ativa',
+            'pix_chave' => ' pix@example.test ', 'pix_recebedor' => ' Titular da rifa '];
+        $this->actingAs($this->admin())->post(route('rifas.store'), $data)->assertSessionHasNoErrors()->assertRedirect();
+        $rifa = Rifa::firstOrFail();
+        $this->assertSame('pix@example.test', $rifa->pix_chave); $this->assertSame('Titular da rifa', $rifa->pix_recebedor);
+        $this->get(route('rifas.show', $rifa))->assertOk()->assertSee('pix@example.test')->assertSee('Titular da rifa');
+        $this->get(route('rifas.edit', $rifa))->assertOk()->assertSee('name="pix_chave"', false)->assertSee('value="pix@example.test"', false);
+        $this->put(route('rifas.update', $rifa), array_merge($data, ['pix_chave' => 'nova@example.test', 'pix_recebedor' => 'Novo titular']))->assertSessionHasNoErrors();
+        $this->assertSame('nova@example.test', $rifa->fresh()->pix_chave); $this->assertSame('Novo titular', $rifa->fresh()->pix_recebedor);
+        $this->get(route('rifas.cartelas.imprimir', $rifa))->assertOk()->assertSee('nova@example.test')->assertSee('Novo titular');
+        $this->put(route('rifas.update', $rifa), array_merge($data, ['pix_chave' => '', 'pix_recebedor' => '']))->assertSessionHasNoErrors();
+        $this->assertNull($rifa->fresh()->pix_chave); $this->assertNull($rifa->fresh()->pix_recebedor);
+    }
+
+    public function test_pix_requires_key_and_receiver_together_on_create_and_update(): void
+    {
+        $this->actingAs($this->admin());
+        $data = ['nome' => 'Rifa', 'quantidade_numeros' => 10, 'numeros_por_cartela' => 5, 'valor_numero' => 10, 'status' => 'ativa'];
+        $this->post(route('rifas.store'), $data + ['pix_chave' => 'pix@example.test'])->assertSessionHasErrors('pix_recebedor');
+        $this->post(route('rifas.store'), $data + ['pix_recebedor' => 'Titular'])->assertSessionHasErrors('pix_chave');
+        $this->assertSame(0, Rifa::count());
+        $rifa = $this->rifa();
+        $this->put(route('rifas.update', $rifa), $data + ['pix_chave' => 'pix@example.test'])->assertSessionHasErrors('pix_recebedor');
+        $this->assertNull($rifa->fresh()->pix_chave);
+    }
+
+    public function test_old_rifas_can_be_edited_without_pix_details(): void
+    {
+        $rifa = $this->rifa();
+        $this->actingAs($this->admin())->put(route('rifas.update', $rifa), ['nome' => 'Nome atualizado', 'valor_numero' => 10, 'status' => 'ativa'])->assertSessionHasNoErrors();
+        $this->assertSame('Nome atualizado', $rifa->fresh()->nome);
+        $this->assertNull($rifa->fresh()->pix_chave); $this->assertNull($rifa->fresh()->pix_recebedor);
     }
 
     public function test_individual_members_receive_cards_without_a_department_and_new_numbers_use_same_roster(): void
@@ -324,11 +361,13 @@ class RifaDistributionTest extends TestCase
 
     public function test_pdf_contains_numbers_and_seller_without_buyer_details(): void
     {
-        $department = $this->department(); $this->member($department, 'Ana'); $rifa = $this->rifa($department);
+        $department = $this->department(); $this->member($department, 'Ana');
+        $rifa = $this->rifa($department, ['pix_chave' => 'pix@example.test', 'pix_recebedor' => 'ADEL & Juventude']);
         $cartela = $rifa->cartelas()->with('numeros', 'vendedor')->first();
         $cartela->numeros()->first()->update(['comprador_nome' => 'Nome privado', 'comprador_telefone' => 'Telefone privado']);
         $html = view('rifas.cartelas.pdf', compact('rifa', 'cartela'))->render();
         $this->assertStringContainsString('Ana', $html); $this->assertStringContainsString('0001', $html);
+        $this->assertStringContainsString('pix@example.test', $html); $this->assertStringContainsString('ADEL &amp; Juventude', $html);
         $this->assertStringNotContainsString('Nome privado', $html); $this->assertStringNotContainsString('Telefone privado', $html);
         $response = $this->actingAs($this->admin())->get(route('rifas.cartelas.pdf', [$rifa, $cartela]));
         $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
@@ -343,7 +382,8 @@ class RifaDistributionTest extends TestCase
     /** @dataProvider whatsappResults */
     public function test_whatsapp_sends_only_assigned_card_to_seller_and_tracks_confirmed_send(bool $success): void
     {
-        $department = $this->department(); $this->member($department, 'Ana'); $rifa = $this->rifa($department);
+        $department = $this->department(); $this->member($department, 'Ana');
+        $rifa = $this->rifa($department, ['pix_chave' => 'pix@example.test', 'pix_recebedor' => 'Titular PIX']);
         $cartela = $rifa->cartelas()->first(); $temporaryPath = null;
         $pdf = \Mockery::mock(\Barryvdh\DomPDF\PDF::class); $pdf->shouldReceive('setPaper')->with('a4')->andReturnSelf(); $pdf->shouldReceive('output')->once()->andReturn('%PDF-fake');
         Pdf::shouldReceive('loadView')->once()->with('rifas.cartelas.pdf', \Mockery::on(fn ($data) => $data['cartela']->id === $cartela->id))->andReturn($pdf);
@@ -351,7 +391,7 @@ class RifaDistributionTest extends TestCase
         $whatsapp->shouldReceive('isConfigurado')->once()->andReturn(true);
         $whatsapp->shouldReceive('enviarDocumentoArquivo')->once()->with('(61) 99999-0000', \Mockery::on(function ($path) use (&$temporaryPath) {
             $temporaryPath = $path; return is_file($path) && file_get_contents($path) === '%PDF-fake';
-        }), 'rifa-'.$rifa->id.'-cartela-'.$cartela->id.'.pdf', \Mockery::on(fn ($caption) => str_contains($caption, 'Ana') && str_contains($caption, '10,00')))->andReturn(['success' => $success]);
+        }), 'rifa-'.$rifa->id.'-cartela-'.$cartela->id.'.pdf', \Mockery::on(fn ($caption) => str_contains($caption, 'Ana') && str_contains($caption, '10,00') && str_contains($caption, 'pix@example.test') && str_contains($caption, 'Titular PIX')))->andReturn(['success' => $success]);
         $this->app->instance(WhatsAppService::class, $whatsapp);
         $this->actingAs($this->admin())->from(route('rifas.cartelas.index', $rifa))
             ->post(route('rifas.cartelas.whatsapp', [$rifa, $cartela]))->assertRedirect(route('rifas.cartelas.index', $rifa))->assertSessionHas($success ? 'success' : 'error');
@@ -369,6 +409,57 @@ class RifaDistributionTest extends TestCase
         $this->get(route('rifas.cartelas.pdf', [$other, $cartela]))->assertNotFound();
     }
 
+    public function test_bulk_recipient_list_covers_all_cards_and_identifies_members_without_phone(): void
+    {
+        $department = $this->department(); $this->member($department, 'Ana'); $this->member($department, 'Bia', ['phone' => null]);
+        $rifa = $this->rifa($department, ['quantidade_numeros' => 70, 'pix_chave' => 'pix@example.test', 'pix_recebedor' => 'Titular PIX']);
+        $response = $this->actingAs($this->admin())->getJson(route('rifas.cartelas.destinatarios', $rifa));
+        $response->assertOk()->assertJsonCount(2, 'destinatarios')->assertHeader('Cache-Control', 'no-store, private');
+        $people = collect($response->json('destinatarios'))->keyBy('nome');
+        $this->assertSame(7, $people['Ana']['cartelas']); $this->assertTrue($people['Ana']['pode_enviar']);
+        $this->assertSame(7, $people['Bia']['cartelas']); $this->assertFalse($people['Bia']['pode_enviar']);
+        Http::assertNothingSent();
+    }
+
+    /** @dataProvider whatsappResults */
+    public function test_bulk_pdf_only_contains_recipient_cards_with_pix_and_marks_only_confirmed_sends(bool $success): void
+    {
+        $department = $this->department(); $ana = $this->member($department, 'Ana'); $bia = $this->member($department, 'Bia');
+        $rifa = $this->rifa($department, ['pix_chave' => 'pix@example.test', 'pix_recebedor' => 'Titular PIX']);
+        $pdf = \Mockery::mock(\Barryvdh\DomPDF\PDF::class);
+        $pdf->shouldReceive('setPaper')->with('a4')->andReturnSelf(); $pdf->shouldReceive('output')->once()->andReturn('%PDF-batch');
+        Pdf::shouldReceive('loadView')->once()->with('rifas.cartelas.pdf', \Mockery::on(function ($data) use ($ana, $rifa) {
+            $this->assertCount(3, $data['cartelas']);
+            $this->assertTrue($data['cartelas']->every(fn ($c) => $c->vendedor_id === $ana->id && $c->rifa_id === $rifa->id));
+            $html = view('rifas.cartelas.pdf', $data)->render();
+            $this->assertSame(3, substr_count($html, 'pix@example.test'));
+            $this->assertSame(3, substr_count($html, 'Titular PIX'));
+            $this->assertStringNotContainsString('Bia', $html);
+            return true;
+        }))->andReturn($pdf);
+        $path = null; $whatsapp = \Mockery::mock(WhatsAppService::class);
+        $whatsapp->shouldReceive('isConfigurado')->once()->andReturn(true);
+        $whatsapp->shouldReceive('enviarDocumentoArquivo')->once()->with($ana->phone, \Mockery::on(function ($value) use (&$path) {
+            $path = $value; return file_get_contents($value) === '%PDF-batch';
+        }), 'rifa-'.$rifa->id.'-vendedor-'.$ana->id.'.pdf', \Mockery::on(fn ($caption) => str_contains($caption, 'pix@example.test')))->andReturn(['success' => $success]);
+        $this->app->instance(WhatsAppService::class, $whatsapp);
+        $this->actingAs($this->admin())->postJson(route('rifas.cartelas.whatsapp-vendedor', [$rifa, $ana]))
+            ->assertStatus($success ? 200 : 422)->assertJson(['success' => $success]);
+        $this->assertSame($success ? 3 : 0, $rifa->cartelas()->where('vendedor_id', $ana->id)->whereNotNull('whatsapp_enviado_em')->count());
+        $this->assertSame(0, $rifa->cartelas()->where('vendedor_id', $bia->id)->whereNotNull('whatsapp_enviado_em')->count());
+        $this->assertFileDoesNotExist($path); Http::assertNothingSent();
+    }
+
+    public function test_bulk_send_requires_pix_and_cannot_access_seller_cards_from_another_rifa(): void
+    {
+        $department = $this->department(); $ana = $this->member($department, 'Ana'); $rifa = $this->rifa($department);
+        $other = $this->rifa(null, ['pix_chave' => 'pix@example.test', 'pix_recebedor' => 'Titular']);
+        $this->actingAs($this->admin())->getJson(route('rifas.cartelas.destinatarios', $rifa))->assertStatus(422);
+        $this->postJson(route('rifas.cartelas.whatsapp-vendedor', [$rifa, $ana]))->assertStatus(422);
+        $this->postJson(route('rifas.cartelas.whatsapp-vendedor', [$other, $ana]))->assertNotFound();
+        Http::assertNothingSent();
+    }
+
     public function test_view_only_user_cannot_distribute_add_numbers_or_send_whatsapp(): void
     {
         $user = User::create(['name' => 'Leitor', 'email' => 'viewer@example.test', 'password' => Hash::make('password')]);
@@ -379,6 +470,9 @@ class RifaDistributionTest extends TestCase
         $this->postJson(route('rifas.cartelas.distribuir', $rifa))->assertForbidden();
         $this->postJson(route('rifas.numeros.adicionar', $rifa), ['quantidade' => 5])->assertForbidden();
         $this->postJson(route('rifas.cartelas.whatsapp', [$rifa, $cartela]))->assertForbidden();
+        $this->getJson(route('rifas.cartelas.destinatarios', $rifa))->assertForbidden();
+        $member = $this->member(null, 'Destinatário');
+        $this->postJson(route('rifas.cartelas.whatsapp-vendedor', [$rifa, $member]))->assertForbidden();
         $this->assertSame(23, $rifa->numeros()->count());
     }
 

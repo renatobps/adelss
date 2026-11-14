@@ -19,11 +19,13 @@
         <a href="{{ route('rifas.cartelas.index', $rifa) }}" class="btn btn-default">Ver cartelas</a>
         @can('update', $rifa)
             <a href="{{ route('rifas.edit', $rifa) }}" class="btn btn-primary">Editar</a>
+            <a href="{{ route('rifas.cartelas.index', $rifa) }}#envio-cartelas" class="btn btn-outline-success mt-1">Enviar cartelas para todos</a>
         @endcan
     </div>
 </div>
 
 @include('rifas.partials.distribution')
+@include('rifas.partials.pix')
 
 <div class="row">
     <div class="col-md-3">

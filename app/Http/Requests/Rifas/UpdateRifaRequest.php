@@ -28,9 +28,19 @@ class UpdateRifaRequest extends FormRequest
             'vendedor_ids.*' => ['integer', 'distinct', \Illuminate\Validation\Rule::exists('members', 'id')->whereNull('deleted_at')],
             'department_id' => ['nullable', 'integer', \Illuminate\Validation\Rule::exists('departments', 'id')->whereNull('deleted_at')],
             'nome' => ['required', 'string', 'max:255'],
+            'pix_chave' => ['nullable', 'required_with:pix_recebedor', 'string', 'max:255'],
+            'pix_recebedor' => ['nullable', 'required_with:pix_chave', 'string', 'max:120'],
             'valor_numero' => ['required', 'numeric', 'min:0.01'],
             'data_sorteio' => ['nullable', 'date'],
             'status' => ['required', 'in:ativa,finalizada,cancelada'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'pix_chave.required_with' => 'Informe a chave PIX do recebedor.',
+            'pix_recebedor.required_with' => 'Informe o nome do recebedor da chave PIX.',
         ];
     }
 }

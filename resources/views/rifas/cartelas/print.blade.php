@@ -17,6 +17,7 @@
     @foreach($cartelas as $cartela)
         <div class="cartela">
             <h3>{{ $cartela->identificador }}</h3>
+            @include('rifas.partials.pix')
             <p>Vendedor: {{ $cartela->vendedor?->name ?? 'Não atribuído' }} | Valor por número: R$ {{ number_format((float) $rifa->valor_numero, 2, ',', '.') }}</p>
             <div class="grid">
                 @foreach($cartela->numeros as $numero)

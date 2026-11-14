@@ -7,7 +7,7 @@ use App\Models\Member;
 use App\Models\Cartela;
 use App\Models\Rifa;
 use App\Services\RifaService;
-use App\Services\WhatsAppService;
+use App\Services\RifaCartelaWhatsappService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -76,7 +76,7 @@ class CartelaController extends Controller
         return $this->gerarPdf($rifa, $cartela)->download('rifa-'.$rifa->id.'-cartela-'.$cartela->id.'.pdf');
     }
 
-    public function whatsapp(Rifa $rifa, Cartela $cartela, WhatsAppService $whatsapp): RedirectResponse
+    public function whatsapp(Rifa $rifa, Cartela $cartela, RifaCartelaWhatsappService $service): RedirectResponse
     {
         $this->authorize('update', $rifa);
         abort_unless((int) $cartela->rifa_id === (int) $rifa->id, 404);
@@ -84,27 +84,38 @@ class CartelaController extends Controller
         if (!$cartela->vendedor || empty($cartela->vendedor->phone)) {
             return back()->with('error', 'Atribua um vendedor com telefone cadastrado a esta cartela.');
         }
-        if (!$whatsapp->isConfigurado()) return back()->with('error', 'Configure a conexão WhatsApp antes de enviar a cartela.');
-        $path = null;
-        try {
-            $path = tempnam(sys_get_temp_dir(), 'rifa-cartela-');
-            if ($path === false) throw new \RuntimeException('Falha ao criar arquivo temporário da cartela.');
-            if (file_put_contents($path, $this->gerarPdf($rifa, $cartela)->output()) === false) {
-                throw new \RuntimeException('Falha ao gravar cartela temporária.');
-            }
-            $result = $whatsapp->enviarDocumentoArquivo(
-                $cartela->vendedor->phone, $path, 'rifa-'.$rifa->id.'-cartela-'.$cartela->id.'.pdf',
-                'Olá, '.$cartela->vendedor->name.'! Segue sua '.$cartela->identificador.' da rifa '.$rifa->nome.'. Valor por número: R$ '.number_format((float) $rifa->valor_numero, 2, ',', '.').'.'
-            );
-            if (!($result['success'] ?? false)) return back()->with('error', 'O WhatsApp não confirmou o envio da cartela. Confira a conexão e tente novamente.');
-            $cartela->update(['whatsapp_enviado_em' => now()]);
-            return back()->with('success', 'Cartela enviada ao WhatsApp de '.$cartela->vendedor->name.'.');
-        } catch (\Throwable $e) {
-            report($e);
-            return back()->with('error', 'Não foi possível enviar a cartela. Confira a conexão WhatsApp e tente novamente.');
-        } finally {
-            if (is_string($path) && is_file($path)) unlink($path);
+        $result = $service->enviar($rifa, $cartela->vendedor, new \Illuminate\Database\Eloquent\Collection([$cartela]));
+        return back()->with($result['success'] ? 'success' : 'error', $result['message']);
+    }
+
+    public function destinatarios(Rifa $rifa): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('update', $rifa);
+        if (!$rifa->pix_chave || !$rifa->pix_recebedor) {
+            return response()->json(['message' => 'Cadastre a chave PIX e o nome do recebedor antes do envio em lote.'], 422);
         }
+        $destinatarios = $rifa->cartelas()->whereNotNull('vendedor_id')->with('vendedor:id,name,phone')->get(['id', 'rifa_id', 'vendedor_id'])
+            ->groupBy('vendedor_id')->map(function ($cartelas) use ($rifa) {
+                $vendedor = $cartelas->first()->vendedor;
+                return [
+                    'nome' => $vendedor?->name ?? 'Membro indisponível', 'cartelas' => $cartelas->count(),
+                    'pode_enviar' => (bool) ($vendedor && !empty($vendedor->phone)),
+                    'url' => $vendedor ? route('rifas.cartelas.whatsapp-vendedor', [$rifa, $vendedor]) : null,
+                ];
+            })->values();
+        return response()->json(['destinatarios' => $destinatarios])->header('Cache-Control', 'no-store, private');
+    }
+
+    public function whatsappVendedor(Rifa $rifa, Member $vendedor, RifaCartelaWhatsappService $service): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('update', $rifa);
+        if (!$rifa->pix_chave || !$rifa->pix_recebedor) {
+            return response()->json(['success' => false, 'message' => 'Cadastre a chave PIX e o nome do recebedor antes do envio em lote.'], 422);
+        }
+        $cartelas = $rifa->cartelas()->where('vendedor_id', $vendedor->id)->orderBy('id')->get();
+        abort_if($cartelas->isEmpty(), 404);
+        $result = $service->enviar($rifa, $vendedor, $cartelas);
+        return response()->json($result, $result['success'] ? 200 : 422);
     }
 
     private function gerarPdf(Rifa $rifa, Cartela $cartela)
