@@ -129,6 +129,36 @@ class MercadoPagoEventAccountsTest extends TestCase
         $this->get('http://localhost/admin/pagamentos/mercado-pago')->assertForbidden();
     }
 
+    public function test_webhook_validation_explains_the_expected_url_and_rejects_wrong_urls_before_contacting_provider(): void
+    {
+        $this->withoutMiddleware(\App\Http\Middleware\VerifyCsrfToken::class);
+        $this->actingAs($this->admin());
+        $this->app->instance('env', 'production');
+        foreach ([
+            ['http://adelss.example.test/webhooks/mercado-pago', 'exige HTTPS'],
+            ['https://adelss.example.test/webhooks/mercado-pago?account=example', 'somente no painel do Mercado Pago'],
+            ['https://wrong.example.test/webhooks/mercado-pago', 'APP_URL'],
+        ] as [$url, $reason]) {
+            $this->post('https://adelss.example.test/admin/pagamentos/mercado-pago', $this->payload(['notification_url' => $url]))
+                ->assertSessionHasErrors('notification_url');
+            $message = session('errors')->first('notification_url');
+            $this->assertStringContainsString('https://adelss.example.test/webhooks/mercado-pago', $message);
+            $this->assertStringContainsString($reason, $message);
+        }
+        $this->assertSame(0, MercadoPagoAccount::count());
+        Http::assertNothingSent();
+    }
+
+    public function test_production_form_suggests_https_even_when_app_url_uses_http(): void
+    {
+        $this->actingAs($this->admin());
+        $this->app->instance('env', 'production');
+        config(['app.url' => 'http://adelss.example.test']);
+        $this->get('https://adelss.example.test/admin/pagamentos/mercado-pago')->assertOk()
+            ->assertSee('value="https://adelss.example.test/webhooks/mercado-pago"', false)
+            ->assertDontSee('value="http://adelss.example.test/webhooks/mercado-pago"', false);
+    }
+
     public function test_rotation_keeps_old_credentials_and_payment_references(): void
     {
         $this->actingAs($this->admin());

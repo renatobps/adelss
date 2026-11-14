@@ -14,6 +14,15 @@ use Illuminate\Validation\ValidationException;
 
 class MercadoPagoAccountController extends Controller
 {
+    private function expectedWebhookUrl(): string
+    {
+        $base = rtrim((string) config('app.url'), '/');
+        if (!app()->environment(['local', 'testing'])) {
+            $base = preg_replace('#^http://#i', 'https://', $base);
+        }
+        return $base.'/webhooks/mercado-pago';
+    }
+
     private function authorizeAdmin(Request $request): void
     {
         abort_unless($request->user()?->is_admin, 403);
@@ -26,6 +35,7 @@ class MercadoPagoAccountController extends Controller
         return response()->view('admin.mercadopago.index', [
             'accounts' => MercadoPagoAccount::where('is_active', true)->orderBy('name')->get(),
             'editing' => null,
+            'expectedWebhookUrl' => $this->expectedWebhookUrl(),
         ])->header('Cache-Control', 'no-store, private');
     }
 
@@ -36,6 +46,7 @@ class MercadoPagoAccountController extends Controller
         return response()->view('admin.mercadopago.index', [
             'accounts' => MercadoPagoAccount::where('is_active', true)->orderBy('name')->get(),
             'editing' => $account,
+            'expectedWebhookUrl' => $this->expectedWebhookUrl(),
         ])->header('Cache-Control', 'no-store, private');
     }
 
@@ -62,11 +73,19 @@ class MercadoPagoAccountController extends Controller
             'currency' => 'required|in:BRL',
             'notification_url' => ['required', 'url', 'max:1000', function ($attribute, $value, $fail) {
                 $target = parse_url($value);
-                $expected = parse_url(rtrim((string) config('app.url'), '/').'/webhooks/mercado-pago');
+                $expectedUrl = $this->expectedWebhookUrl();
+                $expected = parse_url($expectedUrl);
+                if (!app()->environment(['local', 'testing']) && ($target['scheme'] ?? '') !== 'https') {
+                    $fail('O webhook exige HTTPS em produção. Use: '.$expectedUrl);
+                    return;
+                }
+                if (isset($target['query']) || isset($target['fragment'])) {
+                    $fail('Neste campo, informe a URL base: '.$expectedUrl.'. A URL com ?account= é exibida após salvar e deve ser usada somente no painel do Mercado Pago.');
+                    return;
+                }
                 if (($target['host'] ?? '') !== ($expected['host'] ?? '') || ($target['port'] ?? null) !== ($expected['port'] ?? null)
-                    || ($target['path'] ?? '') !== ($expected['path'] ?? '') || isset($target['query']) || isset($target['fragment']) || isset($target['user'])
-                    || (!app()->environment(['local', 'testing']) && ($target['scheme'] ?? '') !== 'https')) {
-                    $fail('Use a URL HTTPS de webhook deste sistema, sem parâmetros adicionais.');
+                    || ($target['path'] ?? '') !== ($expected['path'] ?? '') || isset($target['user']) || isset($target['pass'])) {
+                    $fail('A URL deve corresponder ao endereço público configurado no sistema (APP_URL). Use: '.$expectedUrl.'. Se o domínio exibido estiver incorreto, corrija APP_URL no servidor.');
                 }
             }],
             'sandbox' => 'required|boolean',
