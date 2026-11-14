@@ -12,8 +12,15 @@ class MercadoPagoPaymentMovementsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->travelTo(\Carbon\Carbon::parse('2026-09-25 12:00:00'));
         Cache::flush();
         config()->set('mercadopago.access_token', 'APP_USR-TOKEN');
+    }
+
+    protected function tearDown(): void
+    {
+        $this->travelBack();
+        parent::tearDown();
     }
 
     public function test_agrupa_aprovados_como_entrada_e_estornos_como_saida(): void

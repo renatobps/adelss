@@ -12,7 +12,7 @@
     $locationPhotoUrls = $event->locationPhotoPublicUrls();
     $pixPayment = session('pix_payment');
     $eventPriceJs = number_format((float) ($event->price ?? 0), 2, '.', '');
-    $useConfiguredPayer = !empty(config('mercadopago.test_payer_email')) && !empty(config('mercadopago.test_payer_document'));
+    $useConfiguredPayer = !$event->mercado_pago_account_id && !empty(config('mercadopago.test_payer_email')) && !empty(config('mercadopago.test_payer_document'));
 @endphp
 
 <div class="evx-theme evx-palette-{{ $event->page_palette ?: 'oceano' }}">

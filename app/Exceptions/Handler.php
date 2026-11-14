@@ -17,6 +17,10 @@ class Handler extends ExceptionHandler
         'current_password',
         'password',
         'password_confirmation',
+        'access_token',
+        'webhook_secret',
+        'MP_ACCESS_TOKEN',
+        'MP_WEBHOOK_SECRET',
     ];
 
     /**

@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Schema;
 
 class MercadoPagoWebhookController extends Controller
 {
+    private ?\App\Models\MercadoPagoAccount $webhookAccount = null;
     public function __construct(
         private MercadoPagoService $mercadoPagoService,
         private FinancialNotificationService $financialNotificationService
@@ -24,6 +25,17 @@ class MercadoPagoWebhookController extends Controller
 
     public function handle(Request $request): JsonResponse
     {
+        $this->webhookAccount = null;
+        if ($request->query('account') !== null) {
+            $uuid = $request->query('account');
+            if (!is_string($uuid) || !\Illuminate\Support\Str::isUuid($uuid) || !Schema::hasTable('mercado_pago_accounts')) {
+                return response()->json(['success' => false, 'error' => 'Conta inválida.'], 401);
+            }
+            // Archived versions remain usable only for callbacks of old charges.
+            $this->webhookAccount = \App\Models\MercadoPagoAccount::where('uuid', $uuid)->first();
+            if (!$this->webhookAccount) return response()->json(['success' => false, 'error' => 'Conta inválida.'], 401);
+            $this->mercadoPagoService->useAccount($this->webhookAccount);
+        }
         if (!$this->isSignatureValid($request)) {
             return response()->json(['success' => false, 'error' => 'Assinatura inválida.'], 401);
         }
@@ -37,6 +49,9 @@ class MercadoPagoWebhookController extends Controller
 
         try {
             $payment = $this->mercadoPagoService->getPayment((string) $paymentId);
+            if ($this->webhookAccount && isset($payment['collector_id']) && (string) $payment['collector_id'] !== (string) $this->webhookAccount->merchant_id) {
+                throw new \RuntimeException('O pagamento não pertence à conta informada.');
+            }
             $pending = $this->syncPayment($payment, $request->all());
         } catch (\Throwable $e) {
             Log::warning('Mercado Pago webhook processamento falhou', [
@@ -82,7 +97,7 @@ class MercadoPagoWebhookController extends Controller
             $mpTransaction = null;
             $handled = false;
             /** @var PaymentTransaction|null $paymentTransaction */
-            $paymentTransaction = PaymentTransaction::query()
+            $paymentTransaction = $this->webhookAccount ? null : PaymentTransaction::query()
                 ->where('external_payment_id', $externalId)
                 ->lockForUpdate()
                 ->first();
@@ -136,6 +151,8 @@ class MercadoPagoWebhookController extends Controller
             $eventRegistrationPayment = null;
             if (Schema::hasTable('event_registration_payments')) {
                 $eventRegistrationPayment = EventRegistrationPayment::query()
+                    ->when($this->webhookAccount, fn ($query) => $query->where('mercado_pago_account_id', $this->webhookAccount->id))
+                    ->when(!$this->webhookAccount && Schema::hasColumn('event_registration_payments', 'mercado_pago_account_id'), fn ($query) => $query->whereNull('mercado_pago_account_id'))
                     ->where('external_payment_id', $externalId)
                     ->lockForUpdate()
                     ->first();
@@ -183,7 +200,7 @@ class MercadoPagoWebhookController extends Controller
             return [
                 'confirmedRegistration' => $confirmedRegistration,
                 'receiptTransaction' => $receiptTransaction,
-                'mpMovement' => $mpMovementDirection
+                'mpMovement' => !$this->webhookAccount && $mpMovementDirection
                     ? [
                         'direction' => $mpMovementDirection,
                         'payment' => $payment,
@@ -247,14 +264,16 @@ class MercadoPagoWebhookController extends Controller
 
     private function isSignatureValid(Request $request): bool
     {
-        $secret = trim((string) config('mercadopago.webhook_secret', ''));
+        $secret = trim((string) ($this->webhookAccount ? $this->webhookAccount->webhook_secret : config('mercadopago.webhook_secret', '')));
         if ($secret === '') {
-            return true;
+            return $this->allowsUnsignedWebhook();
         }
 
         $xSignature = (string) $request->header('x-signature', '');
         $xRequestId = (string) $request->header('x-request-id', '');
-        $dataId = (string) ($request->input('data.id') ?: $request->query('data.id') ?: $request->input('id') ?: $request->query('id') ?: '');
+        $rawDataId = $request->input('data.id') ?: $request->query('data.id') ?: $request->input('id') ?: $request->query('id') ?: '';
+        if (!is_scalar($rawDataId)) return false;
+        $dataId = strtolower((string) $rawDataId);
         if ($xSignature === '' || $xRequestId === '' || $dataId === '') {
             if ($this->allowsUnsignedWebhook()) {
                 Log::info('Webhook Mercado Pago sem cabeçalhos de assinatura; processando mesmo assim (túnel/sandbox).');
@@ -287,6 +306,7 @@ class MercadoPagoWebhookController extends Controller
 
     private function allowsUnsignedWebhook(): bool
     {
+        if ($this->webhookAccount || !app()->environment(['local', 'testing'])) return false;
         if (filter_var(config('mercadopago.sandbox'), FILTER_VALIDATE_BOOL)) {
             return true;
         }

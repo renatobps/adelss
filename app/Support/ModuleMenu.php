@@ -111,6 +111,17 @@ class ModuleMenu
             ];
         }
 
+        if ($isAdmin) {
+            $items[] = [
+                'key' => 'payment-settings',
+                'label' => 'Pagamentos',
+                'icon' => 'bx bx-credit-card',
+                'url' => route('admin.mercadopago.index'),
+                'patterns' => ['admin.mercadopago.*'],
+                'category' => self::CATEGORY_ADMIN,
+            ];
+        }
+
         // Membros
         $canViewMembers = $can('members.index.view', 'members.view', 'members.index.manage');
         $canManageRoles = $can(

@@ -16,12 +16,12 @@ class EventLandingHtmlRenderer
         $data = array_merge([
             'event' => $event,
             'customFields' => collect(),
-            'mercadoPagoPublicKey' => (string) config('mercadopago.public_key', ''),
+            'mercadoPagoPublicKey' => $event->mercado_pago_account_id ? $event->mercadoPagoAccount->public_key : (string) config('mercadopago.public_key', ''),
             'errors' => new ViewErrorBag(),
             'spotsLeft' => $event->max_spots > 0 ? max(0, $event->max_spots - (int) ($event->registrations_em_vaga_count ?? 0)) : null,
             'pixPayment' => session('pix_payment'),
             'eventPriceJs' => number_format((float) ($event->price ?? 0), 2, '.', ''),
-            'useConfiguredPayer' => !empty(config('mercadopago.test_payer_email')) && !empty(config('mercadopago.test_payer_document')),
+            'useConfiguredPayer' => !$event->mercado_pago_account_id && !empty(config('mercadopago.test_payer_email')) && !empty(config('mercadopago.test_payer_document')),
         ], $data);
         $scalars = [
             'titulo' => $event->title,

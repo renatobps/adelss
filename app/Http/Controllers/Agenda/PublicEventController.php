@@ -43,7 +43,10 @@ class PublicEventController extends Controller
             ->filter(fn ($field) => ! $this->isDefaultRegistrationFieldName((string) $field->name))
             ->values();
 
-        $mercadoPagoPublicKey = (string) config('mercadopago.public_key', '');
+        if ($event->mercado_pago_account_id) $this->mercadoPagoService->useAccount($event->mercadoPagoAccount);
+        $mercadoPagoPublicKey = $event->mercado_pago_account_id
+            ? $this->mercadoPagoService->publicKey()
+            : (string) config('mercadopago.public_key', '');
 
         $view = match ($event->landing_template) {
             'custom' => 'agenda.eventos.public.custom',
@@ -61,8 +64,19 @@ class PublicEventController extends Controller
 
     public function register(Request $request, string $slug)
     {
-        $configuredTestPayerEmail = trim((string) config('mercadopago.test_payer_email', ''));
-        $configuredTestPayerDocument = preg_replace('/\D+/', '', (string) config('mercadopago.test_payer_document', '')) ?: '';
+        $event = Event::query()
+            ->where('public_slug', $slug)
+            ->where('visibility', 'public')
+            ->where('status', 'agendado')
+            ->with('registrationFields')
+            ->firstOrFail();
+        if ($event->mercado_pago_account_id) $this->mercadoPagoService->useAccount($event->mercadoPagoAccount);
+        if ($request->filled('payment_account_version') && $request->input('payment_account_version') !== (string) ($event->mercado_pago_account_id ?: 'default')) {
+            return back()->withInput()->with('error', 'A conta de pagamento deste evento foi atualizada. Recarregue a página antes de enviar a inscrição.');
+        }
+
+        $configuredTestPayerEmail = $event->mercado_pago_account_id ? '' : trim((string) config('mercadopago.test_payer_email', ''));
+        $configuredTestPayerDocument = $event->mercado_pago_account_id ? '' : (preg_replace('/\D+/', '', (string) config('mercadopago.test_payer_document', '')) ?: '');
 
         if (!$request->filled('email') && $configuredTestPayerEmail !== '') {
             $request->merge(['email' => $configuredTestPayerEmail]);
@@ -76,13 +90,6 @@ class PublicEventController extends Controller
                 'payer_document' => preg_replace('/\D+/', '', (string) $request->input('payer_document')),
             ]);
         }
-
-        $event = Event::query()
-            ->where('public_slug', $slug)
-            ->where('visibility', 'public')
-            ->where('status', 'agendado')
-            ->with('registrationFields')
-            ->firstOrFail();
 
         if (!$event->registration_enabled) {
             return back()->with('error', 'As inscrições estão encerradas para este evento.');
@@ -231,7 +238,8 @@ class PublicEventController extends Controller
                         ], $idempotencyKey);
                     }
 
-                    $paymentRecord = EventRegistrationPayment::create([
+                    $accountContext = $event->mercado_pago_account_id ? ['mercado_pago_account_id' => $event->mercado_pago_account_id] : [];
+                    $paymentRecord = EventRegistrationPayment::create($accountContext + [
                         'event_registration_id' => $registration->id,
                         'idempotency_key' => $idempotencyKey,
                         'external_payment_id' => isset($paymentResponse['id']) ? (string) $paymentResponse['id'] : null,

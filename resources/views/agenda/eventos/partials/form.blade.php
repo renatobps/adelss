@@ -94,6 +94,23 @@
     </div>
 </section>
 
+@if(auth()->user()?->is_admin)
+<section class="card mb-3">
+    <header class="card-header"><h2 class="card-title mb-0">Conta de pagamento do evento</h2></header>
+    <div class="card-body">
+        <label for="mercado-pago-account" class="form-label">Receber pagamentos nesta conta Mercado Pago</label>
+        <select id="mercado-pago-account" name="mercado_pago_account_id" class="form-select">
+            <option value="">Conta padrão do sistema (.env)</option>
+            @foreach(($paymentAccounts ?? collect()) as $paymentAccount)
+                <option value="{{ $paymentAccount->id }}" @selected((string) old('mercado_pago_account_id', $e->mercado_pago_account_id ?? '') === (string) $paymentAccount->id)>{{ $paymentAccount->name }} — {{ $paymentAccount->merchant_name }} {{ $paymentAccount->sandbox ? '(Teste)' : '(Produção)' }}</option>
+            @endforeach
+        </select>
+        <p class="text-muted mt-2">A escolha vale para novas cobranças deste evento. Pagamentos já gerados continuam vinculados à conta original.</p>
+        <a href="{{ route('admin.mercadopago.index') }}" class="btn btn-outline-primary">Gerenciar contas Mercado Pago</a>
+    </div>
+</section>
+@endif
+
 <div class="row">
     <div class="col-lg-6">
         <section class="card mb-3">

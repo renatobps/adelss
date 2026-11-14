@@ -12,6 +12,7 @@ class EventRegistrationPayment extends Model
 
     protected $fillable = [
         'event_registration_id',
+        'mercado_pago_account_id',
         'idempotency_key',
         'external_payment_id',
         'external_reference',

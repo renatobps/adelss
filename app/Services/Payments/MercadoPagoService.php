@@ -14,12 +14,35 @@ use MercadoPago\MercadoPagoConfig;
 
 class MercadoPagoService
 {
+    private array $settings;
+    private ?\App\Models\MercadoPagoAccount $account = null;
+
     public function __construct()
     {
-        $accessToken = (string) config('mercadopago.access_token', '');
-        if ($accessToken !== '') {
-            MercadoPagoConfig::setAccessToken($accessToken);
-        }
+        $this->settings = (array) config('mercadopago', []);
+    }
+
+    public function useAccount(\App\Models\MercadoPagoAccount $account): void
+    {
+        $this->account = $account;
+        $this->settings = $account->paymentConfig();
+    }
+
+    public function publicKey(): string
+    {
+        return (string) ($this->settings['public_key'] ?? '');
+    }
+
+    public function accountId(): ?int
+    {
+        return $this->account?->id;
+    }
+
+    private function configureSdk(): void
+    {
+        // The SDK keeps a static token: set it for every call, not just at
+        // construction, so different event accounts cannot leak into each other.
+        MercadoPagoConfig::setAccessToken((string) ($this->settings['access_token'] ?? ''));
     }
 
     /**
@@ -88,6 +111,7 @@ class MercadoPagoService
     public function getPayment(string|int $paymentId): array
     {
         try {
+            $this->configureSdk();
             $client = new PaymentClient();
             $payment = $client->get((int) $paymentId);
 
@@ -116,7 +140,7 @@ class MercadoPagoService
 
     public function isConfigured(): bool
     {
-        return trim((string) config('mercadopago.access_token', '')) !== '';
+        return trim((string) ($this->settings['access_token'] ?? '')) !== '';
     }
 
     /**
@@ -134,7 +158,7 @@ class MercadoPagoService
             }
         }
 
-        $token = trim((string) config('mercadopago.access_token', ''));
+        $token = trim((string) ($this->settings['access_token'] ?? ''));
         if ($token === '') {
             throw new \RuntimeException('Mercado Pago não configurado (MP_ACCESS_TOKEN).');
         }
@@ -205,7 +229,7 @@ class MercadoPagoService
             }
         }
 
-        $token = trim((string) config('mercadopago.access_token', ''));
+        $token = trim((string) ($this->settings['access_token'] ?? ''));
         if ($token === '') {
             $empty['error'] = 'MP_ACCESS_TOKEN não configurado.';
 
@@ -1121,7 +1145,7 @@ class MercadoPagoService
             ?? ((float) $available + (float) $unavailable);
         $currency = (string) ($payload['currency_id']
             ?? data_get($payload, 'available.currency_id')
-            ?? config('mercadopago.currency', 'BRL'));
+            ?? ($this->settings['currency'] ?? 'BRL'));
 
         return [
             'available' => round((float) $available, 2),
@@ -1143,6 +1167,7 @@ class MercadoPagoService
                 'x-idempotency-key: ' . $idempotencyKey,
             ]);
 
+            $this->configureSdk();
             $client = new PaymentClient();
             $payment = $client->create($request, $requestOptions);
 
@@ -1171,17 +1196,14 @@ class MercadoPagoService
 
     private function statementDescriptor(): string
     {
-        return mb_substr(trim((string) config('mercadopago.statement_descriptor', '')), 0, 13);
+        return mb_substr(trim((string) ($this->settings['statement_descriptor'] ?? '')), 0, 13);
     }
 
     private function notificationUrl(): string
     {
-        $configured = trim((string) config('mercadopago.notification_url', ''));
-        if ($configured !== '') {
-            return $configured;
-        }
-
-        return route('webhooks.mercadopago');
+        $url = trim((string) ($this->settings['notification_url'] ?? '')) ?: route('webhooks.mercadopago');
+        if ($this->account) $url .= (str_contains($url, '?') ? '&' : '?').'account='.rawurlencode($this->account->uuid);
+        return $url;
     }
 
     /**
@@ -1194,6 +1216,7 @@ class MercadoPagoService
 
     private function cacheGet(string $key): mixed
     {
+        if ($this->account) $key .= '.'.$this->account->uuid;
         try {
             return Cache::get($key);
         } catch (\Throwable $e) {
@@ -1205,6 +1228,7 @@ class MercadoPagoService
 
     private function cacheHas(string $key): bool
     {
+        if ($this->account) $key .= '.'.$this->account->uuid;
         try {
             return Cache::has($key);
         } catch (\Throwable $e) {
@@ -1216,6 +1240,7 @@ class MercadoPagoService
 
     private function cachePut(string $key, mixed $value, \DateTimeInterface|\DateInterval|int $ttl): void
     {
+        if ($this->account) $key .= '.'.$this->account->uuid;
         try {
             Cache::put($key, $value, $ttl);
         } catch (\Throwable $e) {

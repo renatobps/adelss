@@ -48,6 +48,7 @@ Route::post('/webhook/{event}', [EvolutionWebhookController::class, 'handle'])
 
 Route::middleware('auth')->group(function () {
     require __DIR__.'/modules/dashboard.php';
+    require __DIR__.'/modules/payment-settings.php';
     require __DIR__.'/modules/members.php';
     require __DIR__.'/modules/servico.php';
     require __DIR__.'/modules/permissions.php';

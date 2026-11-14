@@ -50,7 +50,7 @@ class EventosController extends Controller
             ->get()
             ->filter(fn (EventCategory $category) => ! preg_match('/culto|pgi/i', $category->name));
 
-        return view('agenda.eventos.create', compact('categories'));
+        return view('agenda.eventos.create', ['categories' => $categories, 'paymentAccounts' => $this->paymentAccounts()]);
     }
 
     public function store(Request $request)
@@ -106,6 +106,7 @@ class EventosController extends Controller
         return view('agenda.eventos.edit', [
             'event' => $event,
             'categories' => $categories,
+            'paymentAccounts' => $this->paymentAccounts(),
         ]);
     }
 
@@ -135,6 +136,11 @@ class EventosController extends Controller
 
                 $event->location_photos = $this->storeLocationPhotos($request, $event->location_photos ?? []);
                 $event->save();
+                if ($event->wasChanged('mercado_pago_account_id')) {
+                    AuditLogger::log('pagamentos', 'event_account_changed', 'Conta do evento alterada.', [
+                        'event_id' => $event->id, 'account_id' => $event->mercado_pago_account_id,
+                    ]);
+                }
 
                 $event->registrationFields()->delete();
 
@@ -1082,8 +1088,18 @@ class EventosController extends Controller
         return $defaultHhMm.':00';
     }
 
+    private function paymentAccounts()
+    {
+        return auth()->user()?->is_admin && \Illuminate\Support\Facades\Schema::hasTable('mercado_pago_accounts')
+            ? \App\Models\MercadoPagoAccount::where('is_active', true)->orderBy('name')->get()
+            : collect();
+    }
+
     private function validateEvent(Request $request, ?Event $event = null): array
     {
+        if ($request->exists('mercado_pago_account_id') && (string) $request->input('mercado_pago_account_id') !== (string) $event?->mercado_pago_account_id) {
+            abort_unless($request->user()?->is_admin, 403);
+        }
         if ($request->input('category_id') === '' || $request->input('category_id') === null) {
             $request->merge(['category_id' => null]);
         }
@@ -1098,6 +1114,7 @@ class EventosController extends Controller
         }
 
         $rules = [
+            'mercado_pago_account_id' => ['nullable', 'integer', Rule::exists('mercado_pago_accounts', 'id')->where('is_active', true)],
             'title' => 'required|string|max:255',
             'subtitle' => 'nullable|string|max:255',
             'subtitle_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -1226,6 +1243,9 @@ class EventosController extends Controller
             'registration_enabled' => $request->boolean('registration_enabled'),
         ];
 
+        if ($request->exists('mercado_pago_account_id')) {
+            $base['mercado_pago_account_id'] = $v['mercado_pago_account_id'] ?? null;
+        }
         return ['base' => $base];
     }
 

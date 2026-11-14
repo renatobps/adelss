@@ -29,6 +29,7 @@ class Event extends Model
         'page_palette',
         'landing_template',
         'landing_html',
+        'mercado_pago_account_id',
         'banner_image',
         'about_html',
         'is_paid',
@@ -80,6 +81,11 @@ class Event extends Model
             'Roboto Slab',
             'Oswald',
         ];
+    }
+
+    public function mercadoPagoAccount()
+    {
+        return $this->belongsTo(MercadoPagoAccount::class);
     }
 
     public function category()

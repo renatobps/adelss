@@ -73,6 +73,7 @@
                 @endif
                 <form method="post" action="{{ route('events.public.register', $event->public_slug) }}" id="event-registration-form" data-event-paid="{{ $event->is_paid ? 'true' : 'false' }}">
                     @csrf
+                    <input type="hidden" name="payment_account_version" value="{{ $event->mercado_pago_account_id ?: 'default' }}">
                     <div class="mb-3">
                         <label class="form-label">Nome completo *</label>
                         <input type="text" name="name" class="form-control" value="{{ old('name') }}" required>
