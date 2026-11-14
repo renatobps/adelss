@@ -71,7 +71,7 @@
                         Método: cartão. Status atual: {{ $pixPayment['status'] ?? 'pending' }}.
                     </div>
                 @endif
-                <form method="post" action="{{ route('events.public.register', $event->public_slug) }}" id="event-registration-form">
+                <form method="post" action="{{ route('events.public.register', $event->public_slug) }}" id="event-registration-form" data-event-paid="{{ $event->is_paid ? 'true' : 'false' }}">
                     @csrf
                     <div class="mb-3">
                         <label class="form-label">Nome completo *</label>
@@ -206,6 +206,13 @@
                         <span class="js-submit-spinner spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
                     </button>
                 </form>
+                <div id="event-registration-progress" class="d-none" role="status" aria-live="polite" aria-atomic="true" style="position:fixed;inset:0;z-index:10000;background:rgba(12,24,39,.72);padding:24px;align-items:center;justify-content:center;">
+                    <div style="width:100%;max-width:440px;padding:32px;border-radius:16px;background:#fff;color:#152a41;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.25);">
+                        <div class="spinner-border mb-3" aria-hidden="true" style="width:42px;height:42px;color:#245ca6;"></div>
+                        <strong id="event-registration-progress-title" style="display:block;font-size:22px;line-height:1.4;color:#152a41;">Enviando sua inscrição…</strong>
+                        <p id="event-registration-progress-message" style="margin:16px 0 0;font-size:15px;line-height:1.7;color:#405268;">Aguarde nesta página, sem atualizar ou reenviar o formulário.</p>
+                    </div>
+                </div>
             @endif
         </div>
     </div>

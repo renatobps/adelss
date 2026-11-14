@@ -53,13 +53,39 @@ document.addEventListener('DOMContentLoaded', function () {
     var submitBtn = document.getElementById('event-registration-submit');
     var isSubmitting = false;
 
+    var progressOverlay = document.getElementById('event-registration-progress');
+    var progressTitle = document.getElementById('event-registration-progress-title');
+    var progressMessage = document.getElementById('event-registration-progress-message');
+    var progressTimer = null;
+
     var setSubmitting = function (state) {
         isSubmitting = state;
+        clearTimeout(progressTimer);
+        if (formEl) {
+            formEl.setAttribute('aria-busy', state ? 'true' : 'false');
+            formEl.inert = state;
+        }
+        if (progressOverlay) {
+            progressOverlay.classList.toggle('d-none', !state);
+            progressOverlay.classList.toggle('d-flex', state);
+        }
+        var isPaid = formEl && formEl.getAttribute('data-event-paid') === 'true';
+        var isPix = isPaid && getSelectedPaymentMethod() === 'pix';
+        var title = isPix ? 'Gerando seu QR Code PIX…' : (isPaid ? 'Processando seu pagamento…' : 'Enviando sua inscrição…');
+        if (progressTitle) progressTitle.textContent = title;
+        if (progressMessage) progressMessage.textContent = isPix
+            ? 'Estamos registrando sua inscrição e preparando o pagamento. Aguarde nesta página, sem atualizar ou reenviar o formulário.'
+            : 'Aguarde nesta página, sem atualizar ou reenviar o formulário.';
+        if (state) {
+            progressTimer = setTimeout(function () {
+                if (progressMessage) progressMessage.textContent = 'Está levando um pouco mais de tempo. Continue aguardando nesta página, sem atualizar ou reenviar o formulário.';
+            }, 15000);
+        }
         if (!submitBtn) return;
         submitBtn.disabled = state;
         var label = submitBtn.querySelector('.js-submit-label');
         var spinner = submitBtn.querySelector('.js-submit-spinner');
-        if (label) label.textContent = state ? 'Enviando...' : 'Enviar inscrição';
+        if (label) label.textContent = state ? (isPix ? 'Gerando QR Code…' : 'Enviando…') : 'Enviar inscrição';
         if (spinner) spinner.classList.toggle('d-none', !state);
     };
 
@@ -72,6 +98,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 event.stopImmediatePropagation();
                 return;
             }
+            // The card SDK validates and tokenizes first. Show the blocking
+            // state only when its callback is ready to send a valid payment.
+            if (getSelectedPaymentMethod() === 'card' && !allowNativeSubmit) return;
             setSubmitting(true);
         });
     }
@@ -156,6 +185,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         event.preventDefault();
                         if (getSelectedPaymentMethod() !== 'card') {
                             allowNativeSubmit = true;
+                            setSubmitting(true);
                             formEl.submit();
                             return;
                         }
@@ -180,6 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             cardData.installments || document.getElementById('form-checkout__installments')?.value || '1';
 
                         allowNativeSubmit = true;
+                        setSubmitting(true);
                         formEl.submit();
                     },
                 },
