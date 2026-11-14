@@ -56,6 +56,27 @@ class EventLandingTemplateTest extends TestCase
         $this->assertStringContainsString('name="payer_document"', $html);
     }
 
+    public function test_pix_replaces_registration_form_in_all_layouts_even_when_registration_closes(): void
+    {
+        session()->put('pix_payment', [
+            'payment_method' => 'pix', 'status' => 'pending',
+            'qr_code_text' => 'pix-copy-test', 'qr_code_base64' => base64_encode('qr-image-test'),
+        ]);
+        foreach (['show', 'filhos', 'custom'] as $template) {
+            foreach ([true, false] as $enabled) {
+                $html = $this->renderLanding('agenda.eventos.public.'.$template, [
+                    'is_paid' => true, 'price' => 75, 'registration_enabled' => $enabled,
+                    'landing_html' => '<div data-evento="inscricao"></div>',
+                ]);
+                $this->assertStringContainsString('pix-copy-test', $html);
+                $this->assertStringContainsString('alt="QR Code PIX"', $html);
+                $this->assertStringNotContainsString('id="event-registration-form"', $html);
+                $this->assertStringNotContainsString('id="event-registration-submit"', $html);
+                $this->assertStringNotContainsString('name="payer_document"', $html);
+            }
+        }
+    }
+
     public function test_completed_events_do_not_offer_registration(): void
     {
         foreach (['show', 'filhos'] as $template) {

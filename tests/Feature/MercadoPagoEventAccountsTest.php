@@ -337,6 +337,40 @@ class MercadoPagoEventAccountsTest extends TestCase
         $this->assertSame(0, DB::table('event_registration_payments')->count());
     }
 
+    public static function pixMediaResults(): array
+    {
+        return ['image delivered' => [true], 'image unavailable' => [false]];
+    }
+
+    /** @dataProvider pixMediaResults */
+    public function test_registration_sends_pix_text_and_image_without_losing_payment_when_media_fails(bool $imageDelivered): void
+    {
+        $this->checkoutSchema();
+        $account = $this->account();
+        $event = Event::create(['title' => 'Imersão', 'public_slug' => 'pix-whatsapp', 'start_date' => '2026-11-28 08:00:00', 'mercado_pago_account_id' => $account->id]);
+        $image = base64_encode('test-qr-image');
+        $service = \Mockery::mock(MercadoPagoService::class);
+        $service->shouldReceive('useAccount')->once();
+        $service->shouldReceive('createPixPayment')->once()->andReturn([
+            'id' => 4040, 'status' => 'pending', 'payment_method_id' => 'pix',
+            'point_of_interaction' => ['transaction_data' => ['qr_code' => 'provider-pix-copy-code', 'qr_code_base64' => $image]],
+        ]);
+        $this->app->instance(MercadoPagoService::class, $service);
+        $whatsapp = \Mockery::mock(\App\Services\WhatsAppService::class);
+        $whatsapp->shouldReceive('isConfigurado')->once()->andReturn(true);
+        $whatsapp->shouldReceive('enviarMensagem')->once()->with('(61) 99999-0000', \Mockery::on(fn ($message) => str_contains($message, 'Imersão')))->ordered()->andReturn(['success' => true]);
+        $whatsapp->shouldReceive('enviarMensagem')->once()->with('(61) 99999-0000', 'provider-pix-copy-code')->ordered()->andReturn(['success' => true]);
+        $whatsapp->shouldReceive('enviarImagemBase64')->once()->with('(61) 99999-0000', $image, \Mockery::on(fn ($caption) => str_contains($caption, 'Imersão') && str_contains($caption, '30,00')))
+            ->ordered()->andReturn(['success' => $imageDelivered]);
+        $this->app->instance(\App\Services\WhatsAppService::class, $whatsapp);
+        $this->from('/evento/pix-whatsapp')->post(route('events.public.register', $event->public_slug), [
+            'name' => 'Participante', 'phone' => '(61) 99999-0000', 'email' => 'pix@example.test', 'payer_document' => '00000000000',
+            'payment_method' => 'pix', 'payment_account_version' => (string) $account->id,
+        ])->assertRedirect('/evento/pix-whatsapp')->assertSessionHasNoErrors()->assertSessionHas('success')->assertSessionHas('pix_payment.qr_code_text', 'provider-pix-copy-code');
+        $this->assertSame(1, DB::table('event_registration_payments')->where('external_payment_id', '4040')->count());
+        Http::assertNothingSent();
+    }
+
     public function test_one_account_cannot_update_another_accounts_payment(): void
     {
         $a = $this->account(); $b = $this->account(['webhook_secret' => 'account-b-secret']);

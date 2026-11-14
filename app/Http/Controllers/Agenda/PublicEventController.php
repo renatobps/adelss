@@ -297,7 +297,7 @@ class PublicEventController extends Controller
             $this->ensureReceiptCredentials($registration);
             // Pagamento ainda pendente: não há comprovante para emitir, então a
             // mensagem ao inscrito sai por aqui. O PDF vai depois da aprovação.
-            $this->sendWhatsAppNotifications($event, $registration, true);
+            $this->sendWhatsAppNotifications($event, $registration, true, $paymentRecord);
 
             return back()
                 ->with('success', $this->successMessage($event, $registration))
@@ -526,7 +526,7 @@ class PublicEventController extends Controller
         }
     }
 
-    private function sendWhatsAppNotifications(Event $event, EventRegistration $registration, bool $includeRegistrantMessage): void
+    private function sendWhatsAppNotifications(Event $event, EventRegistration $registration, bool $includeRegistrantMessage, ?EventRegistrationPayment $payment = null): void
     {
         try {
             $service = app(WhatsAppService::class);
@@ -540,6 +540,25 @@ class PublicEventController extends Controller
                     $registration->phone,
                     $this->buildRegistrantMessage($event, $registration)
                 );
+                if ($payment && $payment->payment_method === 'pix' && $payment->status === 'pending') {
+                    // Send the exact provider payload separately so it is easy to copy.
+                    if (!empty($payment->qr_code_text)) {
+                        $result = $service->enviarMensagem($registration->phone, $payment->qr_code_text);
+                        if (!($result['success'] ?? false)) {
+                            Log::warning('Falha ao enviar PIX copia e cola da inscrição', ['registration_id' => $registration->id]);
+                        }
+                    }
+                    if (!empty($payment->qr_code_base64)) {
+                        $result = $service->enviarImagemBase64(
+                            $registration->phone,
+                            $payment->qr_code_base64,
+                            'PIX — '.$event->title.' | R$ '.number_format((float) $payment->amount, 2, ',', '.').'. Pague para confirmar sua inscrição.'
+                        );
+                        if (!($result['success'] ?? false)) {
+                            Log::warning('Falha ao enviar QR Code PIX da inscrição', ['registration_id' => $registration->id]);
+                        }
+                    }
+                }
             }
 
             if (! empty($event->responsible_phone)) {

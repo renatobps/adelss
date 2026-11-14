@@ -41,15 +41,7 @@
                     @endif
                 </div>
             @endif
-            @if(!$event->registration_enabled || $event->status !== 'agendado')
-                <div class="alert alert-secondary mb-0">Inscrições encerradas para este evento.</div>
-            @elseif($spotsLeft !== null && $spotsLeft === 0)
-                <p class="text-muted mb-0">Vagas esgotadas.</p>
-            @else
-                @if($spotsLeft !== null)
-                    <p class="small text-muted">Vagas restantes: {{ $spotsLeft }}</p>
-                @endif
-                @if(is_array($pixPayment) && (($pixPayment['payment_method'] ?? 'pix') === 'pix') && !empty($pixPayment['qr_code_text']))
+            @if(is_array($pixPayment) && (($pixPayment['payment_method'] ?? 'pix') === 'pix') && (!empty($pixPayment['qr_code_text']) || !empty($pixPayment['qr_code_base64'])))
                     <div class="alert alert-info">
                         <strong>Pagamento pendente</strong><br>
                         Conclua o PIX abaixo para confirmar seu ingresso.
@@ -61,11 +53,21 @@
                                     <img src="data:image/png;base64,{{ $pixPayment['qr_code_base64'] }}" alt="QR Code PIX" style="max-width:260px; width:100%;">
                                 </div>
                             @endif
-                            <label class="form-label">Código copia e cola</label>
-                            <textarea class="form-control" rows="4" readonly>{{ $pixPayment['qr_code_text'] }}</textarea>
+                            @if(!empty($pixPayment['qr_code_text']))
+                                <label class="form-label">Código copia e cola</label>
+                                <textarea class="form-control" rows="4" readonly>{{ $pixPayment['qr_code_text'] }}</textarea>
+                            @endif
                         </div>
                     </div>
-                @elseif(is_array($pixPayment) && (($pixPayment['payment_method'] ?? '') !== 'pix'))
+            @elseif(!$event->registration_enabled || $event->status !== 'agendado')
+                <div class="alert alert-secondary mb-0">Inscrições encerradas para este evento.</div>
+            @elseif($spotsLeft !== null && $spotsLeft === 0)
+                <p class="text-muted mb-0">Vagas esgotadas.</p>
+            @else
+                @if($spotsLeft !== null)
+                    <p class="small text-muted">Vagas restantes: {{ $spotsLeft }}</p>
+                @endif
+                @if(is_array($pixPayment) && (($pixPayment['payment_method'] ?? '') !== 'pix'))
                     <div class="alert alert-info">
                         <strong>Pagamento em processamento</strong><br>
                         Método: cartão. Status atual: {{ $pixPayment['status'] ?? 'pending' }}.
