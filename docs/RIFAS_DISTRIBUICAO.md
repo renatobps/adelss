@@ -100,6 +100,12 @@ não adiciona uma nova migração. A migração base dessa tabela é
 
 ## Publicação por Git
 
+O botão **Excluir rifa**, na listagem e nos detalhes, exige permissão de exclusão
+e confirmação. A exclusão retira a rifa da gestão e bloqueia o acesso às suas telas;
+os números, as cartelas e as vendas permanecem no banco para preservar o histórico.
+O histórico de vendas continua disponível nos relatórios. Não há exclusão física
+em cascata. O cancelamento por status continua disponível separadamente.
+
 No servidor, como root, após obter o commit:
 
 ```bash
@@ -108,6 +114,7 @@ git pull --ff-only origin master
 su -s /bin/sh www-data -c 'cd /code && php artisan migrate --path=database/migrations/2026_11_14_130000_add_department_and_seller_to_rifas.php --force'
 su -s /bin/sh www-data -c 'cd /code && php artisan migrate --path=database/migrations/2026_11_14_140000_create_rifa_vendedores_table.php --force'
 su -s /bin/sh www-data -c 'cd /code && php artisan migrate --path=database/migrations/2026_11_14_150000_add_pix_details_to_rifas.php --force'
+su -s /bin/sh www-data -c 'cd /code && php artisan migrate --path=database/migrations/2026_11_16_120000_add_soft_deletes_to_rifas.php --force'
 su -s /bin/sh www-data -c 'cd /code && php artisan view:clear && php artisan route:clear'
 ```
 

@@ -21,6 +21,7 @@
             <a href="{{ route('rifas.edit', $rifa) }}" class="btn btn-primary">Editar</a>
             <a href="{{ route('rifas.cartelas.index', $rifa) }}#envio-cartelas" class="btn btn-outline-success mt-1">Enviar cartelas para todos</a>
         @endcan
+        @include('rifas.partials.delete-button')
     </div>
 </div>
 

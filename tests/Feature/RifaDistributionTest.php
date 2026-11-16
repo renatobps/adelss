@@ -52,6 +52,7 @@ class RifaDistributionTest extends TestCase
             '2026_04_22_112747_create_cartela_numero_table.php', '2026_11_14_130000_add_department_and_seller_to_rifas.php',
             '2026_11_14_140000_create_rifa_vendedores_table.php',
             '2026_11_14_150000_add_pix_details_to_rifas.php',
+            '2026_11_16_120000_add_soft_deletes_to_rifas.php',
         ] as $migration) (require database_path('migrations/'.$migration))->up();
         Http::preventStrayRequests();
     }
@@ -59,6 +60,37 @@ class RifaDistributionTest extends TestCase
     private function admin(): User
     {
         return User::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => Hash::make('password'), 'is_admin' => true]);
+    }
+
+    public function test_delete_button_removes_rifa_from_management_and_preserves_sales_history(): void
+    {
+        $department = $this->department(); $ana = $this->member($department, 'Ana'); $rifa = $this->rifa($department);
+        app(VendaRifaService::class)->registrarVendaRapida($rifa, [
+            'numero_ids' => [$rifa->numeros()->first()->id], 'vendedor_id' => $ana->id, 'comprador_nome' => 'Comprador',
+        ]);
+        $this->actingAs($this->admin())->get(route('rifas.index'))->assertOk()->assertSee('Excluir rifa');
+        $this->get(route('rifas.show', $rifa))->assertOk()->assertSee('Excluir rifa');
+        $this->delete(route('rifas.destroy', $rifa))->assertRedirect(route('rifas.index'))->assertSessionHas('success');
+        $this->assertNull(Rifa::find($rifa->id));
+        $this->assertTrue(Rifa::withTrashed()->findOrFail($rifa->id)->trashed());
+        $this->assertSame(23, DB::table('numeros_rifa')->where('rifa_id', $rifa->id)->count());
+        $this->assertSame(5, DB::table('cartelas')->where('rifa_id', $rifa->id)->count());
+        $this->assertSame(1, DB::table('rifa_vendas')->where('rifa_id', $rifa->id)->count());
+        $this->get(route('rifas.index'))->assertOk()->assertViewHas('rifas', fn ($items) => $items->isEmpty());
+        $this->get(route('rifas.show', $rifa))->assertNotFound();
+        $this->get(route('rifas.cartelas.index', $rifa))->assertNotFound();
+        $this->post(route('rifas.numeros.adicionar', $rifa), ['quantidade' => 5])->assertNotFound();
+        $this->delete(route('rifas.destroy', $rifa))->assertNotFound();
+    }
+
+    public function test_user_without_delete_permission_cannot_see_delete_button_or_delete_rifa(): void
+    {
+        $user = User::create(['name' => 'Leitor', 'email' => 'leitor@example.test', 'password' => Hash::make('password')]);
+        $user->setRelation('permissions', collect([new Permission(['key' => 'rifas.index.view'])]));
+        $user->setRelation('member', null); $rifa = $this->rifa();
+        $this->actingAs($user)->get(route('rifas.index'))->assertOk()->assertDontSee('Excluir rifa');
+        $this->deleteJson(route('rifas.destroy', $rifa))->assertForbidden();
+        $this->assertNotNull(Rifa::find($rifa->id));
     }
 
     private function department(): Department

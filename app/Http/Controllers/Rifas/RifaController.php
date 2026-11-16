@@ -135,9 +135,10 @@ class RifaController extends Controller
     {
         $this->authorize('delete', $rifa);
 
-        $rifa->update(['status' => 'cancelada']);
+        $rifa->delete();
+        \App\Services\AuditLogger::log('rifas', 'deleted', 'Rifa excluída da gestão.', ['rifa_id' => $rifa->id]);
 
-        return redirect()->route('rifas.index')->with('success', 'Rifa cancelada com sucesso.');
+        return redirect()->route('rifas.index')->with('success', 'Rifa excluída com sucesso. O histórico de números e vendas foi preservado.');
     }
 
     public function updateStatus(Request $request, Rifa $rifa): RedirectResponse

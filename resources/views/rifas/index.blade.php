@@ -65,6 +65,7 @@
                                 <a class="btn btn-xs btn-warning" href="{{ route('rifas.sorteios.index', $rifa) }}">Ver sorteios</a>
                                 <a class="btn btn-xs btn-default" href="{{ route('rifas.cartelas.index', $rifa) }}">Cartelas</a>
                                 <a class="btn btn-xs btn-success" href="{{ route('rifas.vendas.rapida.create', $rifa) }}">Venda rápida</a>
+                                @include('rifas.partials.delete-button', ['buttonSize' => 'btn-xs'])
                             </td>
                         </tr>
                     @empty
