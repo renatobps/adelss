@@ -527,6 +527,32 @@ class WhatsAppService
         ]);
     }
 
+    /** Send through one explicit instance without changing the application's active instance. */
+    public function enviarMensagemNaInstancia(string $instanceId, string $numero, string $mensagem): array
+    {
+        $instance = $this->findInstanceById($instanceId);
+        $token = trim((string) ($instance['token'] ?? ''));
+        if ($this->apiUrl === '' || !$instance || $token === '' || empty($instance['connected'])) {
+            return $this->finalizarEnvio($numero, $mensagem, [
+                'success' => false,
+                'error' => 'A instância selecionada está indisponível, desconectada ou sem token de envio.',
+            ], 'department_event');
+        }
+
+        // Never fall back to the global API token: it may belong to a different account.
+        $response = Http::withHeaders(['apikey' => $token, 'instanceId' => $instanceId])
+            ->asJson()->connectTimeout(5)->timeout(20)
+            ->post($this->buildUrl('send/text'), [
+                'number' => self::normalizarNumero($numero), 'text' => $mensagem, 'delay' => 700,
+            ]);
+        $body = $response->json() ?? [];
+        $result = $this->isSuccessfulResponse($response, $body)
+            ? ['success' => true, 'data' => $body]
+            : ['success' => false, 'error' => $this->resolverMensagemErro($body), 'status' => $response->status()];
+
+        return $this->finalizarEnvio($numero, $mensagem, $result, 'department_event');
+    }
+
     /**
      * Grava sucesso e erro no histórico unificado do painel de notificações.
      *

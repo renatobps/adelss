@@ -558,6 +558,7 @@ class ServiceScheduleController extends Controller
             $q->where('service_areas.id', $serviceArea->id);
         })
         ->with(['member'])
+        ->whereHas('member')
         ->where('status', 'ativo')
         ->get();
 

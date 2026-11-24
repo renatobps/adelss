@@ -67,7 +67,7 @@
                                                 <strong>{{ $index + 1 }}º</strong>
                                             @endif
                                         </td>
-                                        <td><strong>{{ $item->volunteer->member->name }}</strong></td>
+                                        <td><strong>{{ $item->volunteer?->member?->name ?? 'Membro indisponível' }}</strong></td>
                                         <td><span class="badge badge-success badge-lg">{{ $item->total_services }}</span> serviços</td>
                                     </tr>
                                 @endforeach

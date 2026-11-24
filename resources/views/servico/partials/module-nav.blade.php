@@ -1,7 +1,7 @@
 @php
     $user = Auth::user();
     $isAdmin = $user?->is_admin ?? false;
-    $canViewDepartments = $isAdmin || $user?->hasPermission('servico.departments.view') || $user?->hasPermission('servico.departments.manage');
+    $canViewVolunteers = $isAdmin || $user?->hasPermission('servico.voluntarios.cadastro.view') || $user?->hasPermission('servico.voluntarios.cadastro.manage');
     $canViewAreas = $isAdmin || $user?->hasPermission('servico.voluntarios.areas.view') || $user?->hasPermission('servico.voluntarios.areas.manage');
     $canViewEscalas = $isAdmin || $user?->hasPermission('servico.voluntarios.escalas.view') || $user?->hasPermission('servico.voluntarios.escalas.manage');
     $canConfigureEscalas = $isAdmin || $user?->hasPermission('servico.voluntarios.escalas.edit') || $user?->hasPermission('servico.voluntarios.escalas.manage');
@@ -9,11 +9,11 @@
     $canViewRelatorios = $isAdmin || $user?->hasPermission('servico.voluntarios.relatorios.view') || $user?->hasPermission('servico.voluntarios.relatorios.manage');
 
     $items = array_values(array_filter([
-        $canViewDepartments ? [
-            'label' => 'Departamentos',
-            'icon' => 'bx bx-building',
-            'url' => route('departments.index'),
-            'active' => request()->routeIs('departments.*'),
+        $canViewVolunteers ? [
+            'label' => 'Voluntários',
+            'icon' => 'bx bx-group',
+            'url' => route('voluntarios.cadastro.index'),
+            'active' => request()->routeIs('voluntarios.cadastro.*'),
         ] : null,
         $canViewAreas ? [
             'label' => 'Áreas',
@@ -51,7 +51,7 @@
 
 @include('partials.module-nav', [
     'title' => 'Serviço',
-    'subtitle' => 'Departamentos, escalas e voluntários',
+    'subtitle' => 'Escalas e voluntários',
     'items' => $items,
     'columns' => max(count($items), 2),
 ])

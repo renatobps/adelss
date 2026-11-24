@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
     require __DIR__.'/modules/payment-settings.php';
     require __DIR__.'/modules/members.php';
     require __DIR__.'/modules/servico.php';
+    require __DIR__.'/modules/departments.php';
     require __DIR__.'/modules/permissions.php';
     require __DIR__.'/modules/moriah.php';
     require __DIR__.'/modules/notificacoes.php';

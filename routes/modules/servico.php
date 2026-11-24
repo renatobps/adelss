@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\VolunteerController;
 use App\Http\Controllers\ServiceAreaController;
 use App\Http\Controllers\ServiceScheduleController;
@@ -10,9 +9,6 @@ use App\Http\Controllers\ScheduleSettingController;
 use App\Http\Controllers\ServiceHistoryController;
 use App\Http\Controllers\VolunteerReportController;
 
-
-// Rotas do módulo de Departamentos (somente admin)
-Route::resource('departments', DepartmentController::class)->middleware('module.access:servico');
 
 // Rotas do módulo de Serviço - Voluntários (somente admin)
 Route::prefix('servico/voluntarios')->name('voluntarios.')->middleware('module.access:servico')->group(function () {

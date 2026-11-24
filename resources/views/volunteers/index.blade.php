@@ -59,7 +59,10 @@
                                 @foreach($volunteers as $volunteer)
                                     <tr>
                                         <td>
-                                            <strong>{{ $volunteer->member->name }}</strong>
+                                            <strong>{{ $volunteer->member?->name ?? 'Membro indisponível' }}</strong>
+                                            @if(!$volunteer->member)
+                                                <small class="d-block text-muted">Membro excluído ou não encontrado. Revise o vínculo no cadastro.</small>
+                                            @endif
                                         </td>
                                         <td>
                                             @if($volunteer->serviceAreas->count() > 0)
@@ -113,7 +116,7 @@
                                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                                                 </div>
                                                 <div class="modal-body">
-                                                    <p>Tem certeza que deseja excluir o voluntário <strong>"{{ $volunteer->member->name }}"</strong>?</p>
+                                                    <p>Tem certeza que deseja excluir o voluntário <strong>"{{ $volunteer->member?->name ?? 'Membro indisponível' }}"</strong>?</p>
                                                     <p class="text-muted small mb-0">Esta ação não pode ser desfeita.</p>
                                                 </div>
                                                 <div class="modal-footer">

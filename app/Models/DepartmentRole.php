@@ -15,6 +15,7 @@ class DepartmentRole extends Model
         'name',
         'description',
         'is_default',
+        'responsible_member_id',
     ];
 
     protected $casts = [
@@ -35,6 +36,24 @@ class DepartmentRole extends Model
     public function departmentMembers()
     {
         return $this->hasMany(DepartmentMember::class);
+    }
+
+    public function responsibleMember()
+    {
+        return $this->belongsTo(Member::class, 'responsible_member_id');
+    }
+
+    public function responsibleMembers()
+    {
+        return $this->belongsToMany(Member::class, 'department_role_assignments', 'department_role_id', 'member_id')->withTimestamps();
+    }
+
+    public function getAssignedMembersAttribute(): \Illuminate\Support\Collection
+    {
+        return $this->responsibleMembers
+            ->concat($this->responsibleMember ? [$this->responsibleMember] : [])
+            ->concat($this->departmentMembers->where('department_id', $this->department_id)->pluck('member'))
+            ->filter(fn ($member) => $member && !$member->trashed())->unique('id')->values();
     }
 }
 

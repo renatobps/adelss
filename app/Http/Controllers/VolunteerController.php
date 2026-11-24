@@ -6,6 +6,7 @@ use App\Models\Volunteer;
 use App\Models\Member;
 use App\Models\ServiceArea;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class VolunteerController extends Controller
 {
@@ -66,7 +67,7 @@ class VolunteerController extends Controller
     {
         $this->authorize('create', Volunteer::class);
         $validated = $request->validate([
-            'member_id' => 'required|exists:members,id|unique:volunteers,member_id',
+            'member_id' => ['required', Rule::exists('members', 'id')->whereNull('deleted_at'), 'unique:volunteers,member_id'],
             'experience_level' => 'required|in:novo,em_treinamento,experiente',
             'start_date' => 'required|date',
             'status' => 'required|in:ativo,inativo',
@@ -75,7 +76,7 @@ class VolunteerController extends Controller
             'service_areas.*' => 'exists:service_areas,id',
         ], [
             'member_id.required' => 'Selecione um membro.',
-            'member_id.exists' => 'O membro selecionado não existe.',
+            'member_id.exists' => 'O membro selecionado não existe ou foi excluído.',
             'member_id.unique' => 'Este membro já está cadastrado como voluntário.',
             'experience_level.required' => 'Selecione o nível de experiência.',
             'experience_level.in' => 'O nível de experiência deve ser: novo, em treinamento ou experiente.',
@@ -135,7 +136,7 @@ class VolunteerController extends Controller
     {
         $this->authorize('update', $volunteer);
         $validated = $request->validate([
-            'member_id' => 'required|exists:members,id|unique:volunteers,member_id,' . $volunteer->id,
+            'member_id' => ['required', Rule::exists('members', 'id')->whereNull('deleted_at'), Rule::unique('volunteers', 'member_id')->ignore($volunteer->id)],
             'experience_level' => 'required|in:novo,em_treinamento,experiente',
             'start_date' => 'required|date',
             'status' => 'required|in:ativo,inativo',
@@ -144,7 +145,7 @@ class VolunteerController extends Controller
             'service_areas.*' => 'exists:service_areas,id',
         ], [
             'member_id.required' => 'Selecione um membro.',
-            'member_id.exists' => 'O membro selecionado não existe.',
+            'member_id.exists' => 'O membro selecionado não existe ou foi excluído.',
             'member_id.unique' => 'Este membro já está cadastrado como voluntário.',
             'experience_level.required' => 'Selecione o nível de experiência.',
             'experience_level.in' => 'O nível de experiência deve ser: novo, em treinamento ou experiente.',

@@ -61,7 +61,7 @@
                             <tbody>
                                 @foreach($inactiveVolunteers as $item)
                                     <tr>
-                                        <td><strong>{{ $item['volunteer']->member->name }}</strong></td>
+                                        <td><strong>{{ $item['volunteer']->member?->name ?? 'Membro indisponível' }}</strong></td>
                                         <td>
                                             @php
                                                 $mainArea = \App\Models\ServiceHistory::where('volunteer_id', $item['volunteer']->id)
@@ -71,7 +71,7 @@
                                                     ->orderBy('total', 'desc')
                                                     ->first();
                                                 if ($mainArea) {
-                                                    $areaName = \App\Models\ServiceArea::find($mainArea->service_area_id)->name;
+                                                    $areaName = \App\Models\ServiceArea::find($mainArea->service_area_id)?->name ?? 'Área indisponível';
                                                 } else {
                                                     $areaName = 'N/A';
                                                 }

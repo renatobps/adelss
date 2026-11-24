@@ -7,6 +7,8 @@ use App\Models\DepartmentRole;
 use App\Models\Member;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class DepartmentController extends Controller
 {
@@ -43,9 +45,16 @@ class DepartmentController extends Controller
             $query->active();
         }
         
-        $departments = $query->orderBy('name')->paginate(15);
+        $queryData = $request->validate(['q' => 'nullable|string|max:191']);
+        $search = trim((string) ($queryData['q'] ?? ''));
+        if ($search !== '') {
+            $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', '%'.$search.'%')->orWhere('description', 'like', '%'.$search.'%');
+            });
+        }
+        $departments = $query->orderBy('name')->paginate(12)->withQueryString();
         
-        return view('departments.index', compact('departments', 'filter'));
+        return view('departments.index', compact('departments', 'filter', 'search'));
     }
 
     /**
@@ -81,7 +90,7 @@ class DepartmentController extends Controller
         $request->merge(['members' => $membersData]);
 
         $validated = $this->validate($request, [
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:191',
             'template' => 'nullable|string',
             'icon' => 'nullable|string',
             'color' => 'nullable|string',
@@ -91,9 +100,9 @@ class DepartmentController extends Controller
             'homepage_order' => 'nullable|integer|min:0|max:999',
             'homepage_url' => 'nullable|string|max:500',
             'leaders' => 'nullable|array',
-            'leaders.*' => 'exists:members,id',
+            'leaders.*' => [Rule::exists('members', 'id')->whereNull('deleted_at')],
             'members' => 'sometimes|array',
-            'members.*' => 'exists:members,id',
+            'members.*' => [Rule::exists('members', 'id')->whereNull('deleted_at')],
             'roles' => 'nullable|array',
             'roles.*.name' => 'required_without:roles.*.id|string|max:255',
             'roles.*.description' => 'nullable|string',
@@ -101,7 +110,7 @@ class DepartmentController extends Controller
         ], [
             'name.required' => 'O campo nome do departamento é obrigatório.',
             'name.string' => 'O nome do departamento deve ser um texto.',
-            'name.max' => 'O nome do departamento não pode ter mais de 255 caracteres.',
+            'name.max' => 'O nome do departamento não pode ter mais de 191 caracteres.',
             'status.required' => 'O campo status é obrigatório.',
             'status.in' => 'O status deve ser "ativo" ou "arquivado".',
             'leaders.array' => 'Os líderes devem ser uma lista válida.',
@@ -206,7 +215,7 @@ class DepartmentController extends Controller
     public function show(Department $department)
     {
         $this->authorize('view', $department);
-        $department->load(['leader', 'leaders', 'members', 'roles']);
+        $department->load(['leader', 'leaders', 'members', 'roles.responsibleMember', 'roles.responsibleMembers', 'roles.departmentMembers.member']);
         // Carrega os roles para os membros através dos pivots
         $memberIds = $department->members->pluck('id')->toArray();
         $pivots = \App\Models\DepartmentMember::where('department_id', $department->id)
@@ -225,7 +234,7 @@ class DepartmentController extends Controller
         $this->authorize('update', $department);
         $templates = $this->getTemplates();
         $members = Member::orderBy('name')->get();
-        $department->load(['members', 'roles']);
+        $department->load(['members', 'roles.responsibleMember', 'roles.responsibleMembers', 'roles.departmentMembers.member', 'leaders', 'leader']);
         
         return view('departments.edit', compact('department', 'templates', 'members'));
     }
@@ -280,9 +289,12 @@ class DepartmentController extends Controller
             'members' => $membersData,
             'roles_to_delete' => $rolesToDelete
         ]);
+        if ($request->boolean('leaders_present')) {
+            $request->merge(['leaders' => $request->input('leaders', [])]);
+        }
 
         $validated = $this->validate($request, [
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:191',
             'template' => 'nullable|string',
             'icon' => 'nullable|string',
             'color' => 'nullable|string',
@@ -292,9 +304,9 @@ class DepartmentController extends Controller
             'homepage_order' => 'nullable|integer|min:0|max:999',
             'homepage_url' => 'nullable|string|max:500',
             'leaders' => 'nullable|array',
-            'leaders.*' => 'exists:members,id',
+            'leaders.*' => [Rule::exists('members', 'id')->whereNull('deleted_at')],
             'members' => 'sometimes|array',
-            'members.*' => 'exists:members,id',
+            'members.*' => [Rule::exists('members', 'id')->whereNull('deleted_at')],
             'roles' => 'nullable|array',
             'roles.*.id' => 'nullable|exists:department_roles,id',
             'roles.*.name' => 'required_without:roles.*.id|string|max:255',
@@ -305,7 +317,7 @@ class DepartmentController extends Controller
         ], [
             'name.required' => 'O campo nome do departamento é obrigatório.',
             'name.string' => 'O nome do departamento deve ser um texto.',
-            'name.max' => 'O nome do departamento não pode ter mais de 255 caracteres.',
+            'name.max' => 'O nome do departamento não pode ter mais de 191 caracteres.',
             'status.required' => 'O campo status é obrigatório.',
             'status.in' => 'O status deve ser "ativo" ou "arquivado".',
             'leaders.array' => 'Os líderes devem ser uma lista válida.',
@@ -340,7 +352,7 @@ class DepartmentController extends Controller
         $templates = $this->getTemplates();
         
         // Se foi selecionado um template, usar seus dados
-        if (!empty($validated['template']) && isset($templates[$validated['template']])) {
+        if ($request->filled('template') && $validated['template'] !== $department->template && isset($templates[$validated['template']])) {
             $template = $templates[$validated['template']];
             $validated['icon'] = $template['icon'] ?? ($validated['icon'] ?? $department->icon ?? null);
             $validated['color'] = $template['color'] ?? ($validated['color'] ?? $department->color ?? null);
@@ -362,6 +374,21 @@ class DepartmentController extends Controller
             'homepage_url' => $request->boolean('show_on_homepage') ? ($validated['homepage_url'] ?? null) : null,
         ];
 
+        if (isset($validated['leaders'])) {
+            $currentLeaderIds = $department->leaders->modelKeys();
+            if (!$currentLeaderIds && $department->leader) {
+                $currentLeaderIds = [$department->leader->id];
+            }
+            $selectedLeaderIds = array_values(array_unique(array_map('intval', $validated['leaders'])));
+            $comparison = $selectedLeaderIds;
+            sort($currentLeaderIds);
+            sort($comparison);
+            if ($currentLeaderIds !== $comparison) {
+                $updateData['leader_id'] = in_array((int) $department->leader_id, $selectedLeaderIds, true)
+                    ? $department->leader_id : ($selectedLeaderIds[0] ?? null);
+            }
+        }
+
         if ($request->hasFile('logo')) {
             if ($department->logo_url) {
                 Storage::disk('public')->delete($department->logo_url);
@@ -373,12 +400,18 @@ class DepartmentController extends Controller
 
         // Sincronizar líderes
         if (isset($validated['leaders'])) {
-            $department->leaders()->sync($validated['leaders'] ?? []);
+            $unavailableLeaderIds = DB::table('department_leaders')->where('department_id', $department->id)
+                ->whereNotIn('member_id', Member::whereNull('deleted_at')->select('id'))->pluck('member_id')->all();
+            $department->leaders()->sync(array_unique(array_merge($validated['leaders'] ?? [], $unavailableLeaderIds)));
         }
 
         // Sincronizar membros
         if (isset($validated['members'])) {
-            $department->members()->sync($validated['members']);
+            $department->loadMissing(['roles.responsibleMember', 'roles.responsibleMembers', 'roles.departmentMembers.member']);
+            $responsibleIds = $department->roles->flatMap(fn ($role) => $role->assigned_members->pluck('id'))->unique()->all();
+            $unavailableMemberIds = DB::table('department_members')->where('department_id', $department->id)
+                ->whereNotIn('member_id', Member::whereNull('deleted_at')->select('id'))->pluck('member_id')->all();
+            $department->members()->sync(array_unique(array_merge($validated['members'], $responsibleIds, $unavailableMemberIds)));
         }
 
         // Atualizar/criar/excluir cargos

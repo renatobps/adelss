@@ -22,73 +22,105 @@
     $canDeleteCategories = $isAdmin || $user->hasPermission('agenda.categories.delete') || $user->hasPermission('agenda.categories.manage');
 @endphp
 
-<div class="row">
-    <div class="col-lg-9">
-        <section class="card">
-            <header class="card-header">
-                <div class="d-flex justify-content-between align-items-center w-100">
-                    <h2 class="card-title mb-0">Calendário</h2>
-                    <div>
-                        <button type="button" class="btn btn-sm btn-primary" id="btnMonth">Mês</button>
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnListMonthly">Lista mensal</button>
-                        <button type="button" class="btn btn-sm btn-outline-primary" id="btnListWeekly">Lista semanal</button>
-                    </div>
+<div class="agenda-page" id="agendaWorkspace">
+    <header class="agenda-hero">
+        <div class="agenda-hero-icon" aria-hidden="true"><i class="bx bx-calendar"></i></div>
+        <div class="agenda-hero-copy"><span class="agenda-eyebrow">Planejamento e encontros</span><h1>Agenda da igreja</h1><p>Uma visão dos cultos, encontros e eventos dos departamentos.</p></div>
+        @if($canCreateEvents)<button type="button" class="btn btn-primary agenda-create" id="btnNewEvent"><i class="bx bx-plus" aria-hidden="true"></i>Novo evento</button>@endif
+    </header>
+    <div class="agenda-layout">
+        <section class="agenda-calendar-panel" aria-label="Calendário da agenda">
+            <div class="agenda-calendar-toolbar">
+                <div class="agenda-period-navigation">
+                    <div class="agenda-arrows"><button type="button" id="agendaPrev" aria-label="Período anterior"><i class="bx bx-chevron-left" aria-hidden="true"></i></button><button type="button" id="agendaNext" aria-label="Próximo período"><i class="bx bx-chevron-right" aria-hidden="true"></i></button></div>
+                    <h2 id="agendaPeriodTitle" aria-live="polite">Calendário</h2>
+                    <button type="button" class="btn btn-outline-secondary" id="agendaToday">Hoje</button>
                 </div>
-            </header>
-            <div class="card-body">
-                <div id="calendar"></div>
+                <div class="agenda-view-switch" role="group" aria-label="Visualização do calendário">
+                    <button type="button" id="btnMonth" aria-pressed="true"><i class="bx bx-calendar" aria-hidden="true"></i>Mês</button>
+                    <button type="button" id="btnListMonthly" aria-pressed="false"><i class="bx bx-list-ul" aria-hidden="true"></i>Lista mensal</button>
+                    <button type="button" id="btnListWeekly" aria-pressed="false"><i class="bx bx-calendar-week" aria-hidden="true"></i>Semana</button>
+                </div>
             </div>
+            <div class="agenda-filter-toolbar">
+                <div class="agenda-search"><i class="bx bx-search" aria-hidden="true"></i><label for="agendaSearch" class="visually-hidden">Buscar eventos no período</label><input id="agendaSearch" type="search" class="form-control" placeholder="Buscar evento, local ou departamento..." autocomplete="off"></div>
+                <div class="agenda-month-jump"><label for="agendaMonthJump">Ir para</label><input id="agendaMonthJump" type="month" class="form-control" aria-label="Ir para mês"></div>
+                <button type="button" id="agendaRefresh" class="agenda-icon-button" aria-label="Atualizar eventos" title="Atualizar eventos"><i class="bx bx-refresh" aria-hidden="true"></i></button>
+            </div>
+            <div class="agenda-result-bar"><span id="agendaResultCount" role="status">Carregando eventos...</span><span class="agenda-tip">@if($canCreateEvents)Selecione uma data para criar um evento.@else Selecione um evento para ver os detalhes.@endif</span></div>
+            <div class="agenda-notice" id="agendaLoadError" role="alert" hidden>Não foi possível carregar os eventos. <button type="button" id="agendaRetry">Tentar novamente</button></div>
+            <div class="agenda-notice agenda-notice--empty" id="agendaEmpty" hidden>Nenhum evento encontrado neste período com os filtros selecionados. <button type="button" id="agendaClearFilters">Limpar filtros</button></div>
+            <div class="agenda-calendar-body"><div id="calendar" aria-busy="true"></div></div>
         </section>
-    </div>
-    <div class="col-lg-3">
-        <section class="card">
-            <header class="card-header">
-                <h2 class="card-title">Categorias</h2>
-            </header>
-            <div class="card-body">
-                @if($canCreateCategories)
-                <form id="categoryForm">
-                    @csrf
-                    <div class="mb-3">
-                        <input type="text" class="form-control" id="categoryName" placeholder="Nova categoria" required>
-                    </div>
-                    <div class="mb-3">
-                        <input type="color" class="form-control form-control-color" id="categoryColor" value="#0088cc" title="Escolha a cor">
-                    </div>
-                    <button type="submit" class="btn btn-success w-100">
-                        <i class="bx bx-plus me-1"></i>Adicionar
-                    </button>
-                </form>
-                <hr>
-                @endif
-                <div id="categoriesList">
+        <aside class="agenda-sidebar" aria-label="Filtros e próximos eventos">
+            <section class="agenda-side-panel">
+                <div class="agenda-side-heading"><h2>Filtrar agenda</h2><i class="bx bx-filter-alt" aria-hidden="true"></i></div>
+                <label for="agendaSource" class="form-label">Origem dos eventos</label>
+                <select id="agendaSource" class="form-select"><option value="all">Toda a agenda</option><option value="agenda">Eventos da Agenda</option><option value="department">Eventos dos departamentos</option></select>
+                <div class="agenda-category-heading"><h3>Categorias da Agenda</h3><button type="button" id="agendaAllCategories">Marcar todas</button></div>
+                <div id="categoriesList" class="agenda-categories">
                     @foreach($categories as $category)
-                        <div class="d-flex align-items-center justify-content-between mb-2 p-2 border rounded category-item" data-category-id="{{ $category->id }}">
-                            <div class="d-flex align-items-center">
-                                <span class="badge me-2" style="background-color: {{ $category->color }}; width: 20px; height: 20px; display: inline-block; border-radius: 4px;"></span>
-                                <span>{{ $category->name }}</span>
-                            </div>
-                            @if($canDeleteCategories)
-                            <button type="button" class="btn btn-sm btn-danger btn-delete-category" data-category-id="{{ $category->id }}" title="Remover categoria">
-                                <i class="bx bx-trash"></i>
-                            </button>
-                            @endif
+                        <div class="category-item" data-category-id="{{ $category->id }}">
+                            <label><input type="checkbox" data-category-filter value="{{ $category->id }}" checked><span class="agenda-color-dot" style="background:{{ preg_match('/^#[0-9a-f]{6}$/i', $category->color) ? $category->color : '#0088cc' }}" aria-hidden="true"></span><span>{{ $category->name }}</span></label>
+                            @if($canDeleteCategories)<button type="button" class="agenda-icon-button btn-delete-category" data-category-id="{{ $category->id }}" title="Remover categoria {{ $category->name }}" aria-label="Remover categoria {{ $category->name }}"><i class="bx bx-trash" aria-hidden="true"></i></button>@endif
                         </div>
                     @endforeach
                 </div>
+                <label class="agenda-uncategorized"><input type="checkbox" id="agendaUncategorized" checked> Sem categoria</label>
+                <p class="agenda-side-help">Os eventos dos departamentos mantêm a cor e a identificação de sua equipe.</p>
+                @if($canCreateCategories)
+                    <details class="agenda-category-create"><summary><i class="bx bx-plus" aria-hidden="true"></i>Nova categoria</summary>
+                        <form id="categoryForm">@csrf<label for="categoryName" class="form-label">Nome da categoria</label><input type="text" class="form-control" id="categoryName" maxlength="255" required><div class="d-flex gap-2 mt-3"><label for="categoryColor" class="visually-hidden">Cor da categoria</label><input type="color" class="form-control form-control-color" id="categoryColor" value="#0088cc" title="Cor da categoria"><button type="submit" class="btn btn-outline-primary flex-grow-1"><i class="bx bx-plus" aria-hidden="true"></i>Adicionar</button></div></form>
+                    </details>
+                @endif
+            </section>
+            <section class="agenda-side-panel"><div class="agenda-side-heading"><h2>A seguir</h2><i class="bx bx-time-five" aria-hidden="true"></i></div><p class="agenda-side-help">Próximos eventos no período selecionado.</p><div id="agendaUpcoming" class="agenda-upcoming"><p class="agenda-side-help">Carregando...</p></div></section>
+        </aside>
+    </div>
+</div>
+
+<div class="modal fade agenda-detail-modal" id="agendaDetailModal" tabindex="-1" aria-labelledby="agendaDetailTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down"><div class="modal-content">
+        <div class="modal-header"><div><span class="agenda-eyebrow">Evento da Agenda</span><h2 class="modal-title h4" id="agendaDetailTitle"></h2></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div>
+        <div class="modal-body"><dl class="agenda-detail-list"><dt>Quando</dt><dd id="agendaDetailDates"></dd><dt>Local</dt><dd id="agendaDetailLocation"></dd><dt>Descrição</dt><dd id="agendaDetailDescription" style="white-space:pre-wrap;overflow-wrap:anywhere"></dd></dl></div>
+        <div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button></div>
+    </div></div>
+</div>
+
+<div class="modal fade agenda-detail-modal" id="departmentEventModal" tabindex="-1" aria-labelledby="departmentEventModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="departmentEventModalLabel">Evento do departamento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
-        </section>
+            <div class="modal-body">
+                <h2 class="h5" id="departmentEventTitle"></h2>
+                <dl class="agenda-detail-list">
+                    <dt>Departamento</dt><dd id="departmentEventName"></dd>
+                    <dt>Início</dt><dd id="departmentEventStart"></dd>
+                    <div id="departmentEventEndRow"><dt>Término</dt><dd id="departmentEventEnd"></dd></div>
+                    <dt>Local</dt><dd id="departmentEventLocation"></dd>
+                    <dt>Descrição</dt><dd id="departmentEventDescription" style="white-space:pre-wrap; overflow-wrap:anywhere"></dd>
+                </dl>
+            </div>
+            <div class="modal-footer">
+                <a class="btn btn-default" id="departmentEventDetailLink" hidden>Abrir em Departamentos</a>
+                <a class="btn btn-primary" id="departmentEventEditLink" hidden>Editar em Departamentos</a>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
     </div>
 </div>
 
 <!-- Modal Adicionar/Editar Evento -->
 @if($canCreateEvents || $canEditEvents)
-<div class="modal fade" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
+<div class="modal fade agenda-event-modal" id="addEventModal" tabindex="-1" aria-labelledby="addEventModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-fullscreen-sm-down">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="addEventModalLabel">Adicionar</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title" id="addEventModalLabel">Novo evento</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <form id="eventForm" enctype="multipart/form-data">
                 @csrf
@@ -119,17 +151,17 @@
                         <div class="col-md-4">
                             <label for="eventStartTime" class="form-label">Hora Início</label>
                             <div class="d-flex align-items-center">
-                                <input type="number" class="form-control" id="eventStartTimeHour" min="0" max="23" value="19" style="width: 60px;">
+                                <input type="number" class="form-control" id="eventStartTimeHour" aria-label="Hora de início" min="0" max="23" value="19" style="width: 60px;">
                                 <span class="mx-2">:</span>
-                                <input type="number" class="form-control" id="eventStartTimeMinute" min="0" max="59" value="30" style="width: 60px;">
+                                <input type="number" class="form-control" id="eventStartTimeMinute" aria-label="Minutos de início" min="0" max="59" value="30" style="width: 60px;">
                             </div>
                         </div>
                         <div class="col-md-4">
                             <label for="eventEndTime" class="form-label">Hora Fim</label>
                             <div class="d-flex align-items-center">
-                                <input type="number" class="form-control" id="eventEndTimeHour" min="0" max="23" value="21" style="width: 60px;">
+                                <input type="number" class="form-control" id="eventEndTimeHour" aria-label="Hora de término" min="0" max="23" value="21" style="width: 60px;">
                                 <span class="mx-2">:</span>
-                                <input type="number" class="form-control" id="eventEndTimeMinute" min="0" max="59" value="0" style="width: 60px;">
+                                <input type="number" class="form-control" id="eventEndTimeMinute" aria-label="Minutos de término" min="0" max="59" value="0" style="width: 60px;">
                             </div>
                         </div>
                     </div>
@@ -181,7 +213,7 @@
                     
                     <div class="mb-3">
                         <label for="eventDescription" class="form-label">Descrição</label>
-                        <textarea class="form-control" id="eventDescription" name="description" rows="5" placeholder="Insert text here..."></textarea>
+                        <textarea class="form-control" id="eventDescription" name="description" rows="5" placeholder="Descreva o encontro, a programação ou as orientações para os participantes..."></textarea>
                     </div>
                     <div class="mb-3">
                         <label for="eventBannerImage" class="form-label">Imagem do evento</label>
@@ -217,7 +249,7 @@
         <div class="modal-content">
             <div class="modal-header bg-danger text-white">
                 <h5 class="modal-title" id="deleteEventModalLabel">Remover Evento</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
                 <p>Este evento faz parte de uma série recorrente. O que deseja fazer?</p>
@@ -245,7 +277,7 @@
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title" id="updateEventModalLabel">Editar Evento</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
             <div class="modal-body">
                 <p>Este evento faz parte de uma série recorrente. O que deseja fazer?</p>
@@ -268,23 +300,12 @@
 @endsection
 
 @push('styles')
-<style>
-    .fc-event {
-        cursor: pointer !important;
-        transition: opacity 0.2s;
-    }
-    .fc-event:hover {
-        opacity: 0.8;
-    }
-    .fc-event-title {
-        font-weight: 500;
-    }
-</style>
+<link rel="stylesheet" href="{{ asset('css/css/agenda-calendar.css') }}?v={{ filemtime(public_path('css/css/agenda-calendar.css')) }}">
 @endpush
 
 @push('scripts')
-<link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css' rel='stylesheet' />
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
+<script src="{{ asset('js/agenda-calendar-utils.js') }}?v={{ filemtime(public_path('js/agenda-calendar-utils.js')) }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
@@ -296,15 +317,91 @@ document.addEventListener('DOMContentLoaded', function() {
         const clean = text.replace(/^\uFEFF/, '').trim();
         return clean ? JSON.parse(clean) : {};
     }
+
+    function showDepartmentEvent(event) {
+        const details = event.extendedProps;
+        document.getElementById('departmentEventTitle').textContent = details.eventTitle;
+        document.getElementById('departmentEventName').textContent = details.departmentName;
+        document.getElementById('departmentEventStart').textContent = details.displayStart + (event.allDay ? ' · Dia inteiro' : '');
+        document.getElementById('departmentEventEndRow').hidden = !details.displayEnd;
+        document.getElementById('departmentEventEnd').textContent = details.displayEnd || '';
+        document.getElementById('departmentEventLocation').textContent = details.location || 'Não informado';
+        document.getElementById('departmentEventDescription').textContent = details.description || 'Não informada';
+        for (const [id, url] of [
+            ['departmentEventDetailLink', details.detailUrl],
+            ['departmentEventEditLink', details.editUrl],
+        ]) {
+            const link = document.getElementById(id);
+            link.hidden = !url;
+            if (url) link.href = url;
+            else link.removeAttribute('href');
+        }
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('departmentEventModal')).show();
+    }
     
+    const ui = window.AdelAgenda;
+    const sourceFilter = document.getElementById('agendaSource');
+    const searchInput = document.getElementById('agendaSearch');
+    const errorNotice = document.getElementById('agendaLoadError');
+    let cachedRange = null;
+    let cachedEvents = [];
+    let requestSequence = 0;
+    let userSelectedView = false;
+    const categoryFilters = () => Array.from(document.querySelectorAll('[data-category-filter]:checked')).map(input => input.value).concat(document.getElementById('agendaUncategorized').checked ? ['none'] : []);
+    const filters = () => ({ source: sourceFilter.value, search: searchInput.value, categories: categoryFilters() });
+    function reloadCalendarEvents() {
+        cachedRange = null;
+        calendar.refetchEvents();
+    }
+    function showNativeEvent(event) {
+        document.getElementById('agendaDetailTitle').textContent = event.title;
+        const start = [event.start_date?.split('-').reverse().join('/'), event.all_day ? 'Dia inteiro' : event.start_time].filter(Boolean).join(' · ');
+        const end = event.end_date ? [event.end_date.split('-').reverse().join('/'), event.all_day ? '' : event.end_time].filter(Boolean).join(' · ') : '';
+        document.getElementById('agendaDetailDates').textContent = start + (end ? ' — ' + end : '');
+        document.getElementById('agendaDetailLocation').textContent = event.location || 'Não informado';
+        document.getElementById('agendaDetailDescription').textContent = event.description || 'Não informada';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('agendaDetailModal')).show();
+    }
+    function updateOverview(events) {
+        if (!errorNotice.hidden || (cachedRange === null && calendarEl.getAttribute('aria-busy') === 'true')) return;
+        const view = calendar.view;
+        const visible = events.filter(event => ui.inPeriod(event, view.currentStart, view.currentEnd));
+        const departments = visible.filter(ui.isDepartment).length;
+        document.getElementById('agendaResultCount').textContent = `${visible.length} ${visible.length === 1 ? 'evento' : 'eventos'} no período${departments ? ` · ${departments} de departamentos` : ''}`;
+        document.getElementById('agendaEmpty').hidden = visible.length !== 0;
+        const container = document.getElementById('agendaUpcoming');
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const upcoming = visible.filter(event => (event.end || event.start) >= today).sort((a, b) => a.start - b.start).slice(0, 4);
+        const fragment = document.createDocumentFragment();
+        upcoming.forEach(event => {
+            const button = document.createElement('button');
+            button.type = 'button'; button.className = 'agenda-upcoming-item';
+            const badge = document.createElement('span'); badge.className = 'agenda-upcoming-date';
+            const day = document.createElement('span'); day.textContent = String(event.start.getDate()).padStart(2, '0');
+            const month = document.createElement('small'); month.textContent = event.start.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+            badge.append(day, month);
+            const copy = document.createElement('span'); copy.className = 'agenda-upcoming-copy';
+            const title = document.createElement('strong'); title.textContent = event.title;
+            const time = document.createElement('small'); time.textContent = event.allDay ? 'Dia inteiro' : event.start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            copy.append(title, time); button.append(badge, copy);
+            button.addEventListener('click', () => openCalendarEvent(event));
+            fragment.appendChild(button);
+        });
+        if (!upcoming.length) {
+            const empty = document.createElement('p'); empty.className = 'agenda-side-help'; empty.textContent = 'Nenhum próximo evento neste período com os filtros atuais.'; fragment.appendChild(empty);
+        }
+        container.replaceChildren(fragment);
+    }
+    function updateViewButtons(type) {
+        for (const [id, view] of [['btnMonth', 'dayGridMonth'], ['btnListMonthly', 'listMonth'], ['btnListWeekly', 'listWeek']]) {
+            document.getElementById(id).setAttribute('aria-pressed', String(type === view));
+        }
+    }
+
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: currentView,
         locale: 'pt-br',
-        headerToolbar: {
-            left: 'prev,next today',
-            center: 'title',
-            right: ''
-        },
+        headerToolbar: false,
         buttonText: {
             today: 'Hoje',
             month: 'Mês',
@@ -312,43 +409,73 @@ document.addEventListener('DOMContentLoaded', function() {
             day: 'Dia'
         },
         events: async function(info, successCallback, failureCallback) {
+            const sequence = ++requestSequence;
+            const range = `${info.startStr}|${info.endStr}`;
+            calendarEl.setAttribute('aria-busy', 'true');
+            errorNotice.hidden = true;
             try {
-                const url = new URL('{{ route("agenda.events.index") }}', window.location.origin);
-                url.searchParams.set('start', info.startStr);
-                url.searchParams.set('end', info.endStr);
-                const response = await fetch(url.toString(), {
-                    headers: { 'Accept': 'application/json' }
-                });
-                const data = await parseJsonResponse(response);
-                if (!response.ok) {
-                    throw new Error(data.message || 'Erro ao carregar eventos');
+                if (cachedRange !== range) {
+                    const url = new URL('{{ route("agenda.events.index") }}', window.location.origin);
+                    url.searchParams.set('start', info.startStr);
+                    url.searchParams.set('end', info.endStr);
+                    const response = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+                    const data = await parseJsonResponse(response);
+                    if (!response.ok) throw new Error(data.message || 'Erro ao carregar eventos');
+                    if (sequence !== requestSequence) return successCallback([]);
+                    cachedEvents = Array.isArray(data) ? data : [];
+                    cachedRange = range;
                 }
-                successCallback(Array.isArray(data) ? data : []);
+                successCallback(ui.filterEvents(cachedEvents, filters()));
             } catch (error) {
-                console.error('Erro ao carregar eventos:', error);
+                if (sequence !== requestSequence) return successCallback([]);
+                errorNotice.hidden = false;
+                document.getElementById('agendaResultCount').textContent = 'Eventos indisponíveis';
+                document.getElementById('agendaEmpty').hidden = true;
                 failureCallback(error);
+            } finally {
+                if (sequence === requestSequence) calendarEl.setAttribute('aria-busy', 'false');
             }
         },
+        datesSet: function(info) {
+            document.getElementById('agendaPeriodTitle').textContent = info.view.title;
+            document.getElementById('agendaMonthJump').value = ui.localDate(info.view.currentStart).slice(0, 7);
+            updateViewButtons(info.view.type);
+        },
+        eventsSet: updateOverview,
+        height: 'auto',
+        fixedWeekCount: false,
+        dayMaxEvents: 3,
+        moreLinkText: count => `+${count} eventos`,
+        noEventsText: 'Nenhum evento neste período.',
+        allDayText: 'Dia inteiro',
+        eventTimeFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
         editable: false,
         selectable: {{ ($canCreateEvents) ? 'true' : 'false' }},
         selectMirror: {{ ($canCreateEvents) ? 'true' : 'false' }},
-        dayMaxEvents: true,
         eventInteractive: true,
         eventDisplay: 'block',
         eventTextColor: '#ffffff',
         eventDidMount: function(arg) {
             arg.el.style.cursor = 'pointer';
             arg.el.style.fontWeight = '500';
+            if (!arg.el.classList.contains('fc-list-event')) {
+                arg.el.style.color = ui.textColor(arg.event.backgroundColor);
+                const main = arg.el.querySelector('.fc-event-main');
+                if (main) main.style.color = ui.textColor(arg.event.backgroundColor);
+            }
+            if (arg.event.extendedProps.sourceType === 'department') {
+                arg.el.title = arg.event.title;
+            }
         },
         select: function(arg) {
             @if($canCreateEvents)
             selectedDate = arg.startStr;
             resetEventForm();
             const startDate = new Date(arg.start);
-            document.getElementById('eventStartDate').value = startDate.toISOString().split('T')[0];
-            document.getElementById('eventEndDate').value = startDate.toISOString().split('T')[0];
-            document.getElementById('addEventModalLabel').textContent = 'Adicionar';
-            document.getElementById('btnDeleteEvent').style.display = 'none';
+            document.getElementById('eventStartDate').value = ui.localDate(startDate);
+            document.getElementById('eventEndDate').value = ui.localDate(startDate);
+            document.getElementById('addEventModalLabel').textContent = 'Novo evento';
+            if (document.getElementById('btnDeleteEvent')) document.getElementById('btnDeleteEvent').style.display = 'none';
             const modal = new bootstrap.Modal(document.getElementById('addEventModal'));
             modal.show();
             calendar.unselect();
@@ -357,11 +484,18 @@ document.addEventListener('DOMContentLoaded', function() {
             @endif
         },
         eventClick: function(arg) {
-            // Prevenir comportamento padrão
             arg.jsEvent.preventDefault();
+            openCalendarEvent(arg.event);
+        }
+    });
+    function openCalendarEvent(event) {
+            if (event.extendedProps.sourceType === 'department') {
+                showDepartmentEvent(event);
+                return;
+            }
             
             // Buscar dados do evento
-            const eventId = arg.event.id;
+            const eventId = event.id;
             
             if (!eventId) {
                 console.error('Event ID não encontrado');
@@ -371,8 +505,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const url = '{{ route("agenda.events.show", ":id") }}'.replace(':id', eventId);
             
-            console.log('Carregando evento ID:', eventId);
-            console.log('URL:', url);
             
             fetch(url, {
                 method: 'GET',
@@ -388,23 +520,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     return response.json();
                 })
                 .then(data => {
-                    console.log('Dados recebidos:', data);
                     if (data.success && data.event) {
                         @if($canEditEvents)
                         loadEventToForm(data.event);
-                        document.getElementById('addEventModalLabel').textContent = 'Editar - ID ' + data.event.id;
-                        document.getElementById('btnDeleteEvent').style.display = 'block';
+                        document.getElementById('addEventModalLabel').textContent = 'Editar evento';
+                        if (document.getElementById('btnDeleteEvent')) document.getElementById('btnDeleteEvent').style.display = 'block';
                         const modal = new bootstrap.Modal(document.getElementById('addEventModal'));
                         modal.show();
                         @else
-                        // Para usuários comuns, apenas mostrar informações do evento
-                        const event = data.event;
-                        let info = 'Evento: ' + event.title + '\n';
-                        if (event.description) info += 'Descrição: ' + event.description + '\n';
-                        if (event.location) info += 'Local: ' + event.location + '\n';
-                        if (event.start_date) info += 'Data: ' + event.start_date + '\n';
-                        if (event.start_time) info += 'Hora: ' + event.start_time;
-                        alert(info);
+                        showNativeEvent(data.event);
                         @endif
                     } else {
                         console.error('Resposta sem sucesso:', data);
@@ -415,60 +539,61 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Erro ao buscar evento:', error);
                     alert('Erro ao carregar evento: ' + error.message);
                 });
-        }
-    });
-    
+    }
+
     calendar.render();
 
-    const mobileCalendarQuery = window.matchMedia('(max-width: 767.98px)');
-    const syncCalendarView = () => {
-        const targetView = mobileCalendarQuery.matches ? 'listWeek' : 'dayGridMonth';
-        if (calendar.view.type !== targetView) {
-            calendar.changeView(targetView);
-            currentView = targetView;
-        }
-    };
-    mobileCalendarQuery.addEventListener('change', syncCalendarView);
-    
-    // Botões de visualização
-    document.getElementById('btnMonth').addEventListener('click', function() {
-        calendar.changeView('dayGridMonth');
-        currentView = 'dayGridMonth';
-        updateButtons('month');
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) reloadCalendarEvents();
     });
-    
-    document.getElementById('btnListMonthly').addEventListener('click', function() {
-        calendar.changeView('listMonth');
-        currentView = 'listMonth';
-        updateButtons('listMonthly');
+    document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'visible') reloadCalendarEvents();
     });
-    
-    document.getElementById('btnListWeekly').addEventListener('click', function() {
-        calendar.changeView('listWeek');
-        currentView = 'listWeek';
-        updateButtons('listWeekly');
+
+    document.getElementById('agendaPrev').addEventListener('click', () => calendar.prev());
+    document.getElementById('agendaNext').addEventListener('click', () => calendar.next());
+    document.getElementById('agendaToday').addEventListener('click', () => calendar.today());
+    document.getElementById('agendaMonthJump').addEventListener('change', event => {
+        if (/^\d{4}-\d{2}$/.test(event.target.value)) calendar.gotoDate(event.target.value + '-01');
     });
-    
-    function updateButtons(active) {
-        document.getElementById('btnMonth').classList.remove('btn-primary');
-        document.getElementById('btnMonth').classList.add('btn-outline-primary');
-        document.getElementById('btnListMonthly').classList.remove('btn-primary');
-        document.getElementById('btnListMonthly').classList.add('btn-outline-primary');
-        document.getElementById('btnListWeekly').classList.remove('btn-primary');
-        document.getElementById('btnListWeekly').classList.add('btn-outline-primary');
-        
-        if (active === 'month') {
-            document.getElementById('btnMonth').classList.remove('btn-outline-primary');
-            document.getElementById('btnMonth').classList.add('btn-primary');
-        } else if (active === 'listMonthly') {
-            document.getElementById('btnListMonthly').classList.remove('btn-outline-primary');
-            document.getElementById('btnListMonthly').classList.add('btn-primary');
-        } else if (active === 'listWeekly') {
-            document.getElementById('btnListWeekly').classList.remove('btn-outline-primary');
-            document.getElementById('btnListWeekly').classList.add('btn-primary');
-        }
+    document.getElementById('agendaRefresh').addEventListener('click', reloadCalendarEvents);
+    document.getElementById('agendaRetry').addEventListener('click', reloadCalendarEvents);
+    for (const [id, view] of [['btnMonth', 'dayGridMonth'], ['btnListMonthly', 'listMonth'], ['btnListWeekly', 'listWeek']]) {
+        document.getElementById(id).addEventListener('click', () => {
+            userSelectedView = true; currentView = view; calendar.changeView(view);
+        });
     }
-    
+    const mobileCalendarQuery = window.matchMedia('(max-width: 767.98px)');
+    mobileCalendarQuery.addEventListener('change', () => {
+        if (!userSelectedView) calendar.changeView(mobileCalendarQuery.matches ? 'listWeek' : 'dayGridMonth');
+        calendar.updateSize();
+    });
+    sourceFilter.addEventListener('change', () => calendar.refetchEvents());
+    let searchTimer;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimer); searchTimer = setTimeout(() => calendar.refetchEvents(), 180);
+    });
+    document.getElementById('categoriesList').addEventListener('change', () => calendar.refetchEvents());
+    document.getElementById('agendaUncategorized').addEventListener('change', () => calendar.refetchEvents());
+    document.getElementById('agendaAllCategories').addEventListener('click', () => {
+        document.querySelectorAll('[data-category-filter]').forEach(input => { input.checked = true; });
+        document.getElementById('agendaUncategorized').checked = true; calendar.refetchEvents();
+    });
+    document.getElementById('agendaClearFilters').addEventListener('click', () => {
+        sourceFilter.value = 'all'; searchInput.value = '';
+        document.querySelectorAll('[data-category-filter]').forEach(input => { input.checked = true; });
+        document.getElementById('agendaUncategorized').checked = true; calendar.refetchEvents();
+    });
+    @if($canCreateEvents)
+    document.getElementById('btnNewEvent').addEventListener('click', () => {
+        resetEventForm();
+        const date = ui.localDate(calendar.getDate());
+        document.getElementById('eventStartDate').value = date;
+        document.getElementById('eventEndDate').value = date;
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('addEventModal')).show();
+    });
+    @endif
+
     // Formulário de categoria (somente admin)
     @if($canCreateCategories)
     const categoryForm = document.getElementById('categoryForm');
@@ -499,17 +624,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Adicionar categoria à lista
                     const categoriesList = document.getElementById('categoriesList');
                     const categoryDiv = document.createElement('div');
-                    categoryDiv.className = 'd-flex align-items-center justify-content-between mb-2 p-2 border rounded category-item';
-                    categoryDiv.setAttribute('data-category-id', data.category.id);
-                    categoryDiv.innerHTML = `
-                        <div class="d-flex align-items-center">
-                            <span class="badge me-2" style="background-color: ${data.category.color}; width: 20px; height: 20px; display: inline-block; border-radius: 4px;"></span>
-                            <span>${data.category.name}</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-danger btn-delete-category" data-category-id="${data.category.id}" title="Remover categoria">
-                            <i class="bx bx-trash"></i>
-                        </button>
-                    `;
+                    categoryDiv.className = 'category-item';
+                    categoryDiv.dataset.categoryId = data.category.id;
+                    const label = document.createElement('label');
+                    const checkbox = document.createElement('input'); checkbox.type = 'checkbox'; checkbox.checked = true; checkbox.dataset.categoryFilter = ''; checkbox.value = data.category.id;
+                    const dot = document.createElement('span'); dot.className = 'agenda-color-dot'; dot.style.backgroundColor = data.category.color;
+                    const name = document.createElement('span'); name.textContent = data.category.name;
+                    label.append(checkbox, dot, name); categoryDiv.appendChild(label);
+                    @if($canDeleteCategories)
+                    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'agenda-icon-button btn-delete-category'; remove.dataset.categoryId = data.category.id;
+                    remove.setAttribute('aria-label', 'Remover categoria ' + data.category.name);
+                    const icon = document.createElement('i'); icon.className = 'bx bx-trash'; icon.setAttribute('aria-hidden', 'true'); remove.appendChild(icon); categoryDiv.appendChild(remove);
+                    @endif
                     categoriesList.appendChild(categoryDiv);
                     
                     // Adicionar ao select de categorias
@@ -571,8 +697,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function resetEventForm() {
         document.getElementById('eventForm').reset();
         document.getElementById('eventId').value = '';
-        document.getElementById('addEventModalLabel').textContent = 'Adicionar';
-        document.getElementById('btnDeleteEvent').style.display = 'none';
+        document.getElementById('addEventModalLabel').textContent = 'Novo evento';
+        if (document.getElementById('btnDeleteEvent')) document.getElementById('btnDeleteEvent').style.display = 'none';
         
         // Resetar horas padrão
         document.getElementById('eventStartTimeHour').value = 19;
@@ -623,7 +749,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .then(data => {
             if (data.success) {
-                calendar.refetchEvents();
+                reloadCalendarEvents();
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addEventModal'));
                 if (modal) modal.hide();
                 resetEventForm();
@@ -797,7 +923,7 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                calendar.refetchEvents();
+                reloadCalendarEvents();
                 const modal = bootstrap.Modal.getInstance(document.getElementById('addEventModal'));
                 if (modal) modal.hide();
                 const deleteModal = bootstrap.Modal.getInstance(document.getElementById('deleteEventModal'));
@@ -897,7 +1023,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
 
                         // Recarregar eventos do calendário para atualizar categorias
-                        calendar.refetchEvents();
+                        reloadCalendarEvents();
                     } else {
                         alert(data.message || 'Erro ao remover categoria');
                     }

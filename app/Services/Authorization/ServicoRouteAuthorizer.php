@@ -43,6 +43,13 @@ class ServicoRouteAuthorizer
         $action = $request->route()?->getActionMethod() ?? '';
 
         if (str_starts_with($routeName, 'departments')) {
+            if (str_contains($routeName, '.notifications.')) {
+                $action = 'update';
+            }
+            // Role management was already part of editing a department.
+            if (str_starts_with($routeName, 'departments.administration.') && $action !== 'index') {
+                $action = 'update';
+            }
             return $this->authorizeCrudRoute(
                 $user,
                 $this->departmentPolicy,

@@ -13,14 +13,12 @@ class ServicoModulePolicy
         }
 
         $viewPermissions = [
-            'servico.departments.view',
             'servico.voluntarios.cadastro.view',
             'servico.voluntarios.areas.view',
             'servico.voluntarios.disponibilidade.view',
             'servico.voluntarios.escalas.view',
             'servico.voluntarios.historico.view',
             'servico.voluntarios.relatorios.view',
-            'servico.departments.manage',
             'servico.voluntarios.cadastro.manage',
             'servico.voluntarios.areas.manage',
             'servico.voluntarios.disponibilidade.manage',

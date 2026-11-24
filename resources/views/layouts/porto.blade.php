@@ -47,6 +47,9 @@
     <link rel="shortcut icon" type="image/png" href="{{ asset('img/img/LOG SS AZUL.png') }}" />
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('img/img/LOG SS AZUL.png') }}" />
 
+    @if(request()->routeIs('departments.*'))
+        @include('departments.partials.styles')
+    @endif
     @stack('styles')
 </head>
 <body>
@@ -254,7 +257,6 @@
                     $isCultosModule = request()->routeIs('cultos.*');
                     $isAgendaModule = request()->routeIs('agenda.*');
                     $isServicoModule = request()->routeIs('servico.*')
-                        || request()->routeIs('departments.*')
                         || request()->routeIs('voluntarios.*');
                     $isRifasModule = request()->routeIs('rifas.*');
                     $isEventosModule = request()->routeIs('eventos.*');
@@ -389,6 +391,9 @@
                 @endif
                 @if($isServicoModule)
                     @include('servico.partials.module-nav')
+                @endif
+                @if(request()->routeIs('departments.*'))
+                    @include('departments.partials.module-nav')
                 @endif
                 @if($isRifasModule)
                     @include('rifas.partials.module-nav')

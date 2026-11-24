@@ -262,16 +262,28 @@ class ModuleMenu
             'category' => self::CATEGORY_MODULES,
         ];
 
-        // Serviço
+        // Departamentos keeps its existing permission keys and data links.
         $canViewDepartments = $can('servico.departments.view', 'servico.departments.manage');
+        if ($canViewDepartments) {
+            $items[] = [
+                'key' => 'departments',
+                'label' => 'Departamentos',
+                'icon' => 'bx bx-building',
+                'url' => route('departments.index'),
+                'patterns' => ['departments.*'],
+                'category' => self::CATEGORY_MODULES,
+            ];
+        }
+
+        // Serviço
         $canViewVolCadastro = $can('servico.voluntarios.cadastro.view', 'servico.voluntarios.cadastro.manage');
         $canViewVolAreas = $can('servico.voluntarios.areas.view', 'servico.voluntarios.areas.manage');
         $canViewVolEscalas = $can('servico.voluntarios.escalas.view', 'servico.voluntarios.escalas.manage');
         $canViewVolHistorico = $can('servico.voluntarios.historico.view', 'servico.voluntarios.historico.manage');
         $canViewVolRelatorios = $can('servico.voluntarios.relatorios.view', 'servico.voluntarios.relatorios.manage');
-        if ($isAdmin || $canViewDepartments || $canViewVolCadastro || $canViewVolAreas || $canViewVolEscalas || $canViewVolHistorico || $canViewVolRelatorios) {
-            if ($isAdmin || $canViewDepartments) {
-                $servicoUrl = route('departments.index');
+        if ($isAdmin || $canViewVolCadastro || $canViewVolAreas || $canViewVolEscalas || $canViewVolHistorico || $canViewVolRelatorios) {
+            if ($isAdmin || $canViewVolCadastro) {
+                $servicoUrl = route('voluntarios.cadastro.index');
             } elseif ($canViewVolAreas) {
                 $servicoUrl = route('voluntarios.areas.index');
             } elseif ($canViewVolEscalas) {
@@ -287,7 +299,7 @@ class ModuleMenu
                 'label' => 'Serviço',
                 'icon' => 'bx bx-cog',
                 'url' => $servicoUrl,
-                'patterns' => ['servico.*', 'departments.*', 'voluntarios.*'],
+                'patterns' => ['servico.*', 'voluntarios.*'],
                 'category' => self::CATEGORY_MODULES,
             ];
         }

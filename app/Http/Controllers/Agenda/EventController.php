@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Agenda;
 
 use App\Http\Controllers\Controller;
+use App\Models\DepartmentEvent;
 use App\Models\Event;
 use App\Models\EventCategory;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Storage;
 
 class EventController extends Controller
@@ -17,17 +20,19 @@ class EventController extends Controller
     public function index(Request $request)
     {
         $this->authorize('viewAny', Event::class);
-        $start = $request->input('start');
-        $end = $request->input('end');
+        $range = $request->validate([
+            'start' => 'nullable|required_with:end|date',
+            'end' => 'nullable|required_with:start|date|after:start',
+        ]);
+        $start = !empty($range['start']) ? CarbonImmutable::parse($range['start'])->setTimezone(config('app.timezone')) : null;
+        $end = !empty($range['end']) ? CarbonImmutable::parse($range['end'])->setTimezone(config('app.timezone')) : null;
 
         // Verificar e atualizar eventos passados automaticamente
         $this->checkPastEvents();
 
         $query = Event::with('category');
 
-        if ($start && $end) {
-            $query->whereBetween('start_date', [$start, $end]);
-        }
+        $this->applyCalendarRange($query, $start, $end);
 
         $events = $query->get();
 
@@ -47,7 +52,63 @@ class EventController extends Controller
             ];
         });
 
-        return response()->json($formattedEvents);
+        $departmentQuery = DepartmentEvent::with('department')->whereHas('department');
+        $this->applyCalendarRange($departmentQuery, $start, $end);
+        $departmentEvents = $departmentQuery->get()->map(function (DepartmentEvent $event) use ($request) {
+            $department = $event->department;
+            $color = preg_match('/^#[0-9a-f]{6}$/i', $department->color ?? '') ? $department->color : '#6f42c1';
+
+            return [
+                'id' => 'department-event:'.$event->id,
+                'title' => $event->title.' — '.$department->name,
+                'start' => $event->start_date->format($event->all_day ? 'Y-m-d' : 'Y-m-d\TH:i:s'),
+                // Department all-day dates are inclusive; FullCalendar's end is exclusive.
+                'end' => $event->all_day
+                    ? ($event->end_date ?? $event->start_date)->copy()->addDay()->format('Y-m-d')
+                    : $event->end_date?->format('Y-m-d\TH:i:s'),
+                'allDay' => $event->all_day,
+                'backgroundColor' => $color,
+                'borderColor' => $color,
+                'editable' => false,
+                'startEditable' => false,
+                'durationEditable' => false,
+                'extendedProps' => [
+                    'sourceType' => 'department',
+                    'eventTitle' => $event->title,
+                    'departmentId' => $department->id,
+                    'departmentName' => $department->name,
+                    'description' => $event->description,
+                    'location' => $event->location,
+                    'displayStart' => $event->start_date->format($event->all_day ? 'd/m/Y' : 'd/m/Y H:i'),
+                    'displayEnd' => $event->end_date?->format($event->all_day ? 'd/m/Y' : 'd/m/Y H:i'),
+                    'detailUrl' => $request->user()->can('view', $department)
+                        ? route('departments.events.show', [$department, $event]) : null,
+                    'editUrl' => $request->user()->can('update', $department)
+                        ? route('departments.events.edit', [$department, $event]) : null,
+                ],
+            ];
+        });
+
+        return response()->json($formattedEvents->concat($departmentEvents)->values());
+    }
+
+    private function applyCalendarRange(Builder $query, ?CarbonImmutable $start, ?CarbonImmutable $end): void
+    {
+        if (!$start || !$end) {
+            return;
+        }
+
+        // The requested range is [start, end); include events that began earlier.
+        $query->where('start_date', '<', $end)
+            ->where(function ($query) use ($start) {
+                $query->where('end_date', '>', $start)
+                    ->orWhere(function ($query) use ($start) {
+                        $query->where('start_date', '>=', $start)
+                            ->where(function ($query) {
+                                $query->whereNull('end_date')->orWhereColumn('end_date', 'start_date');
+                            });
+                    });
+            });
     }
 
     /**

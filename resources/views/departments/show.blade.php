@@ -1,214 +1,99 @@
 @extends('layouts.porto')
-
-@section('title', 'Visualizar Departamento')
-
-@section('page-title', $department->name)
-
+@include('departments.partials.styles')
+@section('title', $department->name.' — Departamento')
+@section('page-title', 'Visão geral do departamento')
 @section('breadcrumbs')
     <li><a href="{{ route('departments.index') }}">Departamentos</a></li>
-    <li><span>Visualizar</span></li>
+    <li><span>{{ $department->name }}</span></li>
 @endsection
-
 @section('content')
-<div class="row">
-    <div class="col-12">
-        <section class="card">
-            <header class="card-header" style="background: linear-gradient(135deg, {{ $department->color ?? '#667eea' }} 0%, {{ $department->color ?? '#764ba2' }} 100%); color: white; position: relative; overflow: hidden;">
-                <div style="position: relative; z-index: 1; text-align: center; padding: 2rem 0;">
-                    <div class="mb-3">
-                        @if($department->icon)
-                            <i class="{{ $department->icon }}" style="font-size: 4rem; color: white;"></i>
-                        @else
-                            <i class="bx bx-group" style="font-size: 4rem; color: white;"></i>
-                        @endif
-                    </div>
-                    <h2 class="mb-0" style="color: white;">{{ $department->name }}</h2>
-                    <p class="mb-0" style="color: rgba(255,255,255,0.9);">
-                        @if($department->status == 'ativo')
-                            <span class="badge badge-success">Ativo</span>
-                        @else
-                            <span class="badge badge-secondary">Arquivado</span>
-                        @endif
-                    </p>
-                </div>
-            </header>
-            <div class="card-body">
-                <div class="d-flex justify-content-end mb-4">
-                    <a href="{{ route('departments.edit', $department) }}" class="btn btn-primary">
-                        <i class="bx bx-edit me-2"></i>Editar
-                    </a>
-                    <a href="{{ route('departments.index') }}" class="btn btn-default">
-                        <i class="bx bx-arrow-back me-2"></i>Voltar
-                    </a>
-                </div>
-
-                @if($department->description)
-                    <div class="mb-4">
-                        <h5>Sobre o departamento</h5>
-                        <p>{{ $department->description }}</p>
-                    </div>
-                @endif
-
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <section class="card">
-                            <header class="card-header">
-                                <h2 class="card-title">Líderes</h2>
-                            </header>
-                            <div class="card-body">
-                                @if($department->leaders && $department->leaders->count() > 0)
-                                    @foreach($department->leaders as $leader)
-                                        <div class="d-flex align-items-center mb-3">
-                                            @if($leader->photo_url)
-                                                <img src="{{ $leader->photo_url }}" 
-                                                     alt="{{ $leader->name }}" 
-                                                     class="rounded-circle me-3" 
-                                                     width="60" 
-                                                     height="60"
-                                                     style="object-fit: cover;">
-                                            @else
-                                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" 
-                                                     style="width: 60px; height: 60px;">
-                                                    <i class="bx bx-user text-white" style="font-size: 2rem;"></i>
-                                                </div>
-                                            @endif
-                                            <div>
-                                                <h5 class="mb-0">{{ $leader->name }}</h5>
-                                                <p class="text-muted mb-0">{{ $leader->email ?? '-' }}</p>
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                @elseif($department->leader)
-                                    {{-- Fallback para compatibilidade com leader_id antigo --}}
-                                    <div class="d-flex align-items-center">
-                                        @if($department->leader->photo_url)
-                                            <img src="{{ $department->leader->photo_url }}" 
-                                                 alt="{{ $department->leader->name }}" 
-                                                 class="rounded-circle me-3" 
-                                                 width="60" 
-                                                 height="60"
-                                                 style="object-fit: cover;">
-                                        @else
-                                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3" 
-                                                 style="width: 60px; height: 60px;">
-                                                <i class="bx bx-user text-white" style="font-size: 2rem;"></i>
-                                            </div>
-                                        @endif
-                                        <div>
-                                            <h5 class="mb-0">{{ $department->leader->name }}</h5>
-                                            <p class="text-muted mb-0">{{ $department->leader->email ?? '-' }}</p>
-                                        </div>
-                                    </div>
-                                @else
-                                    <p class="text-muted">Nenhum líder definido</p>
-                                @endif
-                            </div>
-                        </section>
-                    </div>
-
-                    <div class="col-md-6 mb-4">
-                        <section class="card">
-                            <header class="card-header">
-                                <h2 class="card-title">Informações</h2>
-                            </header>
-                            <div class="card-body">
-                                <p><strong>Status:</strong> 
-                                    @if($department->status == 'ativo')
-                                        <span class="badge badge-success">Ativo</span>
-                                    @else
-                                        <span class="badge badge-secondary">Arquivado</span>
-                                    @endif
-                                </p>
-                                <p><strong>Template:</strong> {{ $department->template ?? 'Personalizado' }}</p>
-                                <p><strong>Total de Membros:</strong> {{ $department->members->count() }}</p>
-                                <p><strong>Total de Cargos:</strong> {{ $department->roles->count() }}</p>
-                            </div>
-                        </section>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <section class="card">
-                            <header class="card-header">
-                                <h2 class="card-title">Participantes ({{ $department->members->count() }})</h2>
-                            </header>
-                            <div class="card-body">
-                                @if($department->members->count() > 0)
-                                    <div class="table-responsive">
-                                        <table class="table table-sm">
-                                            <thead>
-                                                <tr>
-                                                    <th>Nome</th>
-                                                    <th>Cargo</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach($department->members as $member)
-                                                    <tr>
-                                                        <td>{{ $member->name }}</td>
-                                                        <td>
-                                                            @php
-                                                                $pivot = isset($pivots) ? $pivots->get($member->id) : null;
-                                                                $roleName = '-';
-                                                                if ($pivot && $pivot->role) {
-                                                                    $roleName = $pivot->role->name;
-                                                                } elseif ($pivot && $pivot->department_role_id) {
-                                                                    $role = \App\Models\DepartmentRole::find($pivot->department_role_id);
-                                                                    $roleName = $role ? $role->name : '-';
-                                                                }
-                                                            @endphp
-                                                            <span class="badge badge-info">{{ $roleName }}</span>
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                @else
-                                    <p class="text-muted text-center">*Sem participantes</p>
-                                @endif
-                            </div>
-                        </section>
-                    </div>
-
-                    <div class="col-md-6 mb-4">
-                        <section class="card">
-                            <header class="card-header">
-                                <h2 class="card-title">Cargos/funções ({{ $department->roles->count() }})</h2>
-                            </header>
-                            <div class="card-body">
-                                @if($department->roles->count() > 0)
-                                    <ul class="list-unstyled">
-                                        @foreach($department->roles as $role)
-                                            <li class="mb-2 p-2" style="background-color: #f8f9fa; border-radius: 4px;">
-                                                <strong>{{ $role->name }}</strong>
-                                                @if($role->is_default)
-                                                    <span class="badge badge-secondary">Padrão</span>
-                                                @endif
-                                                @if($role->description)
-                                                    <br><small class="text-muted">{{ $role->description }}</small>
-                                                @endif
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <p class="text-muted text-center">Nenhum cargo definido</p>
-                                @endif
-                            </div>
-                        </section>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <small class="text-muted">
-                        <strong>Cadastrado em:</strong> {{ $department->created_at->format('d/m/Y H:i') }}<br>
-                        <strong>Última atualização:</strong> {{ $department->updated_at->format('d/m/Y H:i') }}
-                    </small>
-                </div>
-            </div>
-        </section>
+@php
+    $color = preg_match('/^#[0-9a-f]{6}$/i', $department->color ?? '') ? $department->color : '#3458bd';
+    $icon = $department->icon ?: 'bx-group';
+    $leaders = $department->leaders->isNotEmpty() ? $department->leaders : collect($department->leader ? [$department->leader] : []);
+@endphp
+<div class="dept-page" style="--dept-accent: {{ $color }}">
+    <header class="dept-hero">
+        <span class="dept-avatar">
+            @if($department->logo_url)<img src="{{ asset('storage/'.$department->logo_url) }}" alt="Logo de {{ $department->name }}">@else<i class="{{ str_starts_with($icon, 'bx-') ? 'bx '.$icon : $icon }}" aria-hidden="true"></i>@endif
+        </span>
+        <div class="dept-hero-copy"><div class="dept-eyebrow">Conheça a equipe</div><h1>{{ $department->name }}</h1><div class="mt-2"><span class="dept-status {{ $department->status === 'arquivado' ? 'dept-status--archived' : '' }}">{{ $department->status === 'arquivado' ? 'Arquivado' : 'Ativo' }}</span></div></div>
+        <div class="dept-hero-actions">
+            @can('update', $department)<a href="{{ route('departments.edit', $department) }}" class="btn btn-primary"><i class="bx bx-slider-alt" aria-hidden="true"></i>Editar departamento</a>@endcan
+            <a href="{{ route('departments.index') }}" class="btn btn-outline-secondary">Voltar à lista</a>
+        </div>
+    </header>
+    <div class="dept-stats" aria-label="Resumo do departamento">
+        <div class="dept-stat"><i class="bx bx-group" aria-hidden="true"></i><div><strong>{{ $department->members->count() }}</strong><span>Participantes</span></div></div>
+        <div class="dept-stat"><i class="bx bx-user-check" aria-hidden="true"></i><div><strong>{{ $leaders->count() }}</strong><span>Na liderança</span></div></div>
+        <div class="dept-stat"><i class="bx bx-id-card" aria-hidden="true"></i><div><strong>{{ $department->roles->count() }}</strong><span>Cargos definidos</span></div></div>
     </div>
+    <div class="row g-4">
+        <div class="col-12 col-xl-8">
+            <section class="dept-panel">
+                <div class="dept-panel-heading"><h2>Sobre o departamento</h2></div>
+                <div class="dept-panel-body"><p class="dept-paragraph mb-0">{{ $department->description ?: 'Este departamento ainda não tem uma apresentação. Descreva seu propósito nas configurações.' }}</p></div>
+            </section>
+            <section class="dept-panel" data-filter-list>
+                <div class="dept-panel-heading"><div><h2>Quem faz parte</h2><p>Pessoas e responsabilidades da equipe.</p></div><span class="dept-count" data-filter-count aria-live="polite">{{ $department->members->count() }} pessoas</span></div>
+                <div class="dept-panel-body">
+                    @if($department->members->isNotEmpty())
+                        <div class="dept-search mb-3"><i class="bx bx-search" aria-hidden="true"></i><label class="visually-hidden" for="overview-people-search">Buscar participantes por nome ou cargo</label><input id="overview-people-search" class="form-control" type="search" placeholder="Buscar por nome ou cargo..." data-filter-input></div>
+                        <div class="dept-person-list dept-person-list--grid dept-scroll-list">
+                            @foreach($department->members as $member)
+                                @php
+                                    $pivot = isset($pivots) ? $pivots->get($member->id) : null;
+                                    $roleNames = collect($pivot?->role ? [$pivot->role->name] : [])
+                                        ->merge($department->roles->filter(fn ($role) => $role->assigned_members->contains('id', $member->id))->pluck('name'))->unique();
+                                @endphp
+                                <article class="dept-person" id="department-member-{{ $member->id }}" data-filter-item>
+                                    <span class="dept-avatar dept-avatar--small" aria-hidden="true">{{ mb_strtoupper(mb_substr($member->name, 0, 1)) }}</span>
+                                    <div class="dept-person-info"><span class="dept-person-name">{{ $member->name }}</span>
+                                        @forelse($roleNames as $roleName)<span class="dept-tag">{{ $roleName }}</span>@empty<span class="dept-person-meta">Participante</span>@endforelse
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
+                        <p class="dept-empty mt-3" data-filter-empty hidden>Nenhuma pessoa encontrada. Tente outro nome ou cargo.</p>
+                    @else
+                        <div class="dept-empty"><i class="bx bx-user-plus" aria-hidden="true"></i>A equipe ainda não tem participantes.@can('update', $department)<br><a href="{{ route('departments.edit', $department) }}">Escolher participantes</a>@endcan</div>
+                    @endif
+                </div>
+            </section>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6"><a href="{{ route('departments.projects.index', $department) }}" class="dept-link-card h-100 mb-0"><i class="bx bx-folder" aria-hidden="true"></i><span><strong>Projetos e iniciativas</strong><small>Acompanhe as ações do departamento</small></span><i class="bx bx-chevron-right" aria-hidden="true"></i></a></div>
+                <div class="col-md-6"><a href="{{ route('departments.events.index', $department) }}" class="dept-link-card h-100 mb-0"><i class="bx bx-calendar" aria-hidden="true"></i><span><strong>Calendário anual</strong><small>Veja os eventos e planeje o ano</small></span><i class="bx bx-chevron-right" aria-hidden="true"></i></a></div>
+            </div>
+        </div>
+        <aside class="col-12 col-xl-4">
+            <section class="dept-panel">
+                <div class="dept-panel-heading"><h2>Liderança</h2></div>
+                <div class="dept-panel-body">
+                    <div class="dept-person-list">
+                        @forelse($leaders as $leader)
+                            <div class="dept-person"><span class="dept-avatar dept-avatar--small" aria-hidden="true">{{ mb_strtoupper(mb_substr($leader->name, 0, 1)) }}</span><div class="dept-person-info"><span class="dept-person-name">{{ $leader->name }}</span><span class="dept-person-meta">Liderança do departamento</span></div></div>
+                        @empty
+                            <p class="dept-muted mb-0">Nenhum líder definido.</p>
+                        @endforelse
+                    </div>
+                </div>
+            </section>
+            <section class="dept-panel">
+                <div class="dept-panel-heading"><div><h2>Administração</h2><p>Cargos e responsáveis do departamento.</p></div></div>
+                <div class="dept-panel-body">
+                    <div class="dept-scroll-list" style="max-height:320px">
+                        @forelse($department->roles as $role)
+                            <div class="dept-role-row"><strong>{{ $role->name }}</strong><span>{{ $role->assigned_members->pluck('name')->join(' · ') ?: ($role->responsible_member_id ? 'Membro indisponível' : 'Nenhuma pessoa atribuída') }}</span></div>
+                        @empty
+                            <p class="dept-muted mb-0">Nenhum cargo definido.</p>
+                        @endforelse
+                    </div>
+                    <a href="{{ route('departments.administration.index', $department) }}" class="btn btn-outline-secondary w-100 mt-3">{{ Auth::user()->can('update', $department) ? 'Gerenciar administração' : 'Ver administração' }}</a>
+                </div>
+            </section>
+        </aside>
+    </div>
+    <p class="dept-muted mb-0">Atualizado em {{ $department->updated_at?->format('d/m/Y') }}.</p>
 </div>
+@push('scripts')<script src="{{ asset('js/departments.js') }}?v={{ filemtime(public_path('js/departments.js')) }}"></script>@endpush
 @endsection
-

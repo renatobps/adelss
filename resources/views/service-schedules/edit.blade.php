@@ -189,7 +189,7 @@
                                                 @foreach($areaVolunteers as $volunteer)
                                                     <option value="{{ $volunteer->id }}" 
                                                             {{ in_array($volunteer->id, $selectedVolunteerIds) ? 'selected' : '' }}>
-                                                        {{ $volunteer->member->name }}
+                                                        {{ $volunteer->member?->name ?? 'Membro indisponível' }}
                                                     </option>
                                                 @endforeach
                                             </select>

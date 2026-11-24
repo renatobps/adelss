@@ -96,8 +96,8 @@
                                             <tbody>
                                                 @foreach($histories as $history)
                                                     <tr>
-                                                        <td>{{ $history->member->name }}</td>
-                                                        <td>{{ $history->serviceArea->name }}</td>
+                                                        <td>{{ $history->member?->name ?? 'Membro indisponível' }}</td>
+                                                        <td>{{ $history->serviceArea?->name ?? 'Área indisponível' }}</td>
                                                         <td>
                                                             @if($history->status == 'serviu')
                                                                 <span class="badge badge-success">Serviu</span>

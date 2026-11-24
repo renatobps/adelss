@@ -2,7 +2,7 @@
 
 @section('title', 'Visualizar Voluntário')
 
-@section('page-title', $volunteer->member->name)
+@section('page-title', $volunteer->member?->name ?? 'Membro indisponível')
 
 @section('breadcrumbs')
     <li><a href="{{ route('voluntarios.cadastro.index') }}">Cadastro de Voluntários</a></li>
@@ -19,10 +19,13 @@
                     <a href="#" class="card-action card-action-dismiss" data-card-dismiss></a>
                 </div>
                 <h2 class="card-title">
-                    <i class="bx bx-user me-2"></i>{{ $volunteer->member->name }}
+                    <i class="bx bx-user me-2"></i>{{ $volunteer->member?->name ?? 'Membro indisponível' }}
                 </h2>
             </header>
             <div class="card-body">
+                @if(!$volunteer->member)
+                    <div class="alert alert-warning">O membro vinculado foi excluído ou não foi encontrado. O cadastro e o histórico do voluntário foram preservados.</div>
+                @endif
                 <div class="d-flex justify-content-end mb-4">
                     <a href="{{ route('voluntarios.cadastro.edit', $volunteer) }}" class="btn btn-primary">
                         <i class="bx bx-edit me-2"></i>Editar
@@ -41,7 +44,7 @@
                             <div class="card-body">
                                 <div class="mb-3">
                                     <strong>Membro:</strong><br>
-                                    <span>{{ $volunteer->member->name }}</span>
+                                    <span>{{ $volunteer->member?->name ?? 'Membro indisponível' }}</span>
                                 </div>
                                 <div class="mb-3">
                                     <strong>Nível de Experiência:</strong><br>

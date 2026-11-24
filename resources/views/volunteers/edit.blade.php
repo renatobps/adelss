@@ -23,6 +23,9 @@
                 </h2>
             </header>
             <div class="card-body">
+                @if(!$volunteer->member)
+                    <div class="alert alert-warning">O membro vinculado foi excluído ou não foi encontrado. Selecione um membro disponível para atualizar este cadastro.</div>
+                @endif
                 <form action="{{ route('voluntarios.cadastro.update', $volunteer) }}" method="POST">
                     @csrf
                     @method('PUT')

@@ -14,9 +14,9 @@ Route::prefix('agenda')->name('agenda.')->middleware('module.access:agenda')->gr
     // Eventos (API para FullCalendar)
     Route::get('events', [EventController::class, 'index'])->name('events.index');
     Route::post('events', [EventController::class, 'store'])->name('events.store');
-    Route::get('events/{event}', [EventController::class, 'show'])->name('events.show');
-    Route::put('events/{event}', [EventController::class, 'update'])->name('events.update');
-    Route::delete('events/{event}', [EventController::class, 'destroy'])->name('events.destroy');
+    Route::get('events/{event}', [EventController::class, 'show'])->whereNumber('event')->name('events.show');
+    Route::put('events/{event}', [EventController::class, 'update'])->whereNumber('event')->name('events.update');
+    Route::delete('events/{event}', [EventController::class, 'destroy'])->whereNumber('event')->name('events.destroy');
 
     // Categorias
     Route::post('categories', [EventCategoryController::class, 'store'])->name('categories.store');

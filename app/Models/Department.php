@@ -103,6 +103,16 @@ class Department extends Model
         return $this->hasMany(DepartmentRole::class);
     }
 
+    public function events(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DepartmentEvent::class);
+    }
+
+    public function projects(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DepartmentProject::class);
+    }
+
     /**
      * Scope para departamentos ativos
      */

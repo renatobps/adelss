@@ -307,7 +307,7 @@
                                                     @foreach($volunteers as $volunteer)
                                                         <option value="{{ $volunteer->id }}" 
                                                                 {{ in_array($volunteer->id, $selectedVolunteers) ? 'selected' : '' }}>
-                                                            {{ $volunteer->member->name }}
+                                                            {{ $volunteer->member?->name ?? 'Membro indisponível' }}
                                                         </option>
                                                     @endforeach
                                                 </select>
@@ -410,7 +410,7 @@
                                             @if(count($volunteers) > 0)
                                                 <ul class="mb-0" style="padding-left: 20px;">
                                                     @foreach($volunteers as $volunteer)
-                                                        <li style="margin-bottom: 4px; font-size: 14px;">{{ $volunteer->member->name }}</li>
+                                                        <li style="margin-bottom: 4px; font-size: 14px;">{{ $volunteer->member?->name ?? 'Membro indisponível' }}</li>
                                                     @endforeach
                                                 </ul>
                                             @else

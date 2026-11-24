@@ -14,6 +14,7 @@ class Kernel extends ConsoleKernel
     {
         // Verificar eventos passados a cada hora
         $schedule->command('events:check-past')->hourly();
+        $schedule->command('departments:notify-events')->everyMinute()->withoutOverlapping(10);
 
         // Lembretes / resumos financeiros (horário vem da configuração da automação)
         $schedule->command('financial:notify-due-expenses')->hourly();

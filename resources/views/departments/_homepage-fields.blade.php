@@ -1,7 +1,9 @@
+@unless($compact ?? false)
 <div class="col-12 mb-3">
     <hr class="my-2">
     <h5 class="mb-3"><i class="bx bx-globe me-1"></i> Página Principal</h5>
 </div>
+@endunless
 
 <div class="col-md-12 mb-3">
     <div class="form-check form-switch">
@@ -9,7 +11,7 @@
                {{ old('show_on_homepage', $department->show_on_homepage ?? false) ? 'checked' : '' }}>
         <label class="form-check-label" for="show_on_homepage">Exibir na Página Principal</label>
     </div>
-    <small class="form-text text-muted">Quando ativo, este departamento aparece como card na landing pública.</small>
+    <small class="form-text text-muted">Quando ativo, este departamento aparece na página principal do site da igreja.</small>
 </div>
 
 <div class="col-md-6 mb-3 homepage-order-field" style="{{ old('show_on_homepage', $department->show_on_homepage ?? false) ? '' : 'display:none;' }}">
