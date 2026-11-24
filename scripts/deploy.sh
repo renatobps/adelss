@@ -2,6 +2,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+umask 0002
 
 mkdir -p \
   storage/framework/cache/data \
@@ -16,6 +17,10 @@ fix_storage_perms() {
   # root (cron/artisan) e www-data (PHP-FPM) precisam escrever nos mesmos arquivos.
   chmod -R a+rwX storage bootstrap/cache 2>/dev/null || true
   chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
+  # Repair old non-searchable cache directories and preserve group inheritance.
+  if [ "$(id -u)" -eq 0 ]; then
+    bash scripts/fix-cache-permissions.sh
+  fi
 }
 
 fix_storage_perms

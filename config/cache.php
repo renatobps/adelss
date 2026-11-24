@@ -39,9 +39,10 @@ return [
         'file' => [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
-            // Cron roda como root e o PHP-FPM como www-data; 0666 permite os dois
-            // sobrescreverem o mesmo arquivo de cache.
-            'permission' => 0666,
+            // FileStore applies this override to directories too. A file-only
+            // mode such as 0666 removes their search bit and breaks throttling.
+            // Shared ownership, setgid directories and umask are set at deploy.
+            'permission' => null,
         ],
 
         'memcached' => [

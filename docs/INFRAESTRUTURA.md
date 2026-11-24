@@ -75,7 +75,7 @@ crontab -l                  # deve conter a linha do schedule:run
 Linha esperada no crontab:
 
 ```
-* * * * * cd /code && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /code && umask 0002 && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 Se o cron não estiver rodando:
@@ -83,6 +83,8 @@ Se o cron não estiver rodando:
 ```bash
 service cron start
 ```
+
+O cache é compartilhado entre o cron (root) e o PHP-FPM (`www-data`). Manter `umask 0002` na linha do cron e pastas de cache com grupo herdado (`setgid`), preparadas por `bash scripts/fix-cache-permissions.sh`. Alternativamente, executar o scheduler como `www-data`. Em comandos Artisan manuais, usar o usuário do PHP-FPM ou a mesma `umask`. Não configurar `cache.stores.file.permission` como `0666`: o Laravel também aplica esse valor às pastas, removendo seu acesso. O incidente e a recuperação estão documentados em `TROUBLESHOOTING.md`.
 
 ### Sintoma quando isso quebra
 

@@ -2,6 +2,22 @@
 
 Incidentes já vividos no projeto, com sintoma → causa provável → solução. Consulte antes de reinvestigar do zero.
 
+## Erro 500 ao enviar formulário público — cache sem acesso às pastas
+
+Se o log mostrar `fileperms(): stat failed for .../storage/framework/cache/data/...`, com `FileStore`, `RateLimiter` e `ThrottleRequests` na pilha, o envio falhou na proteção contra excesso de requisições, antes de gravar as respostas. O `FileStore` do Laravel 10 aplica `cache.stores.file.permission` tanto a arquivos como a pastas. A configuração `0666` remove a execução/busca das pastas e provoca o erro. Manter esse ajuste como `null`; compartilhar o cache pelo proprietário/grupo, não por uma permissão de arquivo aplicada a diretórios.
+
+Após atualizar o código, executar como root no container:
+
+```bash
+cd /code
+bash scripts/fix-cache-permissions.sh
+su -s /bin/sh www-data -c 'cd /code && php artisan config:clear && php artisan config:cache'
+```
+
+O script repara apenas `storage/framework/cache` e `bootstrap/cache`, sem limpar entradas do cache, sessões, uploads ou respostas. Para PHP-FPM com outro usuário, passá-lo como argumento ao script e substituir `www-data` no comando seguinte. Para evitar recorrência, o cron deve usar `umask 0002` conforme `INFRAESTRUTURA.md`, ou executar Artisan como o usuário do PHP-FPM. Atualizar a configuração sem reparar as pastas antigas não basta. O limite de envios do formulário permanece ativo.
+
+## Outros incidentes
+
 | Sintoma | Causa provável | Solução |
 |---|---|---|
 | **WhatsApp parou de enviar tudo** (comprovantes, alertas, enquetes, publicações em grupo) | Conexões esgotadas no Postgres do Evolution Go (`FATAL: sorry, too many clients already`) | [`INFRAESTRUTURA.md` § 1](INFRAESTRUTURA.md#1-postgresql-do-evolution-go--idle_session_timeout--crítico): verificar `SHOW idle_session_timeout;` e reaplicar `ALTER SYSTEM SET idle_session_timeout = '15min';` se retornar `0` |
